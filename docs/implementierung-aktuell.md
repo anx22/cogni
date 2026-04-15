@@ -1,6 +1,6 @@
 # Produktintelligenz — Aktuelle Implementierungen & Entscheidungen
 
-## Status: Phase 0–2 (Setup, Entity Screen & Datenmodell)
+## Status: Phase 0–3 (Setup, Entity Screen, Datenmodell, Projekt-Screen)
 
 ### Getroffene Entscheidungen
 
@@ -10,6 +10,10 @@
 | Design-System | Dunkles Theme, glasartig, dezente Verläufe | Gemäß Designhaltung: reduziert, ruhig, technisch |
 | Entität-Animation | CSS Gradients mit Blur (21st.dev-inspiriert) | Kein Canvas nötig für V1, performant, wartbar |
 | Hauptnavigation | Keine klassische Sidebar | Orientierung über Zustandswechsel: Entität ↔ Projekt ↔ Overlay |
+| Navigation Entity↔Projekt | Zustandswechsel auf gleicher Seite | Kein Routing, Entity schrumpft / Projekt gleitet herein |
+| Projekt-Screen Layout | Bento Grid, volle Breite, Apple-Keynote-Feeling | Schwebend, dynamische Kachelgrößen, großzügiges Padding |
+| Lagebild | Fließtext + Kennzahlen kombiniert | Oben Lagetext, darunter verdichtete Stats als Facetten-Einstieg |
+| Datenquelle Phase 3 | UI-First mit Demo-Daten | Schnelle Design-Validierung, echte Anbindung folgt |
 
 ### Aktuell implementiert
 
@@ -19,7 +23,9 @@
 - [x] Dropzone-Funktionalität
 - [x] Lovable Cloud aktiviert (Supabase-Backend)
 - [x] Supabase-Datenmodell (24 Tabellen, 9 Enums, RLS, Storage)
-- [ ] Projekt-Screen
+- [x] Projekt-Screen mit Bento Grid Layout
+- [x] 10 Facetten-Komponenten mit Demo-Daten
+- [x] Zustandswechsel Entity ↔ Projekt (gleiche Seite)
 - [ ] Dialog-Overlay
 - [ ] Upload-Pipeline
 - [ ] Graphiti-Integration
@@ -41,3 +47,13 @@
 **Aggregat:** project_state_snapshots
 
 **Storage:** `assets`-Bucket mit RLS (Upload/View/Delete nur eigene Dateien)
+
+### Projekt-Screen Architektur (Phase 3)
+
+**Komponenten:**
+- `ProjectScreen` — Hauptcontainer mit Bento Grid
+- `ProjectHeader` — Projektname, Lagetext, Stat-Chips
+- `BentoCard` — Wiederverwendbare glasartige Karte mit optionalem Expand
+- 10 Facetten: Lagebild, Änderungen, Konflikte, Themen, Timeline, Entscheidungen, Offene Punkte, Dokumente, Stakeholder, Feedback
+
+**Layout:** Bento Grid mit variablen Spalten (1–4), responsive, volle Breite mit großzügigem Padding
