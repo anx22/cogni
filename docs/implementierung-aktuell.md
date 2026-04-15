@@ -1,6 +1,6 @@
 # Produktintelligenz — Aktuelle Implementierungen & Entscheidungen
 
-## Status: Phase 0–1 (Setup & Entity Screen)
+## Status: Phase 0–2 (Setup, Entity Screen & Datenmodell)
 
 ### Getroffene Entscheidungen
 
@@ -17,8 +17,27 @@
 - [x] Design-System: Dunkles Theme mit HSL-Tokens
 - [x] Entität-Screen mit animiertem Kern (5 Zustände)
 - [x] Dropzone-Funktionalität
+- [x] Lovable Cloud aktiviert (Supabase-Backend)
+- [x] Supabase-Datenmodell (24 Tabellen, 9 Enums, RLS, Storage)
 - [ ] Projekt-Screen
 - [ ] Dialog-Overlay
-- [ ] Supabase-Datenmodell
 - [ ] Upload-Pipeline
 - [ ] Graphiti-Integration
+
+### Datenmodell (Phase 2)
+
+**Enums:** asset_type, processing_status, delta_type, review_status, box_type, box_state, fact_type, decision_status, contradiction_type
+
+**Kerntabellen:** projects, assets, sources, parsed_documents, proposed_facts, canonical_facts
+
+**Review-Pipeline:** review_sessions, review_cases, change_events, commit_results
+
+**Projektobjekte:** topics, decisions, deadlines, tasks, open_points
+
+**Stakeholder:** persons, organizations, project_stakeholder_links
+
+**Querobjekte:** contradictions, feedback, corrections, fact_references, version_links
+
+**Aggregat:** project_state_snapshots
+
+**Storage:** `assets`-Bucket mit RLS (Upload/View/Delete nur eigene Dateien)
