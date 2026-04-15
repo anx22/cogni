@@ -1,12 +1,15 @@
 import { useState, useCallback } from "react";
 import EntityCore from "@/components/EntityCore";
+import ProjectScreen from "@/components/project/ProjectScreen";
 
 type EntityState = "idle" | "hover" | "processing" | "review-ready" | "failed";
+type AppView = "entity" | "project";
 
 const Index = () => {
   const [entityState, setEntityState] = useState<EntityState>("idle");
   const [lastImpact, setLastImpact] = useState<string | null>(null);
   const [droppedFiles, setDroppedFiles] = useState<string[]>([]);
+  const [view, setView] = useState<AppView>("entity");
 
   const handleDrop = useCallback((files: File[]) => {
     const names = files.map(f => f.name);
@@ -16,9 +19,12 @@ const Index = () => {
   }, []);
 
   const handleReviewClick = useCallback(() => {
-    // Will open Dialog Overlay in Phase 4
     console.log("Review triggered");
   }, []);
+
+  if (view === "project") {
+    return <ProjectScreen onBack={() => setView("entity")} />;
+  }
 
   return (
     <div className="relative flex flex-col items-center justify-center min-h-screen overflow-hidden bg-background">
@@ -61,7 +67,7 @@ const Index = () => {
       {/* Project access — very subtle, top right */}
       <button
         className="absolute top-6 right-6 text-xs text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors tracking-widest uppercase"
-        onClick={() => {/* Phase 3: navigate to project screen */}}
+        onClick={() => setView("project")}
       >
         Projekte
       </button>
