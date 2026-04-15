@@ -20,14 +20,6 @@ export const demoProject = {
     naechsterTermin: "18. April 2026",
   },
 
-  aenderungen: [
-    { id: "a1", text: "Neuer Termin für Go-Live erkannt: 15. Mai 2026", delta: "replace", zeit: "vor 2 Stunden", quelle: "Mail von Thomas Berger" },
-    { id: "a2", text: "Thema 'Datenmigration' um offenen Punkt ergänzt", delta: "add", zeit: "vor 5 Stunden", quelle: "Protokoll Steering Committee" },
-    { id: "a3", text: "Entscheidung 'React statt Angular' bestätigt", delta: "confirm", zeit: "gestern", quelle: "Review Session #12" },
-    { id: "a4", text: "Budgetrahmen von 180k auf 210k angepasst", delta: "replace", zeit: "gestern", quelle: "Mail von CFO" },
-    { id: "a5", text: "Stakeholder Maria Schulz neu zugeordnet", delta: "add", zeit: "vor 2 Tagen", quelle: "Org-Update PPTX" },
-  ],
-
   konflikte: [
     { id: "k1", typ: "deadline", title: "Go-Live Termin widersprüchlich", beschreibung: "Mail vom PM nennt 15. Mai, Steering-Protokoll sagt 1. Juni.", faktA: "Go-Live: 15. Mai 2026 (Mail Thomas Berger)", faktB: "Go-Live: 1. Juni 2026 (Protokoll Steering)", status: "offen" },
     { id: "k2", typ: "decision", title: "Migrationsstrategie unklar", beschreibung: "Zwei konkurrierende Ansätze: Big Bang vs. Phasenweise.", faktA: "Big-Bang-Migration empfohlen (Techteam)", faktB: "Phasenweise Migration gefordert (Fachseite)", status: "offen" },
@@ -44,14 +36,15 @@ export const demoProject = {
     { id: "t8", name: "Go-Live", beschreibung: "Rollout-Plan, Kommunikation, Fallback", entscheidungen: 1, offenePunkte: 0, dokumente: 0 },
   ],
 
+  // Timeline now absorbs Änderungen — entries include delta info + quelle
   timeline: [
-    { id: "tl1", datum: "15.04.2026", text: "Neuer Go-Live-Termin erkannt", typ: "change" },
-    { id: "tl2", datum: "14.04.2026", text: "Budgetanpassung auf 210k bestätigt", typ: "confirm" },
-    { id: "tl3", datum: "13.04.2026", text: "Maria Schulz als Stakeholder hinzugefügt", typ: "add" },
-    { id: "tl4", datum: "12.04.2026", text: "Migrationsstrategie-Konflikt erkannt", typ: "conflict" },
-    { id: "tl5", datum: "10.04.2026", text: "React-Entscheidung nach Review bestätigt", typ: "confirm" },
-    { id: "tl6", datum: "08.04.2026", text: "UX-Prototyp v2 hochgeladen", typ: "add" },
-    { id: "tl7", datum: "05.04.2026", text: "Steering Committee Protokoll verarbeitet", typ: "add" },
+    { id: "tl1", datum: "15.04.2026", text: "Neuer Go-Live-Termin erkannt: 15. Mai 2026", typ: "change", quelle: "Mail von Thomas Berger" },
+    { id: "tl2", datum: "14.04.2026", text: "Budgetanpassung auf 210k bestätigt", typ: "confirm", quelle: "CFO-Freigabe" },
+    { id: "tl3", datum: "13.04.2026", text: "Maria Schulz als Stakeholder hinzugefügt", typ: "add", quelle: "Org-Update PPTX" },
+    { id: "tl4", datum: "12.04.2026", text: "Migrationsstrategie-Konflikt erkannt", typ: "conflict", quelle: "Steering Committee Protokoll" },
+    { id: "tl5", datum: "10.04.2026", text: "React-Entscheidung nach Review bestätigt", typ: "confirm", quelle: "Review Session #12" },
+    { id: "tl6", datum: "08.04.2026", text: "UX-Prototyp v2 hochgeladen", typ: "add", quelle: "Lisa Meier" },
+    { id: "tl7", datum: "05.04.2026", text: "Steering Committee Protokoll verarbeitet", typ: "add", quelle: "Dokument-Upload" },
   ],
 
   entscheidungen: [

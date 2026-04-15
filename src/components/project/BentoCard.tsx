@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Sparkles } from "lucide-react";
 
 interface BentoCardProps {
   title: string;
@@ -10,6 +10,8 @@ interface BentoCardProps {
   expandable?: boolean;
   defaultExpanded?: boolean;
   className?: string;
+  id?: string;
+  changeIndicator?: boolean;
 }
 
 const BentoCard = ({
@@ -21,6 +23,8 @@ const BentoCard = ({
   expandable = false,
   defaultExpanded = true,
   className = "",
+  id,
+  changeIndicator = false,
 }: BentoCardProps) => {
   const [expanded, setExpanded] = useState(defaultExpanded);
 
@@ -32,6 +36,7 @@ const BentoCard = ({
 
   return (
     <div
+      id={id}
       className={`rounded-2xl border border-border/60 bg-card/60 backdrop-blur-sm transition-all duration-300 hover:border-border/90 hover:bg-card/80 ${className}`}
     >
       {/* Header */}
@@ -47,6 +52,12 @@ const BentoCard = ({
           {badge !== undefined && (
             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${badgeColors[badgeVariant]}`}>
               {badge}
+            </span>
+          )}
+          {changeIndicator && (
+            <span className="relative flex h-2 w-2" title="Kürzlich geändert">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary/40 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary/70" />
             </span>
           )}
         </div>
