@@ -1,88 +1,68 @@
-## Produktintelligenz – Implementierungsplan
 
-### Phase 0: Dokumentation & Projektsetup
 
-- Verzeichnis `docs/` anlegen mit:
-  - `docs/produkt-gesamt.md` – Gesamtprodukt-Dokumentation (Vision, Modell, Prinzipien)
-  - `docs/implementierung-aktuell.md` – Aktuelle Implementierungen & getroffene Entscheidungen
-  - `docs/geplant.md` – Geplante Umsetzungen & Roadmap
-  - `docs/input/00-06-PRODUKTKERN.md` – Originalinput
-  - `docs/input/08-DESIGN-UND-UI-SPECS.md` – Originalinput
-  - `docs/input/07-09-TECH-UND-ROADMAP.md` – Originalinput
-- Memory-System mit Kernregeln befüllen
+## Projekt-Screen: Architektur-Redesign
 
-### Phase 1: Entität-Screen (Hauptscreen)
+### Kernproblem
 
-- Fast leerer Screen mit zentralem, animiertem Entitäts-Kern (Canvas/animated css gradients with blur, inspirated by 21st.dev)
-- 5 Zustände: Idle (subtile Bewegung), Hover/Drag-Over (magnetischer Sog), Processing (Spannungsaufbau), Review Ready (Fokussierung), Failed (ruhige Störung)
-- Dropzone-Funktionalität über den gesamten Kern (PDF, DOCX, PPTX, Bilder, Notizen, .eml)
-- Minimale Begleitelemente: Input-Hinweis, letzter Impact, Review-Trigger, zurückhaltender Projektzugang
-- Asset-Orbit: Neu eingebrachte Objekte als kurze orbitale Fragmente
+10 gleichwertige Panels auf einer Seite erzeugen visuellen Lärm. Die aktuelle Anordnung behandelt alle Facetten als gleichrangig, obwohl sie fundamental verschiedene Rollen haben.
 
-### Phase 2: Supabase-Datenmodell (Kanonischer Kern)
+### Neue Informationsarchitektur
 
-- Kerntabellen: assets, sources, parsed_documents, proposed_facts, canonical_facts
-- Review-Objekte: review_sessions, review_cases, change_events, commit_results
-- Projektobjekte: projects, topics, decisions, deadlines, tasks, open_points
-- Querobjekte: contradictions, feedback, corrections, references, version_links
-- project_state_snapshots für verdichteten Zustand
-- Stakeholder: persons, organizations, project_stakeholder_links
-- Vollständige Provenance: Quelle, Zeitpunkt, Extraktionslauf, Review-Entscheidung
-- RLS-Policies und Auth
+Die Panels lassen sich in drei natürliche Archetypen gruppieren:
 
-### Phase 3: Projekt-Screen
+```text
+┌──────────────────────────────────────────────────────┐
+│  PROJECT HEADER                                       │
+│  Name + Lagetext + Stat-Chips (Konflikte, Offene P.) │
+│  + Konflikt-Banner (nur wenn Konflikte existieren)   │
+└──────────────────────────────────────────────────────┘
 
-- Project State Header: Projektname, Lagebeschreibung, kritische Änderungen, Konfliktindikatoren
-- 10 aufklappbare Facetten in vertikaler Dramaturgie:
-  1. Aktueller Stand (verdichtetes Lagebild)
-  2. Wichtigste Änderungen (Deltas sichtbar gegen Vorzustand)
-  3. Konflikte (prominent, nie versteckt)
-  4. Themen (inhaltliche Cluster)
-  5. Timeline (Veränderungsverlauf, nicht bloße Chronologie)
-  6. Entscheidungen (mit Geltungsstatus)
-  7. Offene Punkte & Aufgaben
-  8. Dokumente & Versionen
-  9. Stakeholder
-  10. Feedback & Korrekturen
-- Progressive Offenlegung: Blöcke starten verdichtet, können aufklappen
+┌─ TAB BAR ────────────────────────────────────────────┐
+│  INTELLIGENCE    SUBSTANZ    KONTEXT                  │
+└──────────────────────────────────────────────────────┘
+```
 
-### Phase 4: Dialog-Overlay
+**Tab 1: INTELLIGENCE** (Was passiert? Was muss ich wissen?)
+- Lagebild/Aktueller Stand (verdichteter Fließtext + KPIs)
+- Timeline (Chronologie der Veränderungen -- absorbiert Änderungen)
+- Entscheidungen (mit Geltungsstatus)
+- Offene Punkte & Aufgaben
 
-- Vollbild-Overlay über beide Screens
-- 7 Gesprächsbox-Typen: Wissensbox, Zuordnungsbox, Konfliktbox, Auswahlbox, Eingabebox, Kontextbox, Aktionsbox
-- Boxen: umrandet, gerundet, ruhig-interaktiv, mit 6 Zuständen (vorgeschlagen, aufgeklappt, geändert, bestätigt, verworfen, eskaliert)
-- Dynamische Komposition aus Review Cases – kein Chat, kein Formular
-- Commit-Flow: Bestätigen / Verwerfen / Präzisieren → Schreibt in kanonischen Zustand
+**Tab 2: SUBSTANZ** (Woraus besteht das Projekt inhaltlich?)
+- Themen (inhaltliche Cluster)
+- Dokumente & Versionen
+- Feedback & Korrekturen
 
-### Phase 5: Upload-Pipeline (Intake → Review)
+**Tab 3: KONTEXT** (Wer und was drumherum?)
+- Stakeholder
+- Projektmetadaten (Infrastruktur, Zeitrahmen etc.)
 
-- Upload-Handler mit Dateityp-Erkennung
-- Supabase Storage für Originaldateien
-- Integration mit Unstructured API für Parsing/Partitioning
-- Strukturierte Extraktion: Personen, Orgs, Themen, Entscheidungen, Termine, Aufgaben
-- Proposed Facts in Supabase schreiben
-- Review Cases automatisch generieren
-- Overlay mit komponierten Gesprächsboxen öffnen
+### Konflikte & Änderungen: Neue Patterns
 
-### Phase 6: Graphiti-Integration (Knowledge Graph)
+**Konflikte** werden kein eigenes Panel mehr. Stattdessen:
+- **Konflikt-Banner** im Header: Erscheint nur wenn `konflikte.length > 0`. Rotes, dezentes Banner direkt unter dem Lagetext mit Anzahl + klickbar zum Aufklappen der Details. Null Konflikte = Banner existiert nicht.
+- Im Referenz-Bild sichtbar: "KRITISCH" Badge-Stil, nicht als voller Panel.
 
-- Graphiti als temporalen Wissensmotor anbinden
-- Parsed Documents → Graph Nodes/Edges
-- Themenbezüge, Stakeholder-Beziehungen, Versionshinweise erzeugen
-- Widerspruchserkennung gegen bestehende Fakten
-- Delta-Logik: bestätigen, ergänzen, ersetzen, widersprechen, zusammenführen, verwerfen
-- Ergebnisse als reviewbare Vorschläge nach Supabase zurückschreiben
+**Änderungen** werden aufgelöst:
+- Die Timeline absorbiert alle Änderungen (sie sind bereits dort als Events abgebildet -- aktuell redundant).
+- Timeline-Entries bekommen Delta-Tags (Neu, Ersetzt, Bestätigt) wie bisher in FacetAenderungen.
+- Zusätzlich: Jedes Panel, das kürzlich geändert wurde, bekommt einen subtilen Change-Indicator (kleiner Dot oder Icon-Button im BentoCard-Header), der bei Hover die letzten Änderungen zu diesem Panel zeigt.
 
-### Designprinzipien (durchgängig)
+### Betroffene Dateien
 
-- Extrem reduziert, ruhig, technisch, konzentriert, große typo, frei glassartig mit dynamischen dezenten verläufen
-- Viel Ruhefläche, starke Zentrierung
-- Dunkler/neutral, keine Dashboard-Ästhetik
-- Keine klassische Sidebar als Hauptnavigation
-- Kein Auto-Commit – alles über Review
-- Jede Erkenntnis hat Quelle und Delta
+1. **ProjectScreen.tsx** -- Tab-System mit 3 Tabs, neues Layout pro Tab
+2. **ProjectHeader.tsx** -- Konflikt-Banner (conditional), Stat-Chips bleiben
+3. **FacetKonflikte.tsx** -- Wird zu KonfliktBanner (inline im Header, kein eigenes Panel)
+4. **FacetAenderungen.tsx** -- Entfällt als eigenständiges Panel
+5. **FacetTimeline.tsx** -- Erweitert um Delta-Tags, absorbiert Änderungsinhalte
+6. **BentoCard.tsx** -- Neues `changeIndicator`-Prop für subtilen Änderungsdot
+7. **demoProject.ts** -- Timeline-Entries um Delta-Infos ergänzen
+8. Alle Facetten -- Zuordnung zu Tabs, ggf. kleine Anpassungen
 
-### Entscheidung Knowledge Graph
+### Design-Orientierung (aus den Referenzbildern)
 
-- **Graphiti** wird empfohlen (temporale Beziehungen, Fact Invalidation, Widerspruchslogik als Kern)
-- Cognee verworfen (Risiko der Vermischung von Produktlogik und Engine)
+- Tab-Bar: Zentriert, schlank, uppercase, dezenter Active-Indicator (Linie oder Highlight)
+- Bottom-Bar oder Top-Bar-Tabs im Stil von Bild 2 (INTELLIGENCE / GAPS / DOCUMENTS)
+- Konflikt-Badge: Kompakt, rot akzentuiert, nicht raumgreifend
+- Horizontale Timeline (wie Bild 2: CHRONOLOGY) statt vertikaler Liste
+
