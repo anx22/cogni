@@ -1,16 +1,14 @@
 import { useState } from "react";
 import { demoProject } from "@/data/demoProject";
 import ProjectHeader from "./ProjectHeader";
-import FacetLagebild from "./facets/FacetLagebild";
-import FacetAenderungen from "./facets/FacetAenderungen";
-import FacetKonflikte from "./facets/FacetKonflikte";
-import FacetThemen from "./facets/FacetThemen";
 import FacetTimeline from "./facets/FacetTimeline";
 import FacetEntscheidungen from "./facets/FacetEntscheidungen";
 import FacetOffenePunkte from "./facets/FacetOffenePunkte";
+import FacetThemen from "./facets/FacetThemen";
 import FacetDokumente from "./facets/FacetDokumente";
 import FacetStakeholder from "./facets/FacetStakeholder";
 import FacetFeedback from "./facets/FacetFeedback";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 interface ProjectScreenProps {
   onBack: () => void;
@@ -29,47 +27,84 @@ const ProjectScreen = ({ onBack }: ProjectScreenProps) => {
         ← Entität
       </button>
 
-      {/* Project Header */}
+      {/* Project Header with conditional conflict banner */}
       <ProjectHeader project={p} />
 
-      {/* Bento Grid */}
+      {/* Tab System */}
       <div className="px-8 md:px-12 lg:px-16 xl:px-20 pb-20">
-        {/* Row 1: Lagebild (wide) + Konflikte */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
-          <div className="lg:col-span-2">
-            <FacetLagebild project={p} />
-          </div>
-          <div className="lg:col-span-1">
-            <FacetKonflikte konflikte={p.konflikte} />
-          </div>
-        </div>
+        <Tabs defaultValue="intelligence" className="w-full">
+          <TabsList className="bg-transparent border-b border-border/40 rounded-none h-auto p-0 mb-8 gap-0 w-full justify-start">
+            <TabsTrigger
+              value="intelligence"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none bg-transparent text-muted-foreground/60 data-[state=active]:text-foreground/90 uppercase text-xs tracking-[0.15em] px-6 py-3 transition-all"
+            >
+              Intelligence
+            </TabsTrigger>
+            <TabsTrigger
+              value="substanz"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none bg-transparent text-muted-foreground/60 data-[state=active]:text-foreground/90 uppercase text-xs tracking-[0.15em] px-6 py-3 transition-all"
+            >
+              Substanz
+            </TabsTrigger>
+            <TabsTrigger
+              value="kontext"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none bg-transparent text-muted-foreground/60 data-[state=active]:text-foreground/90 uppercase text-xs tracking-[0.15em] px-6 py-3 transition-all"
+            >
+              Kontext
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Row 2: Änderungen + Timeline */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
-          <FacetAenderungen aenderungen={p.aenderungen} />
-          <FacetTimeline timeline={p.timeline} />
-        </div>
+          {/* INTELLIGENCE */}
+          <TabsContent value="intelligence" className="mt-0 space-y-6">
+            {/* Lagebild as inline briefing */}
+            <div className="rounded-2xl border border-border/60 bg-card/60 backdrop-blur-sm p-6">
+              <p className="text-sm text-foreground/85 leading-relaxed">{p.lagetext}</p>
+            </div>
 
-        {/* Row 3: Themen (full width) */}
-        <div className="mb-5">
-          <FacetThemen themen={p.themen} />
-        </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <FacetTimeline timeline={p.timeline} />
+              <FacetEntscheidungen entscheidungen={p.entscheidungen} />
+            </div>
 
-        {/* Row 4: Entscheidungen + Offene Punkte & Aufgaben */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
-          <FacetEntscheidungen entscheidungen={p.entscheidungen} />
-          <FacetOffenePunkte offenePunkte={p.offenePunkte} aufgaben={p.aufgaben} />
-        </div>
+            <FacetOffenePunkte offenePunkte={p.offenePunkte} aufgaben={p.aufgaben} />
+          </TabsContent>
 
-        {/* Row 5: Dokumente + Stakeholder + Feedback */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          <FacetDokumente dokumente={p.dokumente} />
-          <FacetStakeholder stakeholder={p.stakeholder} />
-          <FacetFeedback feedback={p.feedback} korrekturen={p.korrekturen} />
-        </div>
+          {/* SUBSTANZ */}
+          <TabsContent value="substanz" className="mt-0 space-y-6">
+            <FacetThemen themen={p.themen} />
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <FacetDokumente dokumente={p.dokumente} />
+              <FacetFeedback feedback={p.feedback} korrekturen={p.korrekturen} />
+            </div>
+          </TabsContent>
+
+          {/* KONTEXT */}
+          <TabsContent value="kontext" className="mt-0 space-y-6">
+            <FacetStakeholder stakeholder={p.stakeholder} />
+
+            {/* Project Meta */}
+            <div className="rounded-2xl border border-border/60 bg-card/60 backdrop-blur-sm p-6">
+              <h2 className="text-sm font-medium tracking-wide text-foreground/90 uppercase mb-4">Projektdaten</h2>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <MetaItem label="Status" value="Aktiv" />
+                <MetaItem label="Budget" value="210.000 EUR" />
+                <MetaItem label="Nächster Termin" value={p.stats.naechsterTermin} />
+                <MetaItem label="Letzte Änderung" value={p.stats.letzteAenderung} />
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
 };
+
+const MetaItem = ({ label, value }: { label: string; value: string }) => (
+  <div>
+    <p className="text-xs text-muted-foreground/50 mb-1">{label}</p>
+    <p className="text-sm text-foreground/85 font-medium">{value}</p>
+  </div>
+);
 
 export default ProjectScreen;
