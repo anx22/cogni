@@ -1,121 +1,132 @@
-## Audit: Was sich durch v2 ändert
-
-### Substanzielle Verschiebungen gegenüber v1
 
 
-| Bereich                   | v1 (alt)                                                               | v2 (neu)                                                                                                                                        | Auswirkung                                                    |
-| ------------------------- | ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| Projektscreen-Architektur | 10 gleichrangige Facetten / 3 Tabs (Intelligence / Substanz / Kontext) | **4 feste Rollen**: Lage, Handlungsbedarf, **Verlauf**, Substanz                                                                                | Tab-Modell ist obsolet. Neuer Aufbau pro Rolle.               |
-| Handlungsbedarf           | existiert nicht als Konzept                                            | **operatives Zentrum**, vereint offene Punkte, Aufgaben, unbestätigte Entscheidungen, Konflikte, Gaps, Dependencies, arbeitsrelevantes Feedback | Komplett neue Hauptkomponente, ersetzt mehrere Einzelfacetten |
-| Konflikte                 | eigenes Panel / Banner                                                 | kein eigenes Panel, sondern **Banner in Lage + Marker in Handlungsbedarf + Ereignis im Verlauf**                                                | Konfliktbox/Facet-Logik wird neu eingebettet                  |
-| Änderungen                | eigenes Panel                                                          | **existiert nicht separat**, vollständig im Verlauf                                                                                             | bereits in letzter Iteration entfernt — bestätigt             |
-| Stakeholder               | eigener Tab "Kontext"                                                  | **nur Header-Material**, keine Hauptfläche                                                                                                      | FacetStakeholder als Hauptpanel weg                           |
-| Themen                    | gleichrangige Karten                                                   | echte **Drilldown-Einstiege** in Substanz                                                                                                       | Karten-Logik überdenken                                       |
-| Entscheidungen            | eigenes Panel mit allen Status                                         | **nur offen/kritisch/richtungsprägend** stehen separat; bestätigte gehören in Verlauf                                                           | Aufteilung nötig                                              |
-| Universeller Input        | Dropzone für Dateien                                                   | **ein Modul für Datei + Text + Paste + Link + Sprache + Antworten**                                                                             | Entity-Screen-Input erweitern                                 |
-| Gap Signals               | nicht modelliert                                                       | **eigene Objektklasse + Kernlogik**                                                                                                             | Datenmodell-Lücke                                             |
-| Dependency Signals        | nicht modelliert                                                       | **eigene Relationsklasse** (blockiert durch / wartet auf / hängt ab von)                                                                        | Datenmodell-Lücke                                             |
-| Outcome Signal            | nicht modelliert                                                       | **minimales Zielbild** pro Projekt (Erfolgskriterium / No-Go)                                                                                   | Datenmodell-Lücke                                             |
-| Dialogboxen               | 7 Typen                                                                | **8 Typen** (Gap-Box neu)                                                                                                                       | Phase 4 anpassen                                              |
-| Inhaltliche Regel         | gleichlaute Bento-Kacheln                                              | "Zustand, Arbeit, Verlauf, Substanz dürfen nie gleichrangig dargestellt werden"                                                                 | aktuelle UI verstößt direkt dagegen                           |
+## Phase 3.5 — Sweeping Rebuild Projekt-Screen
 
+### Strategie: Tabula rasa
 
-### Was bleibt unverändert
+Komplettes Löschen aller bisherigen Projekt-Screen-Komponenten. Neuaufbau strikt nach Vier-Rollen-Modell. Keine Bento-Logik, keine Tabs, keine gleichrangigen Facetten.
 
-- Drei Außenmodi (Entität / Projekt / Overlay)
-- Lovable + Supabase + Unstructured + Graphiti/Cognee Stack
-- Review-vor-Commit, Provenance, Delta-Logik
-- Designhaltung (ruhig, technisch, dunkel, glasartig)
-- Knowledge-Graph-Entscheidung Graphiti vs. Cognee weiterhin offen (war in v1 als entschieden markiert — **Korrektur nötig**)
+### Lösch-Liste
 
-### Was das für unseren Entwicklungsstand bedeutet
+```
+src/components/project/BentoCard.tsx
+src/components/project/ProjectHeader.tsx
+src/components/project/ProjectScreen.tsx
+src/components/project/facets/  (gesamter Ordner)
+```
 
-**Phase 0 (Doku):** Inputs müssen versioniert werden, Doku neu geschrieben.
+### Neue Struktur
 
-**Phase 1 (Entity-Screen):** Im Kern okay. Dropzone muss zum **universellen Input** ausgebaut werden (Text, Paste, Link, Sprache). Nicht jetzt — später.
+```
+src/components/project/
+  ProjectScreen.tsx          ← Orchestrator, vertikaler Flow
+  LageZone.tsx               ← Header-Region (immer sichtbar)
+  HandlungsbedarfList.tsx    ← Operatives Zentrum
+  VerlaufFeed.tsx            ← Ereignis-Chronologie
+  SubstanzSection.tsx        ← Themen + Dokumente
 
-**Phase 2 (Datenmodell):** **Lücken**. Es fehlen:
+  shared/
+    ConflictBanner.tsx       ← in LageZone eingebettet
+    ActionItem.tsx           ← Zeile in HandlungsbedarfList
+    EventEntry.tsx           ← Zeile in VerlaufFeed
+    SourceMarker.tsx         ← einheitlicher Provenance-Token
+    DeltaTag.tsx             ← neu/ersetzt/bestätigt/widersprochen
+    ObjectToken.tsx          ← Termin/Entscheidung/Konflikt/Dok/Thema/Gap/Blocker
+```
 
-- `gap_signals` (eigene Tabelle)
-- `dependencies` (eigene Relationsklasse)
-- `outcome_signals` / Zielbild pro Projekt
-- `dialog_sessions` (separat von review_sessions, falls gewünscht)
-- Box-Typ-Enum braucht `gap_box`
+### Layout-Hierarchie (vertikal, kein Grid-Gleichgewicht)
 
-**Phase 3 (Projekt-Screen):** **Größter Bruch**. Die aktuelle Tab-Struktur (Intelligence/Substanz/Kontext) widerspricht dem Vier-Rollen-Modell. Komplett neu aufzubauen: (alten code löschen, sweeping, komplett neuaufbauen, fresh take)
+```text
+┌─────────────────────────────────────────────┐
+│ LAGE                                         │  ← visuell dominant, ruhig
+│ Name + Lagetext + Chips + Konflikt-Banner    │
+│ + nächster Termin + letzte Änderung +        │
+│ Stakeholder-Zahl + Zielbild                  │
+├─────────────────────────────────────────────┤
+│ HANDLUNGSBEDARF                              │  ← stärkste Statusmarker
+│ Gruppen: entscheiden / klären / umsetzen /   │
+│ prüfen — priorisierte Liste, expandierbar    │
+├─────────────────────────────────────────────┤
+│ VERLAUF                                      │  ← ruhiger, gefiltert
+│ Ereignisfeed mit Typfiltern + Delta-Tags     │
+├─────────────────────────────────────────────┤
+│ SUBSTANZ                                     │  ← tieferer Drilldown
+│ Themencluster + Dokumentlisten               │
+└─────────────────────────────────────────────┘
+```
 
-- Lage-Header (statt aktuellem Header + separates Lagebild)
-- **Handlungsbedarf** als priorisierte, gruppierte Liste (entscheiden / klären / umsetzen / prüfen) — neue Komponente
-- **Verlauf** als Ereignisfeed mit Filtern (übernimmt Timeline + bestätigte Entscheidungen + Konfliktereignisse + Uploads)
-- **Substanz** als Themen-Drilldown + Dokumente
-- Stakeholder verschwindet aus Hauptfläche, sitzt im Header
-- Konflikt-Banner in Lage bleibt, Konflikte als Marker in Handlungsbedarf
+Keine gleichlauten Bento-Kacheln. Jede Rolle hat eigene visuelle Sprache:
+- **Lage**: dichte Headerfläche, minimal Border, größere Typo
+- **Handlungsbedarf**: priorisierte Liste mit Statusmarkern, Quick-Actions, expandierbare Detailzeilen
+- **Verlauf**: Feed mit linker Zeitlinie, kleinere Typo, Filter-Chips oben
+- **Substanz**: Themencluster als große Drilldown-Karten + saubere Dokumentliste
 
-**Phase 4 (Overlay):** Plan bleibt valide, +1 Box-Typ (Gap-Box).
+### Demo-Daten erweitern (`demoProject.ts`)
 
-**Phase 5/6 (Upload, Graphiti):** Unverändert in der Substanz, Graphiti-Entscheidung ist laut v2 wieder offen.
+Hinzufügen:
+- `gaps`: 2-3 Gap Signals (z.B. "Performance-Anforderung fehlt", "Migrations-Cutoff unklar") mit `wirkung`, `betrifft`, `lebensdauer`
+- `dependencies`: 2-3 Abhängigkeiten (`typ`: blockiert_durch | wartet_auf | hängt_ab_von, `quelle`, `ziel`)
+- `outcome`: ein Zielbild-Objekt (`erfolgskriterium`, `nogos[]`)
+- Entscheidungen aufteilen: nur offene/kritische bleiben in Handlungsbedarf-Quelle, bestätigte fließen in Verlauf
+- Handlungsbedarf-Items bekommen `arbeitsmodus`-Feld (entscheiden/klären/umsetzen/prüfen) und optional `blocker`-Marker
 
----
+### HandlungsbedarfList — Detail
 
-## Plan: Versionierung + Doku-Reset + Plan-Reset
+- Vereinheitlichte Item-Struktur: alle Quellen (offene Punkte, Aufgaben, offene Entscheidungen, Konflikte, Gaps, Blocker, Arbeits-Feedback) werden zu einem `ActionItem` normalisiert
+- Gruppierung nach Arbeitsmodus mit kleinen Section-Headern
+- Pro Item: Titel, Objekt-Token (Typ-Indikator), Verantwortlich/Frist/Quelle, Status-Marker, Quick-Actions (entscheiden/klären/inline-antworten/öffnen)
+- Expandierbare Detailzeile statt Vollpanel
+- Konflikte erscheinen hier als Marker-Items (nicht als eigenes Panel) — Banner bleibt nur in Lage
 
-### Schritt 1 — Inputs versionieren
+### VerlaufFeed — Detail
 
-- `docs/input/veraltet/` anlegen
-- Alte Inputs verschieben: `00-06-PRODUKTKERN.md`, `07-09-TECH-UND-ROADMAP.md`, `08-DESIGN-UND-UI-SPECS.md` → `docs/input/veraltet/`
-- Neue Inputs aus User-Uploads nach `docs/input/` kopieren als kanonisch (gleiche Dateinamen, ohne "2"-Suffix)
+- Chronologisch absteigend, gruppiert nach Woche
+- Typfilter-Chips: Alle / Änderungen / Entscheidungen / Konflikte / Uploads / Milestones
+- Pro Eintrag: Datum, Delta-Tag, Inhalt, Quelle (SourceMarker), betroffenes Objekt
+- Vertikale Zeitlinie links als visueller Anker
 
-### Schritt 2 — Drei Doku-Files neu schreiben
+### SubstanzSection — Detail
 
-- `docs/produkt-gesamt.md` — komplett neu auf Basis v2: Vier-Rollen-Modell, Gap/Dependency/Outcome, universeller Input, 8 Box-Typen
-- `docs/implementierung-aktuell.md` — aktualisierter Audit-Stand: was steht, was bricht, was bleibt, Korrektur Graphiti-Status auf "offen"
-- `docs/geplant.md` — neuer Plan reflektiert v2 (siehe Schritt 4)
+- Themen als echte Drilldown-Einstiege (nicht Karten-Wand): pro Thema Headline + Kurzbeschreibung + Counts + Hover-Detail
+- Darunter Dokumentliste mit Versions-Hinweisen, optional nach Thema gruppiert
 
-### Schritt 3 — Memory aktualisieren
+### Shared-Komponenten — einheitliche Tokens (Spec 5.7)
 
-- `mem://index.md` Core anpassen: "Vier Rollen statt Bento-Facetten", Graphiti-Entscheidung als offen markieren
-- `mem://features/produkt-prinzipien` ergänzen: Gap, Dependency, Outcome, universeller Input
-- `mem://features/entscheidungen` korrigieren: Graphiti vs. Cognee wieder offen
+- **SourceMarker**: kleines Quellen-Pill, klickbar, einheitlich überall
+- **DeltaTag**: farbcodierte Mini-Tags für neu/ersetzt/bestätigt/widersprochen
+- **ObjectToken**: Mini-Icon+Label für Objekttypen (Termin, Entscheidung, Konflikt, Dok, Thema, Gap, Blocker)
 
-### Schritt 4 — Neue Roadmap (`geplant.md`)
+### Designhaltung
 
-**Phase 3.5 — Projekt-Screen Reset (nächster Schritt):**
+- Vertikaler Lese-Flow, viel Ruhefläche zwischen den vier Zonen
+- Lage: backdrop-blur + dezenter Gradient
+- Handlungsbedarf: stärkster Kontrast (operativ)
+- Verlauf: gedämpfter
+- Substanz: zurückhaltend, mehr Whitespace
+- Konsistente Inneneinheiten, Typo, Border-Sprache
 
-- bestehende Strukturen entfernen -> Neu Bauen, fresh take
-- vier Rollen umsetzen: Lage / Handlungsbedarf / Verlauf / Substanz
-- neue Komponenten:
-  - `LageZone` (Header mit Lagetext, Chips, Konflikt-Banner, nächster Termin, letzte Änderung, Meta inkl. Stakeholder-Zahl)
-  - `HandlungsbedarfList` (priorisierte Liste, gruppierbar entscheiden/klären/umsetzen/prüfen, Quick-Actions, Blocker-Marker, Inline-Antwort)
-  - `VerlaufFeed` (chronologischer Ereignisfeed mit Typfiltern + Delta-Tags)
-  - `SubstanzSection` (Themen-Drilldown + Dokumentliste mit Versionen)
-- Demo-Daten erweitern um Gap/Dependency/Outcome-Beispiele
-- alte Facetten-Komponenten entfernen oder neu zugeordnet einbetten
+### Was bleibt
 
-**Phase 2.5 — Datenmodell-Erweiterung (Migration):**
+- `ProjectScreen` als Top-Level mit `onBack`-Prop
+- `demoProject.ts` als Datenquelle (erweitert)
+- Index.tsx Navigation unverändert
+- Index.tsx Designhaltung (dunkel, glasartig)
 
-- Tabellen `gap_signals`, `dependencies`, `outcome_signals`
-- Enum `box_type` um `gap_box` erweitern
-- ggf. `dialog_sessions`
+### Was nicht in dieser Phase
 
-**Phase 4 — Overlay (unverändert, +Gap-Box):** wie geplant.
+- Datenmodell-Migration (Phase 2.5, separat)
+- Echte Backend-Anbindung
+- Overlay-Trigger (Phase 4)
 
-**Phase 5 — Universeller Input:** Entity-Dropzone ausbauen auf Text/Paste/Link/Sprache. (hier vorher genauer fragen nach präziser ausgestaltung)
+### Reihenfolge der Umsetzung
 
-**Phase 6 — Upload-Pipeline + Unstructured:** wie bisher.
+1. Demo-Daten erweitern (Gaps, Dependencies, Outcome, Arbeitsmodus)
+2. Shared-Tokens bauen (SourceMarker, DeltaTag, ObjectToken)
+3. LageZone
+4. HandlungsbedarfList
+5. VerlaufFeed
+6. SubstanzSection
+7. ProjectScreen-Orchestrator
+8. Alte Dateien löschen
+9. `docs/implementierung-aktuell.md` aktualisieren
 
-**Phase 7 — Knowledge-Graph-Entscheidung + Integration:** Graphiti  ist entschieden!,  anbinden.
-
-### Schritt 5 — Audit-Notiz im implementierung-aktuell.md
-
-Dedizierter Abschnitt "Bruchstellen durch v2-Inputs" mit Tabelle aus diesem Audit, damit nachvollziehbar ist, warum die nächste UI-Iteration so radikal wird.
-
-
-
-### Betroffene Dateien
-
-- verschieben: 3× `docs/input/*.md` → `docs/input/veraltet/`
-- neu erstellen: 3× `docs/input/*.md` (aus User-Uploads)
-- überschreiben: `docs/produkt-gesamt.md`, `docs/implementierung-aktuell.md`, `docs/geplant.md`
-- aktualisieren: `mem://index.md`, `mem://features/produkt-prinzipien`, `mem://features/entscheidungen`
-
-Keine Code- oder DB-Änderungen in diesem Schritt — reine Doku-/Memory-Synchronisation und Audit. Code-Reset des Projekt-Screens kommt in der darauffolgenden Iteration nach deiner Freigabe.
