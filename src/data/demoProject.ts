@@ -1,30 +1,308 @@
-// Demo-Daten für den Projekt-Screen (Phase 3, UI-First)
+// Demo-Daten für den Projekt-Screen (Phase 3.5, Vier-Rollen-Modell)
+
+export type Arbeitsmodus = "entscheiden" | "klaeren" | "umsetzen" | "pruefen";
+export type ObjektTyp =
+  | "termin"
+  | "entscheidung"
+  | "konflikt"
+  | "dokument"
+  | "thema"
+  | "gap"
+  | "blocker"
+  | "aufgabe"
+  | "offener_punkt"
+  | "feedback";
+
+export type DeltaTyp = "neu" | "ersetzt" | "bestaetigt" | "widersprochen";
 
 export const demoProject = {
   id: "demo-1",
   name: "Redesign Kundenportal",
   status: "active",
-  description: "Komplette Neugestaltung des B2B-Kundenportals mit Fokus auf Self-Service, Dashboards und automatisierte Reporting-Funktionen.",
+  description:
+    "Komplette Neugestaltung des B2B-Kundenportals mit Fokus auf Self-Service, Dashboards und automatisierte Reporting-Funktionen.",
 
-  // Lagebild
-  lagetext: "Das Projekt steht vor der finalen Designfreigabe. Zwei Konflikte blockieren die Migration der Bestandsdaten. Die Timeline wurde durch einen neuen Stakeholder-Wunsch um 2 Wochen verschoben. Drei Entscheidungen warten auf Bestätigung.",
+  lagetext:
+    "Das Projekt steht vor der finalen Designfreigabe. Zwei Konflikte blockieren die Migration der Bestandsdaten. Die Timeline wurde durch einen neuen Stakeholder-Wunsch um 2 Wochen verschoben. Drei Entscheidungen warten auf Bestätigung.",
+
+  outcome: {
+    erfolgskriterium:
+      "Self-Service-Quote von 70% innerhalb 3 Monaten nach Go-Live, Reporting-Latenz < 2s.",
+    nogos: [
+      "Kein Daten-Verlust bei Migration",
+      "Keine Funktionsregression gegenüber Altportal",
+    ],
+  },
 
   stats: {
     konflikte: 2,
-    offenePunkte: 5,
-    entscheidungenOffen: 3,
-    themen: 8,
-    dokumente: 14,
+    handlungsbedarf: 9,
     stakeholder: 6,
     letzteAenderung: "vor 2 Stunden",
     naechsterTermin: "18. April 2026",
+    budget: "210.000 EUR",
   },
 
   konflikte: [
-    { id: "k1", typ: "deadline", title: "Go-Live Termin widersprüchlich", beschreibung: "Mail vom PM nennt 15. Mai, Steering-Protokoll sagt 1. Juni.", faktA: "Go-Live: 15. Mai 2026 (Mail Thomas Berger)", faktB: "Go-Live: 1. Juni 2026 (Protokoll Steering)", status: "offen" },
-    { id: "k2", typ: "decision", title: "Migrationsstrategie unklar", beschreibung: "Zwei konkurrierende Ansätze: Big Bang vs. Phasenweise.", faktA: "Big-Bang-Migration empfohlen (Techteam)", faktB: "Phasenweise Migration gefordert (Fachseite)", status: "offen" },
+    {
+      id: "k1",
+      typ: "deadline" as const,
+      title: "Go-Live Termin widersprüchlich",
+      beschreibung: "Mail vom PM nennt 15. Mai, Steering-Protokoll sagt 1. Juni.",
+      faktA: "Go-Live: 15. Mai 2026 (Mail Thomas Berger)",
+      faktB: "Go-Live: 1. Juni 2026 (Protokoll Steering)",
+      status: "offen",
+    },
+    {
+      id: "k2",
+      typ: "decision" as const,
+      title: "Migrationsstrategie unklar",
+      beschreibung: "Zwei konkurrierende Ansätze: Big Bang vs. Phasenweise.",
+      faktA: "Big-Bang-Migration empfohlen (Techteam)",
+      faktB: "Phasenweise Migration gefordert (Fachseite)",
+      status: "offen",
+    },
   ],
 
+  // Gap Signals — fehlende Information mit Wirkung
+  gaps: [
+    {
+      id: "g1",
+      titel: "Performance-Anforderung fehlt",
+      wirkung: "Architekturentscheidung Caching/CDN nicht treffbar",
+      betrifft: "API-Integration, Reporting",
+      lebensdauer: "seit 6 Tagen offen",
+    },
+    {
+      id: "g2",
+      titel: "Migrations-Cutoff unklar",
+      wirkung: "Test-Strategie und Fallback-Plan blockiert",
+      betrifft: "Datenmigration",
+      lebensdauer: "seit 3 Tagen offen",
+    },
+    {
+      id: "g3",
+      titel: "DSGVO-Auftragsverarbeitung mit Agentur ungeklärt",
+      wirkung: "Vertragsabschluss verzögert sich",
+      betrifft: "Rechtliches",
+      lebensdauer: "seit 9 Tagen offen",
+    },
+  ],
+
+  // Dependency Signals
+  dependencies: [
+    {
+      id: "dep1",
+      typ: "blockiert_durch" as const,
+      quelle: "Datenmigration",
+      ziel: "Konflikt: Migrationsstrategie",
+      beschreibung: "Migration kann nicht starten, bevor Strategie steht.",
+    },
+    {
+      id: "dep2",
+      typ: "wartet_auf" as const,
+      quelle: "API-Architektur",
+      ziel: "Performance-Anforderung",
+      beschreibung: "Caching-Layer hängt an Latenzziel.",
+    },
+    {
+      id: "dep3",
+      typ: "haengt_ab_von" as const,
+      quelle: "Go-Live",
+      ziel: "Schulungstermine Endnutzer",
+      beschreibung: "Rollout setzt geschulte Power-User voraus.",
+    },
+  ],
+
+  // Handlungsbedarf — normalisierte ActionItems mit Arbeitsmodus
+  handlungsbedarf: [
+    {
+      id: "h1",
+      arbeitsmodus: "entscheiden" as Arbeitsmodus,
+      objektTyp: "konflikt" as ObjektTyp,
+      titel: "Go-Live Termin festlegen",
+      beschreibung: "15. Mai vs. 1. Juni — Klärung mit Steering nötig.",
+      verantwortlich: "Thomas Berger",
+      frist: "20.04.2026",
+      quelle: "Konflikt #k1",
+      blocker: true,
+    },
+    {
+      id: "h2",
+      arbeitsmodus: "entscheiden" as Arbeitsmodus,
+      objektTyp: "konflikt" as ObjektTyp,
+      titel: "Migrationsstrategie wählen",
+      beschreibung: "Big-Bang vs. phasenweise — beide Optionen geprüft.",
+      verantwortlich: "Jan Krüger",
+      frist: "22.04.2026",
+      quelle: "Konflikt #k2",
+      blocker: true,
+    },
+    {
+      id: "h3",
+      arbeitsmodus: "klaeren" as Arbeitsmodus,
+      objektTyp: "gap" as ObjektTyp,
+      titel: "Performance-Anforderung definieren",
+      beschreibung: "Latenzziel und Concurrent-User-Zahl fehlen.",
+      verantwortlich: "Dr. Anna Weber",
+      frist: null,
+      quelle: "Gap #g1",
+      blocker: false,
+    },
+    {
+      id: "h4",
+      arbeitsmodus: "klaeren" as Arbeitsmodus,
+      objektTyp: "gap" as ObjektTyp,
+      titel: "Migrations-Cutoff bestimmen",
+      beschreibung: "Stichtag für Altdatenstand festlegen.",
+      verantwortlich: null,
+      frist: "25.04.2026",
+      quelle: "Gap #g2",
+      blocker: false,
+    },
+    {
+      id: "h5",
+      arbeitsmodus: "klaeren" as Arbeitsmodus,
+      objektTyp: "offener_punkt" as ObjektTyp,
+      titel: "Mobile-First oder Desktop-First?",
+      beschreibung: "UX-Richtung mit Fachseite abstimmen.",
+      verantwortlich: "Lisa Meier",
+      frist: null,
+      quelle: "UX Design",
+      blocker: false,
+    },
+    {
+      id: "h6",
+      arbeitsmodus: "umsetzen" as Arbeitsmodus,
+      objektTyp: "aufgabe" as ObjektTyp,
+      titel: "Wireframes finalisieren",
+      beschreibung: "Letzte Iteration nach Feedback Steering.",
+      verantwortlich: "Lisa Meier",
+      frist: "20.04.2026",
+      quelle: "UX Design",
+      blocker: false,
+    },
+    {
+      id: "h7",
+      arbeitsmodus: "umsetzen" as Arbeitsmodus,
+      objektTyp: "aufgabe" as ObjektTyp,
+      titel: "API-Dokumentation erstellen",
+      beschreibung: "OpenAPI-Spec für externe Partner.",
+      verantwortlich: "Jan Krüger",
+      frist: "25.04.2026",
+      quelle: "API-Integration",
+      blocker: false,
+    },
+    {
+      id: "h8",
+      arbeitsmodus: "pruefen" as Arbeitsmodus,
+      objektTyp: "feedback" as ObjektTyp,
+      titel: "CTA-Stärke im UX-Prototyp prüfen",
+      beschreibung: "Feedback Dr. Weber: Call-to-Actions zu schwach.",
+      verantwortlich: "Lisa Meier",
+      frist: null,
+      quelle: "Feedback Dr. Weber",
+      blocker: false,
+    },
+    {
+      id: "h9",
+      arbeitsmodus: "pruefen" as Arbeitsmodus,
+      objektTyp: "feedback" as ObjektTyp,
+      titel: "PDF-Export für Reporting verifizieren",
+      beschreibung: "Anforderung aus Mail Berger 09.04.",
+      verantwortlich: null,
+      frist: null,
+      quelle: "Feedback Berger",
+      blocker: false,
+    },
+  ],
+
+  // Verlauf — chronologischer Ereignisfeed mit Delta-Tags
+  verlauf: [
+    {
+      id: "v1",
+      datum: "15.04.2026",
+      delta: "neu" as DeltaTyp,
+      ereignisTyp: "aenderung" as const,
+      inhalt: "Neuer Go-Live-Termin erkannt: 15. Mai 2026",
+      objekt: "Termin",
+      quelle: "Mail von Thomas Berger",
+    },
+    {
+      id: "v2",
+      datum: "14.04.2026",
+      delta: "bestaetigt" as DeltaTyp,
+      ereignisTyp: "entscheidung" as const,
+      inhalt: "Budget 210k EUR bestätigt",
+      objekt: "Entscheidung",
+      quelle: "CFO-Freigabe",
+    },
+    {
+      id: "v3",
+      datum: "13.04.2026",
+      delta: "neu" as DeltaTyp,
+      ereignisTyp: "aenderung" as const,
+      inhalt: "Maria Schulz als Stakeholder hinzugefügt",
+      objekt: "Stakeholder",
+      quelle: "Org-Update PPTX",
+    },
+    {
+      id: "v4",
+      datum: "12.04.2026",
+      delta: "widersprochen" as DeltaTyp,
+      ereignisTyp: "konflikt" as const,
+      inhalt: "Migrationsstrategie-Konflikt erkannt",
+      objekt: "Konflikt",
+      quelle: "Steering Committee Protokoll",
+    },
+    {
+      id: "v5",
+      datum: "12.04.2026",
+      delta: "neu" as DeltaTyp,
+      ereignisTyp: "upload" as const,
+      inhalt: "Steering Committee Protokoll v3 hochgeladen",
+      objekt: "Dokument",
+      quelle: "Dokument-Upload",
+    },
+    {
+      id: "v6",
+      datum: "10.04.2026",
+      delta: "bestaetigt" as DeltaTyp,
+      ereignisTyp: "entscheidung" as const,
+      inhalt: "React als Frontend-Framework bestätigt",
+      objekt: "Entscheidung",
+      quelle: "Review Session #12",
+    },
+    {
+      id: "v7",
+      datum: "08.04.2026",
+      delta: "ersetzt" as DeltaTyp,
+      ereignisTyp: "upload" as const,
+      inhalt: "UX-Prototyp v2 ersetzt v1",
+      objekt: "Dokument",
+      quelle: "Lisa Meier",
+    },
+    {
+      id: "v8",
+      datum: "05.04.2026",
+      delta: "neu" as DeltaTyp,
+      ereignisTyp: "milestone" as const,
+      inhalt: "Konzeptphase abgeschlossen",
+      objekt: "Milestone",
+      quelle: "Projektplan",
+    },
+    {
+      id: "v9",
+      datum: "02.04.2026",
+      delta: "bestaetigt" as DeltaTyp,
+      ereignisTyp: "entscheidung" as const,
+      inhalt: "Hosting auf AWS bestätigt",
+      objekt: "Entscheidung",
+      quelle: "Techteam-Empfehlung",
+    },
+  ],
+
+  // Substanz — Themen mit Drilldown-Counts
   themen: [
     { id: "t1", name: "UX Design", beschreibung: "Wireframes, Prototypen, Usability-Tests", entscheidungen: 2, offenePunkte: 1, dokumente: 4 },
     { id: "t2", name: "Datenmigration", beschreibung: "Bestandsdaten, Mapping, Validierung", entscheidungen: 1, offenePunkte: 2, dokumente: 3 },
@@ -36,41 +314,8 @@ export const demoProject = {
     { id: "t8", name: "Go-Live", beschreibung: "Rollout-Plan, Kommunikation, Fallback", entscheidungen: 1, offenePunkte: 0, dokumente: 0 },
   ],
 
-  // Timeline now absorbs Änderungen — entries include delta info + quelle
-  timeline: [
-    { id: "tl1", datum: "15.04.2026", text: "Neuer Go-Live-Termin erkannt: 15. Mai 2026", typ: "change", quelle: "Mail von Thomas Berger" },
-    { id: "tl2", datum: "14.04.2026", text: "Budgetanpassung auf 210k bestätigt", typ: "confirm", quelle: "CFO-Freigabe" },
-    { id: "tl3", datum: "13.04.2026", text: "Maria Schulz als Stakeholder hinzugefügt", typ: "add", quelle: "Org-Update PPTX" },
-    { id: "tl4", datum: "12.04.2026", text: "Migrationsstrategie-Konflikt erkannt", typ: "conflict", quelle: "Steering Committee Protokoll" },
-    { id: "tl5", datum: "10.04.2026", text: "React-Entscheidung nach Review bestätigt", typ: "confirm", quelle: "Review Session #12" },
-    { id: "tl6", datum: "08.04.2026", text: "UX-Prototyp v2 hochgeladen", typ: "add", quelle: "Lisa Meier" },
-    { id: "tl7", datum: "05.04.2026", text: "Steering Committee Protokoll verarbeitet", typ: "add", quelle: "Dokument-Upload" },
-  ],
-
-  entscheidungen: [
-    { id: "e1", title: "Frontend-Framework: React", status: "active", entschiedenAm: "10.04.2026", quelle: "Review Session #12", angriffspunkt: null },
-    { id: "e2", title: "Hosting auf AWS", status: "active", entschiedenAm: "02.04.2026", quelle: "Techteam-Empfehlung", angriffspunkt: null },
-    { id: "e3", title: "Go-Live Termin", status: "draft", entschiedenAm: null, quelle: null, angriffspunkt: "Widersprüchliche Angaben" },
-    { id: "e4", title: "Migrationsstrategie", status: "draft", entschiedenAm: null, quelle: null, angriffspunkt: "Zwei konkurrierende Vorschläge" },
-    { id: "e5", title: "Budget 210k EUR", status: "active", entschiedenAm: "14.04.2026", quelle: "CFO-Freigabe", angriffspunkt: null },
-  ],
-
-  offenePunkte: [
-    { id: "op1", title: "Datenmapping für Altdaten klären", status: "open", projekt: "Datenmigration" },
-    { id: "op2", title: "Performance-Anforderungen definieren", status: "open", projekt: "API-Integration" },
-    { id: "op3", title: "Mobile-First oder Desktop-First?", status: "open", projekt: "UX Design" },
-    { id: "op4", title: "Reporting-Frequenz abstimmen", status: "open", projekt: "Reporting" },
-    { id: "op5", title: "Validierungsregeln für Import", status: "open", projekt: "Datenmigration" },
-  ],
-
-  aufgaben: [
-    { id: "au1", title: "Wireframes finalisieren", status: "in_progress", zugewiesen: "Lisa Meier", faellig: "20.04.2026" },
-    { id: "au2", title: "API-Dokumentation erstellen", status: "open", zugewiesen: "Jan Krüger", faellig: "25.04.2026" },
-    { id: "au3", title: "Testdaten generieren", status: "open", zugewiesen: null, faellig: null },
-  ],
-
   dokumente: [
-    { id: "d1", name: "Steering Committee Protokoll v3", typ: "docx", version: 3, datum: "12.04.2026", thema: "Go-Live" },
+    { id: "d1", name: "Steering Committee Protokoll", typ: "docx", version: 3, datum: "12.04.2026", thema: "Go-Live" },
     { id: "d2", name: "UX-Prototyp Kundenportal", typ: "pptx", version: 2, datum: "08.04.2026", thema: "UX Design" },
     { id: "d3", name: "Migrationsstrategie Vergleich", typ: "pdf", version: 1, datum: "10.04.2026", thema: "Datenmigration" },
     { id: "d4", name: "API-Schnittstellenspezifikation", typ: "pdf", version: 1, datum: "05.04.2026", thema: "API-Integration" },
@@ -84,15 +329,5 @@ export const demoProject = {
     { id: "s4", name: "Dr. Anna Weber", rolle: "Fachbereich", org: "Vertrieb" },
     { id: "s5", name: "Maria Schulz", rolle: "Projektsteuerung", org: "PMO" },
     { id: "s6", name: "Ext. Partner", rolle: "Implementierung", org: "Agentur Digitalis" },
-  ],
-
-  feedback: [
-    { id: "f1", inhalt: "UX-Prototyp braucht stärkere Call-to-Actions", ziel: "UX-Prototyp Kundenportal", autor: "Dr. Anna Weber", datum: "11.04.2026" },
-    { id: "f2", inhalt: "Datenmigration sollte in 3 Phasen erfolgen", ziel: "Migrationsstrategie", autor: "Jan Krüger", datum: "13.04.2026" },
-    { id: "f3", inhalt: "Reporting muss auch PDF-Export unterstützen", ziel: "Reporting", autor: "Thomas Berger", datum: "09.04.2026" },
-  ],
-
-  korrekturen: [
-    { id: "c1", text: "Budgetrahmen korrigiert: 180k → 210k", vorher: "180.000 EUR", nachher: "210.000 EUR", datum: "14.04.2026" },
   ],
 };
