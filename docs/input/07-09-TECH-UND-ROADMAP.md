@@ -19,9 +19,11 @@
 - Unstructured liefert strukturierte Dokumentrepräsentationen, aber keine Projektwahrheit.
 - Graphiti oder Cognee bauen Kontext, Relationen, Historie und Retrieval-fähiges Wissen auf.
 - Finaler Projektzustand entsteht erst nach Review und Commit.
-- Graph-/Memory-Layer sind spezialisierte Wissensmotoren, nicht der alleinige Master.
+- Graph-/Memory-Layer sind spezialisierte Wissensmotoren, nicht der Master.
 - Jede relevante Änderung braucht Quelle, Zeitbezug und Commit-Historie.
-- Die UI darf nie direkt aus Rohdaten oder Toolantworten gebaut werden.
+- Die UI wird nie direkt aus Rohdaten oder Toolantworten gebaut.
+- Das System modelliert rekonstruierte Lage, Unsicherheit und Lücken explizit.
+- Direkte Nutzereingaben sind gleichwertige Inputs neben Dateien.
 
 ---
 
@@ -30,9 +32,10 @@
 ### Lovable
 Verantwortlich für:
 - Entität-Screen
-- Projektdetailansicht
+- Projektscreen
 - Dialog-Overlay
-- Visualisierung von Review, Deltas und Projektzustand
+- universellen Projekt-Input
+- Visualisierung von Review, Deltas, Lücken und Projektzustand
 
 Nicht verantwortlich für:
 - Dokumentverarbeitung
@@ -45,9 +48,13 @@ Nicht verantwortlich für:
 Verantwortlich für:
 - Storage der Originaldateien
 - strukturierte Kernpersistenz in Postgres
+- Intake Records für Dateien, Text und Sprache
 - Review Sessions und Review Cases
 - Proposed Facts und Change Events
 - Commit Results
+- Gap Signals
+- Dependency Signals
+- Outcome Signals
 - Project-State-Snapshots
 - Realtime-Updates an die App
 
@@ -86,129 +93,156 @@ Cognee ist sinnvoll, wenn ein enger verzahnter Wissensmotor mit weniger Einzelve
 ## 4. Zusammenspiel der Systeme
 
 ### Datenfluss
-1. Nutzer lädt Material in der Entität hoch.
+1. Nutzer liefert Material oder direkten Input in der Entität oder im Projekt.
 2. Originaldatei und Intake-Metadaten werden in Supabase gespeichert.
-3. Unstructured verarbeitet das Material und liefert strukturierte Dokumentelemente zurück.
-4. Diese Dokumentrepräsentationen werden an Graphiti oder Cognee übergeben.
-5. Der Wissensmotor erzeugt oder aktualisiert Themenbezüge, Stakeholder-Beziehungen, Versionhinweise, Widersprüche und weitere kontextuelle Vorschläge.
-6. Diese Ergebnisse werden als reviewbare Vorschläge und Deltas nach Supabase zurückgeschrieben.
-7. Der Nutzer prüft die Fälle im Overlay.
-8. Erst nach Commit wird der kanonische Projektzustand aktualisiert.
-9. Lovable rendert den neuen Zustand aus Supabase.
+3. Dateibasierte Inputs werden durch Unstructured verarbeitet und in strukturierte Dokumentelemente überführt.
+4. Strukturierte Dokumentelemente und direkte Nutzereingaben werden an Graphiti oder Cognee übergeben.
+5. Der Wissensmotor erzeugt oder aktualisiert Themenbezüge, Stakeholder-Beziehungen, Versionhinweise, Widersprüche, Gap Signals, Dependency Signals und weitere kontextuelle Vorschläge.
+6. Diese Vorschläge werden als Proposed Facts, Change Events und Review Cases nach Supabase zurückgeschrieben.
+7. Erst nach Review-Commit wird der kanonische Projektzustand aktualisiert.
+8. Lovable liest den Projektzustand, aktive Reviews und Delta-Informationen aus Supabase und rendert Entität, Projektscreen und Overlay.
 
-### Harte Regel
-Nicht Parser ↔ Graph ↔ App ↔ Datenbank.
+### Harte Kopplungsregel
+Nicht:
+Parser ↔ Graph ↔ DB ↔ App
 
 Sondern:
-**App → Supabase → Unstructured → Graphiti/Cognee → Supabase → App**
-
-Damit bleibt die Kopplung klar und die Zuständigkeit prüfbar.
+App → Supabase als Wahrheit → Unstructured als Dokumentservice → Graphiti/Cognee als Wissensmotor → zurück in Supabase → App
 
 ---
 
-## 5. Kanonische Kernobjekte
+## 5. Kanonischer Datenkern
 
-Diese Objekte müssen sauber in Supabase modelliert sein:
-- Asset
-- Source
-- Parsed Document Output
+Supabase muss mindestens folgende Objektklassen halten:
+- Project
+- Message
+- Document
+- Person
+- Organisation
+- Topic
+- Decision
+- Milestone / Event
+- Task
+- Open Point
+- Dependency
+- Feedback
+- Correction
+- Reference
+- Contradiction
+- Version Link
+- Gap Signal
+- Outcome Signal
 - Proposed Fact
+- Change Event
 - Review Session
 - Review Case
-- Change Event
 - Commit Result
-- Canonical Fact
 - Project State Snapshot
-
-Optionaler Unterbau je nach Wissensmotor:
-- Graph Node / Edge Projection
-- Memory Artifact
-- Retrieval Context Object
-
-Wichtig:
-Das Overlay braucht echte Backend-Objekte. Es darf keine reine UI-Fassade sein.
 
 ---
 
-## 6. Offene Unterbau-Entscheidung
+## 6. Zwingende Kernlogiken
 
-### Option A — Graphiti
-Einsatz, wenn:
-- temporale Beziehungen zentral sind
-- Faktveränderungen und Invalidation wichtig sind
-- der Graph klar als spezialisierter Kontextmotor gedacht ist
+### 6.1 Review vor Commit
+Kein vorgeschlagener Fakt wird ohne Review-Commit kanonisch.
 
-Stärken:
-- saubere zeitliche Wissenslogik
-- stark für Widersprüche, Historie, Versionsbeziehungen
+### 6.2 Projektzustand statt Rohlisten
+Das System baut immer zuerst einen verdichteten Projektzustand und leitet daraus die UI ab.
 
-Risiken:
-- mehr eigene Integrations- und Orchestrierungsarbeit
-- Produktlogik muss stärker außerhalb des Graphen gebaut werden
+### 6.3 Delta-Logik
+Jede neue Information muss gegen Bestehendes geprüft werden:
+- bestätigt
+- ergänzt
+- ersetzt
+- widerspricht
+- bleibt unklar
 
-### Option B — Cognee
-Einsatz, wenn:
-- Graph, Memory, Retrieval und Pipelines enger zusammenliegen sollen
-- weniger Einzelverkabelung gewünscht ist
-- der Wissensmotor stärker als integrierte Engine gedacht ist
+### 6.4 Provenance
+Jeder relevante Fakt braucht:
+- Quelle
+- Zeitpunkt
+- Extraktions- oder Intake-Lauf
+- Review-Entscheidung
+- Commit-Historie
 
-Stärken:
-- integrierter Ansatz
-- näher an einer Knowledge Engine als nur an einer Graph-Schicht
+### 6.5 Gap- und Ambiguity-Logik
+Lücken und Unsicherheit sind eigene Systemzustände:
+- unklar
+- nicht bestätigt
+- Quelle fehlt
+- widersprüchlich
+- wahrscheinlich, aber nicht gesichert
 
-Risiken:
-- Commit- und Review-Modell dürfen nicht in die Engine abrutschen
-- Produktlogik muss trotz Integration klar im Projektmodell verankert bleiben
+### 6.6 Dependency-Logik
+Abhängigkeiten müssen als explizite Relationen geführt werden:
+- blockiert durch
+- wartet auf
+- hängt ab von
+
+### 6.7 Outcome-Placeholder
+Das System hält ein minimales Zielbild:
+- Erfolgskriterium
+- gewünschter Outcome
+- No-Go-Zustand
+
+### 6.8 Universeller Projekt-Input
+Nicht nur Datei-Intake:
+- Freitext
+- kurze Statusupdates
+- Antworten auf Rückfragen
+- Korrekturen
+- Spracheingabe / Sprachmemo
 
 ---
 
 ## 7. Kritische technische Stellen
 
-### 7.1 Wahrheit und Projektion nicht vermischen
-Der größte Architekturfehler wäre, Graphiti oder Cognee als eigentliche Wahrheit zu behandeln.
+### 7.1 Graph nie als Wahrheit behandeln
+Graphiti oder Cognee dürfen niemals der offizielle Projektzustand werden.
 
 Pflicht:
-- Supabase hält den offiziellen Zustand.
-- Graph/Memory hält abgeleiteten Kontext.
+- offizieller Zustand nur in Supabase
+- Graph/Memories nur als spezialisierte Kontextprojektion
 
-### 7.2 Dokumentstruktur nicht mit Projektwahrheit verwechseln
-Unstructured liefert Struktur, aber keine belastbaren Projektentscheidungen.
-
-Pflicht:
-- Zwischen Parsing und Projektfakt liegt immer ein eigener Interpretations- und Review-Schritt.
-
-### 7.3 Review nicht weich machen
-Die Vision verlangt bewusst Kontrolle.
+### 7.2 Unstructured nicht mit Fachlogik verwechseln
+Unstructured liefert Dokumentstruktur, nicht Projektbedeutung.
 
 Pflicht:
-- Nur bestätigte Vorschläge werden committed.
-- Confidence darf Priorisierung steuern, aber keinen finalen Auto-Commit.
+- klare Trennung zwischen Dokumentelement und Projektfakt
+- nachgelagerte Interpretation immer reviewfähig halten
+
+### 7.3 Direkte Inputs und Dokumente gleich behandeln
+Kurze Texte, Antworten und Sprachmemos dürfen kein Nebensystem werden.
+
+Pflicht:
+- gleicher Intake- und Provenance-Standard wie bei Dateien
+- gleiche Delta-, Gap- und Reviewlogik
 
 ### 7.4 Delta-Logik sauber modellieren
-Der Wissensmotor muss nicht nur erkennen, was neu ist, sondern was sich verändert.
+Neue Information darf nie nur angehängt werden.
 
 Pflicht:
-- bestätigen
-- ergänzen
-- ersetzen
-- widersprechen
-- zusammenführen
-- verwerfen
+- jede Änderung gegen bestehende Fakten prüfen
+- Statusübergänge explizit modellieren
+- widersprechende Fakten nicht still überschreiben
 
-Ohne diese Delta-Logik bleibt das System eine Ablage mit semantischen Tags.
-
-### 7.5 Widersprüche als eigene Klasse behandeln
-Widersprüche sind kein Nebeneffekt.
+### 7.5 Gap Signals nicht dekorativ behandeln
+Lücken sind kein UX-Badge, sondern steuernde Information.
 
 Pflicht:
-- Terminwidersprüche
-- Entscheidungswidersprüche
-- Versionskonflikte
-- Projektzuordnungs-Konflikte
+- Gap Signals als eigene Objekte
+- nur operative Lücken lösen Rückfragen aus
+- Gap Signals in Handlungsbedarf überführbar halten
 
-Diese Fälle müssen explizit erzeugt, gespeichert und reviewbar gemacht werden.
+### 7.6 Dependency-Logik ernst nehmen
+Abhängigkeiten sind kein Zusatzfeld.
 
-### 7.6 Themen-Drift verhindern
+Pflicht:
+- Dependencies als eigene Relationsklasse
+- Blocker-Wirkung in Handlungsbedarf sichtbar machen
+- Verlauf und Lage mit Dependencies anreichern
+
+### 7.7 Themen-Drift verhindern
 Themen dürfen nicht unkontrolliert wachsen und sich duplizieren.
 
 Pflicht:
@@ -217,29 +251,27 @@ Pflicht:
 - kontrollierte Zusammenführung
 - klare Quellbezüge je Thema
 
-### 7.7 Provenance nie verlieren
-Jeder relevante Fakt braucht:
-- Quelle
-- Zeitpunkt
-- Extraktionslauf
-- Review-Entscheidung
-- Commit-Historie
-
-Ohne Provenance ist das System fachlich nicht belastbar.
-
 ### 7.8 Overlay und Backend streng koppeln
 Das Dialog-Overlay ist Kernfunktion.
 
-Pflicht:
+Pflichtobjekte:
 - Review Session
 - Review Case
 - Proposed Fact
+- Gap Signal
 - Change Event
 - Commit Result
 
-Wenn diese Objekte fehlen, zerfällt die Gesprächslogik bei realen Änderungen.
+### 7.9 Unvollständigkeit im UI korrekt abbilden
+Die App darf keine falsche Vollständigkeit suggerieren.
 
-### 7.9 Integrationstiefe begrenzen
+Pflicht:
+- rekonstruierte Lage statt absolute Wahrheit anzeigen
+- Unsicherheit und Lücken intern führen
+- operative Rückfragen gezielt auslösen
+- Prioritäten relativ aus verfügbaren Signalen ableiten
+
+### 7.10 Integrationstiefe begrenzen
 Graphiti oder Cognee dürfen nicht das gesamte Produktmodell übernehmen.
 
 Pflicht:
@@ -248,33 +280,47 @@ Pflicht:
 
 ---
 
-## 8. Roadmap
+## 8. Offene Unterbau-Entscheidung
+
+### Option A — Graphiti
+Nutzen, wenn zeitliche Veränderung, Fakt-Invaliderung, Widerspruchspflege und historischer Kontext im Vordergrund stehen.
+
+Stärke:
+- graphisch strenger
+- temporal sauberer
+- passend für Verlauf, Widerspruch und Versionsbeziehungen
+
+Risiko:
+- mehr eigene Integrations- und Orchestrierungsarbeit
+
+### Option B — Cognee
+Nutzen, wenn ein integrierterer Wissensmotor mit Graph, Vector, relationalem Zustand und Pipelines gewünscht ist.
+
+Stärke:
+- enger verzahnt
+- pipeline-näher
+- weniger Einzelverkabelung
+
+Risiko:
+- Produktmodell und Commit-Logik dürfen nicht in Cognee verschwinden
+
+---
+
+## 9. Roadmap
 
 ### V1
 - Lovable als Produktschale
 - Supabase als kanonischer Kern
 - Unstructured als fixer Dokumentservice
 - Graphiti oder Cognee als Knowledge-Unterbau
-- Upload → Parsing → Wissensvorschläge → Review → Commit
-- Projektzustand mit Themen, Entscheidungen, Timeline, Stakeholdern, Dokumenten, Konflikten
+- universeller Projekt-Input
+- Upload/Text/Sprache → Parsing falls nötig → Wissensvorschläge → Review → Commit
+- Projektzustand in vier Rollen: Lage, Handlungsbedarf, Verlauf, Substanz
 - vollständige Provenance und Commit-Historie
+- Gap Signals, Dependency Signals und gezielte Rückfragen
+- minimales Outcome-Signal
 
-### Nicht in V1
-- automatische Mail-Synchronisation
-- autonome Hintergrundverarbeitung ohne Review
-- überkomplexe Agentenkaskaden
-- zusätzliche Memory-SaaS-Schichten ohne klaren Nutzen
-- mehrere konkurrierende Graph-/Memory-Systeme parallel
-
----
-
-## 9. Referenz für die Umsetzung
-
-Beim Coden und Reviewen gilt:
-- zuerst Kernzustand und Objektmodell sauber bauen
-- dann Parsing-Flow und Rückschreibelogik
-- dann Wissensmotor ankoppeln
-- dann Overlay mit echten Review-Objekten verbinden
-- UI immer aus committedem oder reviewbarem Zustand rendern, nie aus losem Tooloutput
-
-Die Kernvision wird technisch nur erfüllt, wenn Review, Provenance, Delta-Logik und Widerspruchsbehandlung von Anfang an korrekt modelliert sind.
+### Später
+- constraint-basierte adaptive Projektscreen-Modi
+- automatische Vorauswahl von Screen-Rezepten je Projektkomplexität
+- breitere Automatisierung für Folgefragen und Lückenschließung

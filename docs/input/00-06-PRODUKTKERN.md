@@ -1,17 +1,17 @@
-# Produktintelligenz v4 — Produktkern
+# Produktintelligenz — Produktkern
 
 ## 0. Kernthese
 
-Produktintelligenz ist eine zentrale Entität, die rohe Projektobjekte aufnimmt, sie projektübergreifend versteht, Veränderungen gegen bestehendes Wissen abgleicht, Widersprüche sichtbar macht und daraus im Dialog mit dem Nutzer einen belastbaren Projektzustand formt.
+Produktintelligenz ist eine zentrale Entität, die rohe Projektobjekte und direkte Nutzereingaben aufnimmt, sie projektübergreifend versteht, gegen bestehendes Wissen abgleicht, Widersprüche und Lücken sichtbar macht und daraus im Dialog mit dem Nutzer einen belastbaren Projektzustand formt.
 
 Das Produkt ist weder klassische Projektmanagement-Software noch Dateiablage noch Graph-Viewer.
 
-Außen gibt es nur drei sichtbare Modi:
-- **Entität-Screen**
-- **Projekt-Screen**
-- **Dialog-Overlay**
+Außen sichtbar sind nur drei Modi:
+- Entität-Screen
+- Projekt-Screen
+- Dialog-Overlay
 
-Innen arbeitet eine agentische Intelligenz mit Parsing-, Matching-, Kontext-, Konflikt- und State-Building-Logik.
+Innen arbeitet eine agentische Intelligenz mit Parsing-, Matching-, Kontext-, Konflikt-, Gap- und State-Building-Logik.
 
 ---
 
@@ -19,33 +19,26 @@ Innen arbeitet eine agentische Intelligenz mit Parsing-, Matching-, Kontext-, Ko
 
 ### 1.1 Sichtbare Außenform
 
-Die App hat zwei Hauptscreens und einen systemweiten Vollbildmodus:
-
 1. **Entität-Screen**  
-   globaler Eingang, Upload, Intake, Verarbeitung, Review-Einstieg
+   globaler Eingang, Upload, direkter Input, Verarbeitung, Review-Einstieg
 
 2. **Projekt-Screen**  
    verdichtete Projektsicht, progressive Offenlegung, keine modulare B2B-Navigation
 
 3. **Dialog-Overlay**  
-   Vollbildmodus für Review, Feedback, Korrektur, Konfliktklärung, Umzuordnung und Präzisierung
+   Vollbildmodus für Review, Feedback, Korrektur, Konfliktklärung, Umzuordnung, Rückfragen und Präzisierung
 
-### 1.2 Produktgefühl
+### 1.2 Harte Produktprinzipien
 
-Der Nutzer soll nicht das Gefühl haben, Daten zu verwalten.  
-Er füttert die Entität.  
-Die Entität verarbeitet, ordnet, vergleicht, markiert und fragt dort nach, wo menschliche Bestätigung nötig ist.
-
-### 1.3 Harte Produktprinzipien
-
-- außen extrem reduziert
-- innen hochstrukturiert
+- außen reduziert, innen strukturiert
 - Review immer vorhanden
 - kein Auto-Commit in den Projektzustand
-- jede relevante Erkenntnis hat Quelle und Delta
-- Feedback und Korrektur sind allgegenwärtig
+- jede relevante Erkenntnis hat Quelle, Zeitbezug und Delta
+- Konflikte sind Kernfunktion
+- Lücken und Unsicherheit werden explizit geführt
+- Feedback und Korrektur sind durchgehende Signale
 - Projektzustand ist wichtiger als Rohdatenlisten
-- Konflikte sind Kernfunktion, keine Nebenfunktion
+- das System zeigt rekonstruierte Lage, nicht absolute Wahrheit
 
 ---
 
@@ -53,16 +46,17 @@ Die Entität verarbeitet, ordnet, vergleicht, markiert und fragt dort nach, wo m
 
 ### 2.1 Entität-Screen
 
-Der Entität-Screen ist kein Dashboard. Er ist der globale operative Eingang in die Projektintelligenz.
+Der Entität-Screen ist globaler Eingang in die Projektintelligenz.
 
 Die Entität ist gleichzeitig:
 - Dropzone
+- universeller Projekt-Input
 - Aktivitätszentrum
 - Identität des Produkts
 - Review-Trigger
 - globaler Zustandsanzeiger
 
-Der Nutzer kann hier hineinwerfen:
+Eingaben:
 - Copy/Paste-Mail
 - `.eml`
 - PDF
@@ -72,30 +66,28 @@ Der Nutzer kann hier hineinwerfen:
 - Notiz
 - Link / Web-Snapshot
 - gemischte Asset-Bundles mit optionalen Metadaten
+- freier Texteingang
+- kurze Statusupdates
+- Antworten auf Rückfragen
+- Sprachmemo / Spracheingabe
 
 ### 2.2 Projekt-Screen
 
-Der Projekt-Screen zeigt nicht Rohmaterial, sondern das Ergebnis der Entitätsarbeit.
+Der Projekt-Screen zeigt nicht Rohmaterial, sondern den aktuell rekonstruierten Projektzustand.
 
-Er beginnt immer mit dem **aktuellen Stand** und entfaltet sich dann in aufklappbare Projektfacetten.
+Er folgt vier festen Rollen:
+- **Lage**
+- **Handlungsbedarf**
+- **Verlauf**
+- **Substanz**
 
-Diese Facetten sind keine Primärnavigation, sondern verdichtete Sichten des Projektzustands:
-- aktueller Stand
-- wichtigste Änderungen
-- Konflikte
-- Themen
-- Timeline
-- Entscheidungen
-- offene Punkte und Aufgaben
-- Dokumente und Versionen
-- Stakeholder
-- Feedback und Korrekturen
+Diese Rollen ersetzen die frühere Gleichrangigkeit vieler Fach-Panels.
 
 ### 2.3 Dialog-Overlay
 
-Das Overlay ist der eigentliche Gesprächsraum zwischen Nutzer und Entität.
+Das Overlay ist der Gesprächsraum zwischen Nutzer und Entität.
 
-Es läuft über beide Hauptscreens und übernimmt:
+Es übernimmt:
 - Review
 - Zuordnungsprüfung
 - Konfliktauflösung
@@ -104,6 +96,7 @@ Es läuft über beide Hauptscreens und übernimmt:
 - manuelle Präzisierung
 - Versionsklärung
 - Commit oder Verwerfung
+- gezielte Rückfragen bei relevanten Lücken
 
 Der Modus ist nicht chatartig. Er ist ein dynamisch komponierter Interaktionsraum aus Gesprächsobjekten.
 
@@ -116,7 +109,7 @@ Der Modus ist nicht chatartig. Er ist ein dynamisch komponierter Interaktionsrau
 Der Dialogmodus ist kein Textchat.  
 Er ist ein semantisch komponierter Gesprächsraum aus einfachen, gerundeten, umrandeten Boxen.
 
-Die Entität baut je nach Fall die passende Kombination aus Informations-, Auswahl-, Kontext- und Aktionsobjekten.
+Die Entität baut je nach Fall die passende Kombination aus Informations-, Auswahl-, Kontext-, Eingabe- und Aktionsobjekten.
 
 ### 3.2 Typische Dialoganlässe
 
@@ -129,94 +122,30 @@ Die Entität baut je nach Fall die passende Kombination aus Informations-, Auswa
 - Dokumentversion ist unklar
 - Thema soll gemerged oder umbenannt werden
 - bestehende Entscheidung wird durch neue Information angegriffen
+- wesentliche Informationslücke blockiert den Projektzustand
+- eine Rückfrage muss direkt beantwortet werden
 
-### 3.3 Archetypische Gesprächsboxen
+### 3.3 Gesprächsboxen
 
-#### Wissensbox
-Zeigt erkannte Erkenntnisse.
-
-Beispiele:
-- neue Entscheidung erkannt
-- Termin erkannt
-- Thema ergänzt
-- offener Punkt erkannt
-- Widerspruch erkannt
-
-#### Zuordnungsbox
-Zeigt, wohin die Entität etwas eingeordnet hat.
-
-Beispiele:
-- diesem Projekt zugeordnet
-- diesem Thema zugeordnet
-- als Version dieses Dokuments erkannt
-
-Ausklappbar und änderbar.
-
-#### Konfliktbox
-Zeigt Kollisionen, Mehrdeutigkeiten oder Unsicherheiten.
-
-Beispiele:
-- neuer Termin widerspricht bestehendem Termin
-- neue Aussage kollidiert mit freigegebener Entscheidung
-- Dokument passt zu mehreren Projekten
-
-#### Auswahlbox
-Erzwingt eine explizite Entscheidung.
-
-Beispiele:
-- Projekt A / Projekt B / neues Projekt
-- bestätigen / verwerfen
-- Dokumentversion / eigenständiges Dokument
-
-#### Eingabebox
-Nimmt kurze manuelle Präzisierungen auf.
-
-Beispiele:
-- Projekt suchen
-- Thema umbenennen
-- Freitext-Korrektur
-- Stakeholder ergänzen
-
-#### Kontextbox
-Zeigt Begründung und Quellenbasis.
-
-Beispiele:
-- erkannt aus Mail vom …
-- Zuordnung basiert auf …
-- Konflikt entsteht durch …
-
-#### Aktionsbox
-Schließt den Fall.
-
-Beispiele:
-- bestätigen
-- abbrechen
-- als neues Thema anlegen
-- mit bestehendem Thema mergen
+- **Wissensbox** — erkannter Sachverhalt
+- **Zuordnungsbox** — Projekt-, Themen- oder Versionszuordnung
+- **Konfliktbox** — Kollision, Mehrdeutigkeit, Unsicherheit
+- **Gap-Box** — fehlende Information mit Auswirkung
+- **Auswahlbox** — explizite Alternativen
+- **Eingabebox** — kurze manuelle Präzisierung oder Antwort
+- **Kontextbox** — Quelle und Begründung
+- **Aktionsbox** — bestätigen, verwerfen, mergen, abbrechen
 
 ### 3.4 Systemobjekte des Dialogs
 
-- **Dialog Session**  
-  komplette Gesprächssitzung zwischen Nutzer und Entität
-- **Review Case**  
-  einzelner Klärungsfall innerhalb einer Session
-- **Gesprächsbox**  
-  kleinste sichtbare Interaktionseinheit
-- **Confidence Signal**  
-  interne Sicherheitseinschätzung für Priorisierung, nie für Auto-Commit
-- **Commit Result**  
-  bestätigt, geändert, verworfen, eskaliert
+- Dialog Session
+- Review Case
+- Gesprächsbox
+- Confidence Signal
+- Gap Signal
+- Commit Result
 
-### 3.5 Zustände einer Box
-
-- vorgeschlagen
-- aufgeklappt
-- geändert
-- bestätigt
-- verworfen
-- eskaliert
-
-### 3.6 Harte Dialogregel
+### 3.5 Harte Dialogregel
 
 Nichts wird endgültig in den Projektzustand übernommen, bevor es durch einen Review-Commit gegangen ist.
 
@@ -239,6 +168,7 @@ Nichts wird endgültig in den Projektzustand übernommen, bevor es durch einen R
 - Termin
 - Aufgabe
 - offener Punkt
+- Abhängigkeit
 
 ### 4.3 Querobjekte
 
@@ -247,218 +177,106 @@ Nichts wird endgültig in den Projektzustand übernommen, bevor es durch einen R
 - Referenz
 - Widerspruch
 - Versionsbezug
-- Änderungsereignis
+- Gap Signal
+- Outcome Signal
 
 ### 4.4 Aggregat
 
-- aktueller Projektstand
+- aktueller Projektzustand
 
-### 4.5 Besondere Modellentscheidungen
+### 4.5 Systemobjekte
 
-- Feedback und Korrektur sind keine Randnotizen, sondern durchgehende Querobjekte und Dialogtreiber.
-- Ein Dokument kann mehreren Projekten zugeordnet sein.
-- Themen entstehen automatisch, bleiben aber mergebar und umbenennbar.
-- Offener Punkt und Aufgabe bleiben getrennt.
-- Jede relevante Erkenntnis braucht Quelle und Review.
-- Jede Änderung muss als Delta nachvollziehbar sein.
-
----
-
-## 5. Organisationslogik im Projekt
-
-### 5.1 Der Projektzustand ist die Hauptsache
-
-Der Projekt-Screen zeigt zuerst den **aktuellen Stand**. Erst danach entfaltet er die Tiefe.
-
-Der Nutzer soll sofort verstehen:
-- Was ist gerade die Lage?
-- Was hat sich verändert?
-- Was ist kritisch?
-- Was ist entschieden?
-- Was ist offen?
-- Wo gibt es Widersprüche?
-
-### 5.2 Projektfacetten
-
-#### Aktueller Stand
-Verdichtetes Lagebild.
-
-#### Änderungen
-Was wurde neu erkannt, bestätigt, verschoben, ersetzt, verworfen?
-
-#### Konflikte
-Welche Spannungen, Kollisionen oder Unklarheiten bestehen?
-
-#### Themen
-Inhaltliche Cluster mit Quellen, Entscheidungen, Feedback, Korrekturen, offenen Punkten und Dokumenten.
-
-#### Timeline
-Veränderungsverlauf statt bloßer Chronologie.
-
-#### Entscheidungen
-Mit Geltungsstatus, Quelle, Angriffspunkt und Verlauf.
-
-#### Offene Punkte und Aufgaben
-Getrennt, aber nah beieinander.
-
-#### Dokumente und Versionen
-Mit Herkunft, Projektbezug, Themenbezug und Versionslogik.
-
-#### Stakeholder
-Personen, Organisationen, Rollen, Beziehungen.
-
-#### Feedback und Korrekturen
-Querliegender Layer über das gesamte Projekt.
-
-### 5.3 Zeit- und Gültigkeitslogik
-
-Bei konkurrierenden Informationen gilt:
-1. formal bindend
-2. explizit freigegeben
-3. neueste
-4. wahrscheinlichste
+- Review Session
+- Review Case
+- Proposed Fact
+- Change Event
+- Commit Result
+- Project State Snapshot
 
 ---
 
-## 6. Entitätslogik
+## 5. Projektzustand
 
-Die Entität soll sich nicht wie starre App-Logik anfühlen. Sie wirkt wie ein eigenständiges intelligentes Wesen.
+Der Projektzustand ist keine Rohsammlung, sondern eine verdichtete, laufend aktualisierte Sicht auf ein Projekt.
 
-### 6.1 Was die Entität intern tut
+Er enthält:
+- Lagebild
+- Handlungsbedarf
+- Verlauf
+- Substanz
+- Quellenbezug
+- offene Konflikte
+- Unsicherheiten und Lücken
+- Abhängigkeiten
+- minimales Zielbild
 
-1. nimmt Material auf
-2. erkennt Typ, Struktur und Kontext
-3. wählt passende Parsing- und Extraktionspfade
-4. bildet strukturierte Signale
-5. schlägt Projekt- und Themenzuordnungen vor
-6. gleicht neue Signale mit bestehendem Wissen ab
-7. erkennt Konflikte, Überschreibungen, Versionen und Deltas
-8. baut daraus Review Cases
-9. komponiert passende Gesprächsboxen
-10. übernimmt Änderungen erst nach Review-Commit
-11. baut daraus den aktualisierten Projektzustand
+### 5.1 Die vier Rollen des Projektscreens
 
-### 6.2 Wichtige Entitätsfähigkeiten
+#### Lage
+Der obere, immer sichtbare Zustand des Projekts.
 
-- Projektzuordnung
-- Themenbildung und Themenmerge
-- Entscheidungsabgleich
-- Terminabgleich
-- Konflikterkennung
-- Versionserkennung
-- Stakeholder-Erweiterung
-- Feedback- und Korrekturverarbeitung
-- Delta-Erzeugung
-- Projektzustands-Building
+Enthält:
+- kurzer Lagetext
+- kritische Chips
+- nächster harter Termin
+- letzte relevante Änderung
+- Review-Bedarf
+- minimale Metadaten
+- falls vorhanden: Zielbild oder Erfolgskriterium
 
-### 6.3 Was sie nicht sein darf
+Stakeholder und Projektdaten sitzen hier reduziert im Header.
 
-- ein blindes OCR-/Parsing-Frontend
-- ein Chatbot ohne belastbare Objektstruktur
-- ein autonomes Blackbox-System ohne Review
-- eine klassische CRUD-App mit etwas KI darüber
+#### Handlungsbedarf
+Das operative Zentrum.
 
----
-
-## 7. Intelligenz-Pipeline
-
-### 7.1 Intake
-
-Mögliche Eingänge:
-- Copy/Paste-Mail
-- `.eml`
-- PDF
-- PPTX
-- DOCX
-- Bild
-- Notiz
-- Link / Web-Snapshot
-- heterogene Asset-Bundles mit optionalen Metadaten
-
-### 7.2 Preparation
-
-Das Rohmaterial wird lesbar und vergleichbar gemacht.
-
-- Dateityp erkennen
-- Text extrahieren
-- Mail-Thread bereinigen
-- Signaturen und Zitatblöcke reduzieren
-- Hauptinhalt bilden
-- Dokumentmetadaten erfassen
-- Anhänge separieren
-- OCR nur bei Bedarf
-
-### 7.3 Extraction
-
-Aus Inhalt werden strukturierte Signale.
-
-- Personen
-- Organisationen
-- mögliche Projektzuordnung
-- Themen
-- Entscheidungen
-- Termine
-- Aufgaben
+Fasst zusammen:
 - offene Punkte
-- Feedback
-- Korrekturen
-- Referenzen
+- Aufgaben
+- unbestätigte Entscheidungen
+- Feedback und Korrekturen mit Arbeitscharakter
+- Konflikte
+- Informationslücken mit Folgen
+- Abhängigkeiten mit Blocker-Wirkung
 
-### 7.4 Linking
+Arbeitsmodi:
+- entscheiden
+- klären
+- umsetzen
+- prüfen
 
-Neue Signale werden gegen bestehendes Wissen geprüft.
+#### Verlauf
+Die Veränderungs- und Ereignislogik des Projekts.
 
-- Projektkandidaten prüfen
-- Themenbezug prüfen
-- Dokumentversionen erkennen
-- Entscheidungen und Termine abgleichen
-- Konflikte berechnen
-- Stakeholder abgleichen
+Enthält:
+- Timeline
+- Änderungen
+- bestätigte Entscheidungen
+- wichtige Uploads
+- Konfliktereignisse
+- Workshops, Milestones, Freigaben
 
-### 7.5 Review Assembly
+Änderungen existieren nicht als eigenes Panel neben dem Verlauf.
 
-Aus den Signalen und Konflikten werden Review Cases und Gesprächsboxen gebaut.
+#### Substanz
+Die inhaltliche Tiefe des Projekts.
 
-### 7.6 Commit
-
-Nach Nutzerentscheidung werden Änderungen in den kanonischen Zustand übernommen.
-
-### 7.7 Project State Build
-
-Danach wird der aktuelle Projektzustand neu erzeugt.
-
-- Lagebild aktualisieren
-- Timeline ergänzen
-- Themen gewichten
-- Konflikte aktualisieren
-- Relevanz und Priorität neu bestimmen
+Enthält:
+- Themen
+- Dokumente und Versionen
+- Feedback und Korrekturen als Quellenmaterial, falls relevant
 
 ---
 
-## 8. V1-Fokus
+## 6. Inhaltliche Regeln
 
-### Rein in V1
-
-- manueller Intake
-- Upload heterogener Assets
-- Preparation und Parsing
-- strukturierte Extraktion
-- Projektzuordnungsvorschläge
-- immer Review
-- Dialog-Overlay
-- Projektzustands-Building
-- Themen
-- Entscheidungen
-- Timeline
-- Dokumente und Versionen
-- Stakeholder
-- Konflikte
-- Feedback und Korrekturen
-
-### Draußen in V1
-
-- Live-Mail-Sync
-- komplexe Team-Kollaboration
-- autonome Hintergrundimporte ohne Nutzerkontakt
-- überkomplexe Ontologie
-- unkontrollierte Vollautonomie ohne Review
+- Konflikte sind kein normales Panel. Sie sind kritischer Zustand, Banner, Marker oder Alarm.
+- Änderungen existieren nicht separat neben dem Verlauf.
+- Stakeholder und Projektdaten sind nie Hauptfläche.
+- Feedback und Korrekturen sind nur dann eigenständig sichtbar, wenn sie im Projekt dominant sind.
+- Themen sind keine dekorativen Karten. Sie sind echte inhaltliche Einstiege.
+- Entscheidungen stehen nur separat, wenn sie offen, kritisch oder richtungsprägend sind. Bestätigte Entscheidungen gehören in den Verlauf.
+- Abhängigkeiten werden als blockiert durch, wartet auf oder hängt ab von geführt.
+- Handlungsbedarf darf auch Unsicherheit, fehlende Quellen und unbestätigte Punkte enthalten.
+- Die Entität stellt Rückfragen nur dann, wenn Lücken operative Folgen haben.
+- Der Screen wird nach Arbeitsmodus gebaut, nicht nach Ontologie.
+- Constraint-basierte adaptive UI bleibt ein späterer Plan und ist nicht Teil von V1.
