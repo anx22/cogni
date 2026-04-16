@@ -1,11 +1,11 @@
-# Produktintelligenz v4 — Design und UI-Screen-Specs
+# Produktintelligenz — Design und UI-Screen-Specs
 
 ## 1. Designhaltung
 
 Die App darf sich nicht wie Verwaltungssoftware anfühlen.  
 Sie muss wie eine ruhige, konzentrierte, souveräne technische Intelligenz wirken.
 
-Die richtige Richtung ist:
+Richtung:
 - reduziert
 - präzise
 - ruhig
@@ -17,201 +17,262 @@ Keine dichte Dashboard-Wand.
 Keine klassische Sidebar als Hauptgeste.  
 Keine überladene Modulnavigation.
 
-Der Nutzer soll fühlen:
-- hier arbeitet ein zentrales Wesen
-- ich füttere es
-- es versteht Projektkontext
-- es fragt nur dort nach, wo mein Urteil nötig ist
-- ich sehe verdichtete Erkenntnis statt Datenmüll
-
 ---
 
 ## 2. Globale UI-Prinzipien
 
 - viel Ruhefläche
-- starke Zentrierung
 - wenige dominante Elemente
 - progressive Offenlegung
 - jede wichtige Erkenntnis hat Herkunft und Delta
 - Review fühlt sich wie Gespräch an, nicht wie Formulararbeit
 - Projektansichten priorisieren Lage und Veränderung vor Vollständigkeit
 - jede Interaktion wirkt bewusst, nie hektisch
+- die UI zeigt rekonstruierte Lage, nicht behauptete Vollständigkeit
 
 ---
 
 ## 3. Sichtbare Systemlogik
 
 Außen sichtbar sind nur drei Modi:
-- **Entität**
-- **Projekt**
-- **Overlay**
+- Entität
+- Projekt
+- Overlay
 
-Die UI darf keine technischen Schichten verraten.  
-Parsing, Graph, Canonical State, Agentik und Orchestrierung bleiben unsichtbar.
-
-Die Entität ist die sichtbare Verdichtung all dieser inneren Schichten.
+Die UI verrät keine technischen Schichten.  
+Parsing, Graph, Canonical State und Orchestrierung bleiben unsichtbar.
 
 ---
 
 ## 4. Screen 1 — Entität-Screen
 
-## 4.1 Zweck
-
+### 4.1 Zweck
 Globaler Eingang in die Projektintelligenz.
 
-## 4.2 Grundaufbau
-
+### 4.2 Grundaufbau
 Fast leerer Screen.  
 Im Zentrum sitzt die Entität als großer kreisförmiger, lebendiger Kern.
 
 Um sie herum nur wenige sekundäre Zonen:
 - Upload-Hinweis oder Drop-Zustand
+- universeller Input
 - orbitale oder zufließende Asset-Fragmente
 - knappe Statussignale
 - letzter Impact
 - Review-Hinweis
 
-Keine Listenwand. Kein Dateimanager. Kein Toolpanel.
-
-## 4.3 Signatur-Element
-
-### Die Entität
-Ein großer runder Kern zwischen neuronaler Struktur, Resonanzfeld und technischer Maschine.
-
-Funktional ist sie gleichzeitig:
+### 4.3 Signatur-Element
+Die Entität ist gleichzeitig:
 - Dropzone
+- universeller Projekt-Input
 - Aktivitätsanzeige
 - Identität des Produkts
 - Review-Trigger
 - globaler Zustandsanker
 
-## 4.4 Zustände der Entität
+### 4.4 Zustände der Entität
+- Idle
+- Hover / Drag-Over
+- Processing
+- Review Ready
+- Failed / Unclear
 
-### Idle
-Ruhig, leicht lebendig, minimale Bewegung.
+### 4.5 Minimale ergänzende Elemente
+- Input-Hinweis
+- Asset-Orbit
+- Letzter Impact
+- Review-Trigger
+- zurückhaltender Projektzugang
 
-### Hover / Drag-Over
-Magnetische Reaktion. Der Kreis reagiert mit Sog, Fokus oder Aufweitung.
+### 4.6 Universeller Projekt-Input
+Ein einziges Eingabemodul für:
+- Datei
+- freier Text
+- Paste
+- Link
+- Spracheingabe / Sprachmemo
+- kurze Antwort auf Rückfrage
 
-### Processing
-Innere Aktivität steigt. Keine banale Spinner-Logik. Eher Spannungsaufbau, Signalfluss, Verdichtung.
-
-### Review Ready
-Die Entität sammelt sich, ein klarer Übergang in den Dialogmodus entsteht.
-
-### Failed / Unclear
-Kein dramatischer Fehlerzustand. Ruhige Störung mit präziser nächster Aktion.
-
-## 4.5 Minimale ergänzende Elemente
-
-### Input-Hinweis
-Kurzer Mikrohinweis nahe der Entität.
-
-Beispiel:
-- Mail, PDF, PPTX, DOCX, Bilder oder Notizen hier ablegen
-
-### Asset-Orbit
-Neu eingebrachte Objekte erscheinen kurz als orbitale Fragmente oder Zuflüsse.
-
-### Letzter Impact
-Kleine verdichtete Info am Rand.
-
-Beispiele:
-- 1 Konflikt erkannt
-- 2 Themen ergänzt
-- Review für Projekt X bereit
-
-### Review-Trigger
-Ruhiger, klarer CTA in Richtung Overlay.
-
-### Projektzugang
-Sehr zurückhaltende, sekundäre Möglichkeit, in bestehende Projekte zu springen.
-Nicht als dominante Navigation.
+Verhalten:
+- erkennt grob den Eingabetyp
+- schlägt Einordnung vor
+- öffnet nur bei Bedarf den Reviewmodus
 
 ---
 
-## 5. Screen 2 — Projekt-Screen
+## 5. Screen 2 — Projektscreen
 
-## 5.1 Zweck
-
-Sichtbar machen, was die Entität über ein Projekt weiß.
+### 5.1 Zweck
+Sichtbar machen, was die Entität aktuell über ein Projekt weiß.
 
 Nicht als Rohdatenliste, sondern als verdichteter Projektzustand.
 
-## 5.2 Grundaufbau
+### 5.2 Informationsarchitektur
+Der Screen folgt vier festen Rollen:
+- **Lage**
+- **Handlungsbedarf**
+- **Verlauf**
+- **Substanz**
 
-Der Screen beginnt immer mit dem **aktuellen Stand**.  
-Darunter folgen vertikale, aufklappbare Projektfacetten.
+Diese Rollen ersetzen die frühere Gleichrangigkeit vieler Fach-Panels.
 
-Empfohlene Reihenfolge:
-1. aktueller Stand
-2. wichtigste Änderungen
-3. Konflikte
-4. Themen
-5. Timeline
-6. Entscheidungen
-7. offene Punkte und Aufgaben
-8. Dokumente und Versionen
-9. Stakeholder
-10. Feedback und Korrekturen
+### 5.3 Layoutlogik
+- Header mit Lage und Meta
+- operative Hauptfläche zuerst
+- danach Verlauf
+- Substanz als tiefere Ebene
+- keine gleich lauten Bento-Kacheln für alles
 
-## 5.3 Layoutlogik
+Empfohlen:
+- obere Lagezone mit Lagetext, kritischen Chips, Review-Hinweis, nächstem Termin und minimaler Meta
+- darunter zwei Hauptblöcke: Handlungsbedarf und Verlauf
+- darunter Substanz mit Themen und Dokumenten
 
-- starke vertikale Dramaturgie
-- zuerst Lagebild, dann Tiefe
-- jede Facette als eigenständiger Block
-- Blöcke starten verdichtet und können groß aufgehen
-- Querverweise springen direkt zu relevanten Facetten oder öffnen das Overlay
+### 5.4 Die vier Rollen
 
-## 5.4 Signatur-Element
+#### Lage
+Immer sichtbar.
 
-### Project State Header
-Ein konzentrierter Kopfbereich mit:
-- Projektname
-- kurzer Lagebeschreibung
-- kritischen Änderungen
-- Konfliktindikatoren
-- letzter Verarbeitungshinweis
+Enthält:
+- kurzer Lagetext
+- kritische Chips
+- Konflikt-/Review-Banner
+- nächster harter Termin
+- letzte relevante Änderung
+- minimale Meta wie Kunde, Status, Stakeholder-Zahl
+- falls vorhanden: Zielbild oder Erfolgskriterium
 
-Nicht wie Dashboard-Header.  
-Eher wie eine redaktionell verdichtete Lagekarte.
+Stakeholder und Projektdaten sind Header-Material, keine Hauptpanels.
 
-## 5.5 Wichtige Facetten
+#### Handlungsbedarf
+Operatives Zentrum.
 
-### Aktueller Stand
-Kurze, belastbare Projektsicht.
+Fasst zusammen:
+- offene Punkte
+- Aufgaben
+- unbestätigte Entscheidungen
+- Feedback und Korrekturen mit Arbeitscharakter
+- Konflikte
+- Informationslücken mit Folgen
+- Blocker und Dependencies
 
-### Änderungen
-Was wurde neu erkannt, bestätigt, verschoben, ersetzt oder verworfen?
+Arbeitsmodi:
+- entscheiden
+- klären
+- umsetzen
+- prüfen
 
-### Konflikte
-Gut sichtbar, nie versteckt.
+#### Verlauf
+Veränderungs- und Ereignislogik.
 
-### Themen
-Inhaltliche Cluster mit Quellen, Entscheidungen, Feedback, Korrekturen, offenen Punkten und Dokumenten.
+Enthält:
+- Timeline
+- Änderungen
+- bestätigte Entscheidungen
+- relevante Uploads
+- Konfliktereignisse
+- Workshops, Milestones, Freigaben
 
-### Timeline
-Veränderungsverlauf mit Deltas statt bloßer Chronologie.
+Änderungen existieren nicht als eigenes Panel neben dem Verlauf.
 
-### Entscheidungen
-Mit Geltungsstatus, Quellenbasis, möglicher Angriffsfläche und Änderungsverlauf.
+#### Substanz
+Inhaltliche Tiefe.
 
-### Dokumente und Versionen
-Nicht Dateiliste, sondern Wissensquellen mit Herkunft und Versionsbezug.
+Enthält:
+- Themen
+- Dokumente und Versionen
+- Feedback/Korrekturen als Quellenmaterial, wenn relevant
 
-### Stakeholder
-Personen, Organisationen, Beziehungen.
+### 5.5 Inhaltliche Regeln
+- Konflikte sind kein normales Panel.
+- Änderungen existieren nicht separat neben dem Verlauf.
+- Stakeholder und Projektdaten sind nie Hauptfläche.
+- Feedback und Korrekturen sind nur dann eigenständig sichtbar, wenn sie im Projekt dominant sind.
+- Themen sind keine dekorativen Karten.
+- Entscheidungen stehen nur separat, wenn sie offen, kritisch oder richtungsprägend sind.
+- Bestätigte Entscheidungen gehören in den Verlauf.
+- Handlungsbedarf darf auch unklare, unbestätigte oder quellenarme Punkte enthalten.
+- Dependencies und Blocker sind Teil des Handlungsbedarfs.
+- Der Screen wird nach Arbeitsmodus gebaut, nicht nach Ontologie.
+- Zustand, Arbeit, Verlauf und Substanz dürfen nie gleichrangig und gleich laut dargestellt werden.
 
-### Feedback und Korrekturen
-Kein Nachgang. Dauerhaft sichtbarer Querlayer.
+### 5.6 Smarte Komponenten und UI-Patterns
+
+#### Lage-Komponenten
+Ruhig, dicht, wenig Interaktion.
+
+Patterns:
+- Lagetext-Block
+- Status-Chips
+- Konflikt-/Review-Banner
+- Gap-Hinweis, wenn eine Lücke operative Wirkung hat
+- Meta-Zeile
+- kleine Highlight-Karten für nächster Termin / letzte Änderung
+
+#### Handlungsbedarf-Komponenten
+Aktive Arbeitskomponenten.
+
+Patterns:
+- priorisierte Liste statt Kachelwand
+- gruppierbar nach entscheiden / klären / umsetzen / prüfen
+- Quick-Actions
+- Verantwortliche, Frist, Quelle, Projektbezug
+- Blocker-/Dependency-Marker
+- expandierbare Detailzeile statt Vollpanel
+- stärkere Statusmarker als in anderen Rollen
+- Inline-Antworten für kurze Klärungen
+
+#### Verlauf-Komponenten
+Chronologisch, filterbar, ruhig.
+
+Patterns:
+- Ereignisfeed
+- Typfilter
+- Delta-Tags wie neu / ersetzt / bestätigt / widersprochen
+- Datum + Quelle + Betroffenheit
+- Gruppierung nach Woche, Phase oder Meilenstein
+
+#### Substanz-Komponenten
+Mehr Tiefgang, weniger Alarm.
+
+Patterns:
+- Themencluster als echte Drilldown-Einstiege
+- Dokumentlisten mit Versionhinweisen
+- thematische Gruppierung
+- Quellbezug
+- relationale Verweise in andere Rollen
+
+### 5.7 Gemeinsame Trigger
+Damit die Rollen zusammenhängend bleiben:
+- einheitliche kleine Header-Zonen
+- subtile Change-Indikatoren
+- konsistente Source-/Provenance-Marker
+- konsistente Review-Marker
+- gleiche Expand-/Drilldown-Logik
+- einheitliche Objekt-Tokens für Termin, Entscheidung, Konflikt, Dokument, Thema, Gap, Blocker
+
+### 5.8 Unvollständigkeit sichtbar, aber ruhig
+Die UI darf nie so tun, als wüsste die Entität alles.
+
+Deshalb:
+- Lage ist immer als aktueller Rekonstruktionsstand formuliert
+- Lücken können als Gap-Signale auftauchen
+- operativ relevante Rückfragen werden im Overlay gestellt
+- Handlungsbedarf darf auch unklare oder unbestätigte Punkte enthalten
+
+### 5.9 Später mögliche adaptive UI
+Später möglich, jetzt nicht Teil von V1:
+- feste Panelbibliothek
+- feste Screen-Modi je Projektkomplexität
+- automatische Vorauswahl der Modus-Variante
+- keine freie generative UI
 
 ---
 
 ## 6. Systemweiter Modus — Dialog-Overlay
 
-## 6.1 Zweck
-
-Das Dialog-Overlay ist der eigentliche Interaktionsraum zwischen Nutzer und Entität.
+### 6.1 Zweck
+Das Dialog-Overlay ist der Interaktionsraum zwischen Nutzer und Entität.
 
 Es dient für:
 - Review
@@ -221,165 +282,49 @@ Es dient für:
 - Umzuordnung
 - Präzisierung
 - Commit oder Verwerfung
+- gezielte Rückfragen bei relevanten Lücken
 
-## 6.2 Charakter
-
+### 6.2 Charakter
 Vollbild. Hohe Fokussierung. Alles außerhalb tritt zurück.
 
-Der Nutzer soll hier das Gefühl haben, dass die Entität einen konkreten Fall mit ihm bearbeitet.
-
-## 6.3 Grundaufbau
-
+### 6.3 Grundaufbau
 Kein Chatstream.
 
-Stattdessen ein **dynamisch komponierter Gesprächsraum** aus Boxen, die je nach Fall nebeneinander, untereinander oder sequenziell erscheinen.
+Stattdessen ein dynamisch komponierter Gesprächsraum aus Boxen, die je nach Fall nebeneinander, untereinander oder sequenziell erscheinen.
 
 Typische räumliche Logik:
 - links oder oben: erkannte Information
 - daneben: Zuordnung oder Kontext
-- darunter: Alternativen, Konflikt oder Auswahl
+- darunter: Alternativen, Konflikt, Gap oder Auswahl
 - am Abschluss: Bestätigen / Verwerfen / Präzisieren
 
-## 6.4 Gesprächsboxen
+### 6.4 Gesprächsboxen
+- Wissensbox
+- Zuordnungsbox
+- Konfliktbox
+- Gap-Box
+- Auswahlbox
+- Eingabebox
+- Kontextbox
+- Aktionsbox
 
-### Wissensbox
-Zeigt den erkannten Sachverhalt.
-
-### Zuordnungsbox
-Zeigt, wohin die Entität ihn eingeordnet hat.
-
-### Konfliktbox
-Zeigt Spannungen, Kollisionen oder Unsicherheiten.
-
-### Auswahlbox
-Bietet Alternativen an.
-
-### Eingabebox
-Erlaubt kurze manuelle Präzisierung.
-
-### Kontextbox
-Zeigt Quelle, Begründung, Ursache.
-
-### Aktionsbox
-Schließt den Review-Fall.
-
-## 6.5 Visuelle Eigenschaften der Boxen
-
+### 6.5 Visuelle Eigenschaften der Boxen
 - umrandet
 - gerundet
 - klar typisiert
 - ruhig, aber deutlich interaktiv
 - konsistente Innenabstände
 - keine laute Formularästhetik
-- Zustandswechsel über Fokus, Dichte und feine Betonung
-
-## 6.6 Ablaufgefühl
-
-Nicht hektisch. Nicht verspielt.
-
-Eher so:
-- Fall wird aufgezogen
-- relevante Elemente erscheinen
-- Nutzer versteht den Sachverhalt schnell
-- Optionen sind klar
-- Commit fühlt sich eindeutig an
 
 ---
 
 ## 7. Interaktionsregeln
 
-## 7.1 Review ist immer explizit
-Jeder Fall endet mit einer klaren Nutzeraktion.
-
-## 7.2 Boxen entstehen aus dem Fall
-Die UI komponiert aus maschinenlesbaren Box Specs, nicht aus starren Formularseiten.
-
-## 7.3 Quellenzugang ist direkt
-Wo immer möglich, springt der Nutzer von einer Erkenntnis in ihren Quellkontext.
-
-## 7.4 Konflikte werden räumlich gegenübergestellt
-Widerspruch braucht Sichtbarkeit. Kein verstecktes Metadatenlabel.
-
-## 7.5 Feedback und Korrektur sind überall
-Sie sind kein Sonderbereich, sondern ein Layer über die gesamte App.
-
-## 7.6 Delta ist sichtbar
-Änderungen werden nicht nur erwähnt, sondern spürbar gegen Vorzustand gezeigt.
-
----
-
-## 8. Beispielhafte UI-Flows
-
-## 8.1 Upload → Review
-1. Nutzer droppt eine Datei in die Entität.
-2. Die Entität verarbeitet und verdichtet.
-3. Das Overlay öffnet sich.
-4. Wissensbox zeigt das erkannte Wissen.
-5. Zuordnungsbox zeigt das vorgeschlagene Projekt.
-6. Auswahlbox erlaubt Projektwechsel.
-7. Kontextbox erklärt die Begründung.
-8. Aktionsbox bietet Bestätigen oder Abbrechen.
-9. Nach Commit springt der Nutzer in das aktualisierte Projekt oder zurück zur Entität.
-
-## 8.2 Konflikt im Projekt → Overlay
-1. Nutzer sieht im Projekt einen Konfliktmarker.
-2. Klick öffnet das Overlay.
-3. Zwei konkurrierende Aussagen, Entscheidungen oder Termine stehen gegenüber.
-4. Kontextbox zeigt Quellenbasis.
-5. Auswahlbox fragt nach Auflösung.
-6. Commit schreibt neue Gültigkeit.
-
-## 8.3 Korrektur aus Projekt heraus
-1. Nutzer öffnet ein Thema oder Dokument.
-2. Er startet Korrektur.
-3. Overlay zeigt aktuellen Stand und betroffenen Zusammenhang.
-4. Eingabebox und Auswahlbox ermöglichen Präzisierung oder Umzuordnung.
-5. Commit aktualisiert Projektzustand und Delta.
-
-## 8.4 Feedback auf eine erkannte Erkenntnis
-1. Nutzer sieht eine Entscheidung, einen Themenblock oder ein Dokument.
-2. Er gibt Feedback.
-3. Overlay öffnet den betroffenen Kontext.
-4. Entität zeigt erkannte Interpretation und Quelle.
-5. Nutzer präzisiert oder korrigiert.
-6. Commit erzeugt Change Event und aktualisiert den Zustand.
-
----
-
-## 9. Navigation und Orientierung
-
-Die Hauptorientierung der App läuft nicht über klassische Module, sondern über Zustandswechsel:
-- Entität
-- Projekt
-- Overlay
-
-Weitere Orientierung entsteht durch:
-- Projektkontext
-- aktive Facette
-- Konfliktmarker
-- Änderungsmarker
-- Quellbezug
-- Review-Status
-
-Eine klassische Sidebar kann es höchstens als schwache Sekundärstruktur geben.  
-Sie darf nie die Hauptidee des Produkts übernehmen.
-
----
-
-## 10. Designkonsequenz aus der Technik
-
-Weil die eigentliche Intelligenz im unsichtbaren Orchestrierungs- und Kernzustands-Layer sitzt, darf die UI nie wie Tool-Verkabelung aussehen.
-
-Der Nutzer sieht:
-- eine Entität, die versteht
-- Projekte, die klar werden
-- einen Dialog, der präzise klärt
-
-Nicht sichtbar sind:
-- Parserwahl
-- Graphlogik
-- Canonical State
-- Agentenrouting
-- Toolaufrufe
-
-Genau das macht die Produktform stark.
+- Review ist immer explizit.
+- Boxen entstehen aus maschinenlesbaren Box Specs.
+- Quellenzugang ist direkt.
+- Konflikte werden räumlich gegenübergestellt.
+- Feedback und Korrektur sind ein durchgehender Layer.
+- Delta ist sichtbar.
+- Rückfragen werden gezielt und sparsam gestellt.
+- Direkte Antworten können kurz und inline sein.

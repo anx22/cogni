@@ -1,39 +1,56 @@
-# Produktintelligenz — Geplante Umsetzungen & Roadmap
+# Produktintelligenz — Geplante Umsetzungen & Roadmap (v2)
 
-## Phase 2: Supabase-Datenmodell
+## Phase 3.5: Projekt-Screen Reset (NÄCHSTER SCHRITT)
 
-- Kerntabellen: assets, sources, parsed_documents, proposed_facts, canonical_facts
-- Review-Objekte: review_sessions, review_cases, change_events, commit_results
-- Projektobjekte: projects, topics, decisions, deadlines, tasks, open_points
-- Querobjekte: contradictions, feedback, corrections, references, version_links
-- project_state_snapshots für verdichteten Zustand
-- Stakeholder: persons, organizations, project_stakeholder_links
-- Vollständige Provenance + RLS-Policies
+Sweeping rebuild — alte Tab-Struktur, Bento-Facetten und Lagebild-Panel werden entfernt. Fresh take.
 
-## Phase 3: Projekt-Screen
+### Vier Rollen, vier Komponenten
 
-- Project State Header mit Lagebeschreibung
-- 10 aufklappbare Facetten (Aktueller Stand → Feedback & Korrekturen)
-- Progressive Offenlegung
+- **`LageZone`** — Header mit Lagetext, Status-Chips, Konflikt-Banner (conditional), nächster Termin, letzte Änderung, Stakeholder-Zahl, Outcome-Signal
+- **`HandlungsbedarfList`** — priorisierte, gruppierte Liste (entscheiden / klären / umsetzen / prüfen). Quick-Actions, Blocker-Marker, Inline-Antwort. Vereint offene Punkte, Aufgaben, unbestätigte Entscheidungen, Konflikte, Gaps, Dependencies, arbeitsrelevantes Feedback.
+- **`VerlaufFeed`** — chronologischer Ereignisfeed mit Typfiltern und Delta-Tags. Übernimmt Timeline + bestätigte Entscheidungen + Konfliktereignisse + Uploads.
+- **`SubstanzSection`** — Themen-Drilldown + Dokumentliste mit Versionen.
+
+### Demo-Daten erweitern
+Gap/Dependency/Outcome-Beispiele in `demoProject.ts` ergänzen.
+
+### Cleanup
+Alte Facetten-Komponenten entfernen oder neu zugeordnet einbetten. Tab-System weg.
+
+## Phase 2.5: Datenmodell-Erweiterung (Migration)
+
+- Tabelle `gap_signals` (Wissenslücken mit Lebensdauer)
+- Tabelle `dependencies` (Relationsklasse: blockiert durch / wartet auf / hängt ab von)
+- Tabelle `outcome_signals` (minimales Zielbild pro Projekt)
+- Enum `box_type` um `gap_box` erweitern
+- ggf. `dialog_sessions` separat von `review_sessions`
+- RLS-Policies für alle neuen Tabellen
 
 ## Phase 4: Dialog-Overlay
 
 - Vollbild-Overlay über beide Screens
-- 7 Gesprächsbox-Typen mit 6 Zuständen
+- **8 Gesprächsbox-Typen** (inkl. neuer Gap-Box) mit 6 Zuständen
 - Dynamische Komposition aus Review Cases
 - Commit-Flow → kanonischer Zustand
 
-## Phase 5: Upload-Pipeline
+## Phase 5: Universeller Input
+
+Entity-Dropzone ausbauen zu universellem Input-Modul: Datei + Text + Paste + Link + Sprache + Antworten.
+
+**Vor Umsetzung: präzise Ausgestaltung mit Nutzer klären.**
+
+## Phase 6: Upload-Pipeline
 
 - Dateityp-Erkennung + Supabase Storage
 - Unstructured API Integration
 - Strukturierte Extraktion → Proposed Facts → Review Cases
 
-## Phase 6: Graphiti-Integration
+## Phase 7: Knowledge-Graph-Integration
 
-- Temporaler Knowledge Graph
+- **Graphiti ist gesetzt** (Entscheidung final)
+- Temporaler Knowledge Graph anbinden
 - Delta-Logik: bestätigen, ergänzen, ersetzen, widersprechen, zusammenführen, verwerfen
-- Widerspruchserkennung → reviewbare Vorschläge
+- Widerspruchs- und Lückenerkennung → reviewbare Vorschläge
 
 ## Nicht in V1
 
