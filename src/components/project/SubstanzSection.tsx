@@ -1,0 +1,69 @@
+import { FileText, Layers } from "lucide-react";
+import type { demoProject } from "@/data/demoProject";
+
+type Thema = (typeof demoProject)["themen"][number];
+type Dok = (typeof demoProject)["dokumente"][number];
+
+const SubstanzSection = ({ themen, dokumente }: { themen: Thema[]; dokumente: Dok[] }) => {
+  return (
+    <section className="px-8 md:px-12 lg:px-16 xl:px-20 py-16 border-t border-border/40">
+      <div className="max-w-6xl mx-auto space-y-14">
+        <header>
+          <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground/50 mb-2">Inhalt</p>
+          <h2 className="text-2xl font-light tracking-tight text-foreground/95">Substanz</h2>
+        </header>
+
+        {/* Themen — Drilldown-Einstiege */}
+        <div>
+          <h3 className="text-xs uppercase tracking-[0.2em] text-muted-foreground/60 mb-4 flex items-center gap-2">
+            <Layers className="w-3.5 h-3.5" /> Themen
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {themen.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                className="group text-left rounded-xl border border-border/40 bg-card/30 hover:bg-card/60 hover:border-border/70 transition-all px-5 py-4"
+              >
+                <div className="flex items-start justify-between gap-3 mb-1.5">
+                  <h4 className="text-base text-foreground/90 font-medium group-hover:text-foreground transition-colors">
+                    {t.name}
+                  </h4>
+                  <span className="text-[11px] text-muted-foreground/40 group-hover:text-muted-foreground/70 transition-colors">→</span>
+                </div>
+                <p className="text-xs text-muted-foreground/60 leading-relaxed mb-3">{t.beschreibung}</p>
+                <div className="flex gap-4 text-[11px] text-muted-foreground/50">
+                  <span>{t.entscheidungen} Entscheidungen</span>
+                  <span>{t.offenePunkte} offen</span>
+                  <span>{t.dokumente} Dokumente</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Dokumente */}
+        <div>
+          <h3 className="text-xs uppercase tracking-[0.2em] text-muted-foreground/60 mb-4 flex items-center gap-2">
+            <FileText className="w-3.5 h-3.5" /> Dokumente
+          </h3>
+          <div className="rounded-xl border border-border/40 bg-card/20 divide-y divide-border/30">
+            {dokumente.map((d) => (
+              <div key={d.id} className="flex items-center gap-4 px-5 py-3 hover:bg-card/40 transition-colors">
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground/50 font-mono w-10">{d.typ}</span>
+                <span className="text-sm text-foreground/85 flex-1 min-w-0 truncate">{d.name}</span>
+                {d.thema && (
+                  <span className="hidden md:inline text-[11px] text-muted-foreground/50">{d.thema}</span>
+                )}
+                <span className="text-[11px] text-muted-foreground/50">v{d.version}</span>
+                <span className="text-[11px] text-muted-foreground/40 font-mono">{d.datum}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+export default SubstanzSection;
