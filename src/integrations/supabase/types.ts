@@ -430,6 +430,115 @@ export type Database = {
           },
         ]
       }
+      dependencies: {
+        Row: {
+          created_at: string
+          dependency_type: Database["public"]["Enums"]["dependency_type"]
+          description: string | null
+          id: string
+          metadata: Json | null
+          project_id: string
+          resolved: boolean
+          source_id: string
+          source_type: string
+          target_id: string
+          target_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          dependency_type: Database["public"]["Enums"]["dependency_type"]
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          project_id: string
+          resolved?: boolean
+          source_id: string
+          source_type: string
+          target_id: string
+          target_type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          dependency_type?: Database["public"]["Enums"]["dependency_type"]
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          project_id?: string
+          resolved?: boolean
+          source_id?: string
+          source_type?: string
+          target_id?: string
+          target_type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dependencies_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dialog_sessions: {
+        Row: {
+          created_at: string
+          id: string
+          metadata: Json | null
+          project_id: string | null
+          resolved_boxes: number | null
+          status: Database["public"]["Enums"]["dialog_status"]
+          summary: string | null
+          total_boxes: number | null
+          trigger_ref_id: string | null
+          trigger_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          project_id?: string | null
+          resolved_boxes?: number | null
+          status?: Database["public"]["Enums"]["dialog_status"]
+          summary?: string | null
+          total_boxes?: number | null
+          trigger_ref_id?: string | null
+          trigger_type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          project_id?: string | null
+          resolved_boxes?: number | null
+          status?: Database["public"]["Enums"]["dialog_status"]
+          summary?: string | null
+          total_boxes?: number | null
+          trigger_ref_id?: string | null
+          trigger_type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dialog_sessions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fact_references: {
         Row: {
           created_at: string
@@ -494,6 +603,62 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "feedback_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gap_signals: {
+        Row: {
+          affects: string | null
+          canonical_fact_id: string | null
+          created_at: string
+          detected_at: string
+          id: string
+          impact: string | null
+          metadata: Json | null
+          project_id: string
+          resolved_at: string | null
+          status: Database["public"]["Enums"]["gap_status"]
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          affects?: string | null
+          canonical_fact_id?: string | null
+          created_at?: string
+          detected_at?: string
+          id?: string
+          impact?: string | null
+          metadata?: Json | null
+          project_id: string
+          resolved_at?: string | null
+          status?: Database["public"]["Enums"]["gap_status"]
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          affects?: string | null
+          canonical_fact_id?: string | null
+          created_at?: string
+          detected_at?: string
+          id?: string
+          impact?: string | null
+          metadata?: Json | null
+          project_id?: string
+          resolved_at?: string | null
+          status?: Database["public"]["Enums"]["gap_status"]
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gap_signals_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
@@ -581,6 +746,50 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      outcome_signals: {
+        Row: {
+          created_at: string
+          id: string
+          metadata: Json | null
+          no_gos: string[] | null
+          notes: string | null
+          project_id: string
+          success_criteria: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          no_gos?: string[] | null
+          notes?: string | null
+          project_id: string
+          success_criteria: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          no_gos?: string[] | null
+          notes?: string | null
+          project_id?: string
+          success_criteria?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outcome_signals_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       parsed_documents: {
         Row: {
@@ -1178,6 +1387,7 @@ export type Database = {
         | "input"
         | "context"
         | "action"
+        | "gap_box"
       contradiction_type: "deadline" | "decision" | "version" | "assignment"
       decision_status: "active" | "superseded" | "revoked" | "draft"
       delta_type:
@@ -1187,6 +1397,8 @@ export type Database = {
         | "contradict"
         | "merge"
         | "discard"
+      dependency_type: "blockiert_durch" | "wartet_auf" | "haengt_ab_von"
+      dialog_status: "open" | "in_progress" | "completed" | "cancelled"
       fact_type:
         | "topic"
         | "decision"
@@ -1196,6 +1408,7 @@ export type Database = {
         | "stakeholder"
         | "reference"
         | "other"
+      gap_status: "open" | "in_clarification" | "resolved" | "obsolete"
       processing_status: "pending" | "processing" | "completed" | "failed"
       review_status: "open" | "in_progress" | "completed" | "cancelled"
     }
@@ -1342,6 +1555,7 @@ export const Constants = {
         "input",
         "context",
         "action",
+        "gap_box",
       ],
       contradiction_type: ["deadline", "decision", "version", "assignment"],
       decision_status: ["active", "superseded", "revoked", "draft"],
@@ -1353,6 +1567,8 @@ export const Constants = {
         "merge",
         "discard",
       ],
+      dependency_type: ["blockiert_durch", "wartet_auf", "haengt_ab_von"],
+      dialog_status: ["open", "in_progress", "completed", "cancelled"],
       fact_type: [
         "topic",
         "decision",
@@ -1363,6 +1579,7 @@ export const Constants = {
         "reference",
         "other",
       ],
+      gap_status: ["open", "in_clarification", "resolved", "obsolete"],
       processing_status: ["pending", "processing", "completed", "failed"],
       review_status: ["open", "in_progress", "completed", "cancelled"],
     },
