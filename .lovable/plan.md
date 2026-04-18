@@ -1,132 +1,95 @@
 
 
-## Phase 3.5 — Sweeping Rebuild Projekt-Screen
+## Problem
 
-### Strategie: Tabula rasa
+Der Screen wirkt wie eine flache schwarze Wand. Container, Karten und Sektionen sind kaum unterscheidbar, weil:
 
-Komplettes Löschen aller bisherigen Projekt-Screen-Komponenten. Neuaufbau strikt nach Vier-Rollen-Modell. Keine Bento-Logik, keine Tabs, keine gleichrangigen Facetten.
+1. `bg-card/40`, `bg-card/30`, `bg-background/40`, `bg-card/20` liegen alle extrem nah beieinander auf fast schwarzem Grund
+2. `border-border/40` und `border-border/50` sind quasi unsichtbar
+3. Keine echte Tiefenhierarchie — alles schwebt auf derselben Ebene
+4. Keine Trennung zwischen den vier Rollen-Zonen außer einer dünnen Linie
 
-### Lösch-Liste
+## Design-Revise — Surface- & Depth-System
 
-```
-src/components/project/BentoCard.tsx
-src/components/project/ProjectHeader.tsx
-src/components/project/ProjectScreen.tsx
-src/components/project/facets/  (gesamter Ordner)
-```
+### 1. Surface-Hierarchie einführen (3 Ebenen + Akzent)
 
-### Neue Struktur
-
-```
-src/components/project/
-  ProjectScreen.tsx          ← Orchestrator, vertikaler Flow
-  LageZone.tsx               ← Header-Region (immer sichtbar)
-  HandlungsbedarfList.tsx    ← Operatives Zentrum
-  VerlaufFeed.tsx            ← Ereignis-Chronologie
-  SubstanzSection.tsx        ← Themen + Dokumente
-
-  shared/
-    ConflictBanner.tsx       ← in LageZone eingebettet
-    ActionItem.tsx           ← Zeile in HandlungsbedarfList
-    EventEntry.tsx           ← Zeile in VerlaufFeed
-    SourceMarker.tsx         ← einheitlicher Provenance-Token
-    DeltaTag.tsx             ← neu/ersetzt/bestätigt/widersprochen
-    ObjectToken.tsx          ← Termin/Entscheidung/Konflikt/Dok/Thema/Gap/Blocker
-```
-
-### Layout-Hierarchie (vertikal, kein Grid-Gleichgewicht)
+Statt zufälliger Opacity-Werte ein klares System mit echtem Kontrast:
 
 ```text
-┌─────────────────────────────────────────────┐
-│ LAGE                                         │  ← visuell dominant, ruhig
-│ Name + Lagetext + Chips + Konflikt-Banner    │
-│ + nächster Termin + letzte Änderung +        │
-│ Stakeholder-Zahl + Zielbild                  │
-├─────────────────────────────────────────────┤
-│ HANDLUNGSBEDARF                              │  ← stärkste Statusmarker
-│ Gruppen: entscheiden / klären / umsetzen /   │
-│ prüfen — priorisierte Liste, expandierbar    │
-├─────────────────────────────────────────────┤
-│ VERLAUF                                      │  ← ruhiger, gefiltert
-│ Ereignisfeed mit Typfiltern + Delta-Tags     │
-├─────────────────────────────────────────────┤
-│ SUBSTANZ                                     │  ← tieferer Drilldown
-│ Themencluster + Dokumentlisten               │
-└─────────────────────────────────────────────┘
+Ebene 0  Page Background      sehr dunkel, neutral kühl
+Ebene 1  Zone Background      +4-6% Helligkeit, leichte Tönung
+Ebene 2  Card / Container     +8-10% Helligkeit, sichtbarer Border
+Ebene 3  Inner Element        +12% Helligkeit für Hover/Active/Inset
 ```
 
-Keine gleichlauten Bento-Kacheln. Jede Rolle hat eigene visuelle Sprache:
-- **Lage**: dichte Headerfläche, minimal Border, größere Typo
-- **Handlungsbedarf**: priorisierte Liste mit Statusmarkern, Quick-Actions, expandierbare Detailzeilen
-- **Verlauf**: Feed mit linker Zeitlinie, kleinere Typo, Filter-Chips oben
-- **Substanz**: Themencluster als große Drilldown-Karten + saubere Dokumentliste
+Konkret in `index.css` neue Tokens ergänzen:
+- `--surface-0` (Page)
+- `--surface-1` (Zone) 
+- `--surface-2` (Card)
+- `--surface-3` (Inner/Hover)
+- `--border-subtle` (sichtbar, ~14-16% L)
+- `--border-strong` (Trennlinien zwischen Zonen, ~20% L)
 
-### Demo-Daten erweitern (`demoProject.ts`)
+Helligkeitssprünge mindestens 4-5% L im HSL — sonst nicht wahrnehmbar auf OLED/dunklen Screens.
 
-Hinzufügen:
-- `gaps`: 2-3 Gap Signals (z.B. "Performance-Anforderung fehlt", "Migrations-Cutoff unklar") mit `wirkung`, `betrifft`, `lebensdauer`
-- `dependencies`: 2-3 Abhängigkeiten (`typ`: blockiert_durch | wartet_auf | hängt_ab_von, `quelle`, `ziel`)
-- `outcome`: ein Zielbild-Objekt (`erfolgskriterium`, `nogos[]`)
-- Entscheidungen aufteilen: nur offene/kritische bleiben in Handlungsbedarf-Quelle, bestätigte fließen in Verlauf
-- Handlungsbedarf-Items bekommen `arbeitsmodus`-Feld (entscheiden/klären/umsetzen/prüfen) und optional `blocker`-Marker
+### 2. Zonen klarer trennen
 
-### HandlungsbedarfList — Detail
+Statt `border-b border-border/40` zwischen den vier Rollen:
+- **Lage**: `surface-1` mit dezentem Top-Gradient
+- **Handlungsbedarf**: `surface-0` (zurückgesetzt) — die Karten darin liegen auf `surface-2` und stechen hervor
+- **Verlauf**: `surface-1` wieder leicht angehoben
+- **Substanz**: `surface-0`
 
-- Vereinheitlichte Item-Struktur: alle Quellen (offene Punkte, Aufgaben, offene Entscheidungen, Konflikte, Gaps, Blocker, Arbeits-Feedback) werden zu einem `ActionItem` normalisiert
-- Gruppierung nach Arbeitsmodus mit kleinen Section-Headern
-- Pro Item: Titel, Objekt-Token (Typ-Indikator), Verantwortlich/Frist/Quelle, Status-Marker, Quick-Actions (entscheiden/klären/inline-antworten/öffnen)
-- Expandierbare Detailzeile statt Vollpanel
-- Konflikte erscheinen hier als Marker-Items (nicht als eigenes Panel) — Banner bleibt nur in Lage
+Wechsel zwischen `surface-0` und `surface-1` erzeugt Rhythmus ohne harte Linien. Plus eine ~1px `border-strong`-Linie als sauberer Schnitt.
 
-### VerlaufFeed — Detail
+### 3. Karten endlich sichtbar machen
 
-- Chronologisch absteigend, gruppiert nach Woche
-- Typfilter-Chips: Alle / Änderungen / Entscheidungen / Konflikte / Uploads / Milestones
-- Pro Eintrag: Datum, Delta-Tag, Inhalt, Quelle (SourceMarker), betroffenes Objekt
-- Vertikale Zeitlinie links als visueller Anker
+Aktuell: `bg-card/40 border-border/50` → praktisch unsichtbar.
+Neu: 
+- Hintergrund: `surface-2` (echte Fläche, kein Alpha-Trick)
+- Border: `border-subtle` (1px, sichtbar)
+- Optional: leichter innerer Glow oben (1px `inset 0 1px 0 rgba(255,255,255,0.04)`) → gibt Karten die typische "schwebende" Glas-Anmutung
+- Schatten weiter unten: `shadow-[0_1px_0_rgba(0,0,0,0.4),0_8px_24px_-12px_rgba(0,0,0,0.6)]`
 
-### SubstanzSection — Detail
+Betroffen: Lagebild-Box, Zielbild-Box, Konflikt-Banner, Handlungsbedarf-Gruppen-Container, Verlauf-Einträge, Substanz-Karten.
 
-- Themen als echte Drilldown-Einstiege (nicht Karten-Wand): pro Thema Headline + Kurzbeschreibung + Counts + Hover-Detail
-- Darunter Dokumentliste mit Versions-Hinweisen, optional nach Thema gruppiert
+### 4. Inner Rows in Handlungsbedarf
 
-### Shared-Komponenten — einheitliche Tokens (Spec 5.7)
+Die Liste wirkt aktuell wie ein Block. Lösung:
+- Container auf `surface-2`
+- `divide-y divide-border-subtle` (sichtbar)
+- Hover-Row: `surface-3`
+- Expandierter Body: leicht eingerückter `surface-1`-Streifen mit linkem Akzentbalken in der Modus-Farbe (violet/amber/emerald/cyan)
 
-- **SourceMarker**: kleines Quellen-Pill, klickbar, einheitlich überall
-- **DeltaTag**: farbcodierte Mini-Tags für neu/ersetzt/bestätigt/widersprochen
-- **ObjectToken**: Mini-Icon+Label für Objekttypen (Termin, Entscheidung, Konflikt, Dok, Thema, Gap, Blocker)
+### 5. Akzentfarben dezent, aber präsent
 
-### Designhaltung
+- Modus-Headlines (Entscheiden/Klären/Umsetzen/Prüfen): aktueller Farbcode bleibt, aber +kleines farbiges Quadrat/Dot davor für visuelle Verankerung
+- Konflikt-Banner: Border kräftiger (`border-destructive/50`), Hintergrund mit echtem rötlichem Tint statt nur 5% Alpha
+- No-Go-Tags: gleiche Behandlung
 
-- Vertikaler Lese-Flow, viel Ruhefläche zwischen den vier Zonen
-- Lage: backdrop-blur + dezenter Gradient
-- Handlungsbedarf: stärkster Kontrast (operativ)
-- Verlauf: gedämpfter
-- Substanz: zurückhaltend, mehr Whitespace
-- Konsistente Inneneinheiten, Typo, Border-Sprache
+### 6. Typo-Kontrast feinjustieren
 
-### Was bleibt
+- Body-Text aktuell `text-foreground/85` und `text-foreground/75` → Karten-Body auf `text-foreground/90` anheben, weil die neuen Surfaces dunkler bleiben
+- Labels (`text-muted-foreground/50`) auf `/65` — sie verschwinden sonst
 
-- `ProjectScreen` als Top-Level mit `onBack`-Prop
-- `demoProject.ts` als Datenquelle (erweitert)
-- Index.tsx Navigation unverändert
-- Index.tsx Designhaltung (dunkel, glasartig)
+## Umfang & Dateien
 
-### Was nicht in dieser Phase
+- `src/index.css` — neue CSS-Variablen für Surface- und Border-System (Dark Mode Block)
+- `tailwind.config.ts` — Tokens als Tailwind-Farben verfügbar machen (`surface-0/1/2/3`, `border-subtle/strong`)
+- `src/components/project/LageZone.tsx` — Lagebild-Box, Zielbild-Box, Meta-Strip-Hintergrund
+- `src/components/project/HandlungsbedarfList.tsx` — Section, Gruppen-Container, Rows, Hover, Expanded-Body mit Akzentbalken
+- `src/components/project/VerlaufFeed.tsx` — Zonen-Hintergrund, Eintragskarten
+- `src/components/project/SubstanzSection.tsx` — Themen-Karten, Dokumentliste
+- `src/components/project/shared/ConflictBanner.tsx` — kräftigerer Tint + Border
+- `src/components/project/ProjectScreen.tsx` — Zonen-Wechsel `surface-0` ↔ `surface-1`, stärkere Trennlinie
 
-- Datenmodell-Migration (Phase 2.5, separat)
-- Echte Backend-Anbindung
-- Overlay-Trigger (Phase 4)
+## Out of Scope
 
-### Reihenfolge der Umsetzung
+- Keine Layout-Änderungen, keine neuen Inhalte
+- Keine Funktionsänderungen
+- Akzentfarben-System (violet/amber/emerald/cyan/destructive) bleibt wie es ist
 
-1. Demo-Daten erweitern (Gaps, Dependencies, Outcome, Arbeitsmodus)
-2. Shared-Tokens bauen (SourceMarker, DeltaTag, ObjectToken)
-3. LageZone
-4. HandlungsbedarfList
-5. VerlaufFeed
-6. SubstanzSection
-7. ProjectScreen-Orchestrator
-8. Alte Dateien löschen
-9. `docs/implementierung-aktuell.md` aktualisieren
+## Erwartetes Ergebnis
+
+Klare visuelle Hierarchie: Du siehst auf den ersten Blick wo eine Zone aufhört und die nächste anfängt, welche Container existieren und welche Elemente klickbar/interaktiv sind — ohne dass das Design seine ruhige, dunkle, glasartige Haltung verliert.
 
