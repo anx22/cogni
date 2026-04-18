@@ -1,41 +1,53 @@
 # Produktintelligenz — Aktuelle Implementierungen & Entscheidungen (v2-synchronisiert)
 
-## Status: Phase 0–3 abgeschlossen, Phase 3 muss zurückgesetzt werden
-
-### Bruchstellen durch v2-Inputs
-
-| Bereich | v1 (alt) | v2 (neu) | Auswirkung |
-|---|---|---|---|
-| Projektscreen-Architektur | 10 Facetten / 3 Tabs | **4 feste Rollen** (Lage, Handlungsbedarf, Verlauf, Substanz) | Tab-Modell obsolet, kompletter Rebuild |
-| Handlungsbedarf | nicht existent | operatives Zentrum | Neue Hauptkomponente |
-| Konflikte | eigenes Panel | Banner in Lage + Marker in Handlungsbedarf + Ereignis in Verlauf | Konfliktpanel weg |
-| Änderungen | eigenes Panel | vollständig im Verlauf | bereits entfernt |
-| Stakeholder | eigener Tab | nur Header-Material | Hauptpanel weg |
-| Themen | gleichrangige Karten | Drilldown-Einstiege | Karten-Logik neu |
-| Entscheidungen | eigenes Panel mit allen Status | nur offen/kritisch separat, bestätigte in Verlauf | Aufteilung |
-| Universeller Input | nur Dropzone | Datei + Text + Paste + Link + Sprache | Entity-Input erweitern |
-| Gap Signals | nicht modelliert | eigene Objektklasse | Datenmodell-Lücke |
-| Dependency Signals | nicht modelliert | eigene Relationsklasse | Datenmodell-Lücke |
-| Outcome Signal | nicht modelliert | minimales Zielbild | Datenmodell-Lücke |
-| Dialogboxen | 7 Typen | 8 Typen (+Gap-Box) | Phase 4 anpassen |
-| Inhaltliche Regel | gleichlaute Bento-Kacheln | "Zustand, Arbeit, Verlauf, Substanz nie gleichrangig" | aktuelle UI verstößt |
-
-### Korrekturen gegenüber v1
-- **Knowledge-Graph-Entscheidung wieder offen** (Graphiti vs. Cognee). v1 hatte Graphiti vorzeitig als entschieden markiert.
+## Status: Phase 0–3.6 abgeschlossen
 
 ### Aktuell implementiert
 - [x] Projektstruktur und Dokumentation (`docs/`, v2-synchronisiert)
 - [x] Design-System: Dunkles Theme mit HSL-Tokens
 - [x] Entität-Screen mit animiertem Kern, Dropzone (noch kein universeller Input)
+- [x] **Side-Grids am Entitäts-Screen** (Phase 3.6) — schwebendes Projekt-Grid links (4×5 Kacheln, Pagination, Drop-Zone-Schutz, Tastaturnavigation), Platzhalter-Grid rechts
 - [x] Lovable Cloud aktiviert
-- [x] Supabase-Datenmodell (24 Tabellen) — **lückenhaft**: gap_signals, dependencies, outcome_signals fehlen
-- [~] Projekt-Screen mit Tab-Architektur — **muss zurückgesetzt werden**
-- [ ] Vier-Rollen-Projektscreen (Lage / Handlungsbedarf / Verlauf / Substanz)
-- [ ] Datenmodell-Erweiterung (Phase 2.5)
-- [ ] Dialog-Overlay
-- [ ] Universeller Input
-- [ ] Upload-Pipeline
-- [ ] Knowledge-Graph-Entscheidung + Integration
+- [x] Supabase-Datenmodell (24 + 3 Tabellen) inkl. `gap_signals`, `dependencies`, `outcome_signals`, `dialog_sessions`; Enum `box_type` um `gap_box` erweitert
+- [x] **Vier-Rollen-Projektscreen** (Phase 3.5) — `LageZone`, `HandlungsbedarfList`, `VerlaufFeed`, `SubstanzSection`
+- [x] **Audit & Verfeinerung Projekt-Screen** (Phase 3.6)
+  - Gap- und Dependency-Signale sichtbar im `SignalStrip` (Lage-Zone)
+  - Dependencies als Handlungsbedarf-Items mit eigenem `ObjektTyp: "dependency"`
+  - Stakeholder-Liste via Popover (Name/Rolle/Org)
+  - Feedback-/Korrektur-Button auf Lagebild und Verlauf-Einträgen (hover-revealed)
+  - Konflikt-Eintrag im Verlauf optisch markiert (rote Punkt-Markierung)
+  - Toast-Brücken auf allen bisher toten Buttons (Themen, Dokumente, SourceMarker, Konflikt-Items, Handlungsbedarf-Aktionen, Verlauf-Einträge)
+  - Stats-Cleanup: `konflikte`/`handlungsbedarf`/`stakeholder` nicht mehr hardcoded, sondern aus `array.length` abgeleitet
+  - Dokumente nach Datum sortiert
+  - Themen mit Status-Indikator (offene Punkte → Punkt am Titel)
+- [ ] Dialog-Overlay (Phase 4) — alle Toast-Brücken werden hier durch echte Box-Aufrufe ersetzt
+- [ ] Universeller Input (Phase 5)
+- [ ] Upload-Pipeline (Phase 6)
+- [ ] Knowledge-Graph-Integration (Phase 7, Graphiti)
+
+### Komponenten-Inventar Projekt-Screen
+- `ProjectScreen.tsx` — Layout-Komposition, 60/40-Mittelteil (Verlauf links, Handlungsbedarf rechts)
+- `LageZone.tsx` — Hero-Lagebild, Meta-Strip, Konflikt-Banner, Outcome, SignalStrip
+- `HandlungsbedarfList.tsx` — vier Arbeitsmodi, expandierbare Rows, Toast-Aktionen
+- `VerlaufFeed.tsx` — Filter-Chips, Timeline mit Konflikt-Markierung, Feedback-Button
+- `SubstanzSection.tsx` — Themen-Karten + sortierte Dokumentliste
+- `shared/ConflictBanner.tsx` — klickbare Konflikt-Items
+- `shared/SignalStrip.tsx` — Gaps + Dependencies kompakt
+- `shared/StakeholderPopover.tsx` — Stakeholder-Liste on demand
+- `shared/FeedbackButton.tsx` — universelle Feedback/Korrektur-Affordance
+- `shared/SourceMarker.tsx` — Provenance-Chip (klickbar)
+- `shared/ObjectToken.tsx` — Icon+Farbe pro ObjektTyp (inkl. `dependency`)
+- `shared/DeltaTag.tsx` — Delta-Visualisierung im Verlauf
+
+### Bekannte Phase-4-Aufhängungen (Toast-Brücken)
+Alle `toast()`-Aufrufe im Projekt-Screen sind explizite Übergabepunkte für Phase 4 (Dialog-Overlay):
+- Konflikt-Items → Konfliktbox
+- Themen-Karten → Drilldown / Themen-Box
+- Dokument-Zeilen → Preview / Versionshistorie (Phase 6)
+- Handlungsbedarf-Buttons (Bearbeiten / Inline antworten) → passende Box-Typen
+- SourceMarker → Quellen-Ansicht
+- Verlauf-Einträge → Detail / verknüpfter Konflikt
+- Feedback-Button → Korrektur-Dialog
 
 ### Was bleibt unverändert
 - Drei Außenmodi (Entität / Projekt / Overlay)
@@ -44,13 +56,11 @@
 - Designhaltung: dunkel, glasartig, ruhig, technisch
 - Entity-Screen-Animation und Zustandswechsel
 
-### Datenmodell (Phase 2 Stand)
+### Datenmodell (aktueller Stand)
 
-**Enums:** asset_type, processing_status, delta_type, review_status, box_type (7 Werte, +gap_box ausstehend), fact_type, decision_status, contradiction_type
+**Enums:** asset_type, processing_status, delta_type, review_status, box_type (8 Werte inkl. gap_box), box_state, fact_type, decision_status, contradiction_type, dependency_type, gap_status, dialog_status
 
-**Vorhanden:** projects, assets, sources, parsed_documents, proposed_facts, canonical_facts, review_sessions, review_cases, change_events, commit_results, topics, decisions, deadlines, tasks, open_points, persons, organizations, project_stakeholder_links, contradictions, feedback, corrections, fact_references, version_links, project_state_snapshots
-
-**Fehlend (Phase 2.5):** gap_signals, dependencies, outcome_signals, ggf. dialog_sessions, Enum-Erweiterung box_type um gap_box
+**Tabellen:** projects, assets, sources, parsed_documents, proposed_facts, canonical_facts, review_sessions, review_cases, change_events, commit_results, topics, decisions, deadlines, tasks, open_points, persons, organizations, project_stakeholder_links, contradictions, feedback, corrections, fact_references, version_links, project_state_snapshots, **gap_signals**, **dependencies**, **outcome_signals**, **dialog_sessions**
 
 ### Nächster Schritt
-Phase 3.5 — Projekt-Screen Reset auf Vier-Rollen-Modell. Bestehende Tab-Architektur, Bento-Facetten und Lagebild-Panel werden entfernt. Sweeping rebuild.
+**Phase 4 — Dialog-Overlay**. Alle Toast-Brücken werden durch echte Box-Aufrufe ersetzt. 8 Box-Typen (inkl. Gap-Box) mit 6 Zuständen.
