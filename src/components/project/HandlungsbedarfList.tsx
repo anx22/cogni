@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ChevronRight, User, CalendarClock, Ban } from "lucide-react";
+import { toast } from "sonner";
 import ObjectToken from "./shared/ObjectToken";
 import SourceMarker from "./shared/SourceMarker";
 import type { demoProject, Arbeitsmodus } from "@/data/demoProject";
@@ -99,10 +100,24 @@ const ActionRow = ({ item, barClass }: { item: Item; barClass: string }) => {
           <p className="text-sm text-foreground/90 leading-relaxed mb-3">{item.beschreibung}</p>
           <div className="flex flex-wrap items-center gap-2">
             <SourceMarker quelle={item.quelle} />
-            <button className="text-[11px] uppercase tracking-wider px-2.5 py-1 rounded-md bg-primary/20 text-primary hover:bg-primary/30 transition-colors">
+            <button
+              onClick={() =>
+                toast(`Bearbeiten: ${item.titel}`, {
+                  description: "Bearbeitung im Dialog-Overlay (Phase 4).",
+                })
+              }
+              className="text-[11px] uppercase tracking-wider px-2.5 py-1 rounded-md bg-primary/20 text-primary hover:bg-primary/30 transition-colors"
+            >
               Bearbeiten
             </button>
-            <button className="text-[11px] uppercase tracking-wider px-2.5 py-1 rounded-md border border-border-subtle text-muted-foreground hover:text-foreground hover:border-border-strong transition-colors">
+            <button
+              onClick={() =>
+                toast(`Inline antworten: ${item.titel}`, {
+                  description: "Antwort-Flow kommt mit Phase 4 (Dialog-Overlay).",
+                })
+              }
+              className="text-[11px] uppercase tracking-wider px-2.5 py-1 rounded-md border border-border-subtle text-muted-foreground hover:text-foreground hover:border-border-strong transition-colors"
+            >
               Inline antworten
             </button>
           </div>

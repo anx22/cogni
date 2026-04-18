@@ -1,5 +1,8 @@
-import { Calendar, Clock, Users, Target } from "lucide-react";
+import { Calendar, Clock, Target } from "lucide-react";
 import ConflictBanner from "./shared/ConflictBanner";
+import SignalStrip from "./shared/SignalStrip";
+import StakeholderPopover from "./shared/StakeholderPopover";
+import FeedbackButton from "./shared/FeedbackButton";
 import type { demoProject } from "@/data/demoProject";
 
 type Project = typeof demoProject;
@@ -21,25 +24,30 @@ const LageZone = ({ project }: { project: Project }) => {
             {project.description}
           </p>
 
-          {/* Meta strip — moved up directly under subline */}
+          {/* Meta strip */}
           <div className="flex flex-wrap gap-x-6 gap-y-2 pt-3 border-t border-border-subtle/60">
             <MetaChip icon={<Calendar className="w-3.5 h-3.5" />} label="Nächster Termin" value={project.stats.naechsterTermin} />
             <MetaChip icon={<Clock className="w-3.5 h-3.5" />} label="Letzte Änderung" value={project.stats.letzteAenderung} />
-            <MetaChip icon={<Users className="w-3.5 h-3.5" />} label="Stakeholder" value={`${project.stats.stakeholder}`} />
+            <StakeholderPopover stakeholder={project.stakeholder} />
             <MetaChip icon={<Target className="w-3.5 h-3.5" />} label="Budget" value={project.stats.budget} />
           </div>
         </div>
 
         {/* Lagebild — Hero, dominant */}
-        <div className="relative rounded-2xl border border-border-subtle bg-surface-2 shadow-card-glow p-8 overflow-hidden">
+        <div className="group relative rounded-2xl border border-border-subtle bg-surface-2 shadow-card-glow p-8 overflow-hidden">
           <span className="absolute left-0 top-6 bottom-6 w-1 rounded-r-full bg-primary/50" />
-          <p className="text-[11px] uppercase tracking-[0.2em] text-primary/80 mb-3 pl-3">Lagebild</p>
+          <div className="flex items-start justify-between gap-4 mb-3 pl-3">
+            <p className="text-[11px] uppercase tracking-[0.2em] text-primary/80">Lagebild</p>
+            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+              <FeedbackButton context="Lagebild" />
+            </div>
+          </div>
           <p className="text-lg md:text-xl text-foreground leading-relaxed pl-3 font-light">
             {project.lagetext}
           </p>
         </div>
 
-        {/* Konflikt + Zielbild — secondary, two columns */}
+        {/* Konflikt + Zielbild */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           <div>
             <ConflictBanner konflikte={project.konflikte} />
@@ -59,6 +67,9 @@ const LageZone = ({ project }: { project: Project }) => {
             </div>
           )}
         </div>
+
+        {/* Signale: Gaps + Dependencies */}
+        <SignalStrip gaps={project.gaps} dependencies={project.dependencies} />
       </div>
     </section>
   );
