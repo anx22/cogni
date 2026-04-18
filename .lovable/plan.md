@@ -1,110 +1,126 @@
 
 
-## Entity-Screen-Erweiterung — Schwebende Side-Grids
+## Audit-Bericht Projekt-Detail-Screen + Doku-Update
 
-### Konzept
+### Methodik
+Abgleich ProjectScreen + Subkomponenten + demoProject gegen `docs/produkt-gesamt.md` (4-Rollen-Modell, Kernsignale, Designprinzipien) und `docs/geplant.md` (Phase 3.5 Soll).
 
-Der Entity-Core bleibt absoluter Mittelpunkt. Links und rechts davon schweben zwei dezente Grid-Flächen — wie zwei stille Beiboote neben dem Hauptobjekt. Keine Cards, keine harten Container, nur gepunktete Hintergrundfläche mit Icon-Kacheln.
+---
 
-### Layout
+### Befunde — Was passt
 
-```text
-┌─────────────────────────────────────────────────────────────┐
-│                                                              │
-│  ┌─────────────┐         ●●●●         ┌─────────────┐       │
-│  │ · · · · · · │       ENTITY-CORE     │ · · · · · · │       │
-│  │ □ □ □ □     │      (zentriert)      │ · · · · · · │       │
-│  │ □ □ □ □     │                       │ · · · · · · │       │
-│  │ □ □ □ □     │                       │ · · · · · · │       │
-│  │ □ □ □ □     │                       │ · · · · · · │       │
-│  │ □ □ □ □     │                       │ · · · · · · │       │
-│  │   • • •     │  Pagination dots      │             │       │
-│  └─────────────┘                       └─────────────┘       │
-│   PROJEKTE                              [Platzhalter]        │
-│                                                              │
-│  Drop-Hint                          Bottom-Status            │
-└─────────────────────────────────────────────────────────────┘
-```
+| Bereich | Status |
+|---|---|
+| 4-Rollen-Struktur (Lage / Handlungsbedarf / Verlauf / Substanz) | ✓ vollständig vorhanden |
+| Hierarchie (nicht gleichrangig): Lagebild Hero, Konflikt/Ziel sekundär, Mittelteil 60/40, Substanz full-width | ✓ |
+| Provenance auf Items (SourceMarker, quelle-Felder) | ✓ |
+| Delta-Tags im Verlauf (neu/ersetzt/bestaetigt/widersprochen) | ✓ |
+| Konflikt-Banner in Lage | ✓ |
+| Outcome Signal (Erfolgskriterium + No-Gos) | ✓ |
+| Handlungsbedarf gruppiert in entscheiden/klären/umsetzen/prüfen | ✓ |
+| Verlauf mit Typfiltern | ✓ |
+| Themen-Drilldown + Dokumentliste mit Versionen | ✓ |
 
-### Linkes Grid — Projekt-Launcher
+---
 
-**Visuelle Anmutung:**
-- Hintergrund: `radial-gradient` aus winzigen Punkten (~1px, `foreground/8`, Abstand ~16px) — dezenter Dotted-Pattern
-- Keine Border, kein Container-Rand, nur die Punkt-Fläche definiert das Grid
-- Padding innen ~24px, leicht abgerundete Ecken (`rounded-3xl`) für die Hintergrundfläche
-- Sehr leichter Backdrop-Blur, damit es schwebt aber nicht aufdringlich ist
+### Befunde — Lücken & Inkonsistenzen
 
-**Kacheln:**
-- 4 Spalten × 5 Zeilen = 20 Projekte sichtbar pro Seite
-- Kachel: ~56×56px, `rounded-2xl` (iOS-App-Icon-Anmutung), Hintergrund auf `surface-2` mit dezentem Glow
-- Inhalt der Kachel: 1-2 Buchstaben Initial des Projekts (oder Symbol später) in primary-Farbe, mittig
-- Direkt unter Kachel: einzeiliger Projektname, `text-[10px]`, `text-muted-foreground/70`, max. 1 Zeile mit `truncate`
-- Hover: Kachel wird `surface-3`, leichte Skalierung (`scale-105`), Name wird heller
-- Klick: navigiert zu `view: "project"` (später mit Projekt-ID)
+**A. Datenmodell-Signale unterrepräsentiert in der UI**
+1. **Gap Signals**: in `demoProject.gaps` definiert (3 Stück mit Wirkung, Betrifft, Lebensdauer), aber **nirgends im Screen sichtbar**. Sie tauchen nur indirekt als zwei Handlungsbedarf-Items (`gap` ObjektTyp) auf — die Wirkungs-/Lebensdauer-Information geht verloren. Vision verlangt aber „Lücken sind Kernfunktion, keine Nebenfunktion".
+2. **Dependency Signals**: in `demoProject.dependencies` definiert (3 Stück, blockiert_durch / wartet_auf / haengt_ab_von), **null UI-Sichtbarkeit**. Komplette Datenklasse ohne Rendering.
+3. **Stakeholder-Liste**: `demoProject.stakeholder` (6 Personen mit Rolle/Org) existiert, aber im Screen wird nur die **Anzahl** in Lage gezeigt. Vision sagt „Stakeholder-Kontext" als Lage-Bestandteil — Namen/Rollen fehlen.
 
-**Pagination:**
-- Erscheint nur wenn >20 Projekte
-- Drei kleine Dots unten mittig (`w-1.5 h-1.5 rounded-full`), aktive Seite `bg-foreground/60`, inaktive `bg-foreground/15`
-- Keine Pfeile, keine Nummern — Apple-Stil
-- Klick auf Dot oder horizontales Wischen wechselt Seite (Wisch optional in Phase 2)
+**B. Interaktivität — tote Buttons**
+4. ProjectTile-Klick auf der Entität öffnet immer dasselbe `demoProject` (kein ID-Routing) — bekannt, Phase 4.
+5. **Themen-Buttons** in Substanz: visuell als Drilldown-Einstieg gestaltet (`→`-Pfeil, hover-State), haben aber **keinen onClick** → funktional tot, optisch versprechend.
+6. **Dokument-Zeilen** in Substanz: hover-State, aber **kein onClick** → kein Preview, kein Drilldown.
+7. **Handlungsbedarf-Row Buttons** „Bearbeiten" + „Inline antworten": **keine Handler**, keine State-Änderung, kein Toast-Feedback.
+8. **Verlauf-Einträge**: kein Klick auf Eintrag (z.B. um Quelle zu öffnen oder Kontext zu sehen) — nur SourceMarker-Button ist klickbar, aber auch ohne Handler.
+9. **SourceMarker** generell: button-Element, **kein onClick** → wirkt klickbar, ist es nicht.
+10. **Konflikt-Einträge im Banner**: keine Interaktion möglich (Vision: „Konflikt → öffnet Konfliktbox im Dialog-Overlay" — Phase 4, aber wenigstens Hover/Cursor-Klärung fehlt).
+11. **Meta-Chips** (Termin, Stakeholder, Budget): rein dekorativ — vertretbar, aber Stakeholder-Zahl könnte zu Stakeholder-Liste expandieren.
 
-**Header-Label:**
-- Kleines uppercase-Label `PROJEKTE` unter dem Grid, `text-[10px]`, `tracking-widest`, `text-muted-foreground/40`
+**C. Feedback-/Korrektur-Kanal fehlt**
+12. Vision: „Feedback und Korrektur sind allgegenwärtig". Im Projektscreen gibt es **keinen sichtbaren Feedback/Korrektur-Affordance** auf Lagebild, Verlauf-Einträgen, Themen, Dokumenten. Nur Handlungsbedarf hat „Inline antworten" (ohne Funktion).
 
-### Rechtes Grid — Platzhalter
+**D. Handlungsbedarf — Modell unvollständig abgebildet**
+13. Vision: Handlungsbedarf vereint „offene Punkte, Aufgaben, unbestätigte Entscheidungen, **Konflikte, Gaps, Dependencies**, arbeitsrelevantes Feedback". Aktuell: Konflikte und Gaps tauchen via `objektTyp` auf, **Dependencies komplett nicht** als Handlungsbedarf-Item.
+14. Counter im Header: „9 offen · 2 Blocker" — `stats.handlungsbedarf` ist hardcoded `9`, könnte aus `items.length` kommen (DRY).
 
-- Identische Struktur: gleiche Größe, gleicher Dotted-Background, gleiches Padding
-- Inhalt leer — nur die Punkte sichtbar
-- Mini-Label unten: `BALD VERFÜGBAR` oder einfach kein Label (entscheide ich für „kein Label" — maximale Ruhe, Funktion enthüllt sich später)
-- Gleicher Render-Code, nur ohne Items → später drop-in austauschbar
+**E. Verlauf — Zustände fehlen**
+15. Filter „milestone" existiert, aber `ereignisTyp` enthält nur die Werte aus den Verlauf-Einträgen. Demo hat genau 1 milestone (`v8`). OK.
+16. Kein Indikator, ob ein Verlaufseintrag noch reviewbar/widersprüchlich ist (Vision: „bestätigte Entscheidungen, Konfliktereignisse" — Konflikt-Eintrag `v4` ist nur via Delta-Tag „widersprochen" markiert, ohne Verbindung zum aktiven Konflikt #k1/k2).
 
-### Positionierung & Responsive
+**F. Substanz — Sortierung & Status**
+17. Themen-Karten zeigen Counts, aber kein Status-Signal (z.B. „enthält Konflikt" / „enthält Gap"). Vision: Themen sollen Drilldown in projektinterne Substanz sein — aktuell statische Counts ohne Bewertung.
+18. Dokumente: keine Sortierung (Datum? Typ?), keine Versionshistorie-Aufruf.
 
-- Grids absolut positioniert, vertikal mittig zur Entity (`top-1/2 -translate-y-1/2`)
-- Horizontaler Abstand zur Entity: ausreichend, dass Entity-Glow nicht in Grid läuft (~10-12% der Viewportbreite vom Zentrum)
-- **Breakpoints:**
-  - `xl` (≥1280px): beide Grids sichtbar links und rechts
-  - `lg` (≥1024px): nur linkes Grid sichtbar, rechtes ausgeblendet
-  - `<lg`: beide Grids ausgeblendet, Entity bleibt allein (Mobile-Reinheit)
+**G. Header / Back-Navigation**
+19. „← Entität" als fixed top-left ist okay, aber bei Scroll auf Surface-1 kontrastschwach. Funktional korrekt.
+20. Kein Breadcrumb, kein Projekt-Identifier sichtbar bei Scroll (Title verschwindet).
 
-### Ergänzungen, die du nicht erwähnt hast
+**H. Logische Konsistenz**
+21. `stats.konflikte = 2`, `konflikte.length = 2` — passt.
+22. `stats.handlungsbedarf = 9`, `handlungsbedarf.length = 9` — passt aber redundant.
+23. `stats.stakeholder = 6`, `stakeholder.length = 6` — passt aber redundant.
+24. Themen-Counts (`entscheidungen`, `offenePunkte`, `dokumente`) sind hardcoded, **kein Bezug** zu tatsächlichen Items im Datensatz → reine Demo-Zahlen.
 
-1. **Empty-State linkes Grid**: wenn 0 Projekte existieren → eine einzelne dezente Kachel mit `+` als Aufforderung „Erstes Projekt anlegen"
-2. **Aktiv-Indikator**: das zuletzt geöffnete Projekt bekommt einen winzigen Punkt unter dem Namen (wie iOS „App geöffnet"-Indikator)
-3. **Tooltip on hover**: voller Projektname als Tooltip, falls truncated
-4. **Tastaturzugriff**: Pfeiltasten navigieren durch Kacheln, Enter öffnet — barrierefrei und Apple-typisch elegant
-5. **Drop-Zone-Schutz**: wenn der User Files über die Entity zieht, dürfen die Grids nicht den Drop abfangen → `pointer-events-none` während Drag-State auf den Grids
-6. **Animation beim Erscheinen**: Grids faden mit kleinem `translate-x` (Links: von links, Rechts: von rechts) ein, ~400ms, gestaffelt nach der Entity
+---
 
-### Datenquelle
+### Empfohlene Korrekturen (priorisiert)
 
-- Demo-Liste in `src/data/demoProjects.ts` (Plural, neue Datei) mit ~6-12 Demo-Projekten: `{ id, name, initial, lastOpenedAt? }`
-- Später durch Supabase-Query ersetzbar — Komponente bleibt unverändert
-- Klick auf Kachel ruft existierenden `setView("project")` auf (Phase 4: mit ID-Parameter)
+**P1 — Vision-kritische Sichtbarkeit (Gap & Dependency)**
+- **Lage-Zone erweitern**: kompakter „Signale"-Streifen unter Lagebild oder als 3. Spalte neben Konflikt/Ziel: Gap-Counter + Dependency-Counter mit Badge-Stil analog Konflikt.
+- **Handlungsbedarf**: Dependency-Items als eigene `objektTyp: "dependency"` Einträge ergänzen (z.B. unter „klären" oder „prüfen").
+- **Optional Substanz-Erweiterung**: kleiner Block „Offene Signale" mit allen 3 Gaps (Titel + Wirkung + Lebensdauer) und 3 Dependencies (Quelle → Ziel + Typ) — als kompakte Listen unter Themen oder als eigener Substanz-Subblock. Alternativ in der rechten Spalte des Mittelteils zwischen Verlauf und Handlungsbedarf einblenden.
 
-### Komponenten-Struktur
+**P2 — Tote Interaktionen aktivieren (mit Toast als Phase-4-Brücke)**
+- Themen-Karten: onClick → Toast „Drilldown für Thema X kommt mit Phase 4 (Dialog-Overlay)".
+- Dokument-Zeilen: onClick → Toast „Preview kommt mit Phase 6".
+- Handlungsbedarf-Buttons (Bearbeiten / Inline antworten): onClick → Toast „Dialog-Overlay (Phase 4)".
+- SourceMarker: onClick → Toast mit Quellen-Info.
+- Konflikt-Items: hover cursor-pointer + onClick → Toast.
+- So bleibt UX konsistent (kein Klick versickert), Phase-4-Aufhängung explizit dokumentiert.
 
-- `src/components/entity/SideGrid.tsx` — generischer Grid-Container mit Dotted-Background, Pagination, Slots für Items
-- `src/components/entity/ProjectTile.tsx` — einzelne Kachel mit Initial + Name + Hover/Active-States
-- `src/data/demoProjects.ts` — Demo-Datenquelle
+**P3 — Feedback-Affordance**
+- Kleiner „Feedback/Korrektur"-Button (Icon + Text) auf Lagebild und auf Verlauf-Einträgen (hover-revealed). onClick → Toast/Phase-4-Hinweis.
 
-### Betroffene Dateien
+**P4 — Stakeholder sichtbar machen**
+- In Lage: hinter Stakeholder-Zahl ein Popover/expandable mit Liste (Name, Rolle, Org). Oder als kleiner Avatar-Stack neben dem Chip.
 
-- `src/pages/Index.tsx` — beide Grids links/rechts der Entity einbinden, Click-Handler für Projekt-Navigation
-- **Neu:** `src/components/entity/SideGrid.tsx`
-- **Neu:** `src/components/entity/ProjectTile.tsx`
-- **Neu:** `src/data/demoProjects.ts`
-- `src/index.css` — ggf. Utility für Dotted-Pattern-Background (oder via Tailwind `bg-[radial-gradient(...)]` inline)
+**P5 — Konsistenz-Cleanup**
+- `stats.handlungsbedarf` / `stats.stakeholder` aus `items.length` ableiten statt hardcoden.
+- Handlungsbedarf-Header-Counter konsistent.
+
+**P6 — Verlauf ↔ Konflikt Verbindung**
+- Verlauf-Eintrag mit Delta „widersprochen" sollte optisch auf zugehörigen Konflikt verweisen können (Klick auf Eintrag → Toast „Konflikt #k2 öffnen, Phase 4").
+
+---
+
+### Doku-Update (nach Code-Korrekturen)
+
+Anzupassen:
+- `docs/implementierung-aktuell.md`:
+  - Status Phase 3.5 von „NÄCHSTER SCHRITT" auf **abgeschlossen** setzen.
+  - Implementierte Komponenten auflisten (LageZone, HandlungsbedarfList, VerlaufFeed, SubstanzSection, shared/ConflictBanner/DeltaTag/SourceMarker/ObjectToken).
+  - Phase 3.6 „Visual Hierarchy & Layout-Revise" + „Side-Grids Entity-Screen" als zusätzlich abgeschlossen ergänzen.
+  - Bekannte Phase-4-Lücken explizit listen (Buttons als Toast-Brücken).
+- `docs/geplant.md`:
+  - Phase 3.5 entfernen / als done markieren.
+  - Nächster Schritt = Phase 4 Dialog-Overlay.
+  - Phase 4 um Übergangs-Punkt „bestehende Toast-Brücken durch echte Box-Aufrufe ersetzen" ergänzen.
+- `mem://features/produkt-prinzipien.md` (Memory): Hinweis ergänzen, dass Gap- und Dependency-Signale auch im Projekt-Screen sichtbar sein müssen, nicht nur im Datenmodell.
+
+---
 
 ### Out of Scope
+- Echtes Dialog-Overlay (Phase 4)
+- Echte Drilldown-Routes für Themen/Dokumente (Phase 4+)
+- Backend-Anbindung der Demo-Daten
+- Inhaltliche Veränderung der Demo-Daten (außer Ergänzung Dependency-Items in Handlungsbedarf für P1)
 
-- Echte Backend-Anbindung (kommt mit Phase 2.5/Backend)
-- Drag-and-Drop zwischen Kacheln, Reordering, Favoriten
-- Kontextmenü auf Kacheln
-- Inhalt des rechten Grids
-- Wisch-Gesten für Pagination (Click auf Dots reicht in Phase 1)
+---
 
 ### Erwartetes Ergebnis
-
-Der Entity-Screen wirkt nicht mehr leer, behält aber seine ruhige Zentrierung. Du erkennst auf einen Blick alle aktuellen Projekte als Icon-Wand links neben der Entity und kannst direkt einsteigen — ohne Menü, ohne Sidebar, ohne Bruch der Designhaltung.
+Der Projekt-Screen reflektiert die Produktvision vollständig: Konflikte, **Gaps und Dependencies** sind sichtbar als eigenständige Kernsignale; jede klickbare Fläche reagiert (mindestens Toast-Brücke); Stakeholder-Kontext erschließbar; Feedback/Korrektur-Affordance präsent. Doku ist auf Stand.
 
