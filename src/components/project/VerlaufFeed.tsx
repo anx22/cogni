@@ -25,8 +25,8 @@ const VerlaufFeed = ({ verlauf }: { verlauf: Eintrag[] }) => {
   );
 
   return (
-    <section className="px-8 md:px-12 lg:px-16 xl:px-20 py-14 bg-surface-1 border-b border-border-strong">
-      <div className="max-w-6xl mx-auto">
+    <div>
+      <div>
         <header className="mb-6">
           <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground/70 mb-2">Chronologie</p>
           <h2 className="text-2xl font-light tracking-tight text-foreground">Verlauf</h2>
@@ -50,7 +50,7 @@ const VerlaufFeed = ({ verlauf }: { verlauf: Eintrag[] }) => {
         </div>
 
         {/* Timeline */}
-        <div className="rounded-xl border border-border-subtle bg-surface-2 shadow-card-glow p-6">
+        <div className="rounded-xl border border-border-subtle bg-surface-2 shadow-card-glow p-6 max-h-[720px] overflow-y-auto">
           <div className="relative pl-6 border-l border-border-strong space-y-5">
             {filtered.map((e) => (
               <div key={e.id} className="relative">
@@ -70,7 +70,7 @@ const VerlaufFeed = ({ verlauf }: { verlauf: Eintrag[] }) => {
           </div>
         </div>
       </div>
-    </section>
+    </div>
   );
 };
 

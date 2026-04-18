@@ -22,9 +22,9 @@ const HandlungsbedarfList = ({ items }: { items: Item[] }) => {
   }));
 
   return (
-    <section className="px-8 md:px-12 lg:px-16 xl:px-20 py-16 bg-surface-0 border-b border-border-strong">
-      <div className="max-w-6xl mx-auto">
-        <header className="mb-8 flex items-baseline justify-between">
+    <div>
+      <div>
+        <header className="mb-6 flex items-baseline justify-between">
           <div>
             <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground/70 mb-2">Operatives Zentrum</p>
             <h2 className="text-2xl font-light tracking-tight text-foreground">Handlungsbedarf</h2>
