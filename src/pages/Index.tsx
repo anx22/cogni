@@ -1,6 +1,8 @@
 import { useState, useCallback } from "react";
 import EntityCore from "@/components/EntityCore";
 import ProjectScreen from "@/components/project/ProjectScreen";
+import SideGrid from "@/components/entity/SideGrid";
+import { demoProjects } from "@/data/demoProjects";
 
 type EntityState = "idle" | "hover" | "processing" | "review-ready" | "failed";
 type AppView = "entity" | "project";
@@ -10,12 +12,20 @@ const Index = () => {
   const [lastImpact, setLastImpact] = useState<string | null>(null);
   const [droppedFiles, setDroppedFiles] = useState<string[]>([]);
   const [view, setView] = useState<AppView>("entity");
+  const [activeProjectId, setActiveProjectId] = useState<string | undefined>();
+
+  const isDragActive = entityState === "hover";
 
   const handleDrop = useCallback((files: File[]) => {
     const names = files.map(f => f.name);
     setDroppedFiles(prev => [...prev, ...names]);
     setEntityState("processing");
     setLastImpact(`${files.length} ${files.length === 1 ? "Objekt" : "Objekte"} aufgenommen`);
+  }, []);
+
+  const handleProjectClick = useCallback((id: string) => {
+    setActiveProjectId(id);
+    setView("project");
   }, []);
 
   const handleReviewClick = useCallback(() => {
@@ -30,6 +40,23 @@ const Index = () => {
     <div className="relative flex flex-col items-center justify-center min-h-screen overflow-hidden bg-background">
       {/* Entity Core — center */}
       <div className="relative w-full flex-1 flex items-center justify-center">
+        {/* Left side grid — projects */}
+        <div className="hidden lg:block absolute left-[6%] top-1/2 -translate-y-1/2 z-10">
+          <SideGrid
+            side="left"
+            label="Projekte"
+            projects={demoProjects}
+            activeId={activeProjectId}
+            onProjectClick={handleProjectClick}
+            isDragActive={isDragActive}
+          />
+        </div>
+
+        {/* Right side grid — placeholder */}
+        <div className="hidden xl:block absolute right-[6%] top-1/2 -translate-y-1/2 z-10">
+          <SideGrid side="right" isDragActive={isDragActive} />
+        </div>
+
         <EntityCore
           state={entityState}
           onDrop={handleDrop}
