@@ -11,7 +11,8 @@ export type ObjektTyp =
   | "blocker"
   | "aufgabe"
   | "offener_punkt"
-  | "feedback";
+  | "feedback"
+  | "dependency";
 
 export type DeltaTyp = "neu" | "ersetzt" | "bestaetigt" | "widersprochen";
 
