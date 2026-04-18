@@ -25,11 +25,11 @@ const VerlaufFeed = ({ verlauf }: { verlauf: Eintrag[] }) => {
   );
 
   return (
-    <section className="px-8 md:px-12 lg:px-16 xl:px-20 py-14 border-t border-border/40">
+    <section className="px-8 md:px-12 lg:px-16 xl:px-20 py-14 bg-surface-1 border-b border-border-strong">
       <div className="max-w-6xl mx-auto">
         <header className="mb-6">
-          <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground/50 mb-2">Chronologie</p>
-          <h2 className="text-2xl font-light tracking-tight text-foreground/95">Verlauf</h2>
+          <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground/70 mb-2">Chronologie</p>
+          <h2 className="text-2xl font-light tracking-tight text-foreground">Verlauf</h2>
         </header>
 
         {/* Filter chips */}
@@ -40,8 +40,8 @@ const VerlaufFeed = ({ verlauf }: { verlauf: Eintrag[] }) => {
               onClick={() => setFilter(f.id)}
               className={`text-[11px] uppercase tracking-wider px-3 py-1.5 rounded-full border transition-colors ${
                 filter === f.id
-                  ? "bg-primary/15 text-primary/90 border-primary/30"
-                  : "border-border/40 text-muted-foreground/60 hover:text-foreground/80 hover:border-border/70"
+                  ? "bg-primary/20 text-primary border-primary/40"
+                  : "border-border-subtle bg-surface-2 text-muted-foreground hover:text-foreground hover:border-border-strong"
               }`}
             >
               {f.label}
@@ -50,22 +50,24 @@ const VerlaufFeed = ({ verlauf }: { verlauf: Eintrag[] }) => {
         </div>
 
         {/* Timeline */}
-        <div className="relative pl-6 border-l border-border/40 space-y-5">
-          {filtered.map((e) => (
-            <div key={e.id} className="relative">
-              <div className="absolute -left-[27px] top-1.5 w-2 h-2 rounded-full bg-muted-foreground/30 ring-4 ring-background" />
-              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-1">
-                <span className="text-[11px] text-muted-foreground/50 font-mono">{e.datum}</span>
-                <DeltaTag delta={e.delta} />
-                <span className="text-[10px] uppercase tracking-wider text-muted-foreground/40">{e.objekt}</span>
+        <div className="rounded-xl border border-border-subtle bg-surface-2 shadow-card-glow p-6">
+          <div className="relative pl-6 border-l border-border-strong space-y-5">
+            {filtered.map((e) => (
+              <div key={e.id} className="relative">
+                <div className="absolute -left-[27px] top-1.5 w-2 h-2 rounded-full bg-muted-foreground/60 ring-4 ring-surface-2" />
+                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-1">
+                  <span className="text-[11px] text-muted-foreground/70 font-mono">{e.datum}</span>
+                  <DeltaTag delta={e.delta} />
+                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60">{e.objekt}</span>
+                </div>
+                <p className="text-sm text-foreground/95 leading-snug mb-1.5">{e.inhalt}</p>
+                <SourceMarker quelle={e.quelle} />
               </div>
-              <p className="text-sm text-foreground/85 leading-snug mb-1.5">{e.inhalt}</p>
-              <SourceMarker quelle={e.quelle} />
-            </div>
-          ))}
-          {filtered.length === 0 && (
-            <p className="text-sm text-muted-foreground/50 italic">Keine Einträge in diesem Filter.</p>
-          )}
+            ))}
+            {filtered.length === 0 && (
+              <p className="text-sm text-muted-foreground italic">Keine Einträge in diesem Filter.</p>
+            )}
+          </div>
         </div>
       </div>
     </section>
