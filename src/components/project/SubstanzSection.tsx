@@ -7,7 +7,7 @@ type Dok = (typeof demoProject)["dokumente"][number];
 const SubstanzSection = ({ themen, dokumente }: { themen: Thema[]; dokumente: Dok[] }) => {
   return (
     <section className="px-8 md:px-12 lg:px-16 xl:px-20 py-16 bg-surface-0">
-      <div className="max-w-6xl mx-auto space-y-14">
+      <div className="max-w-7xl mx-auto space-y-14">
         <header>
           <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground/70 mb-2">Inhalt</p>
           <h2 className="text-2xl font-light tracking-tight text-foreground">Substanz</h2>
