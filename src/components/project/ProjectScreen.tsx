@@ -12,10 +12,10 @@ const ProjectScreen = ({ onBack }: ProjectScreenProps) => {
   const p = demoProject;
 
   return (
-    <div className="min-h-screen bg-background animate-[fade-in_0.5s_ease-out]">
+    <div className="min-h-screen bg-surface-0 animate-[fade-in_0.5s_ease-out]">
       <button
         onClick={onBack}
-        className="fixed top-6 left-8 z-50 text-xs text-muted-foreground/40 hover:text-muted-foreground/80 transition-colors tracking-widest uppercase"
+        className="fixed top-6 left-8 z-50 text-xs text-muted-foreground/60 hover:text-foreground/90 transition-colors tracking-widest uppercase"
       >
         ← Entität
       </button>
