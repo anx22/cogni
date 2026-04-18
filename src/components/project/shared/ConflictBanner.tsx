@@ -1,4 +1,5 @@
 import { AlertTriangle } from "lucide-react";
+import { toast } from "sonner";
 
 interface Konflikt {
   id: string;
@@ -19,9 +20,19 @@ const ConflictBanner = ({ konflikte }: { konflikte: Konflikt[] }) => {
           </p>
           <ul className="space-y-1">
             {konflikte.map((k) => (
-              <li key={k.id} className="text-sm text-foreground/95 leading-snug">
-                <span className="font-medium">{k.title}</span>
-                <span className="text-muted-foreground"> · {k.beschreibung}</span>
+              <li key={k.id}>
+                <button
+                  type="button"
+                  onClick={() =>
+                    toast(`Konflikt #${k.id} öffnen`, {
+                      description: "Konfliktbox kommt mit Phase 4 (Dialog-Overlay).",
+                    })
+                  }
+                  className="w-full text-left text-sm text-foreground/95 leading-snug hover:text-foreground transition-colors cursor-pointer"
+                >
+                  <span className="font-medium">{k.title}</span>
+                  <span className="text-muted-foreground"> · {k.beschreibung}</span>
+                </button>
               </li>
             ))}
           </ul>
