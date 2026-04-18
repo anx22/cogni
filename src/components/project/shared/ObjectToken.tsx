@@ -23,6 +23,7 @@ const map: Record<ObjektTyp, { icon: React.ElementType; label: string; color: st
   aufgabe: { icon: CheckSquare, label: "Aufgabe", color: "text-emerald-300/80" },
   offener_punkt: { icon: Circle, label: "Offener Punkt", color: "text-foreground/60" },
   feedback: { icon: MessageSquare, label: "Feedback", color: "text-pink-300/80" },
+  dependency: { icon: GitBranch, label: "Abhängigkeit", color: "text-cyan-300/80" },
 };
 
 const ObjectToken = ({ typ, showLabel = false }: { typ: ObjektTyp; showLabel?: boolean }) => {
