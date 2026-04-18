@@ -58,7 +58,7 @@ const HandlungsbedarfList = ({ items }: { items: Item[] }) => {
           })}
         </div>
       </div>
-    </section>
+    </div>
   );
 };
 
