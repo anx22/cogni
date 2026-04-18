@@ -1,95 +1,88 @@
 
 
-## Problem
+## Layout-Revise — Mehrspaltigkeit + Header-Hierarchie
 
-Der Screen wirkt wie eine flache schwarze Wand. Container, Karten und Sektionen sind kaum unterscheidbar, weil:
+### Teil 1 — Header-Reorganisation (LageZone)
 
-1. `bg-card/40`, `bg-card/30`, `bg-background/40`, `bg-card/20` liegen alle extrem nah beieinander auf fast schwarzem Grund
-2. `border-border/40` und `border-border/50` sind quasi unsichtbar
-3. Keine echte Tiefenhierarchie — alles schwebt auf derselben Ebene
-4. Keine Trennung zwischen den vier Rollen-Zonen außer einer dünnen Linie
+**Problem:** Meta-Strip (Termin/Änderung/Stakeholder/Budget) sitzt zu weit unten. Lagebild, Konflikt, Zielbild wirken als drei gleichwertige Streifen.
 
-## Design-Revise — Surface- & Depth-System
-
-### 1. Surface-Hierarchie einführen (3 Ebenen + Akzent)
-
-Statt zufälliger Opacity-Werte ein klares System mit echtem Kontrast:
+**Neue Hierarchie:**
 
 ```text
-Ebene 0  Page Background      sehr dunkel, neutral kühl
-Ebene 1  Zone Background      +4-6% Helligkeit, leichte Tönung
-Ebene 2  Card / Container     +8-10% Helligkeit, sichtbarer Border
-Ebene 3  Inner Element        +12% Helligkeit für Hover/Active/Inset
+┌─────────────────────────────────────────────────┐
+│ PROJEKT                                          │
+│ Kundenname (groß)                                │
+│ Subline-Beschreibung                             │
+│ ─ Termin · Änderung · Stakeholder · Budget ─    │ ← direkt unter Subline
+├─────────────────────────────────────────────────┤
+│                                                  │
+│   ▌ LAGEBILD (dominant, groß, eigene Fläche)   │ ← Hero-Element
+│     Volltext, größere Typo, mehr Padding         │
+│                                                  │
+├─────────────────────────────────────────────────┤
+│ [Konflikt-Banner schmal]  [Zielbild kompakt]    │ ← zweispaltig, sekundär
+└─────────────────────────────────────────────────┘
 ```
 
-Konkret in `index.css` neue Tokens ergänzen:
-- `--surface-0` (Page)
-- `--surface-1` (Zone) 
-- `--surface-2` (Card)
-- `--surface-3` (Inner/Hover)
-- `--border-subtle` (sichtbar, ~14-16% L)
-- `--border-strong` (Trennlinien zwischen Zonen, ~20% L)
+- Meta-Chips wandern hoch direkt unter die Subline (kompakte Inline-Zeile)
+- Lagebild wird visuell dominant: größere Typo (text-lg), mehr Padding, eigener Akzent (linker Border-Bar in primary/40 oder dezenter Glow)
+- Konflikt + Zielbild rücken in eine zweispaltige Zeile darunter — beide kompakter, gleichrangig untereinander aber sekundär zum Lagebild
+- Zielbild-Box bekommt knappere Darstellung (Erfolgskriterium einzeilig + No-Gos als Inline-Tags)
 
-Helligkeitssprünge mindestens 4-5% L im HSL — sonst nicht wahrnehmbar auf OLED/dunklen Screens.
+### Teil 2 — Mehrspalten-System für die vier Zonen
 
-### 2. Zonen klarer trennen
+**Empfehlung: 60/40 zweispaltig** statt 40/40/20, weil:
+- Drei schmale Spalten zerreißen den Lesefluss bei dichten Listen
+- Handlungsbedarf braucht Platz für expandierbare Rows + Akzentbalken
+- Verlauf/Substanz funktionieren gut nebeneinander
+- Auf 1585px Viewport (aktuell) sind 60/40 noch atmungsaktiv
 
-Statt `border-b border-border/40` zwischen den vier Rollen:
-- **Lage**: `surface-1` mit dezentem Top-Gradient
-- **Handlungsbedarf**: `surface-0` (zurückgesetzt) — die Karten darin liegen auf `surface-2` und stechen hervor
-- **Verlauf**: `surface-1` wieder leicht angehoben
-- **Substanz**: `surface-0`
+**Zonenverteilung:**
 
-Wechsel zwischen `surface-0` und `surface-1` erzeugt Rhythmus ohne harte Linien. Plus eine ~1px `border-strong`-Linie als sauberer Schnitt.
+```text
+┌─────────────────────────────────────────────────────┐
+│ LAGE (volle Breite — Kontext für alles)             │
+├──────────────────────────────┬──────────────────────┤
+│                              │                      │
+│  HANDLUNGSBEDARF (60%)       │  VERLAUF (40%)      │
+│  operatives Zentrum          │  Chronologie        │
+│  bleibt prominent            │  scrollbar          │
+│                              │                      │
+├──────────────────────────────┴──────────────────────┤
+│ SUBSTANZ (volle Breite)                             │
+│ Themen-Drilldown + Dokumente — braucht horizontale │
+│ Fläche für Themen-Cluster                           │
+└─────────────────────────────────────────────────────┘
+```
 
-### 3. Karten endlich sichtbar machen
+**Begründung pro Zone:**
+- **Lage**: volle Breite — orientiert das gesamte Bild, darf nicht zerteilt werden
+- **Handlungsbedarf + Verlauf nebeneinander**: natürliches Paar (Was ist zu tun? + Was ist passiert?), beide scroll-intensiv, profitieren von Side-by-Side
+- **Substanz**: volle Breite — Themen-Cluster + Dokumentliste brauchen horizontalen Platz, sind ohnehin tiefer Drilldown
 
-Aktuell: `bg-card/40 border-border/50` → praktisch unsichtbar.
-Neu: 
-- Hintergrund: `surface-2` (echte Fläche, kein Alpha-Trick)
-- Border: `border-subtle` (1px, sichtbar)
-- Optional: leichter innerer Glow oben (1px `inset 0 1px 0 rgba(255,255,255,0.04)`) → gibt Karten die typische "schwebende" Glas-Anmutung
-- Schatten weiter unten: `shadow-[0_1px_0_rgba(0,0,0,0.4),0_8px_24px_-12px_rgba(0,0,0,0.6)]`
+**Responsive:**
+- ab `lg` (1024px): zweispaltig 60/40
+- darunter: untereinander (aktuelles Verhalten)
 
-Betroffen: Lagebild-Box, Zielbild-Box, Konflikt-Banner, Handlungsbedarf-Gruppen-Container, Verlauf-Einträge, Substanz-Karten.
+### Teil 3 — Visuelle Abgrenzung nebeneinanderliegender Panels
 
-### 4. Inner Rows in Handlungsbedarf
+Damit Handlungsbedarf und Verlauf nebeneinander nicht verschwimmen:
+- Beide bekommen eigene Container auf `surface-2` mit `border-subtle` + `shadow-card-glow`
+- Spaltenabstand: `gap-6` (24px) — genug Luft, kein Riss
+- Zonen-Hintergrund bleibt `surface-0` zwischen den Containern sichtbar
+- Sektion-Header (HANDLUNGSBEDARF / VERLAUF) bleiben als kleine uppercase-Labels über jedem Container
 
-Die Liste wirkt aktuell wie ein Block. Lösung:
-- Container auf `surface-2`
-- `divide-y divide-border-subtle` (sichtbar)
-- Hover-Row: `surface-3`
-- Expandierter Body: leicht eingerückter `surface-1`-Streifen mit linkem Akzentbalken in der Modus-Farbe (violet/amber/emerald/cyan)
+### Betroffene Dateien
 
-### 5. Akzentfarben dezent, aber präsent
+- `src/components/project/LageZone.tsx` — Meta-Chips hochziehen, Lagebild als Hero, Konflikt+Zielbild zweispaltig
+- `src/components/project/ProjectScreen.tsx` — Grid-Layout für Handlungsbedarf+Verlauf-Zone
+- `src/components/project/HandlungsbedarfList.tsx` — Outer-Padding/Container-Wrapping anpassen für Spalte
+- `src/components/project/VerlaufFeed.tsx` — dito, plus ggf. max-height + scroll für lange Feeds
+- `src/components/project/SubstanzSection.tsx` — bleibt full-width, evtl. innere Themen 2-spaltig
 
-- Modus-Headlines (Entscheiden/Klären/Umsetzen/Prüfen): aktueller Farbcode bleibt, aber +kleines farbiges Quadrat/Dot davor für visuelle Verankerung
-- Konflikt-Banner: Border kräftiger (`border-destructive/50`), Hintergrund mit echtem rötlichem Tint statt nur 5% Alpha
-- No-Go-Tags: gleiche Behandlung
+### Out of Scope
 
-### 6. Typo-Kontrast feinjustieren
-
-- Body-Text aktuell `text-foreground/85` und `text-foreground/75` → Karten-Body auf `text-foreground/90` anheben, weil die neuen Surfaces dunkler bleiben
-- Labels (`text-muted-foreground/50`) auf `/65` — sie verschwinden sonst
-
-## Umfang & Dateien
-
-- `src/index.css` — neue CSS-Variablen für Surface- und Border-System (Dark Mode Block)
-- `tailwind.config.ts` — Tokens als Tailwind-Farben verfügbar machen (`surface-0/1/2/3`, `border-subtle/strong`)
-- `src/components/project/LageZone.tsx` — Lagebild-Box, Zielbild-Box, Meta-Strip-Hintergrund
-- `src/components/project/HandlungsbedarfList.tsx` — Section, Gruppen-Container, Rows, Hover, Expanded-Body mit Akzentbalken
-- `src/components/project/VerlaufFeed.tsx` — Zonen-Hintergrund, Eintragskarten
-- `src/components/project/SubstanzSection.tsx` — Themen-Karten, Dokumentliste
-- `src/components/project/shared/ConflictBanner.tsx` — kräftigerer Tint + Border
-- `src/components/project/ProjectScreen.tsx` — Zonen-Wechsel `surface-0` ↔ `surface-1`, stärkere Trennlinie
-
-## Out of Scope
-
-- Keine Layout-Änderungen, keine neuen Inhalte
-- Keine Funktionsänderungen
-- Akzentfarben-System (violet/amber/emerald/cyan/destructive) bleibt wie es ist
-
-## Erwartetes Ergebnis
-
-Klare visuelle Hierarchie: Du siehst auf den ersten Blick wo eine Zone aufhört und die nächste anfängt, welche Container existieren und welche Elemente klickbar/interaktiv sind — ohne dass das Design seine ruhige, dunkle, glasartige Haltung verliert.
+- Keine inhaltlichen Änderungen
+- Keine neuen Komponenten
+- Surface-System bleibt unverändert
 
