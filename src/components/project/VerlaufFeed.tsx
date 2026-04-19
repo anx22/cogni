@@ -2,7 +2,8 @@ import { useState, useMemo } from "react";
 import DeltaTag from "./shared/DeltaTag";
 import SourceMarker from "./shared/SourceMarker";
 import FeedbackButton from "./shared/FeedbackButton";
-import { toast } from "sonner";
+import { useDialog } from "@/components/dialog/DialogProvider";
+import { buildVerlaufSession } from "@/lib/dialog/sessionFactories";
 import type { demoProject } from "@/data/demoProject";
 
 type Eintrag = (typeof demoProject)["verlauf"][number];
@@ -20,6 +21,7 @@ const filters: { id: FilterTyp; label: string }[] = [
 
 const VerlaufFeed = ({ verlauf }: { verlauf: Eintrag[] }) => {
   const [filter, setFilter] = useState<FilterTyp>("alle");
+  const { openDialog } = useDialog();
 
   const filtered = useMemo(
     () => (filter === "alle" ? verlauf : verlauf.filter((v) => v.ereignisTyp === filter)),
@@ -60,13 +62,7 @@ const VerlaufFeed = ({ verlauf }: { verlauf: Eintrag[] }) => {
                 <div
                   key={e.id}
                   className="group relative cursor-pointer"
-                  onClick={() =>
-                    toast(`Verlauf: ${e.inhalt}`, {
-                      description: isConflict
-                        ? "Verknüpfter Konflikt öffnet sich in Phase 4 (Dialog-Overlay)."
-                        : `Quelle: ${e.quelle} · Detailansicht in Phase 4.`,
-                    })
-                  }
+                  onClick={() => openDialog(buildVerlaufSession(e))}
                 >
                   <div className={`absolute -left-[27px] top-1.5 w-2 h-2 rounded-full ring-4 ring-surface-2 ${
                     isConflict ? "bg-destructive/80" : "bg-muted-foreground/60"
