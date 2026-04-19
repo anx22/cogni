@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, forwardRef } from "react";
 import { Check, X, Pencil, AlertTriangle } from "lucide-react";
 import { useDialog } from "./DialogProvider";
 import BoxStateBadge from "./BoxStateBadge";
@@ -87,33 +87,34 @@ const BoxFrame = ({ box, children, hideActions, actions }: BoxFrameProps) => {
   );
 };
 
-export const ActionBtn = ({
-  children,
-  onClick,
-  variant = "ghost",
-  icon,
-}: {
+interface ActionBtnProps {
   children: ReactNode;
   onClick?: () => void;
   variant?: "primary" | "ghost" | "danger";
   icon?: ReactNode;
-}) => {
-  const cls =
-    variant === "primary"
-      ? "bg-primary/20 text-primary hover:bg-primary/30 border-primary/40"
-      : variant === "danger"
-        ? "bg-destructive/15 text-destructive hover:bg-destructive/25 border-destructive/40"
-        : "bg-surface-3 text-muted-foreground hover:text-foreground border-border-subtle hover:border-border-strong";
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`inline-flex items-center gap-1.5 text-[11px] uppercase tracking-wider px-2.5 py-1 rounded-md border transition-colors ${cls}`}
-    >
-      {icon}
-      {children}
-    </button>
-  );
-};
+}
+
+export const ActionBtn = forwardRef<HTMLButtonElement, ActionBtnProps>(
+  ({ children, onClick, variant = "ghost", icon }, ref) => {
+    const cls =
+      variant === "primary"
+        ? "bg-primary/20 text-primary hover:bg-primary/30 border-primary/40"
+        : variant === "danger"
+          ? "bg-destructive/15 text-destructive hover:bg-destructive/25 border-destructive/40"
+          : "bg-surface-3 text-muted-foreground hover:text-foreground border-border-subtle hover:border-border-strong";
+    return (
+      <button
+        ref={ref}
+        type="button"
+        onClick={onClick}
+        className={`inline-flex items-center gap-1.5 text-[11px] uppercase tracking-wider px-2.5 py-1 rounded-md border transition-colors ${cls}`}
+      >
+        {icon}
+        {children}
+      </button>
+    );
+  },
+);
+ActionBtn.displayName = "ActionBtn";
 
 export default BoxFrame;
