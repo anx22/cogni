@@ -1,126 +1,157 @@
 
 
-## Audit-Bericht Projekt-Detail-Screen + Doku-Update
+## Phase 4 — Dialog-Overlay-Grundgerüst
 
-### Methodik
-Abgleich ProjectScreen + Subkomponenten + demoProject gegen `docs/produkt-gesamt.md` (4-Rollen-Modell, Kernsignale, Designprinzipien) und `docs/geplant.md` (Phase 3.5 Soll).
+### Ziel
+Vollbild-Overlay über Entity- und Project-Screen. 8 Box-Typen × 6 Zustände als komponierter Gesprächsraum. Alle bestehenden `toast(...)`-Brücken werden durch `openDialog({...})`-Aufrufe ersetzt.
 
----
+### Architektur
 
-### Befunde — Was passt
+**Globaler State via React Context** (`DialogProvider`), montiert in `App.tsx`. Kein Routing, nur Overlay-State. Jeder Aufruf öffnet eine **Dialog-Session**, die aus 1–N **Boxen** besteht. Boxen sind eigenständige Komponenten, die per `type`-Discriminator gerendert werden.
 
-| Bereich | Status |
+```text
+┌───────────────────────────────────────┐
+│  DialogProvider (Context)             │
+│  ├─ openDialog(session) → setState   │
+│  ├─ closeDialog()                     │
+│  ├─ updateBoxState(boxId, state)      │
+│  └─ <DialogOverlay />  (Portal)       │
+│      ├─ Backdrop + ESC + close-X      │
+│      ├─ Session-Header (Anlass)       │
+│      ├─ <BoxRenderer> (alle Boxen)   │
+│      └─ Commit / Verwerfen Footer     │
+└───────────────────────────────────────┘
+```
+
+### Datenmodell (TS, lokal — Phase 7 verbindet zu Supabase)
+
+```ts
+type BoxType = 'wissen' | 'zuordnung' | 'konflikt' | 'gap'
+             | 'auswahl' | 'eingabe' | 'kontext' | 'aktion';
+
+type BoxState = 'vorgeschlagen' | 'aufgeklappt' | 'geaendert'
+              | 'bestaetigt' | 'verworfen' | 'eskaliert';
+
+type DialogBox = {
+  id: string;
+  type: BoxType;
+  state: BoxState;
+  title: string;
+  payload: any; // typ-spezifisch
+};
+
+type DialogSession = {
+  id: string;
+  anlass: string;       // "Konflikt klären", "Lücke schließen" ...
+  context?: string;     // z.B. "Konflikt #k1"
+  boxes: DialogBox[];
+};
+```
+
+### Die 8 Box-Komponenten (`src/components/dialog/boxes/`)
+
+Jede Box hat dieselbe Hülle (`BoxFrame`): Border, Status-Indikator (6-Zustand-Dot), Titel, Body, Footer-Aktionen (Bestätigen/Verwerfen/Ändern/Eskalieren — abhängig vom Zustand).
+
+1. **WissensBox** — erkannter Sachverhalt + Quelle, „Stimmt / Korrektur / Verwerfen"
+2. **ZuordnungsBox** — Vorschlag „Diesem Projekt/Thema zuordnen?", Auswahl + Bestätigen
+3. **KonfliktBox** — Fakt A vs. Fakt B nebeneinander, Auswahl welche Variante stimmt + Begründung
+4. **GapBox** — Lücke + Wirkung + Lebensdauer, Eingabefeld zur Schließung oder „Später"
+5. **AuswahlBox** — N explizite Optionen als Radio
+6. **EingabeBox** — Freitextfeld + Submit
+7. **KontextBox** — Quelle, Auszug, Begründung, read-only mit „Quelle öffnen"
+8. **AktionsBox** — abschließender Commit-Block: bestätigen / verwerfen / mergen / abbrechen
+
+### 6 Zustände — visuell durchgängig
+
+| Zustand | Indikator |
 |---|---|
-| 4-Rollen-Struktur (Lage / Handlungsbedarf / Verlauf / Substanz) | ✓ vollständig vorhanden |
-| Hierarchie (nicht gleichrangig): Lagebild Hero, Konflikt/Ziel sekundär, Mittelteil 60/40, Substanz full-width | ✓ |
-| Provenance auf Items (SourceMarker, quelle-Felder) | ✓ |
-| Delta-Tags im Verlauf (neu/ersetzt/bestaetigt/widersprochen) | ✓ |
-| Konflikt-Banner in Lage | ✓ |
-| Outcome Signal (Erfolgskriterium + No-Gos) | ✓ |
-| Handlungsbedarf gruppiert in entscheiden/klären/umsetzen/prüfen | ✓ |
-| Verlauf mit Typfiltern | ✓ |
-| Themen-Drilldown + Dokumentliste mit Versionen | ✓ |
+| `vorgeschlagen` | dezent, gestrichelter linker Balken |
+| `aufgeklappt` | voll sichtbar, primary-Akzent |
+| `geaendert` | amber-Punkt + „geändert"-Tag |
+| `bestaetigt` | grüner Haken, Box collapsed |
+| `verworfen` | dim 50%, durchgestrichener Titel |
+| `eskaliert` | roter Rand + „eskaliert"-Badge |
 
----
+### Overlay-UI
 
-### Befunde — Lücken & Inkonsistenzen
+- Vollbild-Portal, `position: fixed inset-0`, Backdrop `bg-background/85 backdrop-blur-md`
+- Container zentriert max-w-3xl, vertikal scrollbar bei langen Sessions
+- Header: kleiner Anlass-Label + Context-Chip (z.B. „Konflikt #k1") + Close-X
+- Body: vertikal gestapelte Boxen, ~16px Abstand
+- Footer: „Alle bestätigen" / „Session schließen" — wird aktiv, wenn alle Boxen einen Endzustand haben
+- ESC schließt, Klick auf Backdrop fragt nach (kein versehentlicher Verlust)
+- Animations: fade-in 200ms, einzelne Boxen staggered 60ms
 
-**A. Datenmodell-Signale unterrepräsentiert in der UI**
-1. **Gap Signals**: in `demoProject.gaps` definiert (3 Stück mit Wirkung, Betrifft, Lebensdauer), aber **nirgends im Screen sichtbar**. Sie tauchen nur indirekt als zwei Handlungsbedarf-Items (`gap` ObjektTyp) auf — die Wirkungs-/Lebensdauer-Information geht verloren. Vision verlangt aber „Lücken sind Kernfunktion, keine Nebenfunktion".
-2. **Dependency Signals**: in `demoProject.dependencies` definiert (3 Stück, blockiert_durch / wartet_auf / haengt_ab_von), **null UI-Sichtbarkeit**. Komplette Datenklasse ohne Rendering.
-3. **Stakeholder-Liste**: `demoProject.stakeholder` (6 Personen mit Rolle/Org) existiert, aber im Screen wird nur die **Anzahl** in Lage gezeigt. Vision sagt „Stakeholder-Kontext" als Lage-Bestandteil — Namen/Rollen fehlen.
+### Helper-Factories
 
-**B. Interaktivität — tote Buttons**
-4. ProjectTile-Klick auf der Entität öffnet immer dasselbe `demoProject` (kein ID-Routing) — bekannt, Phase 4.
-5. **Themen-Buttons** in Substanz: visuell als Drilldown-Einstieg gestaltet (`→`-Pfeil, hover-State), haben aber **keinen onClick** → funktional tot, optisch versprechend.
-6. **Dokument-Zeilen** in Substanz: hover-State, aber **kein onClick** → kein Preview, kein Drilldown.
-7. **Handlungsbedarf-Row Buttons** „Bearbeiten" + „Inline antworten": **keine Handler**, keine State-Änderung, kein Toast-Feedback.
-8. **Verlauf-Einträge**: kein Klick auf Eintrag (z.B. um Quelle zu öffnen oder Kontext zu sehen) — nur SourceMarker-Button ist klickbar, aber auch ohne Handler.
-9. **SourceMarker** generell: button-Element, **kein onClick** → wirkt klickbar, ist es nicht.
-10. **Konflikt-Einträge im Banner**: keine Interaktion möglich (Vision: „Konflikt → öffnet Konfliktbox im Dialog-Overlay" — Phase 4, aber wenigstens Hover/Cursor-Klärung fehlt).
-11. **Meta-Chips** (Termin, Stakeholder, Budget): rein dekorativ — vertretbar, aber Stakeholder-Zahl könnte zu Stakeholder-Liste expandieren.
+`src/lib/dialog/sessionFactories.ts` — kleine Helfer, die aus einem Trigger-Kontext eine Session bauen:
 
-**C. Feedback-/Korrektur-Kanal fehlt**
-12. Vision: „Feedback und Korrektur sind allgegenwärtig". Im Projektscreen gibt es **keinen sichtbaren Feedback/Korrektur-Affordance** auf Lagebild, Verlauf-Einträgen, Themen, Dokumenten. Nur Handlungsbedarf hat „Inline antworten" (ohne Funktion).
+- `buildKonfliktSession(konflikt)` → KonfliktBox + KontextBox + AktionsBox
+- `buildGapSession(gap)` → GapBox + EingabeBox + AktionsBox
+- `buildHandlungsbedarfSession(item)` → WissensBox + EingabeBox + AktionsBox
+- `buildThemaSession(thema)` → KontextBox + ZuordnungsBox
+- `buildDokumentSession(doc)` → KontextBox (Phase-6-Hinweis)
+- `buildVerlaufSession(eintrag)` → KontextBox + ggf. KonfliktBox
+- `buildFeedbackSession(context)` → EingabeBox + AktionsBox
+- `buildSourceSession(quelle)` → KontextBox
 
-**D. Handlungsbedarf — Modell unvollständig abgebildet**
-13. Vision: Handlungsbedarf vereint „offene Punkte, Aufgaben, unbestätigte Entscheidungen, **Konflikte, Gaps, Dependencies**, arbeitsrelevantes Feedback". Aktuell: Konflikte und Gaps tauchen via `objektTyp` auf, **Dependencies komplett nicht** als Handlungsbedarf-Item.
-14. Counter im Header: „9 offen · 2 Blocker" — `stats.handlungsbedarf` ist hardcoded `9`, könnte aus `items.length` kommen (DRY).
+### Toast-Brücken → Dialog-Aufrufe ersetzen
 
-**E. Verlauf — Zustände fehlen**
-15. Filter „milestone" existiert, aber `ereignisTyp` enthält nur die Werte aus den Verlauf-Einträgen. Demo hat genau 1 milestone (`v8`). OK.
-16. Kein Indikator, ob ein Verlaufseintrag noch reviewbar/widersprüchlich ist (Vision: „bestätigte Entscheidungen, Konfliktereignisse" — Konflikt-Eintrag `v4` ist nur via Delta-Tag „widersprochen" markiert, ohne Verbindung zum aktiven Konflikt #k1/k2).
+In folgenden Komponenten werden alle `toast(...)`-Aufrufe durch `openDialog(buildXSession(...))` ersetzt:
 
-**F. Substanz — Sortierung & Status**
-17. Themen-Karten zeigen Counts, aber kein Status-Signal (z.B. „enthält Konflikt" / „enthält Gap"). Vision: Themen sollen Drilldown in projektinterne Substanz sein — aktuell statische Counts ohne Bewertung.
-18. Dokumente: keine Sortierung (Datum? Typ?), keine Versionshistorie-Aufruf.
+- `ConflictBanner.tsx` → `buildKonfliktSession`
+- `SignalStrip.tsx` (Gaps + Dependencies) → `buildGapSession` / `buildHandlungsbedarfSession`
+- `HandlungsbedarfList.tsx` (Bearbeiten + Antworten) → `buildHandlungsbedarfSession`
+- `SubstanzSection.tsx` (Themen + Dokumente) → `buildThemaSession` / `buildDokumentSession`
+- `VerlaufFeed.tsx` (Eintrags-Klick) → `buildVerlaufSession`
+- `SourceMarker.tsx` → `buildSourceSession`
+- `FeedbackButton.tsx` → `buildFeedbackSession`
 
-**G. Header / Back-Navigation**
-19. „← Entität" als fixed top-left ist okay, aber bei Scroll auf Surface-1 kontrastschwach. Funktional korrekt.
-20. Kein Breadcrumb, kein Projekt-Identifier sichtbar bei Scroll (Title verschwindet).
+### Box-Verhalten (lokal in Phase 4)
 
-**H. Logische Konsistenz**
-21. `stats.konflikte = 2`, `konflikte.length = 2` — passt.
-22. `stats.handlungsbedarf = 9`, `handlungsbedarf.length = 9` — passt aber redundant.
-23. `stats.stakeholder = 6`, `stakeholder.length = 6` — passt aber redundant.
-24. Themen-Counts (`entscheidungen`, `offenePunkte`, `dokumente`) sind hardcoded, **kein Bezug** zu tatsächlichen Items im Datensatz → reine Demo-Zahlen.
+- Aktionen ändern nur den Box-State im Context (kein Backend-Commit)
+- „Bestätigen" auf AktionsBox schließt die Session und zeigt einen kurzen Toast „Commit (Mock) — Backend-Anbindung in Phase 7"
+- Geänderter Zustand pro Box wird im Footer als Mini-Summary sichtbar („3 bestätigt, 1 geändert, 1 verworfen")
 
----
+### Neue Dateien
 
-### Empfohlene Korrekturen (priorisiert)
+```
+src/components/dialog/
+  DialogProvider.tsx          # Context + State + Portal-Mount
+  DialogOverlay.tsx           # Vollbild-UI
+  BoxRenderer.tsx             # type-Switch
+  BoxFrame.tsx                # gemeinsame Hülle + Zustands-Indikator
+  BoxStateBadge.tsx
+  boxes/
+    WissensBox.tsx
+    ZuordnungsBox.tsx
+    KonfliktBox.tsx
+    GapBox.tsx
+    AuswahlBox.tsx
+    EingabeBox.tsx
+    KontextBox.tsx
+    AktionsBox.tsx
+src/lib/dialog/
+  types.ts                    # BoxType, BoxState, DialogBox, DialogSession
+  sessionFactories.ts         # buildKonfliktSession etc.
+  useDialog.ts                # Hook
+```
 
-**P1 — Vision-kritische Sichtbarkeit (Gap & Dependency)**
-- **Lage-Zone erweitern**: kompakter „Signale"-Streifen unter Lagebild oder als 3. Spalte neben Konflikt/Ziel: Gap-Counter + Dependency-Counter mit Badge-Stil analog Konflikt.
-- **Handlungsbedarf**: Dependency-Items als eigene `objektTyp: "dependency"` Einträge ergänzen (z.B. unter „klären" oder „prüfen").
-- **Optional Substanz-Erweiterung**: kleiner Block „Offene Signale" mit allen 3 Gaps (Titel + Wirkung + Lebensdauer) und 3 Dependencies (Quelle → Ziel + Typ) — als kompakte Listen unter Themen oder als eigener Substanz-Subblock. Alternativ in der rechten Spalte des Mittelteils zwischen Verlauf und Handlungsbedarf einblenden.
+### Geänderte Dateien
 
-**P2 — Tote Interaktionen aktivieren (mit Toast als Phase-4-Brücke)**
-- Themen-Karten: onClick → Toast „Drilldown für Thema X kommt mit Phase 4 (Dialog-Overlay)".
-- Dokument-Zeilen: onClick → Toast „Preview kommt mit Phase 6".
-- Handlungsbedarf-Buttons (Bearbeiten / Inline antworten): onClick → Toast „Dialog-Overlay (Phase 4)".
-- SourceMarker: onClick → Toast mit Quellen-Info.
-- Konflikt-Items: hover cursor-pointer + onClick → Toast.
-- So bleibt UX konsistent (kein Klick versickert), Phase-4-Aufhängung explizit dokumentiert.
+- `src/App.tsx` — `<DialogProvider>` um die Routes legen
+- `ConflictBanner.tsx`, `SignalStrip.tsx`, `HandlungsbedarfList.tsx`, `SubstanzSection.tsx`, `VerlaufFeed.tsx`, `SourceMarker.tsx`, `FeedbackButton.tsx` — `useDialog().openDialog(...)` statt `toast(...)`
+- `docs/implementierung-aktuell.md` + `docs/geplant.md` — Phase 4 als in Arbeit / abgeschlossen markieren
 
-**P3 — Feedback-Affordance**
-- Kleiner „Feedback/Korrektur"-Button (Icon + Text) auf Lagebild und auf Verlauf-Einträgen (hover-revealed). onClick → Toast/Phase-4-Hinweis.
+### Out of Scope (bleibt für später)
 
-**P4 — Stakeholder sichtbar machen**
-- In Lage: hinter Stakeholder-Zahl ein Popover/expandable mit Liste (Name, Rolle, Org). Oder als kleiner Avatar-Stack neben dem Chip.
-
-**P5 — Konsistenz-Cleanup**
-- `stats.handlungsbedarf` / `stats.stakeholder` aus `items.length` ableiten statt hardcoden.
-- Handlungsbedarf-Header-Counter konsistent.
-
-**P6 — Verlauf ↔ Konflikt Verbindung**
-- Verlauf-Eintrag mit Delta „widersprochen" sollte optisch auf zugehörigen Konflikt verweisen können (Klick auf Eintrag → Toast „Konflikt #k2 öffnen, Phase 4").
-
----
-
-### Doku-Update (nach Code-Korrekturen)
-
-Anzupassen:
-- `docs/implementierung-aktuell.md`:
-  - Status Phase 3.5 von „NÄCHSTER SCHRITT" auf **abgeschlossen** setzen.
-  - Implementierte Komponenten auflisten (LageZone, HandlungsbedarfList, VerlaufFeed, SubstanzSection, shared/ConflictBanner/DeltaTag/SourceMarker/ObjectToken).
-  - Phase 3.6 „Visual Hierarchy & Layout-Revise" + „Side-Grids Entity-Screen" als zusätzlich abgeschlossen ergänzen.
-  - Bekannte Phase-4-Lücken explizit listen (Buttons als Toast-Brücken).
-- `docs/geplant.md`:
-  - Phase 3.5 entfernen / als done markieren.
-  - Nächster Schritt = Phase 4 Dialog-Overlay.
-  - Phase 4 um Übergangs-Punkt „bestehende Toast-Brücken durch echte Box-Aufrufe ersetzen" ergänzen.
-- `mem://features/produkt-prinzipien.md` (Memory): Hinweis ergänzen, dass Gap- und Dependency-Signale auch im Projekt-Screen sichtbar sein müssen, nicht nur im Datenmodell.
-
----
-
-### Out of Scope
-- Echtes Dialog-Overlay (Phase 4)
-- Echte Drilldown-Routes für Themen/Dokumente (Phase 4+)
-- Backend-Anbindung der Demo-Daten
-- Inhaltliche Veränderung der Demo-Daten (außer Ergänzung Dependency-Items in Handlungsbedarf für P1)
-
----
+- Echtes Backend-Commit gegen Supabase (Phase 7 mit Graphiti-Integration)
+- Gesprächsboxen-Persistenz / Wiederaufnahme von Sessions
+- Auto-Generierung von Sessions aus Pipeline-Output (Phase 5/6)
+- Multi-User / Realtime-Sync
+- Sprach-/KI-gestützte Antworten in EingabeBox
 
 ### Erwartetes Ergebnis
-Der Projekt-Screen reflektiert die Produktvision vollständig: Konflikte, **Gaps und Dependencies** sind sichtbar als eigenständige Kernsignale; jede klickbare Fläche reagiert (mindestens Toast-Brücke); Stakeholder-Kontext erschließbar; Feedback/Korrektur-Affordance präsent. Doku ist auf Stand.
+
+Klick auf Konflikt, Gap, Handlungsbedarf-Aktion, Thema, Dokument, Verlauf-Eintrag, SourceMarker oder Feedback öffnet ein konsistentes Vollbild-Overlay mit der passenden Box-Komposition. Jede Box reagiert auf Bestätigen/Ändern/Verwerfen mit sichtbarem Zustandswechsel. Die Toast-Übergangsschicht ist vollständig abgelöst.
 
