@@ -1,11 +1,13 @@
+import { forwardRef } from "react";
 import { FileText } from "lucide-react";
 import { useDialog } from "@/components/dialog/DialogProvider";
 import { buildSourceSession } from "@/lib/dialog/sessionFactories";
 
-const SourceMarker = ({ quelle }: { quelle: string }) => {
+const SourceMarker = forwardRef<HTMLButtonElement, { quelle: string }>(({ quelle }, ref) => {
   const { openDialog } = useDialog();
   return (
     <button
+      ref={ref}
       type="button"
       onClick={(e) => {
         e.stopPropagation();
@@ -18,6 +20,7 @@ const SourceMarker = ({ quelle }: { quelle: string }) => {
       <span className="truncate">{quelle}</span>
     </button>
   );
-};
+});
+SourceMarker.displayName = "SourceMarker";
 
 export default SourceMarker;
