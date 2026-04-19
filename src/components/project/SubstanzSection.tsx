@@ -1,11 +1,13 @@
 import { FileText, Layers } from "lucide-react";
-import { toast } from "sonner";
+import { useDialog } from "@/components/dialog/DialogProvider";
+import { buildThemaSession, buildDokumentSession } from "@/lib/dialog/sessionFactories";
 import type { demoProject } from "@/data/demoProject";
 
 type Thema = (typeof demoProject)["themen"][number];
 type Dok = (typeof demoProject)["dokumente"][number];
 
 const SubstanzSection = ({ themen, dokumente }: { themen: Thema[]; dokumente: Dok[] }) => {
+  const { openDialog } = useDialog();
   // Sortiert: neueste Dokumente zuerst (datum dd.mm.yyyy)
   const sortedDokumente = [...dokumente].sort((a, b) => {
     const toDate = (d: string) => {
@@ -35,11 +37,7 @@ const SubstanzSection = ({ themen, dokumente }: { themen: Thema[]; dokumente: Do
                 <button
                   key={t.id}
                   type="button"
-                  onClick={() =>
-                    toast(`Thema: ${t.name}`, {
-                      description: `${t.entscheidungen} Entscheidungen · ${t.offenePunkte} offen · ${t.dokumente} Dokumente. Drilldown in Phase 4.`,
-                    })
-                  }
+                  onClick={() => openDialog(buildThemaSession(t))}
                   className="group text-left rounded-xl border border-border-subtle bg-surface-2 shadow-card-glow hover:bg-surface-3 hover:border-border-strong transition-all px-5 py-4"
                 >
                   <div className="flex items-start justify-between gap-3 mb-1.5">
@@ -76,11 +74,7 @@ const SubstanzSection = ({ themen, dokumente }: { themen: Thema[]; dokumente: Do
               <button
                 key={d.id}
                 type="button"
-                onClick={() =>
-                  toast(`Dokument: ${d.name}`, {
-                    description: `${d.typ.toUpperCase()} · v${d.version} · ${d.datum}. Preview & Versionshistorie in Phase 6.`,
-                  })
-                }
+                onClick={() => openDialog(buildDokumentSession(d))}
                 className="w-full flex items-center gap-4 px-5 py-3 hover:bg-surface-3 transition-colors text-left"
               >
                 <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-mono w-10">{d.typ}</span>

@@ -1,5 +1,6 @@
 import { HelpCircle, GitBranch } from "lucide-react";
-import { toast } from "sonner";
+import { useDialog } from "@/components/dialog/DialogProvider";
+import { buildGapSession, buildHandlungsbedarfSession } from "@/lib/dialog/sessionFactories";
 import type { demoProject } from "@/data/demoProject";
 
 type Gap = (typeof demoProject)["gaps"][number];
@@ -12,6 +13,7 @@ const depLabel: Record<Dep["typ"], string> = {
 };
 
 const SignalStrip = ({ gaps, dependencies }: { gaps: Gap[]; dependencies: Dep[] }) => {
+  const { openDialog } = useDialog();
   if (gaps.length === 0 && dependencies.length === 0) return null;
 
   return (
@@ -31,11 +33,7 @@ const SignalStrip = ({ gaps, dependencies }: { gaps: Gap[]; dependencies: Dep[] 
               <li key={g.id}>
                 <button
                   type="button"
-                  onClick={() =>
-                    toast(`Lücke: ${g.titel}`, {
-                      description: `${g.wirkung} · ${g.lebensdauer}. Klärung in Phase 4.`,
-                    })
-                  }
+                  onClick={() => openDialog(buildGapSession(g))}
                   className="w-full text-left text-xs text-foreground/90 hover:text-foreground transition-colors leading-snug"
                   title={`${g.wirkung} · betrifft ${g.betrifft} · ${g.lebensdauer}`}
                 >
@@ -61,9 +59,14 @@ const SignalStrip = ({ gaps, dependencies }: { gaps: Gap[]; dependencies: Dep[] 
                 <button
                   type="button"
                   onClick={() =>
-                    toast(`Abhängigkeit: ${d.quelle}`, {
-                      description: d.beschreibung,
-                    })
+                    openDialog(
+                      buildHandlungsbedarfSession({
+                        id: d.id,
+                        titel: `${d.quelle} ${depLabel[d.typ]} ${d.ziel}`,
+                        beschreibung: d.beschreibung,
+                        quelle: `Dependency #${d.id}`,
+                      }),
+                    )
                   }
                   className="w-full text-left text-xs text-foreground/90 hover:text-foreground transition-colors leading-snug"
                 >

@@ -1,13 +1,17 @@
 import { AlertTriangle } from "lucide-react";
-import { toast } from "sonner";
+import { useDialog } from "@/components/dialog/DialogProvider";
+import { buildKonfliktSession } from "@/lib/dialog/sessionFactories";
 
 interface Konflikt {
   id: string;
   title: string;
   beschreibung: string;
+  faktA?: string;
+  faktB?: string;
 }
 
 const ConflictBanner = ({ konflikte }: { konflikte: Konflikt[] }) => {
+  const { openDialog } = useDialog();
   if (konflikte.length === 0) return null;
 
   return (
@@ -24,9 +28,15 @@ const ConflictBanner = ({ konflikte }: { konflikte: Konflikt[] }) => {
                 <button
                   type="button"
                   onClick={() =>
-                    toast(`Konflikt #${k.id} öffnen`, {
-                      description: "Konfliktbox kommt mit Phase 4 (Dialog-Overlay).",
-                    })
+                    openDialog(
+                      buildKonfliktSession({
+                        id: k.id,
+                        title: k.title,
+                        beschreibung: k.beschreibung,
+                        faktA: k.faktA ?? "Variante A",
+                        faktB: k.faktB ?? "Variante B",
+                      }),
+                    )
                   }
                   className="w-full text-left text-sm text-foreground/95 leading-snug hover:text-foreground transition-colors cursor-pointer"
                 >

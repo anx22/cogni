@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { ChevronRight, User, CalendarClock, Ban } from "lucide-react";
-import { toast } from "sonner";
 import ObjectToken from "./shared/ObjectToken";
 import SourceMarker from "./shared/SourceMarker";
+import { useDialog } from "@/components/dialog/DialogProvider";
+import { buildHandlungsbedarfSession } from "@/lib/dialog/sessionFactories";
 import type { demoProject, Arbeitsmodus } from "@/data/demoProject";
 
 type Item = (typeof demoProject)["handlungsbedarf"][number];
@@ -65,6 +66,7 @@ const HandlungsbedarfList = ({ items }: { items: Item[] }) => {
 
 const ActionRow = ({ item, barClass }: { item: Item; barClass: string }) => {
   const [open, setOpen] = useState(false);
+  const { openDialog } = useDialog();
   return (
     <div>
       <button
@@ -101,21 +103,13 @@ const ActionRow = ({ item, barClass }: { item: Item; barClass: string }) => {
           <div className="flex flex-wrap items-center gap-2">
             <SourceMarker quelle={item.quelle} />
             <button
-              onClick={() =>
-                toast(`Bearbeiten: ${item.titel}`, {
-                  description: "Bearbeitung im Dialog-Overlay (Phase 4).",
-                })
-              }
+              onClick={() => openDialog(buildHandlungsbedarfSession(item))}
               className="text-[11px] uppercase tracking-wider px-2.5 py-1 rounded-md bg-primary/20 text-primary hover:bg-primary/30 transition-colors"
             >
               Bearbeiten
             </button>
             <button
-              onClick={() =>
-                toast(`Inline antworten: ${item.titel}`, {
-                  description: "Antwort-Flow kommt mit Phase 4 (Dialog-Overlay).",
-                })
-              }
+              onClick={() => openDialog(buildHandlungsbedarfSession(item))}
               className="text-[11px] uppercase tracking-wider px-2.5 py-1 rounded-md border border-border-subtle text-muted-foreground hover:text-foreground hover:border-border-strong transition-colors"
             >
               Inline antworten
