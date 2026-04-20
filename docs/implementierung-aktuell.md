@@ -26,7 +26,8 @@
 - [x] **Verstehens-Loop (Phase 7 + 7.5)** — `intake-understand` (Lovable AI Gateway, Tool-Calling) erzeugt `proposed_facts` mit `delta_type`, lexikalisches Scoring + Assignment-Agent für Projektzuordnung, `dialog_sessions` + `review_cases` (inkl. Zuordnungsbox), Härtung über `understanding_status`/`understanding_attempt`, Live-Stimme.
 - [x] **Commit-Pfad vollständig (Block A4)** — `commit-fact` schreibt `canonical_facts`, `change_events`, bei Korrektur `corrections` (event_type=`replace`), spezielle Pfade für `open_point` (gap_signals) und `reference` (dependencies, V1: Self-Ref), und triggert nach jedem Commit einen `project_state_snapshot` mit Counts pro Tabelle.
 - [x] **ProjectScreen live (Block B1)** — `useProject(id)` lädt parallel `projects`, `outcome_signals`, `deadlines`, `canonical_facts`, `contradictions`, `gap_signals`, `dependencies`, `decisions`, `tasks`, `open_points`, `feedback`, `change_events`, `topics`, `assets`, `project_stakeholder_links` und mappt auf `ProjectViewModel`. Realtime-Channel pro Projekt invalidiert auf jede relevante Tabellen-Änderung. Side-Grid lädt echte Projekte über `useProjects`, Signal/OpenCount aus echten Konflikt-/Gap-/Task-Counts. Demo-IDs lösen Toast + Rückkehr aus.
-- [ ] Routing per ID `/projekt/:id` und Projekt anlegen (Block B2/B3)
+- [x] **Routing & Projekt anlegen (Block B2/B3)** — URL-basiertes Routing `/projekt/:id`, Projekt anlegen über Side-Grid-Button, Inline-Name-Edit im leeren Projektstatus.
+- [x] **UX-Sweep (Block C)** — Voice-Aufnahme echt (MediaRecorder + Gemini Flash Transkription), Retry-Button für fehlgeschlagene Assets im Session-Panel, HoverCard Asset-Preview.
 - [ ] Knowledge-Graph (Graphiti) — V1.1
 
 ### Komponenten-Inventar Projekt-Screen

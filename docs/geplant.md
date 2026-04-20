@@ -39,17 +39,17 @@
 - `project_state_snapshots` nach jedem Commit (Counts pro Tabelle)
 - Spezialpfade `open_point` → `gap_signals`, `reference` → `dependencies`
 
-## Phase 8: Echte Projekt-Anbindung (Block B — nächster Schritt)
+## Phase 8: Echte Projekt-Anbindung (Block B) ✓
 
-- **B1**: `ProjectScreen` liest live aus Supabase inkl. Realtime
-- **B2**: Routing `/projekt/:id`, ProjectTile-Klick → echtes Projekt
-- **B3**: Projekt anlegen (über Zuordnungsbox oder leer vom Side-Grid)
+- **B1**: `ProjectScreen` liest live aus Supabase inkl. Realtime ✓
+- **B2**: Routing `/projekt/:id`, ProjectTile-Klick → echtes Projekt ✓
+- **B3**: Projekt anlegen (über Side-Grid-Button, Inline-Name-Edit) ✓
 
-## Phase 9: UX-Sweep (Block C)
+## Phase 9: UX-Sweep (Block C) ✓
 
-- Voice-Aufnahme echt (MediaRecorder + Whisper über Lovable AI)
-- Retry-Knopf für `failed`/`rate_limited`/`payment_required`
-- Asset-Detail-Inline-Card im Session-Panel
+- Voice-Aufnahme echt (MediaRecorder + Gemini Flash Transkription) ✓
+- Retry-Knopf für `failed`/`rate_limited`/`payment_required` ✓
+- Asset-Detail-Inline-Card (HoverCard) im Session-Panel ✓
 
 ## Phase 10: Knowledge-Graph (V1.1)
 
