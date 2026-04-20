@@ -166,8 +166,9 @@ export const demoProject = {
       beschreibung: "UX-Richtung mit Fachseite abstimmen.",
       verantwortlich: "Lisa Meier",
       frist: null,
-      quelle: "UX Design",
+      quelle: "Manuell ergänzt im Review",
       blocker: false,
+      manuell: true,
     },
     {
       id: "h6",
