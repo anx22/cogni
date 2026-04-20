@@ -163,7 +163,8 @@ export function useIntake(options: UseIntakeOptions = {}) {
         return;
       }
 
-      window.setTimeout(() => setEntityState?.("idle"), 1200);
+      // Kein blinder Timeout mehr — der Zustand wird ab jetzt aus
+      // Realtime-Events (assets/dialog_sessions) in Index.tsx gesteuert.
     },
     [setEntityState, setLastImpact, onIntake, projectId],
   );

@@ -2,7 +2,7 @@
 //  EntityVoice — die "Stimme" der Intelligenz unter dem Kern.
 // -----------------------------------------------------------------------------
 //  Großer, dünner Text, schwebt mittig. Soft-Fade zwischen Sätzen.
-//  Optional: Retry-Affordance, wenn der letzte Lauf fehlgeschlagen ist.
+//  tone="working" → warmes Amber, damit das Denken auch sprachlich heiß wirkt.
 // =============================================================================
 
 import { useEffect, useState } from "react";
@@ -31,10 +31,13 @@ const EntityVoice = ({ voice, onRetry }: Props) => {
   if (!shown.text) return null;
 
   const toneColor =
-    shown.tone === "alert" ? "text-destructive/80"
-    : shown.tone === "ready" ? "text-primary/80"
-    : shown.tone === "working" ? "text-foreground/70"
-    : "text-muted-foreground/70";
+    shown.tone === "alert"
+      ? "text-destructive/80"
+      : shown.tone === "ready"
+        ? "text-primary/80"
+        : shown.tone === "working"
+          ? "text-amber-300/90"
+          : "text-muted-foreground/70";
 
   return (
     <div
