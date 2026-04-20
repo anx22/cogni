@@ -1,109 +1,109 @@
+## Phase 7.7.1 — Intake-Korrekturen, vier konkrete Bugs
 
-
-## Phase 7.7 — Home als geführter Intake-Hub
-
-Drei zusammenhängende UX-Verbesserungen, zusätzlich zu Phase 7.6.1, damit der Home-Screen Intake-Sessions als persistente, wiederaufrufbare Einheiten behandelt — nicht als lose Files.
+Vier eigenständige Fehler aus dem letzten Schnitt. Kein neues Konzept, nur Reparatur.
 
 ---
 
-### 1. Rechtes Home-Panel: von Files zu Intake-Sessions
+### 1. Kein Fullscreen-Blocker mehr beim Verarbeiten
 
-**Heute:** `RecentAssets` zeigt einzelne Files als Kacheln. Multi-Drops wirken wie unverbundene Einzelteile, abgebrochene Sessions sind unsichtbar, ein Klick auf ein File öffnet nur einen Toast.
+**Bug:** `HomeDropOverlay` legt sich beim Drag *und* beim "busy"-Zustand mit `fixed inset-0 backdrop-blur-md` über den gesamten Screen. Im Screenshot: alles unscharf, unbedienbar.
 
-**Neu:** Das Panel rechts wird zu **„Intake-Sessions"**. Jede Kachel = eine `dialog_session`, gruppiert die Assets, die zusammen verarbeitet wurden, und ist klickbar.
+**Fix:**
 
-Visuelles Modell pro Kachel:
-- Großes Icon mit der Anzahl der Assets in der Session (z.B. „1", „3").
-- Status-Punkt:
-  - **amber/pulsierend** → Session läuft noch (Assets parsen/verstehen, oder Status `open` mit unentschiedenen Boxen).
-  - **blau** → `open`/`in_progress`, Boxen warten auf Entscheidung.
-  - **grün** → `closed`/alle Boxen entschieden → Read-Only.
-  - **grau** → leer/abgebrochen.
-- Hover: Tooltip mit erstem Asset-Namen + „N Sachen, M offen".
+- `HomeDropOverlay` rendert sich **nur** während eines aktiven Drags (`active === true`). Ohne Drag = nicht im DOM, kein Backdrop.
+- Während `busy` ohne Drag passiert visuell **nichts** auf Home. Der Kern wird heiß (das ist die Rückmeldung), das Stimm-Voice-Element informiert.
+- Wenn der Nutzer während `busy` *droppt*: Das Overlay erscheint kurz mit "Noch beschäftigt" — aber es **blockiert die UI nicht ungefragt**. Der Drag-Counter macht es ohnehin nur sichtbar, solange Files über der Seite sind. Sobald man sie wegzieht oder fallenlässt → weg.
+- Restliche Home-UI (`SideGrid`, `IntakeSessionsPanel`, Top-Buttons, EntityVoice) bleibt während `busy` voll bedienbar. Nur neue Drops werden in `handleDrop` abgelehnt — alles andere unverändert klickbar.
 
-Quelle:
-- `dialog_sessions` (für offene/geschlossene Sessions) **+** „Sessions in Entstehung": Assets ohne `session_id`, die gerade parsen/verstehen — als virtuelle Pending-Kachel pro Asset-Bündel (gruppiert nach engem Zeitfenster, z.B. innerhalb von 5s).
-- Limit: letzte 20 Sessions, gemischt mit pending Bündeln.
-- Realtime: Subscription auf `dialog_sessions` und `assets` (für Pending-Bündel).
+### 2. Projektzuordnung kann nicht mehr abgelehnt/übersprungen werden
 
-Klick-Verhalten:
-- **Pending-Bündel** (noch keine Session) → kein Klick möglich, nur visueller Status.
-- **Offene Session** → `openSessionFromDB(id)`, Overlay öffnet sich im **Edit-Modus** (heutiges Verhalten).
-- **Geschlossene Session** → `openSessionFromDB(id)`, Overlay öffnet sich im **Read-Only-Modus** (siehe Punkt 2).
+**Bug:** `ZuordnungsBox` zeigt einen "Später"-Button, der `commitBox(..., "reject")` aufruft. Damit kann die Box als verworfen markiert werden, ohne dass je eine Projekt-ID gewählt wurde — Folge: alle anderen Boxen scheitern später mit `NEEDS_ASSIGNMENT`.
 
-### 2. Read-Only-Modus für abgeschlossene Sessions
+**Fix:**
 
-**Wozu:** Der Nutzer soll vergangene Verstehens-Läufe nachvollziehen können — was vorgeschlagen, was bestätigt, was verworfen wurde — ohne etwas versehentlich zu ändern.
+- "Später"-Button aus `ZuordnungsBox` entfernen. Es gibt nur noch **eine** Aktion: "Zuordnen".
+- VOR Zuordnung können andre fragen nicht beantwortet werden
+- Entscheidung ist immer `confirm` mit entweder `project_id` (vorhandenes Projekt) oder `new_project_name` (neu anlegen).
+- Im `BoxFrame`-Footer wird in der Zuordnungsbox ausschließlich der "Zuordnen"-Button gerendert.
+- Backend: `commit-fact` → `handleAssignment` darf bei `box_type='assignment'` keine `decision='reject'` mehr akzeptieren. Falls doch → 400 mit klarer Meldung. Damit ist es auch über Direktaufrufe nicht mehr möglich.
 
-**Wie:**
-- `DialogSession` bekommt Feld `mode: "edit" | "readonly"`, abgeleitet aus `dialog_sessions.status`:
-  - `closed`, `committed`, oder „alle Boxen final" → `readonly`.
-  - sonst → `edit`.
-- `DialogProvider.openSessionFromDB` setzt den Modus beim Laden.
-- `BoxFrame` blendet im Read-Only-Modus den Aktions-Footer komplett aus.
-- Boxen zeigen ihren Endzustand:
-  - bestätigt: Opacity 60% + ✓.
-  - verworfen: Opacity 40% + durchgestrichener Titel.
-  - geändert: Amber-Punkt + finale Userwerte sichtbar.
-- Header bekommt einen leisen Hinweis: „Abgeschlossen am …" rechts neben dem Titel-Eyebrow.
-- ESC oder X schließt wie gewohnt — keine commit-fact-Calls möglich.
+### 3. „Lisas Projekt" wird nicht vorausgewählt / vorgeschlagen
 
-Datenmodell:
-- Keine Schema-Änderung nötig. `dialog_sessions.status` reicht: wir behandeln `closed` und Sessions, in denen `resolved_boxes >= total_boxes`, als read-only.
-- Optional: `closeDialogSession` Edge-Hilfsfunktion oder einfacher Update-Call, der `status='closed'` setzt, sobald die letzte Box im Overlay entschieden wurde. Realtime-Update sorgt dafür, dass das Panel rechts grün wird.
+**Bug:** Bei der Testdatei mit „Lisa Müller" liefert der Agent `reason_short` wie *„Die explizite Nennung von Lisa Müller legt Zuordnung zu Lisas Projekt nahe."* — aber:
 
-### 3. Fullscreen-Drop-Mechanik auf dem Home-Screen
+- Es existiert kein DB-Projekt namens „Lisas Projekt" → lexikalischer Score = 0 → `mode='new'`.
+- `suggested_new_name` vom Agent ist null (Tool-Schema erlaubt es, aber der Agent füllt es bei `project_id=null` häufig nicht).
+- Aktueller Fallback: `reason_short.split(/[.,;:–—-]/)[0]` → ergibt einen ganzen Halbsatz wie „Die explizite Nennung von Lisa Müller legt Zuordnung zu Lisas Projekt nahe", nicht „Lisas Projekt".
 
-**Heute:** Drops landen nur, wenn man genau auf dem `EntityCore` (kleiner Kreis) loslässt. Außerhalb verschluckt der Browser die Datei und öffnet sie als Tab.
+**Fix in zwei Ebenen:**
 
-**Neu:** Wie auf `ProjectScreen`:
-- `Index.tsx` bekommt einen vollflächigen `onDragOver/Leave/Drop` Handler.
-- Während eines aktiven Drags (mit `Files`) erscheint ein **Fullscreen-Overlay** mit großem leichtem Text:
-  - Idle: „Lass los — ich höre zu." + Untertitel „Datei, Link oder Notiz."
-  - Busy (`processing`/`review-ready`): „Noch beschäftigt." + „Warte kurz, dann gerne." — Drop wird abgewiesen (kein Intake-Call), Voice-Hinweis spielt kurz ab.
-- Overlay nutzt `bg-background/70 backdrop-blur-md`, dasselbe „schwebende" Design wie der Dialog.
-- `EntityCore` behält seine eigene Drop-Zone als visuellen Anker (zentriert, Glow), aber der gesamte Viewport nimmt jetzt Drops an.
-- `SideGrid` und `RecentAssets` sind während des Drags via `pointer-events-none opacity-30` ruhiggestellt (heute schon halb implementiert über `isDragActive`).
+**a) Prompt-Klarstellung in `agentConfig.ts` (`ASSIGNMENT_SYSTEM_PROMPT`):**
 
-Counter-Verhalten:
-- DragEnter/Leave-Counter (Browser-typisches Problem mit verschachtelten Kindern) sauber lösen via Counter-Increment statt boolean — verhindert, dass das Overlay flackert, wenn man über ein Kind-Element zieht.
+- Wenn `project_id=null`, MUSS `suggested_new_name` ein **knapper, sauberer Projektname** sein (max ~40 Zeichen), keine Erklärung. Beispiele in den Prompt aufnehmen: *„Lisas Projekt"*, *„Aurora-Angebot"*, nicht *„Projekt für Lisa"*.
+
+**b) Robusterer Server-Fallback in `intake-understand`:**
+
+- Wenn `suggested_new_name` leer ist:
+  1. Erstens: aus `reason_short` einen quotierten Namen extrahieren via Regex auf `„…"`, `"…"`, `'…'`. Bei der Testdatei matcht das auf `„Lisas Projekt"`.
+  2. Zweitens: dominanten Stakeholder/Topic-Namen aus den extrahierten `facts` ziehen. Bei „Lisa Müller" als Stakeholder-Fact → `"Lisa Müllers Projekt"`.
+  3. Erst danach: Dateiname-Fallback.
+- `defaultSelection` in `ZuordnungsBox`: bei `mode='new'` → `__new__` (steht schon richtig); das Textfeld bekommt den Default-Wert direkt aus `suggestedNewName` — heute schon korrekt verdrahtet. Wenn der Backend-Fallback greift, steht der Name automatisch im Eingabefeld.
+
+### 4. Bereits entschiedene Boxen müssen während der Session korrigierbar sein
+
+**Bug:** `BoxFrame` collapsed bestätigte Boxen (`collapsed = bestaetigt && !readonly`) → Aktionen weg, Inhalte weg, kein Weg zurück.
+
+**Fix:**
+
+- Im Edit-Modus bleiben bestätigte und verworfene Boxen sichtbar (Opacity wie heute), aber:
+  - Sie zeigen ihren finalen Zustand (Häkchen / durchgestrichen) ungeändert.
+  -  "Übernehmen/Verwerfen"-Aktionen bleibt änderbar  
+
+  - Wichtig: das funktioniert nur lokal-zustandsmäßig vor dem nächsten Commit-Klick. Bei Klick auf "Übernehmen/Verwerfen" geht erneut ein `commitBox`-Call raus — der Backend-Code in `commit-fact` updated `review_cases.box_state` einfach idempotent, das ist heute schon so.
+- Im Read-Only-Modus (geschlossene Session)  Nur lesend.
+
+### 5. Auto-Close + Auto-Apply nach voller Beantwortung
+
+**Bug:** Wenn alle Boxen entschieden sind, bleibt der Dialog offen, der Nutzer muss manuell schließen.
+
+**Fix:**
+
+- In `DialogProvider`/`DialogOverlay`: kleiner Effect, der bei jedem `commitBox`-Erfolg prüft, ob alle Entscheidungs-Boxen (alle außer `kontext`) im End-Zustand sind (`END_STATES`).
+- Wenn ja:
+  - Kurze, leise Bestätigung (Voice oder kleines Toast: „Verstanden — abgeschlossen."), 1.2 s sichtbar.
+  - Dann `closeDialog()`.
+- Backend: `commit-fact.updateSessionProgress` setzt heute schon `status='completed'` wenn `resolved >= total` → die Session erscheint automatisch als grün im rechten Panel. Nichts zu ändern.
+- Nebenwirkung: `entityState` in `Index.tsx` darf nach Auto-Close zurück auf `idle` — der bestehende Effekt (`if (!dialogSession && entityState === "review-ready")`) greift, sobald der Dialog dicht ist.
+
+### 6. Overlay öffnet sich erst wenn die Entität fertig ist (Klärung)
+
+Heute korrekt verdrahtet: `dialog_sessions INSERT` → 1.4 s Voice-Beat → `openSessionFromDB`. Voraussetzung ist, dass `entityState` vorher auf `processing` steht (Heißfarbe) und beim Insert auf `review-ready` wechselt. Das stimmt im Code. Falls beim Test wieder nicht: in `pendingSessionId`-Logik die Race-Condition mit dem dialogSession-Auto-Close-Effect entschärfen — der setzt heute `entityState='idle'`, sobald `dialogSession === null`, was nach einem manuellen Schließen direkt das Overlay-Wieder-Öffnen verhindert. Wir entkoppeln das: `pendingSessionId` wird **nicht** in dem Effekt zurückgesetzt; nur `setEntityState('idle')`.
 
 ---
 
 ### Betroffene Dateien
 
-**Neu:**
-- `src/components/entity/IntakeSessionsPanel.tsx` — ersetzt `RecentAssets` rechts; lädt Sessions + Pending-Asset-Bündel, rendert Kacheln, öffnet Session via `openSessionFromDB`.
-- `src/components/entity/HomeDropOverlay.tsx` — Fullscreen-Drop-Layer mit busy/idle-Texten.
-- `src/lib/dialog/sessionMode.ts` — kleine Helper-Funktion `deriveSessionMode(session, cases)`.
-
-**Geändert:**
-- `src/pages/Index.tsx` — Fullscreen-Drop-Handler + DropOverlay einhängen; rechts `IntakeSessionsPanel` statt `RecentAssets`; Drop-Guard greift auch hier.
-- `src/lib/dialog/types.ts` — `DialogSession` erhält `mode: "edit" | "readonly"` und optional `closedAt`.
-- `src/lib/dialog/loadSession.ts` — Modus aus `status` + `resolved_boxes/total_boxes` ableiten; `closedAt` mitgeben.
-- `src/components/dialog/DialogProvider.tsx` — Modus durch Context, `commitBox` no-op im Read-Only.
-- `src/components/dialog/DialogOverlay.tsx` — „Abgeschlossen am …" wenn read-only; ESC/Close arbeiten gleich.
-- `src/components/dialog/BoxFrame.tsx` — Aktionen unterdrücken wenn `session.mode === "readonly"`; visuelle End-Zustände konsistent.
-- `src/components/entity/RecentAssets.tsx` — bleibt vorerst als Komponente bestehen, wird aber im Home nicht mehr eingebunden (Aufräumen optional in späterer Phase).
-
-**Edge / DB:**
-- Keine Schema-Migration zwingend nötig.
-- Optional: kleine SQL-Migration, die `dialog_sessions.status` auf `'closed'` setzt, sobald `resolved_boxes >= total_boxes` (per Trigger). **Bewusst draußen** in diesem Schnitt — wir leiten den Modus zunächst clientseitig ab, das reicht für die UX.
+- `src/components/entity/HomeDropOverlay.tsx` — bleibt strikt drag-only, kein Busy-Vollblocker
+- `src/components/dialog/boxes/ZuordnungsBox.tsx` — „Später"-Aktion entfernen, nur „Zuordnen"
+- `src/components/dialog/BoxFrame.tsx` — bestätigte Boxen mit „Korrigieren"-Link statt collapse
+- `src/components/dialog/DialogProvider.tsx` — Auto-Close bei vollständiger Beantwortung
+- `src/pages/Index.tsx` — Pending-Session-Effect sauber entkoppeln (kein vorzeitiger Reset)
+- `supabase/functions/_shared/agentConfig.ts` — Prompt schärft `suggested_new_name`
+- `supabase/functions/intake-understand/index.ts` — robusterer Fallback (quotierter Name → Stakeholder → Filename)
+- `supabase/functions/commit-fact/index.ts` — `box_type='assignment'` darf nicht `reject` werden
 
 ### Akzeptanzkriterien
 
-- Rechtes Home-Panel zeigt Intake-Sessions, nicht mehr einzelne Files.
-- Multi-Drops erscheinen als **eine** Kachel.
-- Tab-Reload während laufendem Intake → die Session ist weiter sichtbar und kann fortgesetzt werden.
-- Klick auf eine geschlossene Session öffnet das Overlay **nur lesend** — keine Buttons, keine Commits.
-- Klick auf eine offene Session öffnet das Overlay normal.
-- Drop irgendwo auf dem Home-Screen funktioniert; Drop während Verarbeitung wird sichtbar abgewiesen.
-- Pending-Bündel (Assets ohne Session) zeigen amber-pulsierenden Status, schalten automatisch auf die echte Session um, sobald `dialog_session` entsteht.
+- Während Verarbeitung ist die UI **voll** bedienbar; nichts liegt blockierend übers Bild.
+- Beim Drag erscheint das Overlay nur, solange tatsächlich gezogen wird, und verschwindet beim Loslassen.
+- Die Zuordnungsbox hat nur einen Button: „Zuordnen". Keine Möglichkeit zu überspringen.
+- Bei der Testdatei steht im neuen-Projekt-Feld bereits ein sauberer Name (z. B. „Lisas Projekt") als Default.
+- Während des Verstehens-Laufs lassen sich bereits entschiedene Boxen immer noch bearbeiten.
+- Sobald alle Boxen entschieden sind, schließt sich der Dialog automatisch nach kurzer Bestätigung.
+- Vom Panel rechts geöffnete, abgeschlossene Sessions bleiben strikt read-only (kein „Korrigieren"-Link).
 
-### Bewusst nicht in diesem Schnitt
+### Bewusst draußen
 
-- Löschen / Archivieren von Sessions.
-- Multi-Session-Verlaufsansicht („alle Sessions zu Projekt X").
-- Echte Trigger-basierte Auto-Close-Logik in der DB.
-- Reorder/Pinning von Session-Kacheln.
-
+- Kompletter Re-Open einer geschlossenen Session in den Edit-Modus.
+- Undo nach dem Auto-Close.
+- Re-Run von einzelnen Boxen gegen den Agent.
