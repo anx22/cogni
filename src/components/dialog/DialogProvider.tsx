@@ -53,6 +53,7 @@ export const DialogProvider = ({ children }: { children: ReactNode }) => {
       const box = session?.boxes.find((b) => b.id === boxId);
       const reviewCaseId = box?.payload?.__reviewCaseId as string | undefined;
 
+      const previousState = box?.state;
       // Optimistic UI
       updateBoxState(boxId, decision === "confirm" ? "bestaetigt" : "verworfen");
 
@@ -61,12 +62,26 @@ export const DialogProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
       try {
-        const { error } = await supabase.functions.invoke("commit-fact", {
+        const { data, error } = await supabase.functions.invoke("commit-fact", {
           body: { review_case_id: reviewCaseId, decision, user_decision: userDecision ?? null },
         });
         if (error) throw error;
+        if (data && data.ok === false) {
+          // Strukturierte Fehler (z.B. NEEDS_ASSIGNMENT) → Rollback + Hinweis
+          if (previousState) updateBoxState(boxId, previousState);
+          if (data.code === "NEEDS_ASSIGNMENT") {
+            toast.message("Erst Projekt wählen", {
+              description: "Entscheide zuerst die Zuordnungsbox oben.",
+            });
+          } else {
+            toast.error(data.error ?? "Konnte Entscheidung nicht speichern");
+          }
+          devlog.edge("commit-fact blocked", { reviewCaseId, code: data.code });
+          return;
+        }
         devlog.edge("commit-fact ok", { reviewCaseId, decision });
       } catch (err) {
+        if (previousState) updateBoxState(boxId, previousState);
         devlog.error("commit-fact failed", err);
         toast.error("Konnte Entscheidung nicht speichern");
       }
