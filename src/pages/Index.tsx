@@ -10,6 +10,7 @@ import { useIntake } from "@/lib/intake/useIntake";
 import { detectFromDrop } from "@/lib/intake/detectInputType";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { devlog } from "@/lib/devlog/devlog";
 
 type EntityState = "idle" | "hover" | "processing" | "review-ready" | "failed";
 type AppView = "entity" | "project";
@@ -40,7 +41,12 @@ const Index = () => {
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "assets" },
         (payload) => {
-          const status = (payload.new as { processing_status?: string }).processing_status;
+          const row = payload.new as { id?: string; processing_status?: string; file_name?: string };
+          devlog.realtime(`assets UPDATE → ${row.processing_status}`, {
+            id: row.id,
+            file_name: row.file_name,
+          });
+          const status = row.processing_status;
           if (status === "processing") setEntityState("processing");
           else if (status === "completed") {
             setEntityState("idle");
