@@ -230,10 +230,11 @@ const IntakeSessionsPanel = (_props: Props) => {
                 const open = (t.total ?? 0) - (t.resolved ?? 0);
                 const meta = [
                   formatRelative(t.createdAt),
-                  t.status === "closed" ? "abgeschlossen" : t.status === "pending" ? "läuft" : open > 0 ? `${open} offen` : null,
+                  t.status === "open" && open > 0 ? `${open} offen` : null,
                 ]
                   .filter(Boolean)
                   .join(" · ");
+                const badge = STATUS_BADGE[t.status];
 
                 return (
                   <button
