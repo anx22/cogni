@@ -14,5 +14,6 @@ Keine klassische Sidebar. Orientierung über Zustandswechsel.
 - [Produktprinzipien](mem://features/produkt-prinzipien) — Review-First, Provenance, Delta-Logik, Konflikte als Kern
 - [Techstack](mem://features/techstack) — Lovable + Supabase + Unstructured + Graphiti, Datenfluss-Architektur
 - [Entscheidungen](mem://features/entscheidungen) — Graphiti über Cognee, keine Sidebar, CSS-Gradients für Entity
+- [Upload-Pipeline](mem://features/upload-pipeline) — Phase 6: Storage + intake-process Edge Function, Notiz/Link als Asset mit metadata.kind, Realtime-Status
 - [Manueller Eingriff](mem://features/manueller-eingriff) — Nutzer-Werte nur visuell markiert, kein eigenes Datenmodell
 - [Universeller Input](mem://features/universeller-input) — Phase 5: Drop am Kern, Klick öffnet Overlay mit Pills, kein Auto-Switch

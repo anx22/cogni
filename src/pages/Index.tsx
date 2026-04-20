@@ -1,16 +1,22 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import EntityCore from "@/components/EntityCore";
 import ProjectScreen from "@/components/project/ProjectScreen";
 import SideGrid from "@/components/entity/SideGrid";
+import RecentAssets from "@/components/entity/RecentAssets";
 import InputOverlay from "@/components/entity/InputOverlay";
 import { demoProjects } from "@/data/demoProjects";
 import { useIntake } from "@/lib/intake/useIntake";
 import { detectFromDrop } from "@/lib/intake/detectInputType";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 
 type EntityState = "idle" | "hover" | "processing" | "review-ready" | "failed";
 type AppView = "entity" | "project";
 
 const Index = () => {
+  const navigate = useNavigate();
+  const { session, loading, signOut } = useAuth();
   const [entityState, setEntityState] = useState<EntityState>("idle");
   const [lastImpact, setLastImpact] = useState<string | null>(null);
   const [view, setView] = useState<AppView>("entity");
@@ -20,6 +26,36 @@ const Index = () => {
   const { intake } = useIntake({ setEntityState, setLastImpact });
 
   const isDragActive = entityState === "hover";
+
+  useEffect(() => {
+    if (!loading && !session) navigate("/auth", { replace: true });
+  }, [loading, session, navigate]);
+
+  // Realtime: spiegle Verarbeitungsstatus auf den Kern
+  useEffect(() => {
+    if (!session?.user) return;
+    const channel = supabase
+      .channel("assets-status")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "assets" },
+        (payload) => {
+          const status = (payload.new as { processing_status?: string }).processing_status;
+          if (status === "processing") setEntityState("processing");
+          else if (status === "completed") {
+            setEntityState("idle");
+            setLastImpact("verarbeitet");
+          } else if (status === "failed") {
+            setEntityState("failed");
+            setLastImpact("fehlgeschlagen");
+          }
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [session?.user]);
 
   const handleDrop = useCallback(
     (files: File[]) => {
@@ -36,6 +72,8 @@ const Index = () => {
   const handleReviewClick = useCallback(() => {
     console.log("Review triggered");
   }, []);
+
+  if (loading || !session) return null;
 
   if (view === "project") {
     return <ProjectScreen onBack={() => setView("entity")} />;
@@ -56,7 +94,7 @@ const Index = () => {
         </div>
 
         <div className="hidden xl:block absolute right-[6%] top-1/2 -translate-y-1/2 z-10">
-          <SideGrid side="right" isDragActive={isDragActive} />
+          <RecentAssets isDragActive={isDragActive} />
         </div>
 
         <EntityCore
@@ -84,12 +122,20 @@ const Index = () => {
         )}
       </div>
 
-      <button
-        className="absolute top-6 right-6 text-xs text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors tracking-widest uppercase"
-        onClick={() => setView("project")}
-      >
-        Projekte
-      </button>
+      <div className="absolute top-6 right-6 flex items-center gap-4">
+        <button
+          className="text-xs text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors tracking-widest uppercase"
+          onClick={() => setView("project")}
+        >
+          Projekte
+        </button>
+        <button
+          className="text-xs text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors tracking-widest uppercase"
+          onClick={signOut}
+        >
+          Abmelden
+        </button>
+      </div>
 
       <InputOverlay
         open={overlayOpen}
