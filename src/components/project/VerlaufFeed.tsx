@@ -1,10 +1,12 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import DeltaTag from "./shared/DeltaTag";
 import SourceMarker from "./shared/SourceMarker";
 import FeedbackButton from "./shared/FeedbackButton";
 import { useDialog } from "@/components/dialog/DialogProvider";
 import { buildVerlaufSession } from "@/lib/dialog/sessionFactories";
 import type { demoProject } from "@/data/demoProject";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 type Eintrag = (typeof demoProject)["verlauf"][number];
 
@@ -19,13 +21,64 @@ const filters: { id: FilterTyp; label: string }[] = [
   { id: "milestone", label: "Milestones" },
 ];
 
+interface RealEvent {
+  id: string;
+  inhalt: string;
+  datum: string;
+  quelle: string;
+  delta: string;
+  ereignisTyp: FilterTyp;
+}
+
 const VerlaufFeed = ({ verlauf }: { verlauf: Eintrag[] }) => {
   const [filter, setFilter] = useState<FilterTyp>("alle");
   const { openDialog } = useDialog();
+  const { session } = useAuth();
+  const [realEvents, setRealEvents] = useState<RealEvent[]>([]);
+
+  // Echte change_events laden
+  useEffect(() => {
+    if (!session?.user) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("change_events")
+        .select("id, event_type, new_value, created_at, canonical_fact_id")
+        .eq("user_id", session.user.id)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (cancelled || !data) return;
+      const mapped: RealEvent[] = data.map((e) => {
+        const v = (e.new_value ?? {}) as Record<string, unknown>;
+        const title =
+          typeof v.title === "string"
+            ? v.title
+            : typeof v.name === "string"
+              ? v.name
+              : "Fakt bestätigt";
+        return {
+          id: e.id,
+          inhalt: title,
+          datum: new Date(e.created_at).toLocaleDateString("de-DE"),
+          quelle: "Verstehens-Loop",
+          delta: e.event_type,
+          ereignisTyp: e.event_type === "contradict" ? "konflikt" : "aenderung",
+        };
+      });
+      setRealEvents(mapped);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.user]);
+
+  const merged = useMemo(() => {
+    return [...realEvents, ...verlauf];
+  }, [realEvents, verlauf]);
 
   const filtered = useMemo(
-    () => (filter === "alle" ? verlauf : verlauf.filter((v) => v.ereignisTyp === filter)),
-    [filter, verlauf],
+    () => (filter === "alle" ? merged : merged.filter((v) => v.ereignisTyp === filter)),
+    [filter, merged],
   );
 
   return (
@@ -70,7 +123,7 @@ const VerlaufFeed = ({ verlauf }: { verlauf: Eintrag[] }) => {
                   <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-1">
                     <span className="text-[11px] text-muted-foreground/70 font-mono">{e.datum}</span>
                     <DeltaTag delta={e.delta} />
-                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60">{e.objekt}</span>
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60">{("objekt" in e ? e.objekt : "")}</span>
                     <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
                       <FeedbackButton context={e.inhalt} label="" />
                     </div>
