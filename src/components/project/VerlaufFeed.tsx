@@ -122,8 +122,8 @@ const VerlaufFeed = ({ verlauf }: { verlauf: Eintrag[] }) => {
                   }`} />
                   <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-1">
                     <span className="text-[11px] text-muted-foreground/70 font-mono">{e.datum}</span>
-                    <DeltaTag delta={e.delta} />
-                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60">{("objekt" in e ? e.objekt : "")}</span>
+                    <DeltaTag delta={(["neu","ersetzt","bestaetigt","widersprochen"].includes(e.delta) ? e.delta : "neu") as never} />
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60">{"objekt" in e ? String((e as { objekt?: unknown }).objekt ?? "") : ""}</span>
                     <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
                       <FeedbackButton context={e.inhalt} label="" />
                     </div>
