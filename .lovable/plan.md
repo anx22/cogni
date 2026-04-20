@@ -1,98 +1,96 @@
+## Block B3 + Block C — Projekt anlegen & UX-Sweep
 
+### B3: Projekt anlegen vom Side-Grid
 
-## Block B1 — ProjectScreen liest live aus Supabase
+Aktuell kann ein Projekt nur implizit über die ZuordnungsBox im Verstehens-Loop entstehen. Es fehlt ein direkter Weg vom Side-Grid aus.
 
-Echte Projekte (9 in der DB) statt `demoProject.ts` und `demoProjects.ts`. Side-Grid links, Projekt-Routing und Projekt-Screen werden komplett auf Live-Daten umgestellt. `demoProject.ts` bleibt nur als Typ-Quelle/Fallback erhalten, bis B2/B3 abgeschlossen sind.
+**Änderungen:**
 
----
-
-### 1. Zentraler Hook `useProject(id)` — neu
-
-`src/lib/project/useProject.ts`
-
-Lädt parallel und mappt auf das von den UI-Komponenten erwartete Shape:
-
-| UI-Feld                | Quelle                                                                                                         |
-|------------------------|----------------------------------------------------------------------------------------------------------------|
-| `name`, `description`, `status` | `projects` (eq id)                                                                                    |
-| `lagetext`             | aktuell: aus jüngstem `project_state_snapshots.summary` oder Fallback aus Counts                              |
-| `outcome`              | `outcome_signals` (eq project_id, neueste Zeile)                                                              |
-| `stats.naechsterTermin`| frühestes `deadlines.due_date` in der Zukunft                                                                |
-| `stats.letzteAenderung`| `MAX(updated_at)` aus relevanten Tabellen → relativer Zeitstring                                              |
-| `stats.budget`         | aus `canonical_facts` mit `fact_type='budget'` (falls vorhanden), sonst leer                                  |
-| `konflikte`            | `contradictions` mit `resolved=false`                                                                         |
-| `gaps`                 | `gap_signals` mit `status='open'`                                                                             |
-| `dependencies`         | `dependencies` mit `resolved=false`                                                                           |
-| `handlungsbedarf`      | abgeleitet: `decisions` (entscheiden), `gap_signals`+`open_points` (klaeren), `tasks` (umsetzen), `feedback` (pruefen), `dependencies` (klaeren+blocker) |
-| `verlauf`              | `change_events` (limit 100, sortiert)                                                                        |
-| `themen`               | `topics` + abgeleitete Counts via Aggregat-Query                                                              |
-| `dokumente`            | `assets` mit `project_id=eq id` (file_name, file_type, created_at, metadata.version ?? 1)                    |
-| `stakeholder`          | `project_stakeholder_links` joined mit `persons` und `organizations`                                          |
-
-Realtime-Subscription auf alle relevanten Tabellen (`canonical_facts`, `change_events`, `tasks`, `decisions`, `deadlines`, `gap_signals`, `dependencies`, `contradictions`, `assets`, `outcome_signals`, `topics`, `project_stakeholder_links`) gefiltert auf `project_id=eq.${id}` → invalidiert nur die betroffene Teilabfrage.
-
-Status: `loading | ready | empty | error`. `empty` zeigt einen leeren Lagebild-Platzhalter („Noch keine Erkenntnisse — leg etwas ab").
+1. **SideGrid.tsx** — den bestehenden „Erstes Projekt anlegen"-Button (Zeile 99–114, wird nur bei `isEmpty` gezeigt) um einen generellen „+ Neues Projekt"-Button erweitern, der als letzte Kachel im Grid erscheint, wenn Platz vorhanden ist (weniger als `PAGE_SIZE` Items auf der aktuellen Seite). sowie über dezenten text link, links aligned in der paginierungs zeile
+2. **Index.tsx** — neuer Callback `handleCreateProject`:
+  - Ruft `supabase.from("projects").insert({ user_id, name: "Neues Projekt" }).select("id").single()` auf.
+  - Navigiert sofort zu `/projekt/${id}`.
+  - Wird als `onCreateProject` an SideGrid übergeben.
+3. **ProjectScreen.tsx** — beim `empty`-Status den Projektnamen inline editierbar machen (einfaches `contentEditable` oder `input`-Feld), damit der User den Auto-Namen „Neues Projekt" sofort umbenennen kann. Speichert per `onBlur` via `supabase.from("projects").update({ name }).eq("id", projectId)`.
 
 ---
 
-### 2. ProjectScreen umbauen
+### C1: Voice-Aufnahme echt machen
 
-`src/components/project/ProjectScreen.tsx`
+Die Pill „Sprache" ist aktuell disabled mit Platzhalter-Text. Wird zu einer echten `MediaRecorder`-Aufnahme.
 
-- `demoProject` raus, stattdessen `useProject(projectId)`.
-- Bei `loading`: dezenter Skeleton (gleiche Höhe wie LageZone).
-- Bei `empty`: nur LageZone mit Lagebild „Noch keine Substanz" + Drop-Hinweis.
-- Bei `ready`: bestehende Komponenten unverändert weiterverwenden, Props kommen aus dem Hook.
-- `realProjectId` bleibt der einzige akzeptierte Wert; Demo-IDs (`p1` …) lösen einen Toast „Projekt nicht gefunden" + Zurück-Button aus.
+**Neue Datei: `src/lib/voice/useVoiceRecorder.ts**`
 
----
+- Hook mit States: `idle | recording | transcribing | done | error`.
+- `start()`: `navigator.mediaDevices.getUserMedia({ audio: true })`, `MediaRecorder` mit `audio/webm`.
+- `stop()`: Stoppt Recorder, sammelt Blob aus Chunks.
+- `transcribe(blob)`: Ruft eine neue Edge Function `voice-transcribe` auf, die den Audio-Blob an Lovable AI (Whisper-kompatibles Modell) sendet und den Text zurückgibt.
+- Gibt `{ status, transcript, start, stop, cancel }` zurück.
 
-### 3. Side-Grid auf echte Projekte umstellen
+**Neue Edge Function: `supabase/functions/voice-transcribe/index.ts**`
 
-`src/data/demoProjects.ts` wird **nicht gelöscht** (Typ `DemoProject`/`ProjectSignal` werden weiter referenziert), aber:
+- Nimmt `multipart/form-data` mit dem Audio-Blob entgegen.
+- Sendet an Lovable AI Gateway (Whisper/STT-Modell) zur Transkription.
+- Gibt `{ text: string }` zurück.
+- Hinweis: Prüfen ob Lovable AI ein STT-Modell unterstützt. Falls nicht, wird die Transkription über ein Text-LLM simuliert (Audio-Base64 an Gemini Flash, der Audio-Input versteht) oder die Voice-Pill bleibt als „coming soon" mit einem klaren Hinweis.
 
-- Neuer Hook `src/lib/project/useProjects.ts` lädt alle Projekte des Users (`projects` + Aggregat-Counts pro Projekt: `open_count` aus `tasks`+`open_points`+`decisions(draft)`, `signal` aus `contradictions`/`gap_signals`/Deadline-Druck).
-- `Index.tsx` ersetzt `demoProjects` durch das Ergebnis dieses Hooks.
-- Mapping zur DemoProject-Shape: `initial = name.split(' ').map(w=>w[0]).join('').slice(0,3).toUpperCase()`, `lastChangedAt = updated_at`, `signal` deterministisch aus den Counts berechnet (`conflict` > `review` > `action` > `calm`).
+**InputOverlay.tsx** — Voice-Modus (Zeile 216–220):
 
----
+- Ersetzt Platzhalter durch: Aufnahme-Button (Mikrofon-Icon, pulsierend wenn aktiv), Stopp-Button, Wellenform-Visualisierung (optional, einfacher Puls reicht), Transkript-Preview nach Stopp, „Übernehmen"-Button der den transkribierten Text als Notiz-Asset via `onSubmit` weitergibt.
 
-### 4. Komponenten-Anpassungen (minimal)
-
-Alle vier Subkomponenten (`LageZone`, `HandlungsbedarfList`, `VerlaufFeed`, `SubstanzSection`) lesen heute via `typeof demoProject`. Damit sie weiter typsicher mit dem Hook-Output funktionieren, wird ein zentraler Typ `ProjectViewModel` in `src/lib/project/types.ts` definiert (entspricht dem bisherigen `demoProject`-Shape) und die Komponenten-Imports werden umgestellt.
-
-`VerlaufFeed` enthält bereits eine eigene Direkt-Query auf `change_events`. Diese wird **entfernt**, weil der Verlauf jetzt zentral aus dem Hook kommt (kein doppeltes Laden).
+**InputPills.tsx** — `disabled: true` bei Voice entfernen (Zeile 15).
 
 ---
 
-### 5. Bewusst draußen (gehört zu B2/B3)
+### C2: Retry-Button im Session-Panel
 
-- URL-basiertes Routing `/projekt/:id` → B2.
-- Projekt anlegen / leerer Side-Grid-Add-Button verdrahtet → B3.
-- ZuordnungsBox „neues Projekt" → B3.
-- Echtes Stakeholder-CRUD, Themen-Merging, Dokument-Preview → Block E.
+Der Retry-Pfad existiert bereits in `EntityVoice` + `Index.tsx` (`handleRetry`), aber nur für den aktuell sprechenden Fehler. Im IntakeSessionsPanel fehlt er.
 
----
+**IntakeSessionsPanel.tsx:**
 
-### 6. Akzeptanzkriterien
-
-- Klick auf eine echte Projektkachel öffnet den Projekt-Screen mit den **tatsächlichen** Counts und Inhalten dieses Projekts aus der DB.
-- Ein neuer Commit über den Verstehens-Loop ändert sichtbar: Lagebild-Counts, Verlauf bekommt einen Eintrag, Handlungsbedarf wächst — ohne Reload.
-- Side-Grid zeigt die 9 vorhandenen Projekte sortiert nach `updated_at`, mit Initial-Token und Signal-Punkt aus echten Konflikt/Gap-Daten.
-- Klick auf eine Demo-ID-Kachel (existiert nach Umstellung nicht mehr) ist ausgeschlossen, weil der Side-Grid nur noch echte UUIDs erzeugt.
+- Assets mit `understanding_status` in `['failed', 'rate_limited', 'payment_required']` die keine Session haben, als eigene Tiles mit Status `"failed"` anzeigen (neuer TileStatus).
+- Badge: `"fehlgeschlagen"` mit `bg-destructive/15 text-destructive ring-destructive/30`.
+- Klick auf eine failed-Tile: `supabase.functions.invoke("intake-understand", { body: { asset_id, retry: true } })` + Toast „Wird nochmal versucht".
+- Bestehende `pending`-Logik filtert diese raus, damit kein Duplikat entsteht.
 
 ---
 
-### 7. Betroffene Dateien
+### C3: Asset-Detail Inline-Card
 
-- `src/lib/project/useProject.ts` — neu
-- `src/lib/project/useProjects.ts` — neu
-- `src/lib/project/types.ts` — neu (`ProjectViewModel`)
-- `src/components/project/ProjectScreen.tsx` — Datenquelle umstellen, Loading/Empty
-- `src/components/project/LageZone.tsx` — Typ-Import umstellen
-- `src/components/project/HandlungsbedarfList.tsx` — Typ-Import umstellen
-- `src/components/project/VerlaufFeed.tsx` — eigene Query entfernen, Typ-Import umstellen
-- `src/components/project/SubstanzSection.tsx` — Typ-Import umstellen
-- `src/pages/Index.tsx` — `demoProjects` → `useProjects`-Hook
-- `docs/implementierung-aktuell.md` — Block B1 als erledigt markieren
+Klick auf einen abgeschlossenen Session-Eintrag öffnet bereits den Dialog. Was fehlt: ein Quick-Preview ohne den ganzen Dialog.
 
+**Änderung in IntakeSessionsPanel.tsx:**
+
+- Long-Press oder Hover auf eine Tile zeigt einen Popover/Tooltip mit:
+  - Originalname (`file_name`)
+  - Typ + Größe
+  - Erstelldatum
+  - Link zum Dialog (bestehender Klick-Handler)
+  - Projekt-Zuordnung (aus `assets.project_id` → Projektname)
+- Implementierung: `HoverCard` aus shadcn/ui (bereits installiert).
+- Daten: Die `Asset`-Daten sind bereits geladen (`assets`-State). Projektname per Lookup aus `useProjects` oder einem kleinen Map aus den geladenen Projekte.
+
+---
+
+### Dokumentation
+
+- `docs/implementierung-aktuell.md` — B2 als erledigt markieren (Routing ist implementiert), B3 als erledigt, Block C als erledigt.
+- `docs/geplant.md` — Phase 8 und Phase 9 als ✓ markieren.
+
+---
+
+### Betroffene Dateien
+
+
+| Datei                                           | Aktion                           |
+| ----------------------------------------------- | -------------------------------- |
+| `src/components/entity/SideGrid.tsx`            | + Neues-Projekt-Kachel           |
+| `src/pages/Index.tsx`                           | + `handleCreateProject`          |
+| `src/components/project/ProjectScreen.tsx`      | Inline-Name-Edit bei empty       |
+| `src/lib/voice/useVoiceRecorder.ts`             | Neu                              |
+| `supabase/functions/voice-transcribe/index.ts`  | Neu (falls STT verfügbar)        |
+| `src/components/entity/InputOverlay.tsx`        | Voice-Modus echt                 |
+| `src/components/entity/InputPills.tsx`          | Voice enabled                    |
+| `src/components/entity/IntakeSessionsPanel.tsx` | Failed-Tiles + Retry + HoverCard |
+| `docs/implementierung-aktuell.md`               | Status-Update                    |
+| `docs/geplant.md`                               | Status-Update                    |
