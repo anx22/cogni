@@ -97,6 +97,7 @@ export function useIntake(options: UseIntakeOptions = {}) {
               file_name: payload.url,
               file_type: "other",
               processing_status: "completed",
+              understanding_status: "pending",
               metadata: { kind: "url", url: payload.url },
             })
             .select("id")
@@ -124,6 +125,7 @@ export function useIntake(options: UseIntakeOptions = {}) {
               file_name: preview,
               file_type: "note",
               processing_status: "completed",
+              understanding_status: "pending",
               metadata: { kind: "note", text: payload.text },
             })
             .select("id")

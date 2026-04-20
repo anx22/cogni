@@ -45,6 +45,20 @@ const Index = () => {
       .on(
         "postgres_changes",
         {
+          event: "INSERT",
+          schema: "public",
+          table: "assets",
+          filter: `user_id=eq.${session.user.id}`,
+        },
+        (payload) => {
+          const row = payload.new as { id?: string; file_type?: string };
+          devlog.realtime(`assets INSERT → ${row.file_type}`, { id: row.id });
+          setEntityState("processing");
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
           event: "UPDATE",
           schema: "public",
           table: "assets",
