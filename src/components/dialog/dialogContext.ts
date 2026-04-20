@@ -7,6 +7,20 @@ export interface DialogContextValue {
   closeDialog: () => void;
   updateBoxState: (boxId: string, state: BoxState) => void;
   updateBoxPayload: (boxId: string, patch: Record<string, any>) => void;
+  /** Lädt eine echte Session aus der Datenbank und öffnet sie. */
+  openSessionFromDB: (sessionId: string) => Promise<void>;
+  /** Lädt die aktuelle Session erneut aus der Datenbank. */
+  refreshFromDB: () => Promise<void>;
+  /**
+   * Persistente Entscheidung für eine Box.
+   * Wenn die Box ein `__reviewCaseId` im payload hat, wird die Edge Function
+   * `commit-fact` aufgerufen — sonst bleibt es ein reines UI-Update (Demo-Modus).
+   */
+  commitBox: (
+    boxId: string,
+    decision: "confirm" | "reject",
+    userDecision?: Record<string, any>,
+  ) => Promise<void>;
 }
 
 export const DialogContext = createContext<DialogContextValue | null>(null);
