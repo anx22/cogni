@@ -205,7 +205,7 @@ const IntakeSessionsPanel = (_props: Props) => {
             Noch nichts da
           </div>
         ) : (
-          <ScrollArea className="h-[480px] w-[152px] pr-3">
+          <ScrollArea className="h-[324px] w-[152px] pr-3">
             <div className="flex flex-col gap-3">
               {tiles.map((t) => {
                 const clickable = t.status !== "pending" && !!t.sessionId;
