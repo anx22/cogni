@@ -92,6 +92,21 @@ export const DialogProvider = ({ children }: { children: ReactNode }) => {
     [session, updateBoxState, readonly],
   );
 
+  // Auto-Close: alle Entscheidungs-Boxen final → kurz bestätigen + schließen
+  const autoClosedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!session || readonly) return;
+    if (autoClosedRef.current === session.id) return;
+    const decisionBoxes = session.boxes.filter((b) => b.type !== "kontext");
+    if (decisionBoxes.length === 0) return;
+    const allDone = decisionBoxes.every((b) => END_STATES.includes(b.state));
+    if (!allDone) return;
+    autoClosedRef.current = session.id;
+    toast.success("Verstanden — abgeschlossen.");
+    const t = setTimeout(() => setSession(null), 1200);
+    return () => clearTimeout(t);
+  }, [session, readonly]);
+
   return (
     <DialogContext.Provider
       value={{
