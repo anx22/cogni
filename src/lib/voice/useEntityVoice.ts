@@ -26,6 +26,7 @@ export function useEntityVoice(userId: string | undefined) {
   const [state, setState] = useState<VoiceState>({ text: null, tone: "calm" });
   const lastShownAt = useRef(0);
   const queue = useRef<VoiceState[]>([]);
+  const clearTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const enqueue = (next: VoiceState) => {
     queue.current.push(next);
@@ -41,6 +42,13 @@ export function useEntityVoice(userId: string | undefined) {
       if (!next) return;
       lastShownAt.current = Date.now();
       setState(next);
+      if (clearTimer.current) clearTimeout(clearTimer.current);
+      // Auto-Clear nach 8s, falls "ready" landet und nichts Neues kommt.
+      if (next.tone === "ready" && next.text) {
+        clearTimer.current = setTimeout(() => {
+          setState({ text: null, tone: "calm" });
+        }, 8000);
+      }
       if (queue.current.length > 0) drain();
     }, wait);
   };
@@ -137,9 +145,23 @@ export function useEntityVoice(userId: string | undefined) {
           }
         },
       )
+      // Session geschlossen → Stimme räumt sich ab
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "dialog_sessions", filter: `user_id=eq.${userId}` },
+        (p) => {
+          const row = p.new as { status?: string };
+          if (row.status === "completed" || row.status === "cancelled") {
+            if (clearTimer.current) clearTimeout(clearTimer.current);
+            queue.current = [];
+            setState({ text: null, tone: "calm" });
+          }
+        },
+      )
       .subscribe();
 
     return () => {
+      if (clearTimer.current) clearTimeout(clearTimer.current);
       supabase.removeChannel(channel);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

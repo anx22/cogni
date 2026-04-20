@@ -71,7 +71,6 @@ const SideGrid = ({
         "animate-float-in",
         side === "left" ? "[animation-delay:200ms]" : "[animation-delay:350ms]",
         "opacity-0 [animation-fill-mode:forwards]",
-        isDragActive && "pointer-events-none opacity-30 transition-opacity duration-300",
       )}
     >
       <div
