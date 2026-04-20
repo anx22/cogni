@@ -45,7 +45,7 @@ const DialogOverlay = () => {
           </div>
           <button
             type="button"
-            onClick={tryClose}
+            onClick={closeDialog}
             className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-surface-3 transition-colors"
             aria-label="Schließen"
           >
