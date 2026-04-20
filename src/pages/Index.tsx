@@ -305,10 +305,16 @@ const Index = () => {
           <EntityVoice voice={voice} onRetry={handleRetry} />
         </div>
 
-        {!voice.text && (
-          <p className="absolute bottom-[14%] text-muted-foreground text-sm tracking-wide opacity-50 animate-float-in">
-            Klick auf den Kern oder lege etwas hier ab — Datei, Link, Notiz
-          </p>
+        {overlayOpen ? (
+          <div className="absolute top-[58%] left-1/2 -translate-x-1/2 z-30 w-full max-w-xl px-4">
+            <InputOverlay open={overlayOpen} onClose={() => setOverlayOpen(false)} onSubmit={intake} />
+          </div>
+        ) : (
+          !voice.text && (
+            <p className="absolute bottom-[14%] text-muted-foreground text-sm tracking-wide opacity-50 animate-float-in">
+              Klick auf den Kern oder lege etwas hier ab — Datei, Link, Notiz
+            </p>
+          )
         )}
       </div>
 
@@ -328,8 +334,6 @@ const Index = () => {
       </div>
 
       <HomeDropOverlay active={dragActive} busy={busy} />
-
-      <InputOverlay open={overlayOpen} onClose={() => setOverlayOpen(false)} onSubmit={intake} />
     </div>
   );
 };
