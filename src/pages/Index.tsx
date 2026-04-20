@@ -275,7 +275,7 @@ const Index = () => {
             side="left"
             label="Projekte"
             projects={liveProjects}
-            activeId={activeProjectId}
+            activeId={undefined}
             onProjectClick={handleProjectClick}
             isDragActive={isDragActive}
           />
@@ -313,7 +313,7 @@ const Index = () => {
       <div className="absolute top-6 right-6 flex items-center gap-4">
         <button
           className="text-xs text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors tracking-widest uppercase"
-          onClick={() => setView("project")}
+          onClick={() => navigate("/projekt/" + (liveProjects?.[0]?.id ?? ""))}
         >
           Projekte
         </button>
