@@ -222,12 +222,22 @@ Deno.serve(async (req) => {
           reason_short: suggestion?.reason_short,
         };
       } else {
-        // Fallback-Name aus reason_short oder Dateiname ableiten,
-        // damit die Zuordnungsbox nie ohne Vorschlag dasteht.
+        // Fallback-Kaskade für sauberen Projektnamen:
+        //   1. Agent hat suggested_new_name geliefert → nehmen.
+        //   2. Quotierten Namen aus reason_short ziehen ("…", „…", '…').
+        //   3. Dominanten Stakeholder-Namen aus extracted facts → "X's Projekt".
+        //   4. Dateiname ohne Endung.
+        //   5. "Neues Projekt".
+        const quoted = suggestion?.reason_short?.match(/[„"']([^"„"']{2,40})["""']/);
+        const stakeholder = extracted.find((f) => f.fact_type === "stakeholder");
+        const stakeholderName =
+          (stakeholder?.content as any)?.name?.toString().trim() ||
+          stakeholder?.title?.trim();
         const fallbackName =
           suggestion?.suggested_new_name?.trim() ||
-          (suggestion?.reason_short?.split(/[.,;:–—-]/)[0]?.trim().slice(0, 60)) ||
-          (asset.file_name?.replace(/\.[^.]+$/, "").slice(0, 60)) ||
+          quoted?.[1]?.trim() ||
+          (stakeholderName ? `${stakeholderName.split(/\s+/)[0]}s Projekt` : null) ||
+          asset.file_name?.replace(/\.[^.]+$/, "").slice(0, 40) ||
           "Neues Projekt";
         assignment = {
           mode: "new",

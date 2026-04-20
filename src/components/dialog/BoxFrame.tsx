@@ -17,9 +17,11 @@ const BoxFrame = ({ box, children, hideActions, actions }: BoxFrameProps) => {
   const verworfen = box.state === "verworfen";
   const bestaetigt = box.state === "bestaetigt";
   const geaendert = box.state === "geaendert";
-  const collapsed = bestaetigt && !readonly; // im Edit-Modus zusammenklappen, im Readonly sichtbar lassen
+  // Im Edit-Modus bleiben Inhalt + Aktionen IMMER sichtbar — auch bei
+  // bestätigten/verworfenen Boxen, damit der Nutzer korrigieren kann.
+  const collapsed = false;
 
-  const opacity = verworfen ? "opacity-40" : bestaetigt ? "opacity-60" : "opacity-100";
+  const opacity = verworfen ? "opacity-50" : bestaetigt ? "opacity-70" : "opacity-100";
 
   return (
     <section className={`relative transition-opacity ${opacity}`}>

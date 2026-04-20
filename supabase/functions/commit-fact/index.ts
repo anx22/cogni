@@ -56,9 +56,45 @@ Deno.serve(async (req) => {
 
     // ==== Sonderfall: Zuordnungsbox =====================================
     if (rc.box_type === "assignment") {
+      if (decision === "reject") {
+        return new Response(
+          JSON.stringify({
+            ok: false,
+            code: "ASSIGNMENT_REQUIRED",
+            error: "Projektzuordnung ist erforderlich und kann nicht verworfen werden.",
+          }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
       await handleAssignment(admin, user.id, rc, decision, user_decision);
       await updateSessionProgress(admin, rc.session_id);
       return ok({});
+    }
+
+    // ==== Guard: andere Boxen brauchen erst die Zuordnung ===============
+    {
+      const sessionMeta = (rc.session?.metadata ?? {}) as Record<string, any>;
+      const hasAssignment =
+        !!sessionMeta?.assignment?.assigned_project_id || !!rc.session?.project_id;
+      if (!hasAssignment) {
+        // Prüfen ob es überhaupt eine Assignment-Box in der Session gibt
+        const { data: assignmentCase } = await admin
+          .from("review_cases")
+          .select("box_state")
+          .eq("session_id", rc.session_id)
+          .eq("box_type", "assignment")
+          .maybeSingle();
+        if (assignmentCase && assignmentCase.box_state !== "confirmed") {
+          return new Response(
+            JSON.stringify({
+              ok: false,
+              code: "NEEDS_ASSIGNMENT",
+              error: "Bitte zuerst die Projektzuordnung entscheiden.",
+            }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
+        }
+      }
     }
 
     const pf = rc.proposed_fact as
