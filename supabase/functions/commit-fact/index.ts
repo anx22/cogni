@@ -86,8 +86,14 @@ Deno.serve(async (req) => {
       const project_id = sessionProjectId ?? pf.project_id;
 
       if (!project_id) {
-        throw new Error(
-          "Keine Projektzuordnung — bitte zuerst Zuordnungsbox entscheiden.",
+        // Kein 500 — sonst Blank-Screen im Frontend. Strukturierte Antwort mit Code.
+        return new Response(
+          JSON.stringify({
+            ok: false,
+            code: "NEEDS_ASSIGNMENT",
+            error: "Bitte zuerst die Projektzuordnung entscheiden.",
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
 
