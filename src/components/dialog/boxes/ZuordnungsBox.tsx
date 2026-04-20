@@ -12,17 +12,15 @@ interface Candidate {
 }
 
 const ZuordnungsBox = ({ box }: { box: DialogBox }) => {
-  const { commitBox } = useDialog();
+  const { commitBox, readonly } = useDialog();
 
   const candidates: Candidate[] = (box.payload?.candidates as Candidate[] | undefined) ?? [];
   const suggestedNewName: string | undefined = box.payload?.suggested_new_name ?? undefined;
   const agentReason: string | undefined = box.payload?.agent_reason ?? undefined;
   const mode: string | undefined = box.payload?.assignment_mode;
 
-  // Default-Auswahl: bei "auto" oder "uncertain" der Top-Kandidat,
-  // bei "new" der Vorschlagsname als neues Projekt.
   const defaultSelection: string =
-    mode === "new"
+    mode === "new" || candidates.length === 0
       ? "__new__"
       : candidates[0]?.project_id ?? "__new__";
 
@@ -45,7 +43,7 @@ const ZuordnungsBox = ({ box }: { box: DialogBox }) => {
         <>
           <ActionBtn
             variant="primary"
-            icon={<Check className="w-3 h-3" />}
+            icon={<Check className="w-4 h-4" />}
             onClick={handleConfirm}
           >
             Zuordnen
@@ -55,52 +53,67 @@ const ZuordnungsBox = ({ box }: { box: DialogBox }) => {
       }
     >
       {agentReason && (
-        <p className="text-xs text-muted-foreground/70 italic">{agentReason}</p>
+        <p className="text-lg text-foreground/80 font-light leading-relaxed">
+          {agentReason}
+        </p>
       )}
-      <p className="text-sm text-foreground/90">
-        {box.payload?.frage ?? "Welches Projekt passt?"}
-      </p>
-      <div className="space-y-1.5">
-        {candidates.map((c) => (
-          <label
-            key={c.project_id}
-            className="flex items-start gap-2 px-3 py-2 rounded-md bg-surface-3 border border-border-subtle cursor-pointer hover:border-border-strong"
-          >
-            <input
-              type="radio"
-              checked={sel === c.project_id}
-              onChange={() => setSel(c.project_id)}
-              className="mt-0.5 accent-primary"
-            />
-            <div className="flex-1 min-w-0">
-              <div className="text-sm text-foreground/90 truncate">{c.name}</div>
-              {c.reasons && c.reasons.length > 0 && (
-                <div className="text-[10px] text-muted-foreground/60 truncate">
-                  {c.reasons.slice(0, 2).join(" · ")}
-                </div>
-              )}
-            </div>
-          </label>
-        ))}
 
-        <label className="flex items-center gap-2 px-3 py-2 rounded-md bg-surface-3 border border-border-subtle cursor-pointer hover:border-border-strong">
+      <div className="space-y-2 pt-2">
+        {candidates.map((c) => {
+          const active = sel === c.project_id;
+          return (
+            <label
+              key={c.project_id}
+              className={`flex items-center gap-4 px-5 py-4 rounded-lg cursor-pointer transition-colors ${
+                active
+                  ? "bg-primary/10 border border-primary/40"
+                  : "bg-surface-2/40 border border-transparent hover:border-border-subtle"
+              } ${readonly ? "pointer-events-none" : ""}`}
+            >
+              <input
+                type="radio"
+                checked={active}
+                onChange={() => setSel(c.project_id)}
+                disabled={readonly}
+                className="accent-primary w-4 h-4"
+              />
+              <div className="flex-1 min-w-0">
+                <div className="text-lg text-foreground/95 font-light truncate">{c.name}</div>
+                {c.reasons && c.reasons.length > 0 && (
+                  <div className="text-sm text-muted-foreground/60 truncate mt-0.5">
+                    {c.reasons.slice(0, 2).join(" · ")}
+                  </div>
+                )}
+              </div>
+            </label>
+          );
+        })}
+
+        <label
+          className={`flex items-center gap-4 px-5 py-4 rounded-lg cursor-pointer transition-colors ${
+            sel === "__new__"
+              ? "bg-primary/10 border border-primary/40"
+              : "bg-surface-2/40 border border-transparent hover:border-border-subtle"
+          } ${readonly ? "pointer-events-none" : ""}`}
+        >
           <input
             type="radio"
             checked={sel === "__new__"}
             onChange={() => setSel("__new__")}
-            className="accent-primary"
+            disabled={readonly}
+            className="accent-primary w-4 h-4"
           />
-          <Plus className="w-3 h-3 text-muted-foreground/70" />
-          <span className="text-sm text-foreground/90">Neues Projekt</span>
+          <Plus className="w-4 h-4 text-muted-foreground/70" />
+          <span className="text-lg text-foreground/90 font-light">Neues Projekt</span>
         </label>
 
-        {sel === "__new__" && (
+        {sel === "__new__" && !readonly && (
           <input
             type="text"
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             placeholder="Projektname"
-            className="w-full mt-1 px-3 py-2 text-sm bg-surface-2 border border-border-subtle rounded-md focus:outline-none focus:border-primary/50 text-foreground/90"
+            className="w-full mt-2 px-5 py-3 text-xl font-light bg-transparent border-b border-border-strong focus:outline-none focus:border-primary text-foreground/95 placeholder:text-muted-foreground/40"
             autoFocus
           />
         )}
