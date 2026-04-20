@@ -1,63 +1,53 @@
+## Phase 7.5.2 — Bugfix: Foreign-Key zeigt auf falsche Tabelle
 
+### Befund (eindeutig)
 
-## Phase 7.5.1 — Bugfix: Live-Stimme & Verstehens-Loop laufen nicht
+Edge-Log:
 
-Drei harte, voneinander unabhängige Bugs blockieren den ganzen Loop. Alle drei sind klein, alle drei sind sicher.
+```
+review_cases: insert or update on table "review_cases"
+violates foreign key constraint "review_cases_session_id_fkey"
+```
 
-### Befund
+Schema-Inspektion zeigt warum:
 
-1. **Realtime ist für die relevanten Tabellen nicht aktiviert.**
-   `pg_publication_tables` ist leer für `assets`, `dialog_sessions`, `proposed_facts`. Konsequenz: Die Subscriptions in `useEntityVoice` und `Index.tsx` feuern nie. **Keine** Live-Stimme, **kein** Wechsel auf `review-ready`.
+```
+review_cases.session_id  →  review_sessions(id)   ← falsche Tabelle
+```
 
-2. **`intake-process` triggert `intake-understand` nicht.**
-   Der Edge-Log zeigt nach Upload nur `"intake-process responded"` — kein einziger Eintrag von `intake-understand`. Ursache: `intake-process` macht ein `await fetch(...)` mit Service-Key gegen die Function-URL ohne `apikey`-Header. Supabase Edge Functions verwerfen den Call still. Beweis: das letzte erfolgreiche Asset (DESIGN.md, 17:45) hat `processing_status='completed'`, aber **kein** Verstehens-Lauf.
+Der gesamte neue Verstehens-Loop schreibt aber in `dialog_sessions` (Phase 7). `review_sessions` ist eine Alttabelle aus dem ursprünglichen Datenmodell, die nicht mehr genutzt wird. Folge: `dialog_sessions`-Insert klappt, sofortiger `review_cases`-Insert scheitert an der FK → Asset wird auf `failed` gesetzt → „Das hat nicht geklappt — nochmal?" erscheint zurecht. Genau das sieht man im Screenshot.
 
-3. **Idempotenz-Index ist falsch.**
-   Der Index heißt `proposed_facts_extraction_run_id_user_idx` und ist **eindeutig auf `extraction_run_id` allein** (nicht zusammen mit `user_id` wie geplant). Folge: Sobald zwei Fakten mit derselben `extraction_run_id` geschrieben werden — was der Normalfall ist, denn ein Lauf produziert mehrere Fakten — wirft Postgres genau den Fehler aus dem Edge-Log: `duplicate key value violates unique constraint`. Damit schlägt **jeder** Verstehens-Lauf mit ≥2 Fakten fehl.
+Eine Test-Notiz schlägt deshalb **immer** fehl, völlig unabhängig vom Inhalt.
 
-### Lösung
+### Lösung — eine kleine, präzise Migration
 
-**A. Realtime aktivieren** (Migration)
-   - `ALTER PUBLICATION supabase_realtime ADD TABLE public.assets, public.dialog_sessions, public.proposed_facts;`
-   - `ALTER TABLE … REPLICA IDENTITY FULL` für die drei Tabellen, damit `payload.new` vollständig ankommt.
+1. **Constraint umbiegen**
+  - `ALTER TABLE review_cases DROP CONSTRAINT review_cases_session_id_fkey;`
+  - `ALTER TABLE review_cases ADD CONSTRAINT review_cases_session_id_fkey FOREIGN KEY (session_id) REFERENCES dialog_sessions(id) ON DELETE CASCADE;`
+2. **Symmetrisch prüfen & reparieren** (gleiche Klasse von Bug)
+  Wir prüfen alle FKs, die auf die alten Tabellen `review_sessions` / `change_events` (falls Alttabelle existiert) zeigen, und biegen sie auf die aktiven Tabellen um, falls vorhanden. Konkret zu prüfen in der Migration: `proposed_facts`, `change_events`, `gap_signals`, `dependencies` — falls dort noch eine `session_id` mit alter Referenz hängt, gleicher Fix.
+3. **Alttabelle** `review_sessions` **DROPPEN**.
+4. **Hängendes Test-Asset zurücksetzen** (optional, sauber)
+  Setzt das eine `failed`-Asset und sein gehängtes Sibling zurück auf `pending`, damit der Retry-Knopf am Kern (oder ein erneuter Wurf) sie noch einmal durchlaufen lässt — ohne hängende Karteileichen in der DB.
 
-**B. Idempotenz-Index reparieren** (Migration)
-   - Drop `proposed_facts_extraction_run_id_user_idx`.
-   - Statt eindeutigem Index pro Fakt: Eindeutigkeit gehört auf die **Session**, nicht auf den Fakt. Wir setzen sie dort, wo sie hingehört: **`UNIQUE INDEX dialog_sessions_extraction_run_unique ON dialog_sessions((metadata->>'extraction_run_id'), user_id)`**. Damit kann ein Lauf beliebig viele Fakten schreiben, aber pro `extraction_run_id` entsteht nur eine Session — sauberer Idempotenzpunkt. Die deterministische `extraction_run_id` (asset_id + attempt) wird im Code ergänzt.
-   - In `intake-understand`: `extraction_run_id` deterministisch aus `asset_id + attempt` ableiten (nicht mehr `crypto.randomUUID()`), damit Idempotenz greift.
+### Test-Erwartung nach dem Fix
 
-**C. Chain `intake-process → intake-understand` reparieren**
-   - Statt rohem `fetch` den Supabase-Client benutzen: `admin.functions.invoke("intake-understand", { body: { asset_id } })`. Der Client setzt `apikey` und `Authorization` korrekt.
-   - Nicht-blockierend (kein `await`), damit `intake-process` schnell zurückkommt.
+`testdatei.txt` mit „Lisa Müller / Aurora-Angebot / Budget 2050 EUR / Email-Hinweis" reinwerfen →
 
-**D. Kleine UI-Korrekturen für sichtbares Leben**
-   - `Index.tsx`: zusätzlich auf `assets` **INSERT** hören (nicht nur UPDATE) — heute landet eine Notiz/Link sofort als Asset, der erste Voice-Satz „Ich nehme deine Notiz auf" kommt sonst nicht durch.
-   - `useEntityVoice`: gleiche Subscription-Filter, einmal überprüft (sind bereits korrekt — bloß Realtime fehlte).
-   - Beim direkten Asset-Insert für Notiz/Link in `useIntake` setzen wir `understanding_status='pending'` mit, damit es konsistent ist.
-
-**E. Aufräumen der hängenden Assets**
-   - Die 4 Assets mit `understanding_status='pending'` werden nicht angefasst (gehören zu altem Stand). Optional: Knopf am Kern/Devlog später; nicht in diesem Bugfix.
-
-### Test-Erwartung
-
-Notiz „Lisa Müller hat zugesagt, das Aurora-Angebot bis Freitag zu prüfen" reinwerfen →
-1. EntityVoice zeigt sofort „Ich nehme deine Notiz auf."
-2. Wechselt auf „Ich verstehe gerade."
-3. Wechselt auf „Ich erkenne etwas." (erster proposed_fact)
-4. Kern wird golden, Voice sagt „Bereit. 4 Sachen für dich."
-5. Klick auf Kern → Dialog mit Zuordnungsbox + Wissens-Boxen.
+1. Voice: „Ich nehme deine Datei auf."
+2. Voice: „Ich verstehe gerade."
+3. Voice: „Ich erkenne etwas." (erster proposed_fact)
+4. Kern wird golden, Voice: „Bereit. N Sachen für dich."
+5. Klick auf Kern → Dialog mit **Zuordnungsbox** (mode=`new`, Vorschlag „Aurora-Angebot" o. ä., weil keine Projekte existieren) + Wissensboxen für Stakeholder (Lisa Müller), Topic (Aurora-Angebot), Open-Point (Frist Freitag), Budget-Update.
 
 ### Betroffene Dateien
 
-- **Migration (neu):** Realtime-Publication + REPLICA IDENTITY + Index-Tausch
-- `supabase/functions/intake-process/index.ts` — `admin.functions.invoke` statt `fetch`
-- `supabase/functions/intake-understand/index.ts` — deterministische `extraction_run_id`
-- `src/pages/Index.tsx` — zusätzlicher INSERT-Listener auf `assets`
-- `src/lib/intake/useIntake.ts` — `understanding_status: 'pending'` beim Notiz/Link-Insert
+- **Migration (neu):** Constraint `review_cases.session_id` von `review_sessions` auf `dialog_sessions` umbiegen, plus Sweep für gleichartige Bugs auf den anderen verwandten Tabellen
+- Keine Code-Änderungen am Frontend nötig
+- Keine Änderungen an Edge Functions nötig
 
-### Nicht in diesem Schnitt
+### Was bewusst nicht in diesem Schnitt
 
-- Backfill der hängenden Pending-Assets
-- Visualisierung von `understanding_status` als kleiner Punkt am `RecentAssets`-Tile (kommt mit Politur)
-- Inhaltliche Änderungen am Agent oder am Scoring
-
+- `review_sessions`-Tabelle löschen (eigener Schritt)
+- Backfill aller alten `failed`-Assets (nur das eine relevante)
+- Visualisierung des `understanding_status` an `RecentAssets`-Tiles (separater Politurschritt)
