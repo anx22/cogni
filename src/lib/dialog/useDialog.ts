@@ -1,1 +1,1 @@
-export { useDialog } from "@/components/dialog/DialogProvider";
+export { useDialog } from "@/components/dialog/dialogContext";

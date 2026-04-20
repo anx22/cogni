@@ -1,16 +1,9 @@
-import { createContext, useCallback, useContext, useState, ReactNode } from "react";
+import { useCallback, useState, ReactNode } from "react";
 import type { BoxState, DialogSession } from "@/lib/dialog/types";
 import DialogOverlay from "./DialogOverlay";
+import { DialogContext } from "./dialogContext";
 
-interface DialogContextValue {
-  session: DialogSession | null;
-  openDialog: (session: DialogSession) => void;
-  closeDialog: () => void;
-  updateBoxState: (boxId: string, state: BoxState) => void;
-  updateBoxPayload: (boxId: string, patch: Record<string, any>) => void;
-}
-
-const DialogContext = createContext<DialogContextValue | null>(null);
+export { useDialog } from "./dialogContext";
 
 export const DialogProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<DialogSession | null>(null);
@@ -45,10 +38,4 @@ export const DialogProvider = ({ children }: { children: ReactNode }) => {
       {session && <DialogOverlay />}
     </DialogContext.Provider>
   );
-};
-
-export const useDialog = () => {
-  const ctx = useContext(DialogContext);
-  if (!ctx) throw new Error("useDialog must be used within DialogProvider");
-  return ctx;
 };
