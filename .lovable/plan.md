@@ -1,50 +1,89 @@
 
 
-## Plan: Phase 5 — Universeller Input (final)
+## Phase 5 — Status: vollständig ✓
 
-### Entscheidungen
-- **Drop**: bleibt direkt am Kern (wie heute)
-- **Klick auf Kern**: öffnet großes, reduziertes Eingabe-Overlay
-- **Modus-Auswahl im Overlay**: Pills (Notiz · Link · Datei · Sprache)
-- **Voice**: Mikro-Pill als Platzhalter, Toast „kommt bald"
-- **Link**: stiller Intake mit Toast „Link aufgenommen"
+Geprüft und abgeschlossen:
+- `EntityCore` mit Drop + Click → öffnet Overlay
+- `InputOverlay` mit Pills (Notiz/Link/Datei/Sprache), ESC + Cmd+Enter
+- `detectInputType` (file/url/text) inkl. Paste-Detection
+- `useIntake`-Hook als Plug-Point mit Toast + Pulse
+- Voice als Platzhalter mit Toast „Phase 6"
+- Docs (`implementierung-aktuell.md`, `geplant.md`) + Memory (`features/universeller-input.md`) gepflegt
+
+Keine Lücken zur Phase-5-Definition.
+
+---
+
+## Plan: Phase 6 — Upload-Pipeline (V1)
+
+### Ziel
+Aus dem heutigen Mock-Intake wird ein echter Pfad: Datei/Notiz/Link landen in Supabase, werden geparst (bei Dateien), und sind als `assets` + `sources` + `parsed_documents` sichtbar. Kein Knowledge-Graph, keine Proposed Facts — das ist Phase 7.
+
+### Scope-Schnitt (bewusst eng)
+- **In:** Auth (Pflicht für RLS), Storage-Bucket, Asset-Insert, Notiz/Link als `asset_type=other` mit Inhalt im `metadata`, Datei-Upload mit Status-Tracking, Unstructured-Parsing via Edge Function, Realtime-Status am Kern
+- **Out:** Voice-Aufnahme (bleibt Platzhalter), Proposed-Facts-Generierung, Knowledge-Graph, Review-Cases, Themen-Zuordnung, Projekt-Zuordnung im UI (alles `project_id=null` in V1)
 
 ### Architektur
 
-**Neue Dateien**
-- `src/lib/intake/detectInputType.ts` — erkennt file/url/text aus Paste/Drop
-- `src/lib/intake/useIntake.ts` — zentraler `intake(payload)`-Eintrittspunkt: Toast + Pulse-Trigger am Kern, mockt Verarbeitung
-- `src/components/entity/InputOverlay.tsx` — Vollbild-Overlay (dunkel, glasartig, zentriert), Pills oben, großes Eingabefeld in der Mitte, ESC/Klick-außerhalb schließt
-- `src/components/entity/InputPills.tsx` — Pills-Leiste (Notiz aktiv, Link, Datei, Sprache), schaltet Inhaltsfläche um
+**1. Auth (Voraussetzung)**
+- Neue Seite `/auth` (Login + Signup, E-Mail/Passwort + Google)
+- `useAuth`-Hook (Session-Listener nach Lovable-Pattern: `onAuthStateChange` zuerst, dann `getSession`)
+- Auto-confirm aktivieren (Prototyp-Komfort, später abschaltbar)
+- `Index.tsx` redirected zu `/auth`, wenn keine Session
 
-**Geänderte Dateien**
-- `src/components/EntityCore.tsx` — Drop bleibt, neuer `onClick` öffnet Overlay; Drop ruft jetzt `useIntake` statt lokalem Setstate
-- `src/pages/Index.tsx` — Overlay-State (`open`/`close`), Verdrahtung Kern↔Overlay↔Intake
+**2. Storage**
+- Neuer privater Bucket `intake-files` (RLS: nur eigener `user_id`-Pfad)
+- Upload-Pfad: `{user_id}/{asset_id}/{filename}`
 
-### Overlay-Verhalten
-- Öffnet zentriert über dem Kern (Backdrop-Blur, dunkel)
-- Pills: **Notiz** (Default, großes Textarea), **Link** (URL-Feld, stiller Intake), **Datei** (Klick öffnet File-Picker, Drop weiterhin außerhalb möglich), **Sprache** (deaktiviert/Toast)
-- Auto-Detection: wer im Notiz-Feld eine URL pastet, springt nicht um — landet als Link via Detection beim Submit
-- Submit per Enter (Cmd/Ctrl+Enter bei Textarea) oder Button → `intake()` → Overlay schließt → Toast + Kern-Pulse
+**3. Edge Function `intake-process`**
+- Input: `{ asset_id }`
+- Lädt Datei aus Storage, ruft Unstructured API
+- Schreibt `parsed_documents` (segments) + `sources` (source_type='upload')
+- Setzt `assets.processing_status` von `pending` → `processing` → `parsed` (oder `failed`)
+- Secret nötig: `UNSTRUCTURED_API_KEY`
 
-### Intake-Stub
-`useIntake` zeigt:
-- Toast: „{Typ} aufgenommen — wird verarbeitet"
-- Setzt kurz `entityState` auf `processing`, danach zurück auf `idle`
-- Kein Backend, kein Storage — Hook bietet später einen Plug-Point für Phase 6
+**4. Frontend-Verdrahtung**
+- `useIntake` wird zum echten Upload-Hook:
+  - **Datei:** Storage-Upload → `assets`-Insert → invoke `intake-process`
+  - **Notiz:** `assets`-Insert mit `file_type='other'`, Inhalt als `metadata.text`, `processing_status='parsed'` (kein Parsing nötig)
+  - **Link:** `assets`-Insert mit `file_type='other'`, URL als `metadata.url`, `processing_status='parsed'`
+- Realtime-Subscription auf `assets` → Kern-Status spiegelt `processing_status`
+- Toast-Stufen: „aufgenommen" → „verarbeitet" / „fehlgeschlagen"
 
-### Was NICHT in Phase 5
-- Kein echter Upload, kein Parsing, keine Voice-Aufnahme
-- Keine Link-Vorschau (Briefing-konform: stiller Intake)
-- Keine Persistenz der Inputs
+**5. Side-Grid „Letzte Inputs" (rechts)**
+Das heute leere rechte SideGrid bekommt eine schlanke Liste der letzten 8 Assets pro User (Name, Typ-Icon, Status-Punkt). Klick zeigt Toast mit Status — Drilldown kommt später.
 
-### Memory & Docs
-- Neue Notiz `mem://features/universeller-input` — Pills statt Auto-Switch, Drop am Kern, Click öffnet Overlay
-- Update `docs/implementierung-aktuell.md` — Phase 5 als „in Arbeit" → nach Bau auf „erledigt"
-- Update `docs/geplant.md` — Phase 5 abhaken
+### Datenmodell
+Keine neuen Tabellen. Nutzt bestehende `assets`, `sources`, `parsed_documents`. Notizen/Links werden bewusst als `asset_type='other'` mit Inhalt in `metadata` modelliert — keine Sondertabellen, schlank.
 
-### Betroffene Dateien (Übersicht)
-- neu: `src/lib/intake/detectInputType.ts`, `src/lib/intake/useIntake.ts`, `src/components/entity/InputOverlay.tsx`, `src/components/entity/InputPills.tsx`
-- geändert: `src/components/EntityCore.tsx`, `src/pages/Index.tsx`, `docs/implementierung-aktuell.md`, `docs/geplant.md`
-- neu (Memory): `mem://features/universeller-input`, Update `mem://index.md`
+### Sicherheit
+- Bucket privat, RLS pfadbasiert auf `user_id`
+- Edge Function nutzt Service-Role nur für Storage-Read und parsed_documents-Insert; alle User-Daten via `user_id` aus dem Asset
+- `UNSTRUCTURED_API_KEY` als Secret (Add-Secret-Flow vor Bau)
+
+### Was Nutzer beim Bau tun müssen
+1. `UNSTRUCTURED_API_KEY` eingeben (Add-Secret-Prompt)
+2. Sich nach Phase-6-Build einmal registrieren
+
+### Betroffene Dateien
+- **Neu:** `src/pages/Auth.tsx`, `src/hooks/useAuth.ts`, `supabase/functions/intake-process/index.ts`
+- **Geändert:** `src/lib/intake/useIntake.ts` (echter Upload), `src/pages/Index.tsx` (Auth-Gate + Realtime), `src/components/entity/SideGrid.tsx` (rechte Seite mit echten Assets), `src/App.tsx` (Auth-Route)
+- **Migrationen:** Bucket `intake-files` + Storage-RLS-Policies
+- **Docs:** `docs/implementierung-aktuell.md`, `docs/geplant.md`
+- **Memory:** `mem://features/upload-pipeline`
+
+### Out of Scope (Phase 7+)
+- Voice-Transkription
+- Proposed Facts aus geparsten Segmenten erzeugen
+- Knowledge-Graph (Graphiti)
+- Projekt-Zuordnung beim Intake
+- Dokument-Preview im Substanz-Bereich
+
+### Reihenfolge der Umsetzung
+1. Auth + Auth-Gate (sonst kein RLS-Test möglich)
+2. Storage-Bucket + Policies
+3. `useIntake` → echte DB-Inserts (Notiz/Link funktionieren sofort)
+4. Edge Function + Datei-Upload + Realtime
+5. SideGrid rechts mit Asset-Liste
+6. Docs/Memory
 
