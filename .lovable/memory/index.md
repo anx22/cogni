@@ -1,21 +1,20 @@
 # Memory: index.md
-Updated: today
+Updated: heute
 
 # Project Memory
 
 ## Core
 Produktintelligenz: PM-App mit Entität/Projekt/Overlay. Dunkel, glasartig, reduziert. Keine Dashboard-Ästhetik.
-Graphiti für Knowledge Graph. Supabase = kanonische Wahrheit. Unstructured = Parsing.
+Graphiti für Knowledge Graph (Phase 8). Supabase = kanonische Wahrheit. Unstructured = Parsing. Lovable AI Gateway = aktueller Verstehens-Agent (austauschbar via agentClient.ts).
 Kein Auto-Commit. Alles über Review. Jede Erkenntnis hat Quelle + Delta.
 Keine klassische Sidebar. Orientierung über Zustandswechsel.
+Live-Stimme unter dem Kern (EntityVoice) — keine Toasts/Banner für Intelligenz-Feedback.
 
 ## Memories
 - [Designhaltung](mem://design/design-haltung) — Dunkles Theme, glasartig, dezente Verläufe, große Typo, Ruhefläche, Zentrierung
 - [Produktprinzipien](mem://features/produkt-prinzipien) — Review-First, Provenance, Delta-Logik, Konflikte als Kern
 - [Techstack](mem://features/techstack) — Lovable + Supabase + Unstructured + Graphiti, Datenfluss-Architektur
 - [Entscheidungen](mem://features/entscheidungen) — Graphiti über Cognee, keine Sidebar, CSS-Gradients für Entity
-- [Upload-Pipeline](mem://features/upload-pipeline) — Phase 6: Storage + intake-process Edge Function, Notiz/Link als Asset mit metadata.kind, Realtime-Status
-- [Manueller Eingriff](mem://features/manueller-eingriff) — Nutzer-Werte nur visuell markiert, kein eigenes Datenmodell
-- [Universeller Input](mem://features/universeller-input) — Phase 5: Drop am Kern, Klick öffnet Overlay mit Pills, kein Auto-Switch
-- [DevLog](mem://features/devlog) — Dev-only Transparenz-Layer, Singleton-Logger + UI-Panel, erweiterbar via addSink()
-- [Verstehens-Loop](mem://features/verstehens-loop) — Phase 7: Agent-Config zentral in supabase/functions/_shared/agentConfig.ts, Provider-Adapter agentClient.ts austauschbar, intake-understand + commit-fact
+- [Verstehens-Loop](mem://features/verstehens-loop) — Phase 7+7.5: End-to-End Loop, Hardening, Live-Stimme
+- [Projektzuordnung](mem://features/projekt-zuordnung) — Lexikalisches Scoring + Agent-Tie-Breaker, Schwellen, Zuordnungsbox
+- [Manueller Eingriff](mem://features/manueller-eingriff) — Manuelle Eingaben sind Ausnahme, nur visuell gekennzeichnet
