@@ -200,8 +200,8 @@ const Index = () => {
   }, [openSessionFromDB]);
 
   const handleCoreClick = useCallback(() => {
-    if (busy) return;
-    if (entityState === "review-ready" && pendingSessionId.current) {
+    if (busy && entityState !== "review-ready") return;
+    if (pendingSessionId.current) {
       handleReviewClick();
     } else {
       setOverlayOpen(true);
