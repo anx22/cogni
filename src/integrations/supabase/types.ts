@@ -224,7 +224,7 @@ export type Database = {
             foreignKeyName: "commit_results_session_id_fkey"
             columns: ["session_id"]
             isOneToOne: false
-            referencedRelation: "review_sessions"
+            referencedRelation: "dialog_sessions"
             referencedColumns: ["id"]
           },
         ]
@@ -1119,51 +1119,7 @@ export type Database = {
             foreignKeyName: "review_cases_session_id_fkey"
             columns: ["session_id"]
             isOneToOne: false
-            referencedRelation: "review_sessions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      review_sessions: {
-        Row: {
-          created_at: string
-          id: string
-          project_id: string | null
-          resolved_cases: number | null
-          status: Database["public"]["Enums"]["review_status"]
-          summary: string | null
-          total_cases: number | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          project_id?: string | null
-          resolved_cases?: number | null
-          status?: Database["public"]["Enums"]["review_status"]
-          summary?: string | null
-          total_cases?: number | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          project_id?: string | null
-          resolved_cases?: number | null
-          status?: Database["public"]["Enums"]["review_status"]
-          summary?: string | null
-          total_cases?: number | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "review_sessions_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
+            referencedRelation: "dialog_sessions"
             referencedColumns: ["id"]
           },
         ]
