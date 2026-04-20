@@ -1,21 +1,13 @@
 import { ExternalLink, FileText } from "lucide-react";
 import BoxFrame, { ActionBtn } from "../BoxFrame";
-import { useDialog } from "../DialogProvider";
 import type { DialogBox } from "@/lib/dialog/types";
 
 const KontextBox = ({ box }: { box: DialogBox }) => {
-  const { updateBoxState } = useDialog();
-
   return (
     <BoxFrame
       box={box}
       actions={
-        <>
-          <ActionBtn icon={<ExternalLink className="w-3 h-3" />}>Quelle öffnen</ActionBtn>
-          <ActionBtn variant="primary" onClick={() => updateBoxState(box.id, "bestaetigt")}>
-            Zur Kenntnis
-          </ActionBtn>
-        </>
+        <ActionBtn icon={<ExternalLink className="w-3 h-3" />}>Quelle öffnen</ActionBtn>
       }
     >
       {box.payload?.auszug && (
