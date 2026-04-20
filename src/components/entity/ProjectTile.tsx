@@ -103,22 +103,6 @@ const ProjectTile = forwardRef<HTMLButtonElement, ProjectTileProps>(
           )}
         </span>
 
-        {/* Status dots */}
-        {signals.length > 0 && (
-          <span className="absolute top-2 right-2 flex items-center gap-1">
-            {signals.map((s) => (
-              <span
-                key={s}
-                className={cn(
-                  "w-1.5 h-1.5 rounded-full",
-                  signalColor(s),
-                  s !== "calm" && "group-hover:animate-pulse",
-                )}
-                aria-hidden
-              />
-            ))}
-          </span>
-        )}
       </button>
     );
   },
