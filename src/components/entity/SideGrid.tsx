@@ -117,6 +117,7 @@ const SideGrid = ({
             className="grid"
             style={{
               gridTemplateColumns: `repeat(${COLS}, 140px)`,
+              gridTemplateRows: `repeat(${ROWS}, 72px)`,
               columnGap: "10px",
               rowGap: "12px",
             }}
