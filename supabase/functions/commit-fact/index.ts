@@ -133,13 +133,27 @@ Deno.serve(async (req) => {
         );
       }
 
+      // Korrektur-Erkennung: enthält user_decision einen abweichenden content,
+      // committen wir den korrigierten Wert und protokollieren in `corrections`.
+      const ud = (user_decision ?? {}) as Record<string, unknown>;
+      const correctedContent =
+        ud && typeof ud.content === "object" && ud.content !== null
+          ? (ud.content as Record<string, unknown>)
+          : null;
+      const wasCorrected =
+        !!correctedContent &&
+        JSON.stringify(correctedContent) !== JSON.stringify(pf.content);
+      const finalContent = correctedContent ?? pf.content;
+      const correctionReason =
+        typeof ud.reason === "string" ? ud.reason : null;
+
       const { data: cf, error: cfErr } = await admin
         .from("canonical_facts")
         .insert({
           user_id: user.id,
           project_id,
           fact_type: pf.fact_type as never,
-          content: pf.content,
+          content: finalContent,
           source_proposed_fact_id: pf.id,
           provenance: {
             source_id: pf.source_id,
@@ -147,11 +161,22 @@ Deno.serve(async (req) => {
             extraction_run_id: pf.extraction_run_id,
             confidence: pf.confidence,
             committed_at: new Date().toISOString(),
+            corrected: wasCorrected,
           },
         })
         .select("id")
         .single();
       if (cfErr) throw new Error(`canonical_facts: ${cfErr.message}`);
+
+      if (wasCorrected) {
+        await admin.from("corrections").insert({
+          user_id: user.id,
+          canonical_fact_id: cf!.id,
+          previous_value: pf.content,
+          corrected_value: finalContent,
+          reason: correctionReason,
+        });
+      }
 
       // Spezial-Schreibpfade: Gap & Dependency
       if (pf.fact_type === "open_point") {
