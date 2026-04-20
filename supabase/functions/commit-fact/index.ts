@@ -133,13 +133,27 @@ Deno.serve(async (req) => {
         );
       }
 
+      // Korrektur-Erkennung: enthält user_decision einen abweichenden content,
+      // committen wir den korrigierten Wert und protokollieren in `corrections`.
+      const ud = (user_decision ?? {}) as Record<string, unknown>;
+      const correctedContent =
+        ud && typeof ud.content === "object" && ud.content !== null
+          ? (ud.content as Record<string, unknown>)
+          : null;
+      const wasCorrected =
+        !!correctedContent &&
+        JSON.stringify(correctedContent) !== JSON.stringify(pf.content);
+      const finalContent = correctedContent ?? pf.content;
+      const correctionReason =
+        typeof ud.reason === "string" ? ud.reason : null;
+
       const { data: cf, error: cfErr } = await admin
         .from("canonical_facts")
         .insert({
           user_id: user.id,
           project_id,
           fact_type: pf.fact_type as never,
-          content: pf.content,
+          content: finalContent,
           source_proposed_fact_id: pf.id,
           provenance: {
             source_id: pf.source_id,
@@ -147,49 +161,62 @@ Deno.serve(async (req) => {
             extraction_run_id: pf.extraction_run_id,
             confidence: pf.confidence,
             committed_at: new Date().toISOString(),
+            corrected: wasCorrected,
           },
         })
         .select("id")
         .single();
       if (cfErr) throw new Error(`canonical_facts: ${cfErr.message}`);
 
+      if (wasCorrected) {
+        await admin.from("corrections").insert({
+          user_id: user.id,
+          canonical_fact_id: cf!.id,
+          previous_value: pf.content,
+          corrected_value: finalContent,
+          reason: correctionReason,
+        });
+      }
+
       // Spezial-Schreibpfade: Gap & Dependency
       if (pf.fact_type === "open_point") {
-        const c = pf.content ?? {};
+        const c = (finalContent ?? {}) as any;
         await admin.from("gap_signals").insert({
           user_id: user.id,
           project_id,
           canonical_fact_id: cf!.id,
-          title: (c as any).title ?? "Offener Punkt",
-          impact: typeof (c as any).impact === "string" ? (c as any).impact : null,
-          affects: typeof (c as any).affects === "string" ? (c as any).affects : null,
+          title: c.title ?? "Offener Punkt",
+          impact: typeof c.impact === "string" ? c.impact : null,
+          affects: typeof c.affects === "string" ? c.affects : null,
           status: "open",
         });
       }
       if (pf.fact_type === "reference") {
-        const c = pf.content ?? {};
+        const c = (finalContent ?? {}) as any;
         await admin.from("dependencies").insert({
           user_id: user.id,
           project_id,
           source_id: cf!.id,
           source_type: "canonical_fact",
           target_id: cf!.id, // V1: Self-Ref bis echtes Linking kommt (Phase 8)
-          target_type: typeof (c as any).target_type === "string" ? (c as any).target_type : "external",
+          target_type: typeof c.target_type === "string" ? c.target_type : "external",
           dependency_type: "haengt_ab_von",
-          description: typeof (c as any).description === "string" ? (c as any).description : null,
+          description: typeof c.description === "string" ? c.description : null,
         });
       }
 
-      const eventType = (pf.delta_type ?? "add") as
-        | "confirm" | "add" | "replace" | "contradict" | "merge" | "discard";
+      const eventType = wasCorrected
+        ? "replace"
+        : ((pf.delta_type ?? "add") as
+            | "confirm" | "add" | "replace" | "contradict" | "merge" | "discard");
       await admin.from("change_events").insert({
         user_id: user.id,
         project_id,
         canonical_fact_id: cf!.id,
         review_case_id,
         event_type: eventType,
-        new_value: pf.content,
-        previous_value: null,
+        new_value: finalContent,
+        previous_value: wasCorrected ? pf.content : null,
       });
 
       await admin.from("proposed_facts").update({ status: "committed" }).eq("id", pf.id);
@@ -197,6 +224,12 @@ Deno.serve(async (req) => {
         .from("review_cases")
         .update({ box_state: "confirmed", user_decision: user_decision ?? { decision: "confirm" } })
         .eq("id", review_case_id);
+
+      // Projekt-Snapshot schreiben — gibt dem Verlauf einen zeitlichen Anker.
+      await writeProjectSnapshot(admin, user.id, project_id, {
+        trigger_event: `commit:${pf.fact_type}:${eventType}`,
+        canonical_fact_id: cf!.id,
+      });
     } else {
       if (pf) {
         await admin.from("proposed_facts").update({ status: "rejected" }).eq("id", pf.id);
@@ -325,6 +358,53 @@ async function updateSessionProgress(admin: any, session_id: string) {
       status: total > 0 && resolved >= total ? "completed" : "in_progress",
     })
     .eq("id", session_id);
+}
+
+// Schreibt einen kompakten Snapshot des Projektzustands. Bewusst günstig
+// gehalten: Counts pro Tabelle + Trigger-Event. Reicht, um den Verlauf-Feed
+// im Projektscreen mit echtem zeitlichem Anker zu füllen.
+async function writeProjectSnapshot(
+  admin: any,
+  user_id: string,
+  project_id: string,
+  opts: { trigger_event: string; canonical_fact_id?: string },
+) {
+  try {
+    const tables = [
+      "canonical_facts",
+      "decisions",
+      "tasks",
+      "deadlines",
+      "open_points",
+      "gap_signals",
+      "dependencies",
+      "contradictions",
+    ];
+    const counts: Record<string, number> = {};
+    await Promise.all(
+      tables.map(async (t) => {
+        const { count } = await admin
+          .from(t)
+          .select("id", { count: "exact", head: true })
+          .eq("project_id", project_id);
+        counts[t] = count ?? 0;
+      }),
+    );
+    await admin.from("project_state_snapshots").insert({
+      user_id,
+      project_id,
+      trigger_event: opts.trigger_event,
+      summary: `Snapshot nach ${opts.trigger_event}`,
+      snapshot: {
+        counts,
+        last_canonical_fact_id: opts.canonical_fact_id ?? null,
+        captured_at: new Date().toISOString(),
+      },
+    });
+  } catch (err) {
+    // Snapshot-Fehler dürfen den Commit-Pfad nicht killen
+    console.warn("writeProjectSnapshot failed:", err);
+  }
 }
 
 function ok(payload: unknown) {

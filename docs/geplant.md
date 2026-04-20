@@ -26,18 +26,34 @@
 
 **Out of Scope (Phase 7+):** Voice-Aufnahme, Proposed-Facts-Generierung, Knowledge-Graph, Projekt-Zuordnung beim Intake, Dokument-Preview
 
-## Phase 7: Knowledge-Graph-Integration
+## Phase 7: Verstehens-Loop ✓ (abgeschlossen)
 
-- **Graphiti ist gesetzt** (Entscheidung final)
-- Temporaler Knowledge Graph anbinden
-- Delta-Logik: bestätigen, ergänzen, ersetzen, widersprechen, zusammenführen, verwerfen
-- Widerspruchs- und Lückenerkennung → reviewbare Vorschläge
+- `intake-understand` mit Lovable AI Gateway (Tool-Calling)
+- Lexikalisches Projekt-Scoring + Assignment-Agent als Tie-Breaker
+- `proposed_facts` mit `delta_type`, Härtung über `understanding_status`
 
-## Phase 8: Echtes Projekt-Routing
+## Phase 7.6: Commit-Pfad vollständig ✓ (Block A4)
 
-- ProjectTile-Klick auf Side-Grid führt zum spezifischen Projekt (statt immer demoProject)
-- URL-Routing pro Projekt-ID
-- Projekt-Identifier in Header bei Scroll sichtbar
+- `change_events` pro Commit
+- `corrections` wenn `user_decision.content` vom Vorschlag abweicht
+- `project_state_snapshots` nach jedem Commit (Counts pro Tabelle)
+- Spezialpfade `open_point` → `gap_signals`, `reference` → `dependencies`
+
+## Phase 8: Echte Projekt-Anbindung (Block B — nächster Schritt)
+
+- **B1**: `ProjectScreen` liest live aus Supabase inkl. Realtime
+- **B2**: Routing `/projekt/:id`, ProjectTile-Klick → echtes Projekt
+- **B3**: Projekt anlegen (über Zuordnungsbox oder leer vom Side-Grid)
+
+## Phase 9: UX-Sweep (Block C)
+
+- Voice-Aufnahme echt (MediaRecorder + Whisper über Lovable AI)
+- Retry-Knopf für `failed`/`rate_limited`/`payment_required`
+- Asset-Detail-Inline-Card im Session-Panel
+
+## Phase 10: Knowledge-Graph (V1.1)
+
+- Graphiti anbinden (Entscheidung gesetzt), erst nach stabilem Block A+B
 
 ## Nicht in V1
 
