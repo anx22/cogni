@@ -15,12 +15,6 @@
 
 **Nicht in V1 sichtbar:** `vorgeschlagen`, `aufgeklappt`, `eskaliert` als prominente Nutzerlabels.
 
-## Phase 5: Universeller Input
-
-Entity-Dropzone ausbauen zu universellem Input-Modul: Datei + Text + Paste + Link + Sprache + Antworten.
-
-**Vor Umsetzung: präzise Ausgestaltung mit Nutzer klären.**
-
 ## Phase 6: Upload-Pipeline
 
 - Dateityp-Erkennung + Supabase Storage
@@ -56,5 +50,7 @@ Entity-Dropzone ausbauen zu universellem Input-Modul: Datei + Text + Paste + Lin
 - ✓ Phase 0–3: Grundgerüst, Design-System, Entity-Screen, Lovable Cloud
 - ✓ Phase 2.5: Datenmodell-Erweiterung (gap_signals, dependencies, outcome_signals, dialog_sessions, gap_box)
 - ✓ Phase 3.5: Vier-Rollen-Projektscreen
-- ✓ Phase 3.6: Side-Grids Entity-Screen + Audit-Verfeinerung Projekt-Screen (Stakeholder-Popover, Feedback-Affordance, Toast-Brücken)
-- ✓ Phase 3.7: Auflösung „Signale"-Zone (Gaps/Deps in Handlungsbedarf integriert) + Manuell-Kennzeichnung am `SourceMarker`
+- ✓ Phase 3.6: Side-Grids Entity-Screen + Audit-Verfeinerung Projekt-Screen
+- ✓ Phase 3.7: Auflösung „Signale"-Zone + Manuell-Kennzeichnung
+- ✓ Phase 4: Dialog-Overlay (Minimalprinzip, manuell-Flag automatisch)
+- ✓ Phase 5: Universeller Input (Drop am Kern + Click-Overlay mit Pills)

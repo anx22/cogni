@@ -20,8 +20,8 @@
   - Dokumente nach Datum sortiert
   - Themen mit Status-Indikator
 - [x] **Manueller Eingriff — Kennzeichnung** (Phase 3.7) — `SourceMarker` zeigt bei `manuell={true}` ein UserCheck-Icon + Primary-Tönung. Kein eigenes Datenmodell, keine Sonderlogik bei Re-Konflikten (siehe `mem://features/manueller-eingriff`).
-- [x] **Dialog-Overlay (Phase 4)** — Vollbild-Overlay mit 8 Box-Typen / 6 Zuständen als Systembaukasten. **Minimalprinzip für V1**: pro Anlass nur 1–2 Boxen (Inhalt + ggf. Antwort/Widerspruch). Eingabe-/Konflikt-/Gap-Boxen schließen sich selbst ab. Begriffe vereinheitlicht: `Antworten` (Einstieg) und `Übernehmen` (Abschluss). Eskalieren/Mergen/separater Aktionsblock aus der Standard-UI entfernt.
-- [ ] Universeller Input (Phase 5)
+- [x] **Dialog-Overlay (Phase 4)** — Vollbild-Overlay mit 8 Box-Typen / 6 Zuständen als Systembaukasten. **Minimalprinzip für V1**: pro Anlass nur 1–2 Boxen (Inhalt + ggf. Antwort/Widerspruch). Eingabe-/Konflikt-/Gap-Boxen schließen sich selbst ab. Begriffe vereinheitlicht: `Antworten` (Einstieg) und `Übernehmen` (Abschluss). Manuelle Werte aus EingabeBox/AuswahlBox/KonfliktBox werden automatisch als `manuell` markiert.
+- [x] **Universeller Input (Phase 5)** — Drop bleibt am Kern, Klick öffnet ein reduziertes Vollbild-Overlay mit Pills (Notiz · Link · Datei · Sprache). Kein Auto-Switch zwischen Modi; URL-Detection nur innerhalb des Notiz-Felds. `useIntake`-Hook als zentraler Eintrittspunkt mit Toast + Pulse-Trigger. Voice ist Platzhalter (Phase 6).
 - [ ] Upload-Pipeline (Phase 6)
 - [ ] Knowledge-Graph-Integration (Phase 7, Graphiti)
 
@@ -62,4 +62,4 @@ Alle `toast()`-Aufrufe im Projekt-Screen sind explizite Übergabepunkte für Pha
 **Tabellen:** projects, assets, sources, parsed_documents, proposed_facts, canonical_facts, review_sessions, review_cases, change_events, commit_results, topics, decisions, deadlines, tasks, open_points, persons, organizations, project_stakeholder_links, contradictions, feedback, corrections, fact_references, version_links, project_state_snapshots, **gap_signals**, **dependencies**, **outcome_signals**, **dialog_sessions**
 
 ### Nächster Schritt
-**Phase 4 — Dialog-Overlay**. Alle Toast-Brücken werden durch echte Box-Aufrufe ersetzt. 8 Box-Typen (inkl. Gap-Box) mit 6 Zuständen.
+**Phase 6 — Upload-Pipeline**. `useIntake` an echten Storage + Parser anschließen, Voice-Aufnahme aktivieren, Verarbeitungsstatus aus dem Backend zurückspielen.
