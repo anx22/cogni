@@ -222,12 +222,19 @@ Deno.serve(async (req) => {
           reason_short: suggestion?.reason_short,
         };
       } else {
+        // Fallback-Name aus reason_short oder Dateiname ableiten,
+        // damit die Zuordnungsbox nie ohne Vorschlag dasteht.
+        const fallbackName =
+          suggestion?.suggested_new_name?.trim() ||
+          (suggestion?.reason_short?.split(/[.,;:–—-]/)[0]?.trim().slice(0, 60)) ||
+          (asset.file_name?.replace(/\.[^.]+$/, "").slice(0, 60)) ||
+          "Neues Projekt";
         assignment = {
           mode: "new",
           suggestion,
           score: lexScore,
           candidates,
-          suggested_new_name: suggestion?.suggested_new_name ?? null,
+          suggested_new_name: fallbackName,
           reason_short: suggestion?.reason_short,
         };
       }
