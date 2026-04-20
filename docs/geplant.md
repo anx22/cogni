@@ -56,4 +56,5 @@ Entity-Dropzone ausbauen zu universellem Input-Modul: Datei + Text + Paste + Lin
 - ✓ Phase 0–3: Grundgerüst, Design-System, Entity-Screen, Lovable Cloud
 - ✓ Phase 2.5: Datenmodell-Erweiterung (gap_signals, dependencies, outcome_signals, dialog_sessions, gap_box)
 - ✓ Phase 3.5: Vier-Rollen-Projektscreen
-- ✓ Phase 3.6: Side-Grids Entity-Screen + Audit-Verfeinerung Projekt-Screen (Signale, Stakeholder-Popover, Feedback-Affordance, Toast-Brücken)
+- ✓ Phase 3.6: Side-Grids Entity-Screen + Audit-Verfeinerung Projekt-Screen (Stakeholder-Popover, Feedback-Affordance, Toast-Brücken)
+- ✓ Phase 3.7: Auflösung „Signale"-Zone (Gaps/Deps in Handlungsbedarf integriert) + Manuell-Kennzeichnung am `SourceMarker`
