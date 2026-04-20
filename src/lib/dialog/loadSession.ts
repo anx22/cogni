@@ -1,13 +1,13 @@
 // =============================================================================
 //  loadSession — lädt eine echte Dialog-Session aus der Datenbank.
 //  Mappt review_cases → DialogBox (UI-Form).
-//  WICHTIG: DB-box_state ist englisch (proposed/confirmed/rejected/...),
-//  UI-Layer nutzt deutsche Werte. Hier wird gemappt.
+//  Setzt mode (edit | readonly) anhand status + Boxenzustand.
 // =============================================================================
 
 import { supabase } from "@/integrations/supabase/client";
 import type { DialogBox, DialogSession, BoxState } from "./types";
 import { dbBoxTypeToUI } from "./boxMapping";
+import { deriveSessionMode } from "./sessionMode";
 
 const DB_TO_UI_STATE: Record<string, BoxState> = {
   proposed: "vorgeschlagen",
@@ -38,7 +38,6 @@ export async function loadDialogSession(sessionId: string): Promise<DialogSessio
     const factType = ctx.fact_type as string | undefined;
     const content = (ctx.content ?? {}) as Record<string, unknown>;
 
-    // Zuordnungsbox: spezielles Payload mit Kandidaten
     if (c.box_type === "assignment") {
       const candidates = (ctx.candidates ?? []) as {
         project_id: string;
@@ -80,11 +79,15 @@ export async function loadDialogSession(sessionId: string): Promise<DialogSessio
     };
   });
 
+  const mode = deriveSessionMode(session.status, boxes);
+
   return {
     id: session.id,
     anlass: session.summary ?? "Verstehens-Lauf",
     context: session.trigger_type,
     boxes,
+    mode,
+    closedAt: mode === "readonly" ? session.updated_at : null,
   };
 }
 

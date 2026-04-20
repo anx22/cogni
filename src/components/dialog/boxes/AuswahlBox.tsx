@@ -6,7 +6,7 @@ import type { DialogBox } from "@/lib/dialog/types";
 import { useManualOverrides } from "@/lib/dialog/manualOverrides";
 
 const AuswahlBox = ({ box }: { box: DialogBox }) => {
-  const { session, updateBoxState, updateBoxPayload } = useDialog();
+  const { session, updateBoxState, updateBoxPayload, readonly } = useDialog();
   const { markManual } = useManualOverrides();
   const opts: string[] = box.payload?.optionen ?? [];
   const [sel, setSel] = useState<string>(box.payload?.auswahl ?? "");
@@ -17,7 +17,7 @@ const AuswahlBox = ({ box }: { box: DialogBox }) => {
       actions={
         <ActionBtn
           variant="primary"
-          icon={<Check className="w-3 h-3" />}
+          icon={<Check className="w-4 h-4" />}
           onClick={() => {
             updateBoxPayload(box.id, { auswahl: sel });
             if (sel) {
@@ -30,16 +30,29 @@ const AuswahlBox = ({ box }: { box: DialogBox }) => {
         </ActionBtn>
       }
     >
-      <div className="space-y-1.5">
-        {opts.map((o) => (
-          <label
-            key={o}
-            className="flex items-center gap-2 px-3 py-2 rounded-md bg-surface-3 border border-border-subtle cursor-pointer hover:border-border-strong"
-          >
-            <input type="radio" checked={sel === o} onChange={() => setSel(o)} className="accent-primary" />
-            <span className="text-sm text-foreground/90">{o}</span>
-          </label>
-        ))}
+      <div className="space-y-2">
+        {opts.map((o) => {
+          const active = sel === o;
+          return (
+            <label
+              key={o}
+              className={`flex items-center gap-4 px-5 py-4 rounded-lg cursor-pointer transition-colors ${
+                active
+                  ? "bg-primary/10 border border-primary/40"
+                  : "bg-surface-2/40 border border-transparent hover:border-border-subtle"
+              } ${readonly ? "pointer-events-none" : ""}`}
+            >
+              <input
+                type="radio"
+                checked={active}
+                onChange={() => setSel(o)}
+                disabled={readonly}
+                className="accent-primary w-4 h-4"
+              />
+              <span className="text-lg text-foreground/95 font-light">{o}</span>
+            </label>
+          );
+        })}
       </div>
     </BoxFrame>
   );

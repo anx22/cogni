@@ -4,11 +4,13 @@ import type { DialogBox } from "@/lib/dialog/types";
 
 const WissensBox = ({ box }: { box: DialogBox }) => (
   <BoxFrame box={box}>
-    <p className="text-sm text-foreground/90 leading-relaxed">{box.payload?.sachverhalt}</p>
+    <p className="text-lg md:text-xl text-foreground/90 leading-relaxed font-light">
+      {box.payload?.sachverhalt}
+    </p>
     {box.payload?.quelle && (
-      <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/40 border border-border/40 text-[11px] text-muted-foreground">
-        <FileText className="w-3 h-3" /> {box.payload.quelle}
-      </div>
+      <p className="flex items-center gap-2 text-sm text-muted-foreground/60 tracking-wide pt-2">
+        <FileText className="w-3.5 h-3.5" /> {box.payload.quelle}
+      </p>
     )}
   </BoxFrame>
 );

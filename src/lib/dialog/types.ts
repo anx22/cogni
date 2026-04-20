@@ -24,11 +24,15 @@ export interface DialogBox {
   payload: any;
 }
 
+export type DialogMode = "edit" | "readonly";
+
 export interface DialogSession {
   id: string;
   anlass: string;
   context?: string;
   boxes: DialogBox[];
+  mode?: DialogMode;
+  closedAt?: string | null;
 }
 
 export const END_STATES: BoxState[] = ["bestaetigt", "verworfen", "eskaliert"];

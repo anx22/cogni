@@ -47,18 +47,21 @@ export const DialogProvider = ({ children }: { children: ReactNode }) => {
     );
   }, []);
 
-  // ---- Persistenter Pfad: ruft commit-fact, fällt auf reine UI-Updates zurück
+  const readonly = session?.mode === "readonly";
+
   const commitBox = useCallback(
     async (boxId: string, decision: "confirm" | "reject", userDecision?: Record<string, any>) => {
+      if (readonly) {
+        devlog.warn("ui", "commitBox ignored — session is read-only");
+        return;
+      }
       const box = session?.boxes.find((b) => b.id === boxId);
       const reviewCaseId = box?.payload?.__reviewCaseId as string | undefined;
 
       const previousState = box?.state;
-      // Optimistic UI
       updateBoxState(boxId, decision === "confirm" ? "bestaetigt" : "verworfen");
 
       if (!reviewCaseId) {
-        // Demo-Box ohne DB-Pendant — nichts persistieren.
         return;
       }
       try {
@@ -67,7 +70,6 @@ export const DialogProvider = ({ children }: { children: ReactNode }) => {
         });
         if (error) throw error;
         if (data && data.ok === false) {
-          // Strukturierte Fehler (z.B. NEEDS_ASSIGNMENT) → Rollback + Hinweis
           if (previousState) updateBoxState(boxId, previousState);
           if (data.code === "NEEDS_ASSIGNMENT") {
             toast.message("Erst Projekt wählen", {
@@ -86,13 +88,14 @@ export const DialogProvider = ({ children }: { children: ReactNode }) => {
         toast.error("Konnte Entscheidung nicht speichern");
       }
     },
-    [session, updateBoxState],
+    [session, updateBoxState, readonly],
   );
 
   return (
     <DialogContext.Provider
       value={{
         session,
+        readonly: !!readonly,
         openDialog,
         closeDialog,
         updateBoxState,

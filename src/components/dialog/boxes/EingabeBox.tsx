@@ -6,7 +6,7 @@ import type { DialogBox } from "@/lib/dialog/types";
 import { useManualOverrides } from "@/lib/dialog/manualOverrides";
 
 const EingabeBox = ({ box }: { box: DialogBox }) => {
-  const { session, updateBoxState, updateBoxPayload, closeDialog } = useDialog();
+  const { session, updateBoxState, updateBoxPayload, closeDialog, readonly } = useDialog();
   const { markManual } = useManualOverrides();
   const [text, setText] = useState(box.payload?.text ?? "");
 
@@ -22,24 +22,21 @@ const EingabeBox = ({ box }: { box: DialogBox }) => {
     <BoxFrame
       box={box}
       actions={
-        <ActionBtn
-          variant="primary"
-          icon={<Check className="w-3 h-3" />}
-          onClick={submit}
-        >
+        <ActionBtn variant="primary" icon={<Check className="w-4 h-4" />} onClick={submit}>
           Senden
         </ActionBtn>
       }
     >
       {box.payload?.hinweis && (
-        <p className="text-xs text-muted-foreground">{box.payload.hinweis}</p>
+        <p className="text-base text-muted-foreground/80">{box.payload.hinweis}</p>
       )}
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder={box.payload?.placeholder ?? "Text eingeben…"}
         rows={4}
-        className="w-full text-sm bg-surface-3 border border-border-subtle rounded-md px-3 py-2 text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-primary/50"
+        readOnly={readonly}
+        className="w-full text-lg font-light bg-transparent border-b border-border-strong px-1 py-2 text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary"
       />
     </BoxFrame>
   );
