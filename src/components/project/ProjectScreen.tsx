@@ -1,18 +1,18 @@
-import { useCallback, useState } from "react";
-import { demoProject } from "@/data/demoProject";
+import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import LageZone from "./LageZone";
 import HandlungsbedarfList from "./HandlungsbedarfList";
 import VerlaufFeed from "./VerlaufFeed";
 import SubstanzSection from "./SubstanzSection";
 import { useIntake } from "@/lib/intake/useIntake";
 import { detectFromDrop } from "@/lib/intake/detectInputType";
+import { useProject } from "@/lib/project/useProject";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface ProjectScreenProps {
   onBack: () => void;
-  /**
-   * Echte Projekt-UUID aus der DB. Wenn gesetzt, werden alle Drops
-   * direkt an dieses Projekt gehängt → keine Zuordnungsbox im Dialog.
-   */
+  /** Echte Projekt-UUID aus der DB. */
   projectId?: string | null;
 }
 
@@ -21,13 +21,27 @@ const isUuid = (v: unknown): v is string =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 
 const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
-  const p = demoProject;
+  const navigate = useNavigate();
   const [dragActive, setDragActive] = useState(false);
-
-  // Nur wenn echte UUID → an useIntake durchreichen. Demo-IDs („demo-1")
-  // werden bewusst ignoriert, damit der Lauf normal über die Zuordnungsbox geht.
   const realProjectId = isUuid(projectId) ? projectId : null;
   const { intake } = useIntake({ projectId: realProjectId });
+  const { status, project, error } = useProject(realProjectId);
+
+  // Demo-/Fake-IDs: zurück zur Entität mit Hinweis
+  useEffect(() => {
+    if (projectId && !realProjectId) {
+      toast.error("Projekt nicht gefunden", {
+        description: "Diese Kachel zeigt noch ein Demo-Projekt — leg ein echtes ab oder wähle ein anderes.",
+      });
+      onBack();
+    }
+  }, [projectId, realProjectId, onBack]);
+
+  useEffect(() => {
+    if (status === "error" && error) {
+      toast.error("Projekt konnte nicht geladen werden", { description: error });
+    }
+  }, [status, error]);
 
   const onDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -38,7 +52,6 @@ const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
   const onDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    // Nur wenn wir den Container wirklich verlassen
     if (e.currentTarget === e.target) setDragActive(false);
   }, []);
 
@@ -68,23 +81,50 @@ const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
         ← Entität
       </button>
 
-      <LageZone project={p} />
-
-      {/* Operativer Mittelteil — zweispaltig 60/40 ab lg */}
-      <section className="px-8 md:px-12 lg:px-16 xl:px-20 py-16 bg-surface-1 border-b border-border-strong">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-5 gap-6">
-          <div className="lg:col-span-3 min-w-0">
-            <VerlaufFeed verlauf={p.verlauf} />
+      {status === "loading" && (
+        <section className="px-8 md:px-12 lg:px-16 xl:px-20 pt-16 pb-12 bg-surface-1 border-b border-border-strong">
+          <div className="max-w-7xl mx-auto space-y-6">
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-12 w-2/3" />
+            <Skeleton className="h-4 w-full max-w-2xl" />
+            <Skeleton className="h-32 w-full rounded-2xl" />
           </div>
-          <div className="lg:col-span-2 min-w-0">
-            <HandlungsbedarfList items={p.handlungsbedarf} />
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
-      <SubstanzSection themen={p.themen} dokumente={p.dokumente} />
+      {status === "empty" && project && (
+        <>
+          <LageZone project={project} />
+          <section className="px-8 md:px-12 lg:px-16 xl:px-20 py-24 bg-surface-1 border-b border-border-strong">
+            <div className="max-w-3xl mx-auto text-center">
+              <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground/60 mb-3">Noch keine Substanz</p>
+              <p className="text-lg text-foreground/90 font-light leading-relaxed">
+                Lege eine Datei, einen Link oder eine Notiz ab — ich beginne mit dem Verstehen.
+              </p>
+            </div>
+          </section>
+        </>
+      )}
 
-      {/* Drop-Overlay — nur sichtbar während Drag, nimmt nur dann Events */}
+      {status === "ready" && project && (
+        <>
+          <LageZone project={project} />
+
+          <section className="px-8 md:px-12 lg:px-16 xl:px-20 py-16 bg-surface-1 border-b border-border-strong">
+            <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-5 gap-6">
+              <div className="lg:col-span-3 min-w-0">
+                <VerlaufFeed verlauf={project.verlauf} />
+              </div>
+              <div className="lg:col-span-2 min-w-0">
+                <HandlungsbedarfList items={project.handlungsbedarf} />
+              </div>
+            </div>
+          </section>
+
+          <SubstanzSection themen={project.themen} dokumente={project.dokumente} />
+        </>
+      )}
+
       {dragActive && (
         <div
           className="fixed inset-0 z-40 flex items-center justify-center bg-background/60 backdrop-blur-sm pointer-events-none transition-opacity"
@@ -93,7 +133,7 @@ const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
           <div className="border-2 border-dashed border-primary/60 rounded-2xl px-12 py-10 bg-surface-1/80">
             <p className="text-2xl font-light tracking-wide text-foreground/90">
               {realProjectId
-                ? `Ablegen für „${p.name}"`
+                ? `Ablegen für „${project?.name ?? "dieses Projekt"}"`
                 : "Ablegen — Zuordnung im Dialog"}
             </p>
             <p className="mt-2 text-sm text-muted-foreground/70 tracking-wide">

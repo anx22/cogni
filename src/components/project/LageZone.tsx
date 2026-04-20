@@ -2,9 +2,9 @@ import { Calendar, Clock, Target } from "lucide-react";
 import ConflictBanner from "./shared/ConflictBanner";
 import StakeholderPopover from "./shared/StakeholderPopover";
 import FeedbackButton from "./shared/FeedbackButton";
-import type { demoProject } from "@/data/demoProject";
+import type { ProjectViewModel } from "@/lib/project/types";
 
-type Project = typeof demoProject;
+type Project = ProjectViewModel;
 
 const LageZone = ({ project }: { project: Project }) => {
   return (

@@ -7,7 +7,7 @@ import SideGrid from "@/components/entity/SideGrid";
 import IntakeSessionsPanel from "@/components/entity/IntakeSessionsPanel";
 import HomeDropOverlay from "@/components/entity/HomeDropOverlay";
 import InputOverlay from "@/components/entity/InputOverlay";
-import { demoProjects } from "@/data/demoProjects";
+import { useProjects } from "@/lib/project/useProjects";
 import { useIntake } from "@/lib/intake/useIntake";
 import { detectFromDrop } from "@/lib/intake/detectInputType";
 import { useAuth } from "@/hooks/useAuth";
@@ -35,6 +35,7 @@ const Index = () => {
 
   const { intake } = useIntake({ setEntityState });
   const voice = useEntityVoice(session?.user?.id);
+  const { projects: liveProjects } = useProjects();
 
   const busy = entityState === "processing" || entityState === "review-ready";
   const isDragActive = dragActive || entityState === "hover";
@@ -282,7 +283,7 @@ const Index = () => {
           <SideGrid
             side="left"
             label="Projekte"
-            projects={demoProjects}
+            projects={liveProjects}
             activeId={activeProjectId}
             onProjectClick={handleProjectClick}
             isDragActive={isDragActive}
