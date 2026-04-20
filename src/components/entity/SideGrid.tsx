@@ -14,8 +14,8 @@ interface SideGridProps {
   isDragActive?: boolean;
 }
 
-const COLS = 4;
-const ROWS = 5;
+const COLS = 2;
+const ROWS = 4;
 const PAGE_SIZE = COLS * ROWS;
 
 const SideGrid = ({
@@ -30,7 +30,15 @@ const SideGrid = ({
   const [page, setPage] = useState(0);
   const tileRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
-  const items = projects ?? [];
+  const items = useMemo(() => {
+    const list = projects ?? [];
+    return [...list].sort((a, b) => {
+      const ta = a.lastChangedAt ? new Date(a.lastChangedAt).getTime() : 0;
+      const tb = b.lastChangedAt ? new Date(b.lastChangedAt).getTime() : 0;
+      return tb - ta;
+    });
+  }, [projects]);
+
   const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
   const pageItems = useMemo(
     () => items.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE),
@@ -54,6 +62,7 @@ const SideGrid = ({
 
   const isEmpty = side === "left" && items.length === 0;
   const isPlaceholder = side === "right";
+  const showPaginationDots = !isPlaceholder; // always show, faded when single page
 
   return (
     <div
@@ -67,7 +76,7 @@ const SideGrid = ({
     >
       <div
         className={cn(
-          "rounded-3xl p-6 backdrop-blur-sm",
+          "rounded-3xl p-7 backdrop-blur-sm",
           "bg-[hsl(var(--surface-1)/0.3)]",
         )}
         style={{
@@ -78,40 +87,39 @@ const SideGrid = ({
       >
         {isPlaceholder ? (
           <div
-            className="grid gap-x-3 gap-y-4"
+            className="grid"
             style={{
-              gridTemplateColumns: `repeat(${COLS}, 3.5rem)`,
-              gridTemplateRows: `repeat(${ROWS}, 4.5rem)`,
+              gridTemplateColumns: `repeat(${COLS}, 140px)`,
+              gridTemplateRows: `repeat(${ROWS}, 72px)`,
+              columnGap: "10px",
+              rowGap: "12px",
             }}
             aria-hidden
           />
         ) : isEmpty ? (
-          <div
-            className="grid gap-x-3 gap-y-4"
-            style={{
-              gridTemplateColumns: `repeat(${COLS}, 3.5rem)`,
-              gridTemplateRows: `repeat(${ROWS}, 4.5rem)`,
-            }}
+          <button
+            onClick={onCreateProject}
+            className={cn(
+              "rounded-2xl flex items-center justify-center gap-2",
+              "bg-[hsl(var(--surface-2))] hover:bg-[hsl(var(--surface-3))]",
+              "transition-all duration-300 hover:scale-[1.02]",
+              "text-muted-foreground/60 hover:text-muted-foreground",
+              "h-[72px]",
+            )}
+            style={{ width: `${COLS * 140 + (COLS - 1) * 10}px` }}
+            aria-label="Erstes Projekt anlegen"
+            title="Erstes Projekt anlegen"
           >
-            <button
-              onClick={onCreateProject}
-              className={cn(
-                "w-14 h-14 rounded-2xl flex items-center justify-center",
-                "bg-[hsl(var(--surface-2))] hover:bg-[hsl(var(--surface-3))]",
-                "transition-all duration-300 hover:scale-105",
-                "text-muted-foreground/50 hover:text-muted-foreground",
-              )}
-              aria-label="Erstes Projekt anlegen"
-              title="Erstes Projekt anlegen"
-            >
-              <Plus size={18} strokeWidth={1.5} />
-            </button>
-          </div>
+            <Plus size={16} strokeWidth={1.5} />
+            <span className="text-xs tracking-wide">Erstes Projekt anlegen</span>
+          </button>
         ) : (
           <div
-            className="grid gap-x-3 gap-y-4"
+            className="grid"
             style={{
-              gridTemplateColumns: `repeat(${COLS}, 3.5rem)`,
+              gridTemplateColumns: `repeat(${COLS}, 140px)`,
+              columnGap: "10px",
+              rowGap: "12px",
             }}
           >
             {pageItems.map((p, idx) => (
@@ -121,6 +129,10 @@ const SideGrid = ({
                 name={p.name}
                 initial={p.initial}
                 isActive={p.id === activeId}
+                lastChangedAt={p.lastChangedAt}
+                openCount={p.openCount}
+                signal={p.signal}
+                signal2={p.signal2}
                 onClick={() => onProjectClick?.(p.id)}
                 onKeyDown={handleKeyDown(idx)}
               />
@@ -128,21 +140,29 @@ const SideGrid = ({
           </div>
         )}
 
-        {totalPages > 1 && !isPlaceholder && (
+        {showPaginationDots && (
           <div className="flex items-center justify-center gap-1.5 mt-5" role="tablist">
-            {Array.from({ length: totalPages }).map((_, i) => (
-              <button
-                key={i}
-                role="tab"
-                aria-selected={i === page}
-                aria-label={`Seite ${i + 1}`}
-                onClick={() => setPage(i)}
-                className={cn(
-                  "w-1.5 h-1.5 rounded-full transition-colors",
-                  i === page ? "bg-foreground/60" : "bg-foreground/15 hover:bg-foreground/30",
-                )}
-              />
-            ))}
+            {Array.from({ length: Math.max(totalPages, 1) }).map((_, i) => {
+              const single = totalPages <= 1;
+              return (
+                <button
+                  key={i}
+                  role="tab"
+                  aria-selected={i === page}
+                  aria-label={`Seite ${i + 1}`}
+                  onClick={() => !single && setPage(i)}
+                  disabled={single}
+                  className={cn(
+                    "w-1.5 h-1.5 rounded-full transition-colors",
+                    single
+                      ? "bg-foreground/10 cursor-default"
+                      : i === page
+                        ? "bg-foreground/60"
+                        : "bg-foreground/15 hover:bg-foreground/30",
+                  )}
+                />
+              );
+            })}
           </div>
         )}
       </div>
