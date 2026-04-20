@@ -4,14 +4,13 @@ import { X } from "lucide-react";
 import { useDialog } from "./DialogProvider";
 import BoxRenderer from "./BoxRenderer";
 import { END_STATES } from "@/lib/dialog/types";
-import { toast } from "sonner";
 
 const DialogOverlay = () => {
   const { session, closeDialog } = useDialog();
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") tryClose();
+      if (e.key === "Escape") closeDialog();
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
@@ -20,25 +19,15 @@ const DialogOverlay = () => {
 
   if (!session) return null;
 
-  const decided = session.boxes.filter((b) => END_STATES.includes(b.state)).length;
-  const total = session.boxes.length;
-
-  const tryClose = () => {
-    if (decided < total) {
-      toast("Schließen ohne Antwort?", {
-        description: "Erneut schließen bestätigt.",
-        action: { label: "Schließen", onClick: () => closeDialog() },
-      });
-      return;
-    }
-    closeDialog();
-  };
+  const decisionBoxes = session.boxes.filter((b) => b.type !== "kontext");
+  const decided = decisionBoxes.filter((b) => END_STATES.includes(b.state)).length;
+  const total = decisionBoxes.length;
 
   return createPortal(
     <div
       className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-background/85 backdrop-blur-md animate-[fade-in_0.2s_ease-out]"
       onClick={(e) => {
-        if (e.target === e.currentTarget) tryClose();
+        if (e.target === e.currentTarget) closeDialog();
       }}
     >
       <div className="w-full max-w-2xl my-12 mx-4 rounded-2xl border border-border-strong bg-surface-1 shadow-card-glow overflow-hidden">
@@ -56,7 +45,7 @@ const DialogOverlay = () => {
           </div>
           <button
             type="button"
-            onClick={tryClose}
+            onClick={closeDialog}
             className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-surface-3 transition-colors"
             aria-label="Schließen"
           >
