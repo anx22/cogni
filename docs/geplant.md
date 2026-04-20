@@ -15,12 +15,16 @@
 
 **Nicht in V1 sichtbar:** `vorgeschlagen`, `aufgeklappt`, `eskaliert` als prominente Nutzerlabels.
 
-## Phase 6: Upload-Pipeline
+## Phase 6: Upload-Pipeline ✓ (V1 abgeschlossen)
 
-- Dateityp-Erkennung + Supabase Storage
-- Unstructured API Integration
-- Strukturierte Extraktion → Proposed Facts → Review Cases
-- Dokument-Preview im Substanz-Bereich (löst Toast-Brücke ab)
+- Auth (Email/Passwort, Auto-confirm), `useAuth`-Hook, `/auth`-Route
+- Storage-Bucket `intake-files` (privat, RLS pfadbasiert)
+- `useIntake` echt: Datei → Storage + assets-Insert + invoke `intake-process`; Notiz/Link → asset mit `metadata.kind`
+- Edge Function `intake-process` (Unstructured) → `parsed_documents` + `sources`, Status pending → processing → completed/failed
+- Realtime-Subscription auf `assets` spiegelt Verarbeitungsstatus auf den Kern
+- `RecentAssets` (rechtes SideGrid) zeigt letzte 16 Inputs mit Typ-Icon + Status-Punkt
+
+**Out of Scope (Phase 7+):** Voice-Aufnahme, Proposed-Facts-Generierung, Knowledge-Graph, Projekt-Zuordnung beim Intake, Dokument-Preview
 
 ## Phase 7: Knowledge-Graph-Integration
 
@@ -54,3 +58,4 @@
 - ✓ Phase 3.7: Auflösung „Signale"-Zone + Manuell-Kennzeichnung
 - ✓ Phase 4: Dialog-Overlay (Minimalprinzip, manuell-Flag automatisch)
 - ✓ Phase 5: Universeller Input (Drop am Kern + Click-Overlay mit Pills)
+- ✓ Phase 6: Upload-Pipeline V1 (Auth + Storage + Edge Function + Realtime)
