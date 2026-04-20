@@ -235,6 +235,28 @@ export const demoProject = {
       quelle: "Dependency #dep3",
       blocker: false,
     },
+    {
+      id: "h12",
+      arbeitsmodus: "klaeren" as Arbeitsmodus,
+      objektTyp: "gap" as ObjektTyp,
+      titel: "DSGVO-Auftragsverarbeitung mit Agentur klären",
+      beschreibung: "Vertragsabschluss mit Agentur Digitalis verzögert sich, AVV fehlt.",
+      verantwortlich: null,
+      frist: null,
+      quelle: "Gap #g3",
+      blocker: false,
+    },
+    {
+      id: "h13",
+      arbeitsmodus: "klaeren" as Arbeitsmodus,
+      objektTyp: "dependency" as ObjektTyp,
+      titel: "API-Architektur wartet auf Performance-Anforderung",
+      beschreibung: "Caching-Layer-Design hängt am noch fehlenden Latenzziel.",
+      verantwortlich: "Jan Krüger",
+      frist: null,
+      quelle: "Dependency #dep2",
+      blocker: false,
+    },
   ],
 
   // Verlauf — chronologischer Ereignisfeed mit Delta-Tags
