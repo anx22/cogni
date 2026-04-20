@@ -1,96 +1,104 @@
-## Block B3 + Block C — Projekt anlegen & UX-Sweep
 
-### B3: Projekt anlegen vom Side-Grid
 
-Aktuell kann ein Projekt nur implizit über die ZuordnungsBox im Verstehens-Loop entstehen. Es fehlt ein direkter Weg vom Side-Grid aus.
+## Status-Verifikation: Was ist fertig, was muss vor Graphiti validiert werden?
 
-**Änderungen:**
+### Was tatsächlich live im Code steht (verifiziert)
 
-1. **SideGrid.tsx** — den bestehenden „Erstes Projekt anlegen"-Button (Zeile 99–114, wird nur bei `isEmpty` gezeigt) um einen generellen „+ Neues Projekt"-Button erweitern, der als letzte Kachel im Grid erscheint, wenn Platz vorhanden ist (weniger als `PAGE_SIZE` Items auf der aktuellen Seite). sowie über dezenten text link, links aligned in der paginierungs zeile
-2. **Index.tsx** — neuer Callback `handleCreateProject`:
-  - Ruft `supabase.from("projects").insert({ user_id, name: "Neues Projekt" }).select("id").single()` auf.
-  - Navigiert sofort zu `/projekt/${id}`.
-  - Wird als `onCreateProject` an SideGrid übergeben.
-3. **ProjectScreen.tsx** — beim `empty`-Status den Projektnamen inline editierbar machen (einfaches `contentEditable` oder `input`-Feld), damit der User den Auto-Namen „Neues Projekt" sofort umbenennen kann. Speichert per `onBlur` via `supabase.from("projects").update({ name }).eq("id", projectId)`.
+| Block | Status | Beleg im Code |
+|---|---|---|
+| **A1–A3** Verstehens-Loop | ✓ | `intake-understand` läuft, `proposed_facts` mit `delta_type`, Scoring + Assignment-Agent |
+| **A4** Commit-Pfad | ✓ | `commit-fact/index.ts`: schreibt `canonical_facts` + `change_events` + `corrections` (bei Abweichung) + `project_state_snapshots` (Counts pro Tabelle), Spezialpfade `open_point`→`gap_signals`, `reference`→`dependencies` |
+| **B1** ProjectScreen live | ✓ | `useProject.ts` lädt 16 Tabellen parallel + Realtime auf 15 Tabellen |
+| **B2** Routing `/projekt/:id` | ✓ | `pages/Project.tsx` + Route in `App.tsx` |
+| **B3** Projekt anlegen | ✓ | `Index.tsx → handleCreateProject`, `+ Neues Projekt`-Tile + Textlink in `SideGrid.tsx`, Inline-Name-Edit in `LageZone` (empty-state) |
+| **C1** Voice echt | ✓ | `useVoiceRecorder.ts` + Edge Function `voice-transcribe` (Gemini 2.5 Flash, audio/webm) |
+| **C2** Retry-Knopf | ✓ | `IntakeSessionsPanel.tsx`: Failed-Tiles mit `RefreshCw`-Icon und Retry-Invoke |
+| **C3** HoverCard | ✓ | `IntakeSessionsPanel.tsx`: shadcn HoverCard mit Name, Typ, Größe, Datum |
 
----
-
-### C1: Voice-Aufnahme echt machen
-
-Die Pill „Sprache" ist aktuell disabled mit Platzhalter-Text. Wird zu einer echten `MediaRecorder`-Aufnahme.
-
-**Neue Datei: `src/lib/voice/useVoiceRecorder.ts**`
-
-- Hook mit States: `idle | recording | transcribing | done | error`.
-- `start()`: `navigator.mediaDevices.getUserMedia({ audio: true })`, `MediaRecorder` mit `audio/webm`.
-- `stop()`: Stoppt Recorder, sammelt Blob aus Chunks.
-- `transcribe(blob)`: Ruft eine neue Edge Function `voice-transcribe` auf, die den Audio-Blob an Lovable AI (Whisper-kompatibles Modell) sendet und den Text zurückgibt.
-- Gibt `{ status, transcript, start, stop, cancel }` zurück.
-
-**Neue Edge Function: `supabase/functions/voice-transcribe/index.ts**`
-
-- Nimmt `multipart/form-data` mit dem Audio-Blob entgegen.
-- Sendet an Lovable AI Gateway (Whisper/STT-Modell) zur Transkription.
-- Gibt `{ text: string }` zurück.
-- Hinweis: Prüfen ob Lovable AI ein STT-Modell unterstützt. Falls nicht, wird die Transkription über ein Text-LLM simuliert (Audio-Base64 an Gemini Flash, der Audio-Input versteht) oder die Voice-Pill bleibt als „coming soon" mit einem klaren Hinweis.
-
-**InputOverlay.tsx** — Voice-Modus (Zeile 216–220):
-
-- Ersetzt Platzhalter durch: Aufnahme-Button (Mikrofon-Icon, pulsierend wenn aktiv), Stopp-Button, Wellenform-Visualisierung (optional, einfacher Puls reicht), Transkript-Preview nach Stopp, „Übernehmen"-Button der den transkribierten Text als Notiz-Asset via `onSubmit` weitergibt.
-
-**InputPills.tsx** — `disabled: true` bei Voice entfernen (Zeile 15).
+**Fazit:** Block A, B und C sind **funktional vollständig** im Code. Doku (`geplant.md`, `implementierung-aktuell.md`) ist konsistent.
 
 ---
 
-### C2: Retry-Button im Session-Panel
+### Bekannte Schwachstellen, die ich beim Review gefunden habe
 
-Der Retry-Pfad existiert bereits in `EntityVoice` + `Index.tsx` (`handleRetry`), aber nur für den aktuell sprechenden Fehler. Im IntakeSessionsPanel fehlt er.
+Diese sind **nicht blockierend für Graphiti**, aber es lohnt sich, sie vorher zu kennen:
 
-**IntakeSessionsPanel.tsx:**
-
-- Assets mit `understanding_status` in `['failed', 'rate_limited', 'payment_required']` die keine Session haben, als eigene Tiles mit Status `"failed"` anzeigen (neuer TileStatus).
-- Badge: `"fehlgeschlagen"` mit `bg-destructive/15 text-destructive ring-destructive/30`.
-- Klick auf eine failed-Tile: `supabase.functions.invoke("intake-understand", { body: { asset_id, retry: true } })` + Toast „Wird nochmal versucht".
-- Bestehende `pending`-Logik filtert diese raus, damit kein Duplikat entsteht.
-
----
-
-### C3: Asset-Detail Inline-Card
-
-Klick auf einen abgeschlossenen Session-Eintrag öffnet bereits den Dialog. Was fehlt: ein Quick-Preview ohne den ganzen Dialog.
-
-**Änderung in IntakeSessionsPanel.tsx:**
-
-- Long-Press oder Hover auf eine Tile zeigt einen Popover/Tooltip mit:
-  - Originalname (`file_name`)
-  - Typ + Größe
-  - Erstelldatum
-  - Link zum Dialog (bestehender Klick-Handler)
-  - Projekt-Zuordnung (aus `assets.project_id` → Projektname)
-- Implementierung: `HoverCard` aus shadcn/ui (bereits installiert).
-- Daten: Die `Asset`-Daten sind bereits geladen (`assets`-State). Projektname per Lookup aus `useProjects` oder einem kleinen Map aus den geladenen Projekte.
+1. **`useProject.ts` Z. 426–428**: `useEffect(() => load(), [load, reloadKey.current])` — `reloadKey.current` in Deps eines `useEffect` triggert nicht. Hat heute keine Auswirkung (Realtime macht den Reload), aber konzeptionell tot.
+2. **`Index.tsx` Z. 331**: Header-Button "Projekte" navigiert immer zum **ersten** Projekt — kein dedizierter Projekte-Index. Akzeptabel, aber unklare Affordance.
+3. **Themen-Doc-Counts (`useProject.ts` Z. 333)**: `dokumente: 0` ist hartkodiert. Themen zeigen nie Dokument-Anzahl.
+4. **Dependencies V1-Self-Ref (`commit-fact.ts` Z. 201)**: `target_id: cf!.id` — Dependencies referenzieren sich selbst, weil echtes Linking fehlt. Genau das, was Graphiti lösen soll.
+5. **Snapshot-Summary**: `summary` ist nur `"Snapshot nach commit:..."` — kein semantischer Lagetext. `useProject.ts` zeigt diesen Text als Hauptlage an.
 
 ---
 
-### Dokumentation
+### Was du vor Graphiti **manuell validieren** musst
 
-- `docs/implementierung-aktuell.md` — B2 als erledigt markieren (Routing ist implementiert), B3 als erledigt, Block C als erledigt.
-- `docs/geplant.md` — Phase 8 und Phase 9 als ✓ markieren.
+Bevor wir den Knowledge-Graph aufsetzen, brauchst du Vertrauen, dass die darunterliegenden Daten stimmen. Sonst replizieren wir kaputten Zustand in den Graphen.
+
+**Test-Lauf (10 min, ein leeres Projekt, ein Dokument):**
+
+1. **Asset → Verstehen**
+   - Klick "+ Neues Projekt" im Side-Grid → Inline-Name umbenennen
+   - Datei (PDF/DOCX/EML) ablegen → erscheint im rechten Intake-Panel mit `läuft`
+   - Status wechselt zu `offen` → Dialog öffnet sich automatisch
+   
+2. **Im Dialog**
+   - **ZuordnungsBox** kommt zuerst → bestehendes Projekt wählen → bestätigen
+   - Beantworte 1–2 Fakten **unverändert** → bestätigen
+   - Beantworte 1 Fakt **korrigiert** (Wert ändern) → bestätigen
+   
+3. **DB-Check** (Lovable Cloud → SQL Editor):
+   ```sql
+   -- Pro frischer Commit: 1 Zeile in jedem
+   select count(*) from canonical_facts where project_id = '<id>';
+   select event_type, previous_value, new_value from change_events 
+     where project_id = '<id>' order by created_at desc limit 5;
+   select * from corrections where canonical_fact_id in (
+     select id from canonical_facts where project_id = '<id>');
+   select trigger_event, snapshot->'counts' from project_state_snapshots 
+     where project_id = '<id>' order by created_at desc limit 3;
+   ```
+   - **Erwartung:** `change_events.event_type='replace'` + `corrections`-Zeile **nur** beim korrigierten Fakt
+   - **Erwartung:** `project_state_snapshots` hat 3 Zeilen mit jeweils inkrementierten Counts
+
+4. **ProjectScreen live**
+   - Wechsel auf `/projekt/<id>` → Lagebild zeigt aktuelle Counts
+   - Verlauf zeigt 3 Einträge mit korrekten Delta-Tags (neu, neu, ersetzt)
+   - Handlungsbedarf wächst pro `open_point`/Konflikt
+
+5. **Realtime**
+   - In zweitem Tab Projekt offen lassen → in erstem Tab Datei ablegen → zweiter Tab muss **ohne Reload** updaten
+
+6. **Edge-Cases**
+   - Voice: Aufnahme starten/stoppen → Transkript erscheint → Übernehmen → Asset im Intake mit `note`-Icon
+   - Asset mit `failed` Status: Retry-Klick → Status wechselt zurück auf `pending`
+   - Dokument mit Umlauten im Namen → kein "Invalid key"-Fehler mehr
+
+**Wenn alle 6 Checks grün:** Datenbasis ist sauber, Graphiti kann losgehen.
+
+**Wenn ein Check rot:** Erst fixen, dann Graphiti — sonst speichern wir Müll im Graphen.
 
 ---
 
-### Betroffene Dateien
+### Optionale Aufräumarbeiten vor Graphiti (1–2 Stunden)
 
+Diese **nicht** Pflicht, aber Graphiti profitiert davon:
 
-| Datei                                           | Aktion                           |
-| ----------------------------------------------- | -------------------------------- |
-| `src/components/entity/SideGrid.tsx`            | + Neues-Projekt-Kachel           |
-| `src/pages/Index.tsx`                           | + `handleCreateProject`          |
-| `src/components/project/ProjectScreen.tsx`      | Inline-Name-Edit bei empty       |
-| `src/lib/voice/useVoiceRecorder.ts`             | Neu                              |
-| `supabase/functions/voice-transcribe/index.ts`  | Neu (falls STT verfügbar)        |
-| `src/components/entity/InputOverlay.tsx`        | Voice-Modus echt                 |
-| `src/components/entity/InputPills.tsx`          | Voice enabled                    |
-| `src/components/entity/IntakeSessionsPanel.tsx` | Failed-Tiles + Retry + HoverCard |
-| `docs/implementierung-aktuell.md`               | Status-Update                    |
-| `docs/geplant.md`                               | Status-Update                    |
+- **Dependencies-Linking** (commit-fact Z. 201): statt Self-Ref echtes Target auflösen — sonst landen Self-Loops im Graphen
+- **Themen-Dokument-Counts** (useProject Z. 333): aus `assets.metadata.thema` aggregieren
+- **Snapshot-Summary semantisch**: `intake-understand` schreibt eine 1-Satz-Zusammenfassung statt "Snapshot nach commit:..."
+
+---
+
+### Empfehlung
+
+```text
+1. Validierung ausführen (10 min)        ← jetzt
+2. Wenn rot: Bugs fixen
+3. Wenn grün: Block D = Graphiti starten
+   ├─ Dependency-Linking sauber machen   (parallel, optional)
+   └─ Snapshot-Summary semantisch        (parallel, optional)
+```
+
+Sag mir, welche der 6 Checks du machen willst (oder „alle"), dann gehe ich nach deinem Bericht direkt in Block D.
+
