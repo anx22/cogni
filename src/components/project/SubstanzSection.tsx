@@ -1,10 +1,10 @@
 import { FileText, Layers } from "lucide-react";
 import { useDialog } from "@/components/dialog/DialogProvider";
 import { buildThemaSession, buildDokumentSession } from "@/lib/dialog/sessionFactories";
-import type { demoProject } from "@/data/demoProject";
+import type { ThemaVM, DokumentVM } from "@/lib/project/types";
 
-type Thema = (typeof demoProject)["themen"][number];
-type Dok = (typeof demoProject)["dokumente"][number];
+type Thema = ThemaVM;
+type Dok = DokumentVM;
 
 const SubstanzSection = ({ themen, dokumente }: { themen: Thema[]; dokumente: Dok[] }) => {
   const { openDialog } = useDialog();

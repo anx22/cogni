@@ -4,9 +4,9 @@ import ObjectToken from "./shared/ObjectToken";
 import SourceMarker from "./shared/SourceMarker";
 import { useDialog } from "@/components/dialog/DialogProvider";
 import { buildHandlungsbedarfSession } from "@/lib/dialog/sessionFactories";
-import type { demoProject, Arbeitsmodus } from "@/data/demoProject";
+import type { Arbeitsmodus, HandlungsbedarfVM } from "@/lib/project/types";
 
-type Item = (typeof demoProject)["handlungsbedarf"][number];
+type Item = HandlungsbedarfVM;
 
 const modeMeta: Record<Arbeitsmodus, { label: string; hint: string; accent: string; dot: string; bar: string }> = {
   entscheiden: { label: "Entscheiden", hint: "Richtung festlegen", accent: "text-violet-300", dot: "bg-violet-400", bar: "bg-violet-400/70" },
