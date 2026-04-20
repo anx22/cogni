@@ -6,9 +6,10 @@ interface EntityCoreProps {
   state?: EntityState;
   onDrop?: (files: File[]) => void;
   onReviewClick?: () => void;
+  onClick?: () => void;
 }
 
-const EntityCore = ({ state = "idle", onDrop, onReviewClick }: EntityCoreProps) => {
+const EntityCore = ({ state = "idle", onDrop, onReviewClick, onClick }: EntityCoreProps) => {
   const [currentState, setCurrentState] = useState<EntityState>(state);
   const [isDragOver, setIsDragOver] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -37,12 +38,17 @@ const EntityCore = ({ state = "idle", onDrop, onReviewClick }: EntityCoreProps) 
     setIsDragOver(false);
     const files = Array.from(e.dataTransfer.files);
     if (files.length > 0) {
-      setCurrentState("processing");
       onDrop?.(files);
-      // Simulate processing → review ready
-      setTimeout(() => setCurrentState("review-ready"), 3000);
     }
   }, [onDrop]);
+
+  const handleClick = useCallback(() => {
+    if (currentState === "review-ready") {
+      onReviewClick?.();
+      return;
+    }
+    onClick?.();
+  }, [currentState, onReviewClick, onClick]);
 
   const getGradientStyle = () => {
     const base = {
@@ -82,7 +88,7 @@ const EntityCore = ({ state = "idle", onDrop, onReviewClick }: EntityCoreProps) 
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      onClick={currentState === "review-ready" ? onReviewClick : undefined}
+      onClick={handleClick}
     >
       {/* Outer pulse ring */}
       <div
