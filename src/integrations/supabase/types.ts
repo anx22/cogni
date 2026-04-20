@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      aol_runs: {
+        Row: {
+          asset_id: string | null
+          created_at: string
+          current_node: string | null
+          ended_at: string | null
+          error: Json | null
+          id: string
+          langgraph_thread_id: string | null
+          metadata: Json | null
+          project_id: string | null
+          started_at: string | null
+          status: string
+          trigger_type: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          asset_id?: string | null
+          created_at?: string
+          current_node?: string | null
+          ended_at?: string | null
+          error?: Json | null
+          id?: string
+          langgraph_thread_id?: string | null
+          metadata?: Json | null
+          project_id?: string | null
+          started_at?: string | null
+          status?: string
+          trigger_type?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          asset_id?: string | null
+          created_at?: string
+          current_node?: string | null
+          ended_at?: string | null
+          error?: Json | null
+          id?: string
+          langgraph_thread_id?: string | null
+          metadata?: Json | null
+          project_id?: string | null
+          started_at?: string | null
+          status?: string
+          trigger_type?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       assets: {
         Row: {
           created_at: string
@@ -78,6 +129,7 @@ export type Database = {
           content: Json
           created_at: string
           fact_type: Database["public"]["Enums"]["fact_type"]
+          graphiti_uuid: string | null
           id: string
           project_id: string
           provenance: Json | null
@@ -92,6 +144,7 @@ export type Database = {
           content: Json
           created_at?: string
           fact_type: Database["public"]["Enums"]["fact_type"]
+          graphiti_uuid?: string | null
           id?: string
           project_id: string
           provenance?: Json | null
@@ -106,6 +159,7 @@ export type Database = {
           content?: Json
           created_at?: string
           fact_type?: Database["public"]["Enums"]["fact_type"]
+          graphiti_uuid?: string | null
           id?: string
           project_id?: string
           provenance?: Json | null
@@ -675,6 +729,48 @@ export type Database = {
           },
         ]
       }
+      graphiti_sync_log: {
+        Row: {
+          attempt: number
+          created_at: string
+          entity_id: string
+          entity_type: string
+          error: string | null
+          id: string
+          operation: string
+          payload: Json | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attempt?: number
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          error?: string | null
+          id?: string
+          operation: string
+          payload?: Json | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attempt?: number
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          error?: string | null
+          id?: string
+          operation?: string
+          payload?: Json | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       open_points: {
         Row: {
           canonical_fact_id: string | null
@@ -1000,6 +1096,7 @@ export type Database = {
           delta_type: Database["public"]["Enums"]["delta_type"] | null
           extraction_run_id: string | null
           fact_type: Database["public"]["Enums"]["fact_type"]
+          graphiti_episode_uuid: string | null
           id: string
           parsed_document_id: string | null
           project_id: string | null
@@ -1015,6 +1112,7 @@ export type Database = {
           delta_type?: Database["public"]["Enums"]["delta_type"] | null
           extraction_run_id?: string | null
           fact_type?: Database["public"]["Enums"]["fact_type"]
+          graphiti_episode_uuid?: string | null
           id?: string
           parsed_document_id?: string | null
           project_id?: string | null
@@ -1030,6 +1128,7 @@ export type Database = {
           delta_type?: Database["public"]["Enums"]["delta_type"] | null
           extraction_run_id?: string | null
           fact_type?: Database["public"]["Enums"]["fact_type"]
+          graphiti_episode_uuid?: string | null
           id?: string
           parsed_document_id?: string | null
           project_id?: string | null
