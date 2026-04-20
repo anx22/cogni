@@ -1,6 +1,5 @@
 import { Calendar, Clock, Target } from "lucide-react";
 import ConflictBanner from "./shared/ConflictBanner";
-import SignalStrip from "./shared/SignalStrip";
 import StakeholderPopover from "./shared/StakeholderPopover";
 import FeedbackButton from "./shared/FeedbackButton";
 import type { demoProject } from "@/data/demoProject";
@@ -68,8 +67,6 @@ const LageZone = ({ project }: { project: Project }) => {
           )}
         </div>
 
-        {/* Signale: Gaps + Dependencies */}
-        <SignalStrip gaps={project.gaps} dependencies={project.dependencies} />
       </div>
     </section>
   );
