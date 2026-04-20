@@ -166,8 +166,9 @@ export const demoProject = {
       beschreibung: "UX-Richtung mit Fachseite abstimmen.",
       verantwortlich: "Lisa Meier",
       frist: null,
-      quelle: "UX Design",
+      quelle: "Manuell ergänzt im Review",
       blocker: false,
+      manuell: true,
     },
     {
       id: "h6",
@@ -277,7 +278,8 @@ export const demoProject = {
       ereignisTyp: "entscheidung" as const,
       inhalt: "Budget 210k EUR bestätigt",
       objekt: "Entscheidung",
-      quelle: "CFO-Freigabe",
+      quelle: "Manuell bestätigt durch dich",
+      manuell: true,
     },
     {
       id: "v3",

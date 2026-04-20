@@ -78,7 +78,7 @@ const VerlaufFeed = ({ verlauf }: { verlauf: Eintrag[] }) => {
                   <p className="text-sm text-foreground/95 leading-snug mb-1.5 group-hover:text-foreground transition-colors">
                     {e.inhalt}
                   </p>
-                  <SourceMarker quelle={e.quelle} />
+                  <SourceMarker quelle={e.quelle} manuell={(e as { manuell?: boolean }).manuell} />
                 </div>
               );
             })}

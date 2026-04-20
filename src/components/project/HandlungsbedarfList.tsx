@@ -101,7 +101,7 @@ const ActionRow = ({ item, barClass }: { item: Item; barClass: string }) => {
           <span className={`absolute left-4 top-3 bottom-3 w-0.5 rounded-full ${barClass}`} />
           <p className="text-sm text-foreground/90 leading-relaxed mb-3">{item.beschreibung}</p>
           <div className="flex flex-wrap items-center gap-2">
-            <SourceMarker quelle={item.quelle} />
+            <SourceMarker quelle={item.quelle} manuell={item.manuell} />
             <button
               onClick={() => openDialog(buildHandlungsbedarfSession(item))}
               className="text-[11px] uppercase tracking-wider px-2.5 py-1 rounded-md bg-primary/20 text-primary hover:bg-primary/30 transition-colors"

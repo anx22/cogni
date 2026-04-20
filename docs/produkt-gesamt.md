@@ -86,6 +86,10 @@ Ein einziges Eingangs-Modul nimmt heterogene Inputs entgegen:
 - **Unstructured** — Document Intelligence / Parsing
 - **Knowledge Graph** — Graphiti vs. Cognee, Entscheidung in v2 wieder offen
 
+## Manuelle Eingriffe
+
+Default ist KI-Extraktion + Dialog-Bestätigung mit normaler Konflikt- und Delta-Logik. Manuelle Nutzereingaben (direkt eingetippte Werte, überschriebene Vorschläge) sind die Ausnahme und werden lediglich an der Quelle visuell gekennzeichnet — kein eigenes Datenmodell, keine Author-Tags, keine Gewichtung. Wenn ein neues Dokument einem manuell gesetzten Fakt widerspricht, entsteht ein ganz normaler Konflikt; die Kennzeichnung dient nur als Kontext, nicht als Veto.
+
 ## Designhaltung
 
 Extrem reduziert, ruhig, technisch, konzentriert. Große Typografie, glasartig mit dynamischen dezenten Verläufen. Viel Ruhefläche, starke Zentrierung. Dunkler/neutral. Keine Dashboard-Ästhetik. Keine klassische Sidebar. Keine gleichrangigen Bento-Kacheln über Rollen hinweg.
