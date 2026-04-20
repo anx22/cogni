@@ -1,5 +1,5 @@
 import { ReactNode, forwardRef } from "react";
-import { Check, X, Pencil, AlertTriangle } from "lucide-react";
+import { Check, X } from "lucide-react";
 import { useDialog } from "./DialogProvider";
 import BoxStateBadge from "./BoxStateBadge";
 import type { BoxState, DialogBox } from "@/lib/dialog/types";
@@ -31,7 +31,7 @@ const BoxFrame = ({ box, children, hideActions, actions }: BoxFrameProps) => {
     <div
       className={`relative rounded-xl border bg-surface-2 shadow-card-glow overflow-hidden transition-opacity ${
         dim ? "opacity-50" : ""
-      } ${box.state === "eskaliert" ? "border-destructive/50" : "border-border-subtle"}`}
+      } border-border-subtle`}
     >
       <span className={`absolute left-0 top-0 bottom-0 w-1 ${stateBarCls[box.state]}`} />
       <div className="pl-5 pr-5 py-4">
@@ -57,26 +57,13 @@ const BoxFrame = ({ box, children, hideActions, actions }: BoxFrameProps) => {
                   onClick={() => updateBoxState(box.id, "bestaetigt")}
                   icon={<Check className="w-3 h-3" />}
                 >
-                  Bestätigen
-                </ActionBtn>
-                <ActionBtn
-                  onClick={() => updateBoxState(box.id, "geaendert")}
-                  icon={<Pencil className="w-3 h-3" />}
-                >
-                  Ändern
+                  Übernehmen
                 </ActionBtn>
                 <ActionBtn
                   onClick={() => updateBoxState(box.id, "verworfen")}
                   icon={<X className="w-3 h-3" />}
                 >
                   Verwerfen
-                </ActionBtn>
-                <ActionBtn
-                  variant="danger"
-                  onClick={() => updateBoxState(box.id, "eskaliert")}
-                  icon={<AlertTriangle className="w-3 h-3" />}
-                >
-                  Eskalieren
                 </ActionBtn>
               </>
             )}

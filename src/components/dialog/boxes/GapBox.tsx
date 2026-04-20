@@ -5,8 +5,15 @@ import BoxFrame, { ActionBtn } from "../BoxFrame";
 import type { DialogBox } from "@/lib/dialog/types";
 
 const GapBox = ({ box }: { box: DialogBox }) => {
-  const { updateBoxState, updateBoxPayload } = useDialog();
+  const { updateBoxState, updateBoxPayload, closeDialog } = useDialog();
   const [answer, setAnswer] = useState(box.payload?.antwort ?? "");
+
+  const submit = () => {
+    if (!answer.trim()) return;
+    updateBoxPayload(box.id, { antwort: answer });
+    updateBoxState(box.id, "bestaetigt");
+    setTimeout(closeDialog, 250);
+  };
 
   return (
     <BoxFrame
@@ -16,14 +23,11 @@ const GapBox = ({ box }: { box: DialogBox }) => {
           <ActionBtn
             variant="primary"
             icon={<Check className="w-3 h-3" />}
-            onClick={() => {
-              updateBoxPayload(box.id, { antwort: answer });
-              updateBoxState(box.id, answer.trim() ? "bestaetigt" : "geaendert");
-            }}
+            onClick={submit}
           >
             Lücke schließen
           </ActionBtn>
-          <ActionBtn icon={<Clock className="w-3 h-3" />} onClick={() => updateBoxState(box.id, "verworfen")}>
+          <ActionBtn icon={<Clock className="w-3 h-3" />} onClick={() => { updateBoxState(box.id, "verworfen"); setTimeout(closeDialog, 250); }}>
             Später
           </ActionBtn>
         </>
@@ -31,6 +35,9 @@ const GapBox = ({ box }: { box: DialogBox }) => {
     >
       {box.payload?.wirkung && (
         <p className="text-xs text-amber-300/80">Wirkung: {box.payload.wirkung}</p>
+      )}
+      {box.payload?.betrifft && (
+        <p className="text-[11px] text-muted-foreground/70">Betrifft: {box.payload.betrifft}</p>
       )}
       {box.payload?.lebensdauer && (
         <p className="text-[11px] text-muted-foreground/70">{box.payload.lebensdauer}</p>

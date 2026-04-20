@@ -20,7 +20,7 @@
   - Stats-Cleanup: `konflikte`/`handlungsbedarf`/`stakeholder` nicht mehr hardcoded, sondern aus `array.length` abgeleitet
   - Dokumente nach Datum sortiert
   - Themen mit Status-Indikator (offene Punkte → Punkt am Titel)
-- [ ] Dialog-Overlay (Phase 4) — alle Toast-Brücken werden hier durch echte Box-Aufrufe ersetzt
+- [x] **Dialog-Overlay (Phase 4)** — Vollbild-Overlay mit 8 Box-Typen / 6 Zuständen als Systembaukasten. **Minimalprinzip für V1**: pro Anlass nur 1–2 Boxen (Inhalt + ggf. Antwort/Widerspruch). Eingabe-/Konflikt-/Gap-Boxen schließen sich selbst ab. Begriffe vereinheitlicht: `Antworten` (Einstieg) und `Übernehmen` (Abschluss). Eskalieren/Mergen/separater Aktionsblock aus der Standard-UI entfernt.
 - [ ] Universeller Input (Phase 5)
 - [ ] Upload-Pipeline (Phase 6)
 - [ ] Knowledge-Graph-Integration (Phase 7, Graphiti)

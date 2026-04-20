@@ -5,27 +5,24 @@ import BoxFrame, { ActionBtn } from "../BoxFrame";
 import type { DialogBox } from "@/lib/dialog/types";
 
 const KonfliktBox = ({ box }: { box: DialogBox }) => {
-  const { updateBoxState, updateBoxPayload } = useDialog();
+  const { updateBoxState, updateBoxPayload, closeDialog } = useDialog();
   const [choice, setChoice] = useState<"A" | "B" | null>(box.payload?.auswahl ?? null);
   const [reason, setReason] = useState<string>(box.payload?.begruendung ?? "");
 
   const confirm = () => {
+    if (!choice) return;
     updateBoxPayload(box.id, { auswahl: choice, begruendung: reason });
-    if (choice) updateBoxState(box.id, "bestaetigt");
+    updateBoxState(box.id, "bestaetigt");
+    setTimeout(closeDialog, 250);
   };
 
   return (
     <BoxFrame
       box={box}
       actions={
-        <>
-          <ActionBtn variant="primary" icon={<Check className="w-3 h-3" />} onClick={confirm}>
-            Auswahl übernehmen
-          </ActionBtn>
-          <ActionBtn variant="danger" onClick={() => updateBoxState(box.id, "eskaliert")}>
-            Eskalieren
-          </ActionBtn>
-        </>
+        <ActionBtn variant="primary" icon={<Check className="w-3 h-3" />} onClick={confirm}>
+          Entscheidung übernehmen
+        </ActionBtn>
       }
     >
       <p className="text-sm text-muted-foreground">{box.payload?.beschreibung}</p>

@@ -22,17 +22,11 @@ const DialogOverlay = () => {
 
   const decided = session.boxes.filter((b) => END_STATES.includes(b.state)).length;
   const total = session.boxes.length;
-  const summary = {
-    bestaetigt: session.boxes.filter((b) => b.state === "bestaetigt").length,
-    geaendert: session.boxes.filter((b) => b.state === "geaendert").length,
-    verworfen: session.boxes.filter((b) => b.state === "verworfen").length,
-    eskaliert: session.boxes.filter((b) => b.state === "eskaliert").length,
-  };
 
   const tryClose = () => {
     if (decided < total) {
-      toast("Session schließen?", {
-        description: "Es gibt noch offene Boxen. Erneut schließen bestätigt.",
+      toast("Schließen ohne Antwort?", {
+        description: "Erneut schließen bestätigt.",
         action: { label: "Schließen", onClick: () => closeDialog() },
       });
       return;
@@ -47,7 +41,7 @@ const DialogOverlay = () => {
         if (e.target === e.currentTarget) tryClose();
       }}
     >
-      <div className="w-full max-w-3xl my-12 mx-4 rounded-2xl border border-border-strong bg-surface-1 shadow-card-glow overflow-hidden">
+      <div className="w-full max-w-2xl my-12 mx-4 rounded-2xl border border-border-strong bg-surface-1 shadow-card-glow overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between gap-4 px-6 py-4 border-b border-border-subtle bg-surface-2/60">
           <div className="flex items-center gap-3 min-w-0">
@@ -81,22 +75,6 @@ const DialogOverlay = () => {
               <BoxRenderer box={b} />
             </div>
           ))}
-        </div>
-
-        {/* Footer */}
-        <div className="flex items-center justify-between gap-4 px-6 py-3 border-t border-border-subtle bg-surface-2/60 text-[11px] text-muted-foreground">
-          <span>
-            {decided}/{total} entschieden · {summary.bestaetigt} bestätigt · {summary.geaendert} geändert ·{" "}
-            {summary.verworfen} verworfen
-            {summary.eskaliert > 0 && ` · ${summary.eskaliert} eskaliert`}
-          </span>
-          <button
-            type="button"
-            onClick={tryClose}
-            className="text-[11px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Session schließen
-          </button>
         </div>
       </div>
     </div>,

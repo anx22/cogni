@@ -106,13 +106,7 @@ const ActionRow = ({ item, barClass }: { item: Item; barClass: string }) => {
               onClick={() => openDialog(buildHandlungsbedarfSession(item))}
               className="text-[11px] uppercase tracking-wider px-2.5 py-1 rounded-md bg-primary/20 text-primary hover:bg-primary/30 transition-colors"
             >
-              Bearbeiten
-            </button>
-            <button
-              onClick={() => openDialog(buildHandlungsbedarfSession(item))}
-              className="text-[11px] uppercase tracking-wider px-2.5 py-1 rounded-md border border-border-subtle text-muted-foreground hover:text-foreground hover:border-border-strong transition-colors"
-            >
-              Inline antworten
+              Antworten
             </button>
           </div>
         </div>
