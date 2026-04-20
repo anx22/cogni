@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { IntakePayload } from "./detectInputType";
 import type { Database } from "@/integrations/supabase/types";
 import { devlog } from "@/lib/devlog/devlog";
+import { sanitizeStorageName } from "./sanitizeStorageName";
 
 type EntityState = "idle" | "hover" | "processing" | "review-ready" | "failed";
 type AssetType = Database["public"]["Enums"]["asset_type"];
@@ -55,15 +56,19 @@ export function useIntake(options: UseIntakeOptions = {}) {
         if (payload.type === "file" && payload.files?.length) {
           for (const file of payload.files) {
             const assetId = crypto.randomUUID();
-            const path = `${user.id}/${assetId}/${file.name}`;
-            devlog.intake(`upload start: ${file.name}`, { assetId, path, size: file.size });
+            const safeName = sanitizeStorageName(file.name);
+            const path = `${user.id}/${assetId}/${safeName}`;
+            devlog.intake(`upload start: ${file.name}`, { assetId, path, safeName, size: file.size });
 
             const { error: upErr } = await supabase.storage
               .from("intake-files")
               .upload(path, file);
             if (upErr) {
               devlog.error(`storage upload failed: ${file.name}`, upErr);
-              throw upErr;
+              const msg = /invalid key/i.test(upErr.message)
+                ? `Upload abgelehnt: Dateiname „${file.name}" enthält ungültige Zeichen`
+                : `Upload fehlgeschlagen: ${upErr.message}`;
+              throw new Error(msg);
             }
             devlog.intake(`upload done: ${file.name}`, { assetId });
 
@@ -76,6 +81,7 @@ export function useIntake(options: UseIntakeOptions = {}) {
               storage_path: path,
               processing_status: "pending",
               project_id: projectId ?? null,
+              metadata: { original_name: file.name },
             });
             if (insErr) {
               devlog.error("assets insert failed", insErr);
