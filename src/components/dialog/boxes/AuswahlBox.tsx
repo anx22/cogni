@@ -3,9 +3,11 @@ import { Check } from "lucide-react";
 import { useDialog } from "../DialogProvider";
 import BoxFrame, { ActionBtn } from "../BoxFrame";
 import type { DialogBox } from "@/lib/dialog/types";
+import { useManualOverrides } from "@/lib/dialog/manualOverrides";
 
 const AuswahlBox = ({ box }: { box: DialogBox }) => {
-  const { updateBoxState, updateBoxPayload } = useDialog();
+  const { session, updateBoxState, updateBoxPayload } = useDialog();
+  const { markManual } = useManualOverrides();
   const opts: string[] = box.payload?.optionen ?? [];
   const [sel, setSel] = useState<string>(box.payload?.auswahl ?? "");
 
@@ -18,7 +20,10 @@ const AuswahlBox = ({ box }: { box: DialogBox }) => {
           icon={<Check className="w-3 h-3" />}
           onClick={() => {
             updateBoxPayload(box.id, { auswahl: sel });
-            if (sel) updateBoxState(box.id, "bestaetigt");
+            if (sel) {
+              updateBoxState(box.id, "bestaetigt");
+              if (session?.context) markManual(session.context);
+            }
           }}
         >
           Übernehmen

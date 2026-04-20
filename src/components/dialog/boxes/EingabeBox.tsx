@@ -3,15 +3,18 @@ import { Check } from "lucide-react";
 import { useDialog } from "../DialogProvider";
 import BoxFrame, { ActionBtn } from "../BoxFrame";
 import type { DialogBox } from "@/lib/dialog/types";
+import { useManualOverrides } from "@/lib/dialog/manualOverrides";
 
 const EingabeBox = ({ box }: { box: DialogBox }) => {
-  const { updateBoxState, updateBoxPayload, closeDialog } = useDialog();
+  const { session, updateBoxState, updateBoxPayload, closeDialog } = useDialog();
+  const { markManual } = useManualOverrides();
   const [text, setText] = useState(box.payload?.text ?? "");
 
   const submit = () => {
     if (!text.trim()) return;
     updateBoxPayload(box.id, { text });
     updateBoxState(box.id, "bestaetigt");
+    if (session?.context) markManual(session.context);
     setTimeout(closeDialog, 250);
   };
 
