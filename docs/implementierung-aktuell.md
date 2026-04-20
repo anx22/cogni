@@ -11,15 +11,15 @@
 - [x] Supabase-Datenmodell (24 + 3 Tabellen) inkl. `gap_signals`, `dependencies`, `outcome_signals`, `dialog_sessions`; Enum `box_type` um `gap_box` erweitert
 - [x] **Vier-Rollen-Projektscreen** (Phase 3.5) — `LageZone`, `HandlungsbedarfList`, `VerlaufFeed`, `SubstanzSection`
 - [x] **Audit & Verfeinerung Projekt-Screen** (Phase 3.6)
-  - Gap- und Dependency-Signale sichtbar im `SignalStrip` (Lage-Zone)
-  - Dependencies als Handlungsbedarf-Items mit eigenem `ObjektTyp: "dependency"`
+  - Gaps und Dependencies vollständig in Handlungsbedarf integriert (kein separater SignalStrip mehr — Briefing-konform)
   - Stakeholder-Liste via Popover (Name/Rolle/Org)
   - Feedback-/Korrektur-Button auf Lagebild und Verlauf-Einträgen (hover-revealed)
   - Konflikt-Eintrag im Verlauf optisch markiert (rote Punkt-Markierung)
   - Toast-Brücken auf allen bisher toten Buttons (Themen, Dokumente, SourceMarker, Konflikt-Items, Handlungsbedarf-Aktionen, Verlauf-Einträge)
-  - Stats-Cleanup: `konflikte`/`handlungsbedarf`/`stakeholder` nicht mehr hardcoded, sondern aus `array.length` abgeleitet
+  - Stats-Cleanup: aus `array.length` abgeleitet
   - Dokumente nach Datum sortiert
-  - Themen mit Status-Indikator (offene Punkte → Punkt am Titel)
+  - Themen mit Status-Indikator
+- [x] **Manueller Eingriff — Kennzeichnung** (Phase 3.7) — `SourceMarker` zeigt bei `manuell={true}` ein UserCheck-Icon + Primary-Tönung. Kein eigenes Datenmodell, keine Sonderlogik bei Re-Konflikten (siehe `mem://features/manueller-eingriff`).
 - [x] **Dialog-Overlay (Phase 4)** — Vollbild-Overlay mit 8 Box-Typen / 6 Zuständen als Systembaukasten. **Minimalprinzip für V1**: pro Anlass nur 1–2 Boxen (Inhalt + ggf. Antwort/Widerspruch). Eingabe-/Konflikt-/Gap-Boxen schließen sich selbst ab. Begriffe vereinheitlicht: `Antworten` (Einstieg) und `Übernehmen` (Abschluss). Eskalieren/Mergen/separater Aktionsblock aus der Standard-UI entfernt.
 - [ ] Universeller Input (Phase 5)
 - [ ] Upload-Pipeline (Phase 6)
@@ -27,16 +27,15 @@
 
 ### Komponenten-Inventar Projekt-Screen
 - `ProjectScreen.tsx` — Layout-Komposition, 60/40-Mittelteil (Verlauf links, Handlungsbedarf rechts)
-- `LageZone.tsx` — Hero-Lagebild, Meta-Strip, Konflikt-Banner, Outcome, SignalStrip
-- `HandlungsbedarfList.tsx` — vier Arbeitsmodi, expandierbare Rows, Toast-Aktionen
+- `LageZone.tsx` — Hero-Lagebild, Meta-Strip, Konflikt-Banner, Outcome
+- `HandlungsbedarfList.tsx` — vier Arbeitsmodi, expandierbare Rows; enthält Gaps + Dependencies als Items
 - `VerlaufFeed.tsx` — Filter-Chips, Timeline mit Konflikt-Markierung, Feedback-Button
 - `SubstanzSection.tsx` — Themen-Karten + sortierte Dokumentliste
 - `shared/ConflictBanner.tsx` — klickbare Konflikt-Items
-- `shared/SignalStrip.tsx` — Gaps + Dependencies kompakt
 - `shared/StakeholderPopover.tsx` — Stakeholder-Liste on demand
 - `shared/FeedbackButton.tsx` — universelle Feedback/Korrektur-Affordance
-- `shared/SourceMarker.tsx` — Provenance-Chip (klickbar)
-- `shared/ObjectToken.tsx` — Icon+Farbe pro ObjektTyp (inkl. `dependency`)
+- `shared/SourceMarker.tsx` — Provenance-Chip; optionales `manuell`-Flag mit UserCheck-Icon
+- `shared/ObjectToken.tsx` — Icon+Farbe pro ObjektTyp (inkl. `dependency`, `gap`)
 - `shared/DeltaTag.tsx` — Delta-Visualisierung im Verlauf
 
 ### Bekannte Phase-4-Aufhängungen (Toast-Brücken)
