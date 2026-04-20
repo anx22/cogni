@@ -39,9 +39,41 @@ const Index = () => {
   const busy = entityState === "processing" || entityState === "review-ready";
   const isDragActive = dragActive || entityState === "hover";
 
+  const resetDragState = useCallback(() => {
+    dragCounter.current = 0;
+    setDragActive(false);
+  }, []);
+
   useEffect(() => {
     if (!loading && !session) navigate("/auth", { replace: true });
   }, [loading, session, navigate]);
+
+  // Busy darf NIE einen hängen gebliebenen Fullscreen-Drag-Layer stehen lassen.
+  useEffect(() => {
+    if (busy) {
+      resetDragState();
+    }
+  }, [busy, resetDragState]);
+
+  // Sicherheitsnetz für Browser, die nach Drop/Tab-Wechsel keinen sauberen dragleave senden.
+  useEffect(() => {
+    const reset = () => resetDragState();
+    const onVisibility = () => {
+      if (document.visibilityState !== "visible") resetDragState();
+    };
+
+    window.addEventListener("drop", reset);
+    window.addEventListener("dragend", reset);
+    window.addEventListener("blur", reset);
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      window.removeEventListener("drop", reset);
+      window.removeEventListener("dragend", reset);
+      window.removeEventListener("blur", reset);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [resetDragState]);
 
   // Realtime: Asset-Status spiegelt sich auf den Kern
   useEffect(() => {
@@ -85,7 +117,6 @@ const Index = () => {
           ) {
             setEntityState("failed");
           } else if (row.understanding_status === "empty") {
-            // Nichts gefunden → ruhig zurück nach kurzem Moment
             setTimeout(() => setEntityState("idle"), 1500);
           }
         },
@@ -117,10 +148,9 @@ const Index = () => {
             autoOpenedRef.current.add(row.id);
             pendingSessionId.current = row.id;
             setEntityState("review-ready");
-            // Kurzes Delay damit "Bereit"-Stimme lesbar bleibt
             setTimeout(() => {
               if (pendingSessionId.current === row.id) {
-                openSessionFromDB(row.id!);
+                openSessionFromDB(row.id);
                 pendingSessionId.current = null;
                 setEntityState("idle");
               }
@@ -135,7 +165,6 @@ const Index = () => {
   }, [session?.user, openSessionFromDB]);
 
   // Wenn Dialog manuell geschlossen wird → Kern beruhigen.
-  // pendingSessionId NICHT zurücksetzen — sonst Race mit dem Auto-Open-Effekt.
   useEffect(() => {
     if (!dialogSession && entityState === "review-ready") {
       setEntityState("idle");
@@ -153,38 +182,55 @@ const Index = () => {
     [intake, busy],
   );
 
-  // Fullscreen-Drop-Handler
-  const handleWindowDragEnter = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    if (!e.dataTransfer.types.includes("Files")) return;
-    dragCounter.current += 1;
-    setDragActive(true);
-  }, []);
+  const handleWindowDragEnter = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      if (!e.dataTransfer.types.includes("Files") || busy) {
+        resetDragState();
+        return;
+      }
+      dragCounter.current += 1;
+      setDragActive(true);
+    },
+    [busy, resetDragState],
+  );
 
   const handleWindowDragOver = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
-      if (busy) e.dataTransfer.dropEffect = "none";
+      if (!e.dataTransfer.types.includes("Files") || busy) {
+        e.dataTransfer.dropEffect = "none";
+        resetDragState();
+        return;
+      }
+      e.dataTransfer.dropEffect = "copy";
+      if (!dragActive) setDragActive(true);
     },
-    [busy],
+    [busy, dragActive, resetDragState],
   );
 
-  const handleWindowDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    dragCounter.current = Math.max(0, dragCounter.current - 1);
-    if (dragCounter.current === 0) setDragActive(false);
-  }, []);
+  const handleWindowDragLeave = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      if (busy) {
+        resetDragState();
+        return;
+      }
+      dragCounter.current = Math.max(0, dragCounter.current - 1);
+      if (dragCounter.current === 0) setDragActive(false);
+    },
+    [busy, resetDragState],
+  );
 
   const handleWindowDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
-      dragCounter.current = 0;
-      setDragActive(false);
+      resetDragState();
       const files = Array.from(e.dataTransfer.files ?? []);
       if (files.length === 0) return;
       handleDrop(files);
     },
-    [handleDrop],
+    [handleDrop, resetDragState],
   );
 
   const handleProjectClick = useCallback((id: string) => {
