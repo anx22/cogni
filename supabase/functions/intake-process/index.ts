@@ -51,7 +51,7 @@ Deno.serve(async (req) => {
     form.append("files", fileBlob, asset.file_name);
     form.append("strategy", "auto");
 
-    const unstrRes = await fetch("https://api.unstructured.io/general/v0/general", {
+    const unstrRes = await fetch("https://api.unstructuredapp.io/general/v0/general", {
       method: "POST",
       headers: { "unstructured-api-key": unstructuredKey, accept: "application/json" },
       body: form,
