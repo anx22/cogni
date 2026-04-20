@@ -145,9 +145,23 @@ export function useEntityVoice(userId: string | undefined) {
           }
         },
       )
+      // Session geschlossen → Stimme räumt sich ab
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "dialog_sessions", filter: `user_id=eq.${userId}` },
+        (p) => {
+          const row = p.new as { status?: string };
+          if (row.status === "completed" || row.status === "cancelled") {
+            if (clearTimer.current) clearTimeout(clearTimer.current);
+            queue.current = [];
+            setState({ text: null, tone: "calm" });
+          }
+        },
+      )
       .subscribe();
 
     return () => {
+      if (clearTimer.current) clearTimeout(clearTimer.current);
       supabase.removeChannel(channel);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
