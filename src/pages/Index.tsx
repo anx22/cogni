@@ -234,6 +234,20 @@ const Index = () => {
     navigate(`/projekt/${id}`);
   }, [navigate]);
 
+  const handleCreateProject = useCallback(async () => {
+    if (!session?.user) return;
+    const { data, error } = await supabase
+      .from("projects")
+      .insert({ user_id: session.user.id, name: "Neues Projekt" })
+      .select("id")
+      .single();
+    if (error || !data) {
+      toast.error("Projekt konnte nicht angelegt werden");
+      return;
+    }
+    navigate(`/projekt/${data.id}`);
+  }, [session?.user, navigate]);
+
   const handleReviewClick = useCallback(async () => {
     if (pendingSessionId.current) {
       await openSessionFromDB(pendingSessionId.current);
@@ -277,6 +291,7 @@ const Index = () => {
             projects={liveProjects}
             activeId={undefined}
             onProjectClick={handleProjectClick}
+            onCreateProject={handleCreateProject}
             isDragActive={isDragActive}
           />
         </div>
