@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import { DialogProvider } from "./components/dialog/DialogProvider";
+import { ManualOverridesProvider } from "./lib/dialog/manualOverrides";
 
 const queryClient = new QueryClient();
 
@@ -15,13 +16,15 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <DialogProvider>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </DialogProvider>
+        <ManualOverridesProvider>
+          <DialogProvider>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </DialogProvider>
+        </ManualOverridesProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

@@ -2,14 +2,17 @@ import { forwardRef } from "react";
 import { FileText, UserCheck } from "lucide-react";
 import { useDialog } from "@/components/dialog/DialogProvider";
 import { buildSourceSession } from "@/lib/dialog/sessionFactories";
+import { useManualOverrides } from "@/lib/dialog/manualOverrides";
 
 interface SourceMarkerProps {
   quelle: string;
   manuell?: boolean;
 }
 
-const SourceMarker = forwardRef<HTMLButtonElement, SourceMarkerProps>(({ quelle, manuell }, ref) => {
+const SourceMarker = forwardRef<HTMLButtonElement, SourceMarkerProps>(({ quelle, manuell: manuellProp }, ref) => {
   const { openDialog } = useDialog();
+  const { isManual } = useManualOverrides();
+  const manuell = manuellProp || isManual(quelle);
   return (
     <button
       ref={ref}

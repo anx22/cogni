@@ -3,9 +3,11 @@ import { Check } from "lucide-react";
 import { useDialog } from "../DialogProvider";
 import BoxFrame, { ActionBtn } from "../BoxFrame";
 import type { DialogBox } from "@/lib/dialog/types";
+import { useManualOverrides } from "@/lib/dialog/manualOverrides";
 
 const KonfliktBox = ({ box }: { box: DialogBox }) => {
-  const { updateBoxState, updateBoxPayload, closeDialog } = useDialog();
+  const { session, updateBoxState, updateBoxPayload, closeDialog } = useDialog();
+  const { markManual } = useManualOverrides();
   const [choice, setChoice] = useState<"A" | "B" | null>(box.payload?.auswahl ?? null);
   const [reason, setReason] = useState<string>(box.payload?.begruendung ?? "");
 
@@ -13,6 +15,7 @@ const KonfliktBox = ({ box }: { box: DialogBox }) => {
     if (!choice) return;
     updateBoxPayload(box.id, { auswahl: choice, begruendung: reason });
     updateBoxState(box.id, "bestaetigt");
+    if (session?.context) markManual(session.context);
     setTimeout(closeDialog, 250);
   };
 
