@@ -12,3 +12,4 @@ Keine klassische Sidebar. Orientierung über Zustandswechsel.
 - [Produktprinzipien](mem://features/produkt-prinzipien) — Vier Rollen, Review-First, Provenance, Delta, Konflikte/Gaps/Dependencies/Outcome, universeller Input
 - [Techstack](mem://features/techstack) — Lovable + Supabase + Unstructured + Graphiti
 - [Entscheidungen](mem://features/entscheidungen) — Graphiti gesetzt, keine Sidebar, CSS-Gradients für Entity, Vier-Rollen statt Bento
+- [Manueller Eingriff](mem://features/manueller-eingriff) — Manuelle Eingaben nur per Flag gekennzeichnet, sonst keine Sonderlogik; Re-Konflikte sind normale Konflikte
