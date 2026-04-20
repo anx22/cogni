@@ -180,41 +180,43 @@ Deno.serve(async (req) => {
 
       // Spezial-Schreibpfade: Gap & Dependency
       if (pf.fact_type === "open_point") {
-        const c = pf.content ?? {};
+        const c = (finalContent ?? {}) as any;
         await admin.from("gap_signals").insert({
           user_id: user.id,
           project_id,
           canonical_fact_id: cf!.id,
-          title: (c as any).title ?? "Offener Punkt",
-          impact: typeof (c as any).impact === "string" ? (c as any).impact : null,
-          affects: typeof (c as any).affects === "string" ? (c as any).affects : null,
+          title: c.title ?? "Offener Punkt",
+          impact: typeof c.impact === "string" ? c.impact : null,
+          affects: typeof c.affects === "string" ? c.affects : null,
           status: "open",
         });
       }
       if (pf.fact_type === "reference") {
-        const c = pf.content ?? {};
+        const c = (finalContent ?? {}) as any;
         await admin.from("dependencies").insert({
           user_id: user.id,
           project_id,
           source_id: cf!.id,
           source_type: "canonical_fact",
           target_id: cf!.id, // V1: Self-Ref bis echtes Linking kommt (Phase 8)
-          target_type: typeof (c as any).target_type === "string" ? (c as any).target_type : "external",
+          target_type: typeof c.target_type === "string" ? c.target_type : "external",
           dependency_type: "haengt_ab_von",
-          description: typeof (c as any).description === "string" ? (c as any).description : null,
+          description: typeof c.description === "string" ? c.description : null,
         });
       }
 
-      const eventType = (pf.delta_type ?? "add") as
-        | "confirm" | "add" | "replace" | "contradict" | "merge" | "discard";
+      const eventType = wasCorrected
+        ? "replace"
+        : ((pf.delta_type ?? "add") as
+            | "confirm" | "add" | "replace" | "contradict" | "merge" | "discard");
       await admin.from("change_events").insert({
         user_id: user.id,
         project_id,
         canonical_fact_id: cf!.id,
         review_case_id,
         event_type: eventType,
-        new_value: pf.content,
-        previous_value: null,
+        new_value: finalContent,
+        previous_value: wasCorrected ? pf.content : null,
       });
 
       await admin.from("proposed_facts").update({ status: "committed" }).eq("id", pf.id);
@@ -222,6 +224,12 @@ Deno.serve(async (req) => {
         .from("review_cases")
         .update({ box_state: "confirmed", user_decision: user_decision ?? { decision: "confirm" } })
         .eq("id", review_case_id);
+
+      // Projekt-Snapshot schreiben — gibt dem Verlauf einen zeitlichen Anker.
+      await writeProjectSnapshot(admin, user.id, project_id, {
+        trigger_event: `commit:${pf.fact_type}:${eventType}`,
+        canonical_fact_id: cf!.id,
+      });
     } else {
       if (pf) {
         await admin.from("proposed_facts").update({ status: "rejected" }).eq("id", pf.id);
