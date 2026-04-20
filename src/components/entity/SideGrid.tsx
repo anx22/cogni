@@ -27,6 +27,7 @@ const SideGrid = ({
   onCreateProject,
   isDragActive,
 }: SideGridProps) => {
+  const canAddTile = side === "left" && !isPlaceholderSide(side);
   const [page, setPage] = useState(0);
   const tileRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
