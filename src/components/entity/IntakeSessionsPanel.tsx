@@ -25,7 +25,7 @@ import type { Database } from "@/integrations/supabase/types";
 type Session = Database["public"]["Tables"]["dialog_sessions"]["Row"];
 type Asset = Database["public"]["Tables"]["assets"]["Row"];
 
-type TileStatus = "pending" | "open" | "closed" | "empty";
+type TileStatus = "pending" | "open" | "closed" | "rejected" | "empty";
 
 interface SessionTile {
   key: string;
@@ -41,11 +41,27 @@ interface SessionTile {
 
 const LIMIT = 30;
 
-const STATUS_DOT: Record<TileStatus, string> = {
-  pending: "bg-amber-400 animate-pulse",
-  open: "bg-primary",
-  closed: "bg-emerald-500/70",
-  empty: "bg-foreground/25",
+const STATUS_BADGE: Record<TileStatus, { label: string; className: string }> = {
+  pending: {
+    label: "läuft",
+    className: "bg-amber-500/15 text-amber-300 ring-1 ring-amber-400/30",
+  },
+  open: {
+    label: "offen",
+    className: "bg-primary/15 text-primary ring-1 ring-primary/30 animate-pulse",
+  },
+  closed: {
+    label: "fertig",
+    className: "bg-emerald-500/15 text-emerald-300/90 ring-1 ring-emerald-400/25",
+  },
+  rejected: {
+    label: "ignoriert",
+    className: "bg-foreground/5 text-muted-foreground/60 ring-1 ring-foreground/10",
+  },
+  empty: {
+    label: "leer",
+    className: "bg-foreground/5 text-muted-foreground/50 ring-1 ring-foreground/10",
+  },
 };
 
 const iconForType = (t?: string): LucideIcon => {
