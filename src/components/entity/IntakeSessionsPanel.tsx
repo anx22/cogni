@@ -244,7 +244,7 @@ const IntakeSessionsPanel = (_props: Props) => {
                     title={t.firstName}
                     aria-label={t.firstName}
                     className={cn(
-                      "group relative w-[140px] h-[72px] rounded-2xl px-3 py-2.5",
+                      "group relative w-[180px] min-h-[76px] rounded-2xl px-3 py-2.5",
                       "flex items-center gap-3 text-left",
                       "bg-[hsl(var(--surface-2))]",
                       "shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_4px_12px_-4px_rgba(0,0,0,0.4)]",
@@ -253,7 +253,7 @@ const IntakeSessionsPanel = (_props: Props) => {
                       clickable
                         ? "hover:bg-[hsl(var(--surface-3))] hover:-translate-y-0.5 cursor-pointer"
                         : "cursor-default",
-                      t.status === "closed" && "opacity-70",
+                      (t.status === "closed" || t.status === "rejected") && "opacity-75",
                     )}
                   >
                     <span
@@ -270,24 +270,26 @@ const IntakeSessionsPanel = (_props: Props) => {
                       )}
                     </span>
 
-                    <span className="flex flex-col min-w-0 flex-1 gap-0.5">
+                    <span className="flex flex-col min-w-0 flex-1 gap-1">
                       <span className="text-[13px] font-medium text-foreground/90 truncate leading-tight">
                         {t.firstName}
                       </span>
-                      {meta && (
-                        <span className="text-[10px] text-muted-foreground/60 truncate leading-tight">
-                          {meta}
+                      <span className="flex items-center gap-1.5 min-w-0">
+                        <span
+                          className={cn(
+                            "shrink-0 px-1.5 py-0.5 rounded-md text-[9px] font-medium tracking-wide uppercase",
+                            badge.className,
+                          )}
+                        >
+                          {badge.label}
                         </span>
-                      )}
+                        {meta && (
+                          <span className="text-[10px] text-muted-foreground/50 truncate leading-tight">
+                            {meta}
+                          </span>
+                        )}
+                      </span>
                     </span>
-
-                    <span
-                      className={cn(
-                        "absolute top-2 right-2 w-1.5 h-1.5 rounded-full",
-                        STATUS_DOT[t.status],
-                      )}
-                      aria-hidden
-                    />
                   </button>
                 );
               })}
