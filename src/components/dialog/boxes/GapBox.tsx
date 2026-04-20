@@ -5,13 +5,13 @@ import BoxFrame, { ActionBtn } from "../BoxFrame";
 import type { DialogBox } from "@/lib/dialog/types";
 
 const GapBox = ({ box }: { box: DialogBox }) => {
-  const { updateBoxState, updateBoxPayload, closeDialog } = useDialog();
+  const { updateBoxPayload, commitBox, closeDialog } = useDialog();
   const [answer, setAnswer] = useState(box.payload?.antwort ?? "");
 
   const submit = () => {
     if (!answer.trim()) return;
     updateBoxPayload(box.id, { antwort: answer });
-    updateBoxState(box.id, "bestaetigt");
+    commitBox(box.id, "confirm", { antwort: answer });
     setTimeout(closeDialog, 250);
   };
 
@@ -27,7 +27,7 @@ const GapBox = ({ box }: { box: DialogBox }) => {
           >
             Lücke schließen
           </ActionBtn>
-          <ActionBtn icon={<Clock className="w-3 h-3" />} onClick={() => { updateBoxState(box.id, "verworfen"); setTimeout(closeDialog, 250); }}>
+          <ActionBtn icon={<Clock className="w-3 h-3" />} onClick={() => { commitBox(box.id, "reject"); setTimeout(closeDialog, 250); }}>
             Später
           </ActionBtn>
         </>
