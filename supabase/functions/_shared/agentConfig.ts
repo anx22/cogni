@@ -17,18 +17,23 @@
 // =============================================================================
 
 // ---------- Modell ----------
-//  Default für Phase 7. Wechseln durch Anpassen dieses Strings.
-//  Verfügbar via Lovable AI Gateway: google/gemini-2.5-pro, gemini-2.5-flash,
-//  openai/gpt-5, openai/gpt-5-mini ... siehe docs.
 export const AGENT_MODEL = "google/gemini-2.5-pro";
 
 // ---------- Limits ----------
-export const MAX_INPUT_CHARS = 30_000; // Roh-Text-Cap pro Lauf
-export const MAX_FACTS_PER_RUN = 12; // Vorschläge pro Lauf hart deckeln
+export const MAX_INPUT_CHARS = 30_000;
+export const MAX_FACTS_PER_RUN = 12;
+export const AGENT_TIMEOUT_MS = 30_000;
 
-// ---------- System-Prompt (die "Persönlichkeit" des Agenten) ----------
-//  Halte diesen Prompt nüchtern und präzise. Er definiert das Verhalten —
-//  nicht den Output-Style. Strukturiertes Output erzwingen wir über Tool-Call.
+// ---------- Projektzuordnung — Schwellen ----------
+//  Lexikalischer Score:
+//    +3 Treffer auf Projektname
+//    +2 Treffer auf Stakeholder (verknüpft via project_stakeholder_links)
+//    +2 Treffer auf Themen
+//    +1 Treffer auf Org-Domain
+export const ASSIGNMENT_CONFIDENT_THRESHOLD = 3; // ab hier auto-zuordnen
+export const ASSIGNMENT_UNCERTAIN_THRESHOLD = 1; // 1..2 = unsicher → Auswahlbox
+
+// ---------- System-Prompt Extract ----------
 export const AGENT_SYSTEM_PROMPT = `Du bist der Verstehens-Agent einer Projektintelligenz-App.
 
 Deine Aufgabe: Aus einem Eingangs-Text (Notiz, Link-Beschreibung oder geparstes Dokument) extrahierst du strukturierte Vorschläge ("Fakten"), die ein Mensch in einem Review-Schritt bestätigen oder ablehnen wird.
@@ -46,9 +51,25 @@ Sprache: Antworte in derselben Sprache wie der Eingangs-Text (vermutlich Deutsch
 
 Du gibst KEINEN Fließtext zurück. Du rufst ausschließlich das Tool "extract_facts" auf.`;
 
-// ---------- Tool-Schema (strukturierter Output) ----------
-//  Das Schema ist die EINZIGE Quelle der Wahrheit für die Agenten-Ausgabe.
-//  Änderungen hier müssen in linkProposedFact() + boxMapping berücksichtigt werden.
+// ---------- System-Prompt Assignment ----------
+export const ASSIGNMENT_SYSTEM_PROMPT = `Du bist der Zuordnungs-Agent einer Projektintelligenz-App.
+
+Aufgabe: Entscheide, zu welchem bestehenden Projekt der gegebene Text am besten gehört — oder ob es vermutlich ein neues Projekt ist.
+
+Du bekommst:
+1. Den Roh-Text
+2. Eine kompakte Liste der vorhandenen Projekte (Name, Beschreibung, Themen, Stakeholder)
+3. Lexikalische Vor-Hinweise (welche Projekte hatten wörtliche Treffer und wie stark)
+
+Regeln:
+- Lehne dich an die lexikalischen Hinweise an, hinterfrage sie aber bei thematischer Diskrepanz.
+- Wenn nichts wirklich passt: project_id = null (signalisiert "neues Projekt").
+- "confidence" ist deine ehrliche Einschätzung zwischen 0 und 1.
+- "reason_short" ist EIN kurzer Satz auf Deutsch, max ~120 Zeichen, der die Wahl erklärt — er wird dem Nutzer angezeigt.
+
+Du rufst ausschließlich das Tool "suggest_project_assignment" auf.`;
+
+// ---------- Tool-Schema Extract ----------
 export const EXTRACT_FACTS_TOOL = {
   type: "function" as const,
   function: {
@@ -66,13 +87,13 @@ export const EXTRACT_FACTS_TOOL = {
               fact_type: {
                 type: "string",
                 enum: [
-                  "stakeholder", // Person oder Organisation
-                  "topic", // Themenbereich
-                  "decision", // getroffene Entscheidung
-                  "task", // konkrete Aufgabe / Aktion
-                  "deadline", // Termin / Frist
-                  "open_point", // offene Frage / Lücke
-                  "reference", // Verweis / Abhängigkeit
+                  "stakeholder",
+                  "topic",
+                  "decision",
+                  "task",
+                  "deadline",
+                  "open_point",
+                  "reference",
                   "other",
                 ],
               },
@@ -96,9 +117,48 @@ export const EXTRACT_FACTS_TOOL = {
   },
 };
 
+// ---------- Tool-Schema Assignment ----------
+export const SUGGEST_ASSIGNMENT_TOOL = {
+  type: "function" as const,
+  function: {
+    name: "suggest_project_assignment",
+    description:
+      "Schlage das passende Projekt vor oder gib null zurück, wenn der Text vermutlich zu einem neuen Projekt gehört.",
+    parameters: {
+      type: "object",
+      properties: {
+        project_id: {
+          type: ["string", "null"],
+          description: "UUID des Projekts oder null für 'neues Projekt'.",
+        },
+        confidence: { type: "number", minimum: 0, maximum: 1 },
+        reason_short: { type: "string", maxLength: 160 },
+        suggested_new_name: {
+          type: ["string", "null"],
+          description:
+            "Wenn project_id=null: ein knapper Vorschlag für einen neuen Projektnamen, sonst null.",
+        },
+        alternatives: {
+          type: "array",
+          maxItems: 3,
+          items: {
+            type: "object",
+            properties: {
+              project_id: { type: "string" },
+              confidence: { type: "number", minimum: 0, maximum: 1 },
+            },
+            required: ["project_id", "confidence"],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ["project_id", "confidence", "reason_short"],
+      additionalProperties: false,
+    },
+  },
+};
+
 // ---------- Box-Mapping ----------
-//  delta_type + fact_type → Box-Typ in der Review-UI.
-//  Bewusst grob in Phase 7, leicht erweiterbar.
 export type DeltaType = "add" | "confirm" | "replace" | "contradict" | "merge" | "discard";
 export type FactType =
   | "stakeholder"
@@ -133,7 +193,6 @@ export function segmentsToText(segments: unknown): string {
   for (const seg of segments) {
     if (typeof seg === "string") out.push(seg);
     else if (seg && typeof seg === "object") {
-      // Unstructured-Format: {text: "...", ...}
       const t = (seg as { text?: unknown }).text;
       if (typeof t === "string") out.push(t);
     }
