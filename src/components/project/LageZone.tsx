@@ -6,7 +6,13 @@ import type { ProjectViewModel } from "@/lib/project/types";
 
 type Project = ProjectViewModel;
 
-const LageZone = ({ project }: { project: Project }) => {
+interface LageZoneProps {
+  project: Project;
+  editableName?: boolean;
+  onNameChange?: (name: string) => void;
+}
+
+const LageZone = ({ project, editableName, onNameChange }: LageZoneProps) => {
   return (
     <section className="relative px-8 md:px-12 lg:px-16 xl:px-20 pt-16 pb-12 bg-surface-1 border-b border-border-strong">
       {/* Subtle gradient backdrop */}
@@ -16,9 +22,26 @@ const LageZone = ({ project }: { project: Project }) => {
         {/* Title row + meta strip directly underneath */}
         <div>
           <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground/70 mb-3">Projekt</p>
-          <h1 className="text-4xl md:text-5xl font-light tracking-tight text-foreground mb-3">
-            {project.name}
-          </h1>
+          {editableName ? (
+            <h1
+              className="text-4xl md:text-5xl font-light tracking-tight text-foreground mb-3 outline-none border-b border-dashed border-primary/30 focus:border-primary/60 transition-colors"
+              contentEditable
+              suppressContentEditableWarning
+              onBlur={(e) => {
+                const text = e.currentTarget.textContent?.trim();
+                if (text && text !== project.name) onNameChange?.(text);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); }
+              }}
+            >
+              {project.name}
+            </h1>
+          ) : (
+            <h1 className="text-4xl md:text-5xl font-light tracking-tight text-foreground mb-3">
+              {project.name}
+            </h1>
+          )}
           <p className="text-sm text-muted-foreground max-w-3xl leading-relaxed mb-5">
             {project.description}
           </p>

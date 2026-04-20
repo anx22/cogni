@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import LageZone from "./LageZone";
@@ -9,6 +9,7 @@ import { useIntake } from "@/lib/intake/useIntake";
 import { detectFromDrop } from "@/lib/intake/detectInputType";
 import { useProject } from "@/lib/project/useProject";
 import { Skeleton } from "@/components/ui/skeleton";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ProjectScreenProps {
   onBack: () => void;
@@ -94,7 +95,10 @@ const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
 
       {status === "empty" && project && (
         <>
-          <LageZone project={project} />
+          <LageZone project={project} editableName onNameChange={async (newName) => {
+            if (!realProjectId || !newName.trim()) return;
+            await supabase.from("projects").update({ name: newName.trim() }).eq("id", realProjectId);
+          }} />
           <section className="px-8 md:px-12 lg:px-16 xl:px-20 py-24 bg-surface-1 border-b border-border-strong">
             <div className="max-w-3xl mx-auto text-center">
               <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground/60 mb-3">Noch keine Substanz</p>

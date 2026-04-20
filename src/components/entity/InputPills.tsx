@@ -12,7 +12,7 @@ const PILLS: { id: InputMode; label: string; Icon: typeof FileText; disabled?: b
   { id: "note", label: "Notiz", Icon: FileText },
   { id: "link", label: "Link", Icon: LinkIcon },
   { id: "file", label: "Datei", Icon: Paperclip },
-  { id: "voice", label: "Sprache", Icon: Mic, disabled: true },
+  { id: "voice", label: "Sprache", Icon: Mic },
 ];
 
 const InputPills = ({ active, onChange }: InputPillsProps) => {

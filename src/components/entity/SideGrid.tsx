@@ -62,7 +62,8 @@ const SideGrid = ({
 
   const isEmpty = side === "left" && items.length === 0;
   const isPlaceholder = side === "right";
-  const showPaginationDots = !isPlaceholder; // always show, faded when single page
+  const showPaginationDots = !isPlaceholder;
+  const showAddTile = side === "left" && pageItems.length < PAGE_SIZE && pageItems.length > 0;
 
   return (
     <div
@@ -137,32 +138,56 @@ const SideGrid = ({
                 onKeyDown={handleKeyDown(idx)}
               />
             ))}
+            {showAddTile && (
+              <button
+                onClick={onCreateProject}
+                className={cn(
+                  "rounded-2xl flex items-center justify-center gap-2",
+                  "bg-[hsl(var(--surface-2)/0.5)] hover:bg-[hsl(var(--surface-3))]",
+                  "transition-all duration-300 hover:scale-[1.02]",
+                  "text-muted-foreground/40 hover:text-muted-foreground/70",
+                  "border border-dashed border-border/20 hover:border-border/40",
+                )}
+                aria-label="Neues Projekt anlegen"
+                title="Neues Projekt anlegen"
+              >
+                <Plus size={14} strokeWidth={1.5} />
+              </button>
+            )}
           </div>
         )}
 
         {showPaginationDots && (
-          <div className="flex items-center justify-center gap-1.5 mt-5" role="tablist">
-            {Array.from({ length: Math.max(totalPages, 1) }).map((_, i) => {
-              const single = totalPages <= 1;
-              return (
-                <button
-                  key={i}
-                  role="tab"
-                  aria-selected={i === page}
-                  aria-label={`Seite ${i + 1}`}
-                  onClick={() => !single && setPage(i)}
-                  disabled={single}
-                  className={cn(
-                    "w-1.5 h-1.5 rounded-full transition-colors",
-                    single
-                      ? "bg-foreground/10 cursor-default"
-                      : i === page
-                        ? "bg-foreground/60"
-                        : "bg-foreground/15 hover:bg-foreground/30",
-                  )}
-                />
-              );
-            })}
+          <div className="flex items-center justify-between mt-5">
+            <button
+              onClick={onCreateProject}
+              className="text-[10px] text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors tracking-wide"
+            >
+              + Neues Projekt
+            </button>
+            <div className="flex items-center gap-1.5" role="tablist">
+              {Array.from({ length: Math.max(totalPages, 1) }).map((_, i) => {
+                const single = totalPages <= 1;
+                return (
+                  <button
+                    key={i}
+                    role="tab"
+                    aria-selected={i === page}
+                    aria-label={`Seite ${i + 1}`}
+                    onClick={() => !single && setPage(i)}
+                    disabled={single}
+                    className={cn(
+                      "w-1.5 h-1.5 rounded-full transition-colors",
+                      single
+                        ? "bg-foreground/10 cursor-default"
+                        : i === page
+                          ? "bg-foreground/60"
+                          : "bg-foreground/15 hover:bg-foreground/30",
+                    )}
+                  />
+                );
+              })}
+            </div>
           </div>
         )}
       </div>

@@ -1,12 +1,10 @@
 // =============================================================================
-//  InlineComposer (vormals InputOverlay) — inline statt Fullscreen.
-//  Fügt sich unter dem Kern ein, blockiert NICHTS, kein Backdrop, kein
-//  Außenklick-Schließen. Nur ESC oder X schließen.
+//  InlineComposer — inline statt Fullscreen.
 // =============================================================================
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { X, Paperclip } from "lucide-react";
+import { X, Paperclip, Mic, Square, Loader2 } from "lucide-react";
 import InputPills, { type InputMode } from "./InputPills";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -19,6 +17,7 @@ import {
   isUrl,
   type IntakePayload,
 } from "@/lib/intake/detectInputType";
+import { useVoiceRecorder } from "@/lib/voice/useVoiceRecorder";
 
 interface InputOverlayProps {
   open: boolean;
@@ -33,12 +32,14 @@ const InputOverlay = ({ open, onClose, onSubmit, className }: InputOverlayProps)
   const [linkText, setLinkText] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const noteRef = useRef<HTMLTextAreaElement>(null);
+  const voice = useVoiceRecorder();
 
   useEffect(() => {
     if (!open) {
       setMode("note");
       setNoteText("");
       setLinkText("");
+      voice.cancel();
     } else {
       window.setTimeout(() => noteRef.current?.focus(), 50);
     }
@@ -52,14 +53,6 @@ const InputOverlay = ({ open, onClose, onSubmit, className }: InputOverlayProps)
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
-
-  const handleVoice = useCallback(() => {
-    toast("Sprachaufnahme kommt bald", { description: "Phase 6" });
-  }, []);
-
-  useEffect(() => {
-    if (mode === "voice") handleVoice();
-  }, [mode, handleVoice]);
 
   const submitNote = useCallback(() => {
     const value = noteText.trim();
@@ -87,6 +80,13 @@ const InputOverlay = ({ open, onClose, onSubmit, className }: InputOverlayProps)
     },
     [onSubmit, onClose],
   );
+
+  const submitVoice = useCallback(() => {
+    if (!voice.transcript) return;
+    onSubmit(detectFromText(voice.transcript));
+    voice.reset();
+    onClose();
+  }, [voice.transcript, onSubmit, onClose, voice.reset]);
 
   const handleNoteKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
@@ -214,8 +214,91 @@ const InputOverlay = ({ open, onClose, onSubmit, className }: InputOverlayProps)
       )}
 
       {mode === "voice" && (
-        <div className="flex min-h-[140px] flex-col items-center justify-center gap-3 rounded-md border border-dashed border-border/30 bg-background/20 text-muted-foreground/60">
-          <span className="text-sm tracking-wide">Sprachaufnahme kommt in Phase 6</span>
+        <div className="flex min-h-[140px] flex-col items-center justify-center gap-4 rounded-md border border-dashed border-border/30 bg-background/20">
+          {voice.status === "idle" && (
+            <button
+              type="button"
+              onClick={voice.start}
+              className="flex flex-col items-center gap-3 text-muted-foreground/70 hover:text-primary transition-colors"
+            >
+              <div className="w-14 h-14 rounded-full border-2 border-current flex items-center justify-center hover:scale-105 transition-transform">
+                <Mic className="size-6" />
+              </div>
+              <span className="text-xs tracking-wide">Aufnahme starten</span>
+            </button>
+          )}
+
+          {voice.status === "recording" && (
+            <div className="flex flex-col items-center gap-3">
+              <button
+                type="button"
+                onClick={voice.stop}
+                className="flex flex-col items-center gap-3 text-destructive hover:text-destructive/80 transition-colors"
+              >
+                <div className="w-14 h-14 rounded-full border-2 border-current flex items-center justify-center animate-pulse">
+                  <Square className="size-5" />
+                </div>
+                <span className="text-xs tracking-wide">Aufnahme stoppen</span>
+              </button>
+              <div className="flex items-center gap-1.5">
+                {[...Array(5)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="w-1 bg-primary/60 rounded-full animate-pulse"
+                    style={{
+                      height: `${12 + Math.random() * 16}px`,
+                      animationDelay: `${i * 150}ms`,
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {voice.status === "transcribing" && (
+            <div className="flex flex-col items-center gap-3 text-muted-foreground/60">
+              <Loader2 className="size-8 animate-spin" />
+              <span className="text-xs tracking-wide">Transkribiere…</span>
+            </div>
+          )}
+
+          {voice.status === "done" && voice.transcript && (
+            <div className="w-full space-y-3 px-4">
+              <p className="text-sm text-foreground/90 leading-relaxed bg-background/40 rounded-lg p-3 border border-border/20">
+                {voice.transcript}
+              </p>
+              <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={voice.reset}
+                  className="text-[11px] text-muted-foreground/50 hover:text-muted-foreground transition-colors tracking-wide"
+                >
+                  Nochmal
+                </button>
+                <Button
+                  onClick={submitVoice}
+                  variant="outline"
+                  size="sm"
+                  className="border-primary/30 text-primary hover:bg-primary/10 hover:text-primary"
+                >
+                  Übernehmen
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {voice.status === "error" && (
+            <div className="flex flex-col items-center gap-3 text-destructive/80">
+              <p className="text-xs tracking-wide">{voice.error ?? "Fehler bei der Aufnahme"}</p>
+              <button
+                type="button"
+                onClick={voice.reset}
+                className="text-[11px] text-muted-foreground/50 hover:text-muted-foreground transition-colors underline"
+              >
+                Nochmal versuchen
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
