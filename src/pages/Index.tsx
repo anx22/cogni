@@ -35,6 +35,7 @@ const Index = () => {
 
   const { intake } = useIntake({ setEntityState });
   const voice = useEntityVoice(session?.user?.id);
+  const { projects: liveProjects } = useProjects();
 
   const busy = entityState === "processing" || entityState === "review-ready";
   const isDragActive = dragActive || entityState === "hover";
@@ -282,7 +283,7 @@ const Index = () => {
           <SideGrid
             side="left"
             label="Projekte"
-            projects={demoProjects}
+            projects={liveProjects}
             activeId={activeProjectId}
             onProjectClick={handleProjectClick}
             isDragActive={isDragActive}
