@@ -90,7 +90,8 @@ const iconForType = (t?: string): LucideIcon => {
 };
 
 const sessionStatusToTile = (s: Session): TileStatus => {
-  if (s.status === "completed" || s.status === "cancelled") return "closed";
+  if (s.status === "cancelled") return "rejected";
+  if (s.status === "completed") return "closed";
   if ((s.resolved_boxes ?? 0) >= (s.total_boxes ?? 0) && (s.total_boxes ?? 0) > 0) return "closed";
   return "open";
 };
