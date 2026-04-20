@@ -1,49 +1,50 @@
 
 
-## Plan: manuell-Flag automatisch in Dialog-Boxen setzen
+## Plan: Phase 5 — Universeller Input (final)
 
-### Ziel
-Wenn ein Nutzer im Dialog etwas bestätigt/eingibt (EingabeBox, AuswahlBox, KonfliktBox), wird der zugehörige Fakt automatisch als `manuell: true` markiert — sichtbar via `SourceMarker`.
+### Entscheidungen
+- **Drop**: bleibt direkt am Kern (wie heute)
+- **Klick auf Kern**: öffnet großes, reduziertes Eingabe-Overlay
+- **Modus-Auswahl im Overlay**: Pills (Notiz · Link · Datei · Sprache)
+- **Voice**: Mikro-Pill als Platzhalter, Toast „kommt bald"
+- **Link**: stiller Intake mit Toast „Link aufgenommen"
 
-### Problem
-Das Dialog-System ist heute eine isolierte Session ohne Rückkanal in `demoProject`. Boxen rufen `updateBoxPayload` + `updateBoxState` auf, aber das Ergebnis landet nirgends in den Listen (Handlungsbedarf, Verlauf etc.). Die `manuell`-Flags in `demoProject.ts` sind heute statisch gesetzt.
+### Architektur
 
-### Schlanker Lösungsansatz
+**Neue Dateien**
+- `src/lib/intake/detectInputType.ts` — erkennt file/url/text aus Paste/Drop
+- `src/lib/intake/useIntake.ts` — zentraler `intake(payload)`-Eintrittspunkt: Toast + Pulse-Trigger am Kern, mockt Verarbeitung
+- `src/components/entity/InputOverlay.tsx` — Vollbild-Overlay (dunkel, glasartig, zentriert), Pills oben, großes Eingabefeld in der Mitte, ESC/Klick-außerhalb schließt
+- `src/components/entity/InputPills.tsx` — Pills-Leiste (Notiz aktiv, Link, Datei, Sprache), schaltet Inhaltsfläche um
 
-**1. Globaler "manuell-bestätigt"-Store (Set von Quellen-IDs)**
-Neuer leichter Context `ManualOverridesProvider` mit:
-- `manualSources: Set<string>` (z. B. `"Gap #g3"`, `"h5"`, `"Mail Thomas"`)
-- `markManual(quelle: string)` Funktion
+**Geänderte Dateien**
+- `src/components/EntityCore.tsx` — Drop bleibt, neuer `onClick` öffnet Overlay; Drop ruft jetzt `useIntake` statt lokalem Setstate
+- `src/pages/Index.tsx` — Overlay-State (`open`/`close`), Verdrahtung Kern↔Overlay↔Intake
 
-Kein Persistenz, kein Datenmodell-Eingriff, nur Runtime-State für den Prototyp.
+### Overlay-Verhalten
+- Öffnet zentriert über dem Kern (Backdrop-Blur, dunkel)
+- Pills: **Notiz** (Default, großes Textarea), **Link** (URL-Feld, stiller Intake), **Datei** (Klick öffnet File-Picker, Drop weiterhin außerhalb möglich), **Sprache** (deaktiviert/Toast)
+- Auto-Detection: wer im Notiz-Feld eine URL pastet, springt nicht um — landet als Link via Detection beim Submit
+- Submit per Enter (Cmd/Ctrl+Enter bei Textarea) oder Button → `intake()` → Overlay schließt → Toast + Kern-Pulse
 
-**2. Dialog-Boxen rufen `markManual` beim Bestätigen**
-- `EingabeBox.submit()` → `markManual(session.context)`
-- `AuswahlBox` Übernehmen → `markManual(session.context)`
-- `KonfliktBox.confirm()` → `markManual(session.context)`
+### Intake-Stub
+`useIntake` zeigt:
+- Toast: „{Typ} aufgenommen — wird verarbeitet"
+- Setzt kurz `entityState` auf `processing`, danach zurück auf `idle`
+- Kein Backend, kein Storage — Hook bietet später einen Plug-Point für Phase 6
 
-Die `session.context` enthält bereits die Quellen-Referenz (z. B. `"Gap #g3"`, `"Konflikt #k1"`, Handlungsbedarf-ID).
+### Was NICHT in Phase 5
+- Kein echter Upload, kein Parsing, keine Voice-Aufnahme
+- Keine Link-Vorschau (Briefing-konform: stiller Intake)
+- Keine Persistenz der Inputs
 
-**3. `SourceMarker` liest aus dem Store**
-`manuell`-Prop wird zu `manuell?: boolean` (statischer Override aus Demo-Daten) ODER abgeleitet aus `useManualOverrides().has(quelle)`. Effektiv: `manuell || isManual(quelle)`.
+### Memory & Docs
+- Neue Notiz `mem://features/universeller-input` — Pills statt Auto-Switch, Drop am Kern, Click öffnet Overlay
+- Update `docs/implementierung-aktuell.md` — Phase 5 als „in Arbeit" → nach Bau auf „erledigt"
+- Update `docs/geplant.md` — Phase 5 abhaken
 
-**4. Provider in `App.tsx` einhängen**
-Wrappt die App, damit alle Komponenten Zugriff haben.
-
-### Was wir NICHT machen
-- Keine Mutation von `demoProject.ts` zur Laufzeit.
-- Kein neues Feld am Datenmodell.
-- Keine Persistenz/Backend.
-- Kein Refactoring der Box-Signaturen.
-
-### Betroffene Dateien
-- `src/lib/dialog/manualOverrides.tsx` (neu) — Context + Provider + Hook
-- `src/App.tsx` — Provider einhängen
-- `src/components/dialog/boxes/EingabeBox.tsx` — `markManual` im submit
-- `src/components/dialog/boxes/AuswahlBox.tsx` — `markManual` beim Übernehmen
-- `src/components/dialog/boxes/KonfliktBox.tsx` — `markManual` im confirm
-- `src/components/project/shared/SourceMarker.tsx` — Store-Lookup ergänzen
-
-### Effekt im Prototyp
-Nutzer öffnet z. B. einen Handlungsbedarf-Item, gibt eine Antwort ein → schließt → der `SourceMarker` dieses Items zeigt jetzt das UserCheck-Icon + "manuell". Ohne Reload, ohne Datenänderung.
+### Betroffene Dateien (Übersicht)
+- neu: `src/lib/intake/detectInputType.ts`, `src/lib/intake/useIntake.ts`, `src/components/entity/InputOverlay.tsx`, `src/components/entity/InputPills.tsx`
+- geändert: `src/components/EntityCore.tsx`, `src/pages/Index.tsx`, `docs/implementierung-aktuell.md`, `docs/geplant.md`
+- neu (Memory): `mem://features/universeller-input`, Update `mem://index.md`
 
