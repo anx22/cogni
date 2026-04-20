@@ -3,6 +3,8 @@ import type { BoxState, DialogSession } from "@/lib/dialog/types";
 
 export interface DialogContextValue {
   session: DialogSession | null;
+  /** True wenn die aktuelle Session nur lesend angezeigt wird. */
+  readonly: boolean;
   openDialog: (session: DialogSession) => void;
   closeDialog: () => void;
   updateBoxState: (boxId: string, state: BoxState) => void;
@@ -12,9 +14,7 @@ export interface DialogContextValue {
   /** Lädt die aktuelle Session erneut aus der Datenbank. */
   refreshFromDB: () => Promise<void>;
   /**
-   * Persistente Entscheidung für eine Box.
-   * Wenn die Box ein `__reviewCaseId` im payload hat, wird die Edge Function
-   * `commit-fact` aufgerufen — sonst bleibt es ein reines UI-Update (Demo-Modus).
+   * Persistente Entscheidung für eine Box. No-op im Read-Only-Modus.
    */
   commitBox: (
     boxId: string,

@@ -5,8 +5,22 @@ import { useDialog } from "./DialogProvider";
 import BoxRenderer from "./BoxRenderer";
 import { END_STATES } from "@/lib/dialog/types";
 
+const formatDate = (iso?: string | null) => {
+  if (!iso) return null;
+  try {
+    return new Date(iso).toLocaleDateString("de-DE", {
+      day: "2-digit",
+      month: "long",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return null;
+  }
+};
+
 const DialogOverlay = () => {
-  const { session, closeDialog } = useDialog();
+  const { session, closeDialog, readonly } = useDialog();
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -22,49 +36,56 @@ const DialogOverlay = () => {
   const decisionBoxes = session.boxes.filter((b) => b.type !== "kontext");
   const decided = decisionBoxes.filter((b) => END_STATES.includes(b.state)).length;
   const total = decisionBoxes.length;
+  const closedAt = formatDate(session.closedAt);
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-background/85 backdrop-blur-md animate-[fade-in_0.2s_ease-out]"
+      className="fixed inset-0 z-[100] overflow-y-auto bg-background/80 backdrop-blur-xl animate-[fade-in_0.25s_ease-out]"
       onClick={(e) => {
         if (e.target === e.currentTarget) closeDialog();
       }}
     >
-      <div className="w-full max-w-2xl my-12 mx-4 rounded-2xl border border-border-strong bg-surface-1 shadow-card-glow overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between gap-4 px-6 py-4 border-b border-border-subtle bg-surface-2/60">
-          <div className="flex items-center gap-3 min-w-0">
-            <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground/70 truncate">
-              {session.anlass}
-            </p>
-            {session.context && (
-              <span className="text-[11px] px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/30">
-                {session.context}
+      {/* Schwebender Header — kein Card-Look */}
+      <div className="sticky top-0 z-10 flex items-start justify-between gap-6 px-10 md:px-16 lg:px-24 pt-10 pb-6 backdrop-blur-md bg-background/40">
+        <div className="min-w-0 flex-1">
+          <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground/60 mb-2">
+            {readonly ? "Abgeschlossen" : session.context ?? "Verstehen"}
+            {readonly && closedAt && (
+              <span className="ml-3 normal-case tracking-normal text-muted-foreground/50">
+                · {closedAt}
               </span>
             )}
-          </div>
-          <button
-            type="button"
-            onClick={closeDialog}
-            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-surface-3 transition-colors"
-            aria-label="Schließen"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          </p>
+          <h2 className="text-3xl md:text-4xl font-light text-foreground/95 tracking-tight leading-tight">
+            {session.anlass}
+          </h2>
+          {!readonly && total > 0 && (
+            <p className="mt-3 text-sm text-muted-foreground/70 tracking-wide">
+              {decided} von {total} entschieden
+            </p>
+          )}
         </div>
+        <button
+          type="button"
+          onClick={closeDialog}
+          className="mt-1 p-2 rounded-full text-muted-foreground/50 hover:text-foreground hover:bg-surface-2/50 transition-colors"
+          aria-label="Schließen"
+        >
+          <X className="w-5 h-5" />
+        </button>
+      </div>
 
-        {/* Body */}
-        <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-          {session.boxes.map((b, i) => (
-            <div
-              key={b.id}
-              style={{ animationDelay: `${i * 60}ms` }}
-              className="animate-[fade-in_0.25s_ease-out_both]"
-            >
-              <BoxRenderer box={b} />
-            </div>
-          ))}
-        </div>
+      {/* Body — viel Luft, plakative Boxen */}
+      <div className="px-10 md:px-16 lg:px-24 pb-32 max-w-4xl mx-auto space-y-10">
+        {session.boxes.map((b, i) => (
+          <div
+            key={b.id}
+            style={{ animationDelay: `${i * 80}ms` }}
+            className="animate-[fade-in_0.35s_ease-out_both]"
+          >
+            <BoxRenderer box={b} />
+          </div>
+        ))}
       </div>
     </div>,
     document.body,

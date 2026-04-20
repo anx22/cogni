@@ -1,17 +1,7 @@
 import { ReactNode, forwardRef } from "react";
 import { Check, X } from "lucide-react";
 import { useDialog } from "./DialogProvider";
-import BoxStateBadge from "./BoxStateBadge";
-import type { BoxState, DialogBox } from "@/lib/dialog/types";
-
-const stateBarCls: Record<BoxState, string> = {
-  vorgeschlagen: "bg-transparent border-l border-dashed border-border-strong",
-  aufgeklappt: "bg-primary/60",
-  geaendert: "bg-amber-400/70",
-  bestaetigt: "bg-emerald-400/60",
-  verworfen: "bg-muted-foreground/30",
-  eskaliert: "bg-destructive/70",
-};
+import type { DialogBox } from "@/lib/dialog/types";
 
 interface BoxFrameProps {
   box: DialogBox;
@@ -23,54 +13,50 @@ interface BoxFrameProps {
 }
 
 const BoxFrame = ({ box, children, hideActions, actions }: BoxFrameProps) => {
-  const { commitBox } = useDialog();
-  const dim = box.state === "verworfen";
-  const collapsed = box.state === "bestaetigt";
+  const { commitBox, readonly } = useDialog();
+  const verworfen = box.state === "verworfen";
+  const bestaetigt = box.state === "bestaetigt";
+  const geaendert = box.state === "geaendert";
+  const collapsed = bestaetigt && !readonly; // im Edit-Modus zusammenklappen, im Readonly sichtbar lassen
+
+  const opacity = verworfen ? "opacity-40" : bestaetigt ? "opacity-60" : "opacity-100";
 
   return (
-    <div
-      className={`relative rounded-xl border bg-surface-2 shadow-card-glow overflow-hidden transition-opacity ${
-        dim ? "opacity-50" : ""
-      } border-border-subtle`}
-    >
-      <span className={`absolute left-0 top-0 bottom-0 w-1 ${stateBarCls[box.state]}`} />
-      <div className="pl-5 pr-5 py-4">
-        <div className="flex items-start justify-between gap-3 mb-3">
-          <h3
-            className={`text-sm font-medium text-foreground/95 ${
-              box.state === "verworfen" ? "line-through" : ""
-            }`}
-          >
-            {box.title}
-          </h3>
-          <BoxStateBadge state={box.state} />
-        </div>
-
-        {!collapsed && <div className="space-y-3">{children}</div>}
-
-        {!hideActions && !collapsed && (
-          <div className="flex flex-wrap gap-2 mt-4 pt-3 border-t border-border-subtle/60">
-            {actions ?? (
-              <>
-                <ActionBtn
-                  variant="primary"
-                  onClick={() => commitBox(box.id, "confirm")}
-                  icon={<Check className="w-3 h-3" />}
-                >
-                  Übernehmen
-                </ActionBtn>
-                <ActionBtn
-                  onClick={() => commitBox(box.id, "reject")}
-                  icon={<X className="w-3 h-3" />}
-                >
-                  Verwerfen
-                </ActionBtn>
-              </>
-            )}
-          </div>
+    <section className={`relative transition-opacity ${opacity}`}>
+      <div className="flex items-baseline gap-3 mb-5">
+        {geaendert && (
+          <span
+            className="w-2 h-2 rounded-full bg-amber-400/80 mt-2"
+            aria-label="geändert"
+          />
         )}
+        {bestaetigt && (
+          <Check className="w-5 h-5 text-emerald-400/80 mt-1" aria-label="übernommen" />
+        )}
+        <h3
+          className={`text-2xl md:text-3xl font-light text-foreground/95 leading-snug tracking-tight ${
+            verworfen ? "line-through" : ""
+          }`}
+        >
+          {box.title}
+        </h3>
       </div>
-    </div>
+
+      {!collapsed && <div className="space-y-5 text-foreground/85">{children}</div>}
+
+      {!hideActions && !collapsed && !readonly && (
+        <div className="flex flex-wrap items-center gap-6 mt-8">
+          {actions ?? (
+            <>
+              <ActionBtn variant="primary" onClick={() => commitBox(box.id, "confirm")}>
+                Übernehmen
+              </ActionBtn>
+              <ActionBtn onClick={() => commitBox(box.id, "reject")}>Verwerfen</ActionBtn>
+            </>
+          )}
+        </div>
+      )}
+    </section>
   );
 };
 
@@ -85,16 +71,16 @@ export const ActionBtn = forwardRef<HTMLButtonElement, ActionBtnProps>(
   ({ children, onClick, variant = "ghost", icon }, ref) => {
     const cls =
       variant === "primary"
-        ? "bg-primary/20 text-primary hover:bg-primary/30 border-primary/40"
+        ? "text-primary hover:text-primary/80 border-primary/40 hover:border-primary/70"
         : variant === "danger"
-          ? "bg-destructive/15 text-destructive hover:bg-destructive/25 border-destructive/40"
-          : "bg-surface-3 text-muted-foreground hover:text-foreground border-border-subtle hover:border-border-strong";
+          ? "text-destructive/80 hover:text-destructive border-transparent hover:border-destructive/40"
+          : "text-muted-foreground/80 hover:text-foreground border-transparent hover:border-border-strong";
     return (
       <button
         ref={ref}
         type="button"
         onClick={onClick}
-        className={`inline-flex items-center gap-1.5 text-[11px] uppercase tracking-wider px-2.5 py-1 rounded-md border transition-colors ${cls}`}
+        className={`inline-flex items-center gap-2 text-base font-light tracking-wide pb-1 border-b transition-colors ${cls}`}
       >
         {icon}
         {children}
