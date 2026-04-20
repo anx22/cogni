@@ -26,6 +26,7 @@ export function useEntityVoice(userId: string | undefined) {
   const [state, setState] = useState<VoiceState>({ text: null, tone: "calm" });
   const lastShownAt = useRef(0);
   const queue = useRef<VoiceState[]>([]);
+  const clearTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const enqueue = (next: VoiceState) => {
     queue.current.push(next);
@@ -41,6 +42,13 @@ export function useEntityVoice(userId: string | undefined) {
       if (!next) return;
       lastShownAt.current = Date.now();
       setState(next);
+      if (clearTimer.current) clearTimeout(clearTimer.current);
+      // Auto-Clear nach 8s, falls "ready" landet und nichts Neues kommt.
+      if (next.tone === "ready" && next.text) {
+        clearTimer.current = setTimeout(() => {
+          setState({ text: null, tone: "calm" });
+        }, 8000);
+      }
       if (queue.current.length > 0) drain();
     }, wait);
   };
