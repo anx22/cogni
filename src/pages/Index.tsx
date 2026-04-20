@@ -134,7 +134,8 @@ const Index = () => {
     };
   }, [session?.user, openSessionFromDB]);
 
-  // Wenn Dialog manuell geschlossen wird → Kern beruhigen
+  // Wenn Dialog manuell geschlossen wird → Kern beruhigen.
+  // pendingSessionId NICHT zurücksetzen — sonst Race mit dem Auto-Open-Effekt.
   useEffect(() => {
     if (!dialogSession && entityState === "review-ready") {
       setEntityState("idle");

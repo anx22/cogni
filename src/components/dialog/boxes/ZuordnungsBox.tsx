@@ -40,16 +40,13 @@ const ZuordnungsBox = ({ box }: { box: DialogBox }) => {
     <BoxFrame
       box={box}
       actions={
-        <>
-          <ActionBtn
-            variant="primary"
-            icon={<Check className="w-4 h-4" />}
-            onClick={handleConfirm}
-          >
-            Zuordnen
-          </ActionBtn>
-          <ActionBtn onClick={() => commitBox(box.id, "reject")}>Später</ActionBtn>
-        </>
+        <ActionBtn
+          variant="primary"
+          icon={<Check className="w-4 h-4" />}
+          onClick={handleConfirm}
+        >
+          Zuordnen
+        </ActionBtn>
       }
     >
       {agentReason && (

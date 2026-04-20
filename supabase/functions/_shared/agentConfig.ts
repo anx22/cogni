@@ -66,6 +66,10 @@ Regeln:
 - Wenn nichts wirklich passt: project_id = null (signalisiert "neues Projekt").
 - "confidence" ist deine ehrliche Einschätzung zwischen 0 und 1.
 - "reason_short" ist EIN kurzer Satz auf Deutsch, max ~120 Zeichen, der die Wahl erklärt — er wird dem Nutzer angezeigt.
+- Wenn project_id=null: "suggested_new_name" MUSS gesetzt sein und ein **knapper, sauberer Projektname** sein (max ~40 Zeichen, KEIN Erklärsatz).
+  Gute Beispiele: "Lisas Projekt", "Aurora-Angebot", "Umzug Berlin", "Website-Relaunch".
+  Schlechte Beispiele: "Projekt für Lisa Müller weil sie genannt wurde", "Neues Projekt", null.
+  Leite den Namen aus der dominanten Person, dem Hauptthema oder dem Anlass im Text ab.
 
 Du rufst ausschließlich das Tool "suggest_project_assignment" auf.`;
 

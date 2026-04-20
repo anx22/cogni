@@ -1,6 +1,6 @@
 // =============================================================================
-//  HomeDropOverlay — Fullscreen-Drop-Layer für die Home-Ansicht.
-//  Idle: einladend. Busy: blockiert sichtbar.
+//  HomeDropOverlay — erscheint NUR während eines aktiven Drags.
+//  Kein Busy-Vollblocker mehr. Ohne Drag = nicht im DOM.
 // =============================================================================
 
 interface Props {
@@ -12,7 +12,7 @@ const HomeDropOverlay = ({ active, busy }: Props) => {
   if (!active) return null;
   return (
     <div
-      className="fixed inset-0 z-40 flex items-center justify-center bg-background/70 backdrop-blur-md pointer-events-none transition-opacity"
+      className="fixed inset-0 z-40 flex items-center justify-center bg-background/60 backdrop-blur-sm pointer-events-none transition-opacity"
       aria-hidden
     >
       <div
