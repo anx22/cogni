@@ -67,8 +67,6 @@ const LageZone = ({ project }: { project: Project }) => {
           )}
         </div>
 
-        {/* Signale: Gaps + Dependencies */}
-        <SignalStrip gaps={project.gaps} dependencies={project.dependencies} />
       </div>
     </section>
   );
