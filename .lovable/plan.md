@@ -1,109 +1,116 @@
-## Phase 7.7.1 — Intake-Korrekturen, vier konkrete Bugs
 
-Vier eigenständige Fehler aus dem letzten Schnitt. Kein neues Konzept, nur Reparatur.
+
+## Phase 7.7.2 — Inline statt Overlay, persistente Session-Liste, ehrliche Stimme
+
+Vier eigenständige Korrekturen. Keine neuen Konzepte, nur Aufräumen dort, wo der Bildschirm noch fälschlich blockiert oder Texte hängen bleiben.
 
 ---
 
-### 1. Kein Fullscreen-Blocker mehr beim Verarbeiten
+### 1. Stimme räumt sich nach Intake-Ende selbst ab
 
-**Bug:** `HomeDropOverlay` legt sich beim Drag *und* beim "busy"-Zustand mit `fixed inset-0 backdrop-blur-md` über den gesamten Screen. Im Screenshot: alles unscharf, unbedienbar.
+**Bug:** Nach Auto-Close des Dialogs steht der „Bereit. N Sachen für dich"-Satz (oder die Agent-Reason) ewig unter dem Kern, weil nichts ihn löscht.
 
-**Fix:**
+**Fix in `useEntityVoice.ts`:**
+- Neuen Trigger einbauen: `dialog_sessions UPDATE` mit `status='completed'` oder `'cancelled'` → `enqueue({ text: null, tone: 'calm' })`.
+- Zusätzlich: nach jedem `ready`-Satz einen impliziten Auto-Clear nach 8 s, falls **kein** weiterer Event kommt (Fallback bei verlorener Session-Update-Subscription).
+- `EntityVoice.tsx` rendert bei `text === null` schon `null` — keine Änderung nötig.
 
-- `HomeDropOverlay` rendert sich **nur** während eines aktiven Drags (`active === true`). Ohne Drag = nicht im DOM, kein Backdrop.
-- Während `busy` ohne Drag passiert visuell **nichts** auf Home. Der Kern wird heiß (das ist die Rückmeldung), das Stimm-Voice-Element informiert.
-- Wenn der Nutzer während `busy` *droppt*: Das Overlay erscheint kurz mit "Noch beschäftigt" — aber es **blockiert die UI nicht ungefragt**. Der Drag-Counter macht es ohnehin nur sichtbar, solange Files über der Seite sind. Sobald man sie wegzieht oder fallenlässt → weg.
-- Restliche Home-UI (`SideGrid`, `IntakeSessionsPanel`, Top-Buttons, EntityVoice) bleibt während `busy` voll bedienbar. Nur neue Drops werden in `handleDrop` abgelehnt — alles andere unverändert klickbar.
+### 2. Rechtes Panel: gleiches Vokabular wie linkes Projekte-Panel, aber **eine** Spalte mit Inline-Scroll
 
-### 2. Projektzuordnung kann nicht mehr abgelehnt/übersprungen werden
+**Heute:** Grid 4×5, kleine quadratische Kacheln mit Layers-Icon, separates Vokabular.
 
-**Bug:** `ZuordnungsBox` zeigt einen "Später"-Button, der `commitBox(..., "reject")` aufruft. Damit kann die Box als verworfen markiert werden, ohne dass je eine Projekt-ID gewählt wurde — Folge: alle anderen Boxen scheitern später mit `NEEDS_ASSIGNMENT`.
+**Neu — `IntakeSessionsPanel.tsx` wird auf das `ProjectTile`-Format umgebaut:**
 
-**Fix:**
+- **Layout:** 1 Spalte, feste Tile-Breite (140 px wie `ProjectTile`), Höhe 72 px. Container ist eine `ScrollArea` mit `max-h: ~480px` (etwa 6 sichtbare Tiles), darüber/darunter dezenter Fade.
+- **Tile-Anatomie** (parallel zu `ProjectTile`):
+  - Links: kleines Icon-Chip 28 px (statt Initial-Buchstabe). Icon richtet sich nach **Intake-Typ** des ersten Assets:
+    - `note` → `StickyNote`
+    - `url` → `Link`
+    - `image` → `Image`
+    - `audio` → `Mic`
+    - `email/eml` → `Mail`
+    - `pdf/doc/docx` → `FileText`
+    - `pptx` → `Presentation`
+    - sonst → `File`
+  - Multi-Drop: das Icon wird durch die **Anzahl** ersetzt (z. B. „3"), wie heute schon — bleibt.
+  - Mitte: Titel + Meta-Zeile (12/10 px) — Titel = `firstName` gekürzt, Meta = relative Zeit + „N offen" oder „abgeschlossen".
+  - Rechts oben: 1–2 Status-Punkte exakt nach `ProjectTile`-Logik:
+    - `pending` → amber, pulsierend
+    - `open` → primary/blau
+    - `closed` → emerald
+    - `empty` → grau
+- **Klick-Verhalten** unverändert (pending = no-op, open = edit, closed = readonly).
+- **Pagination-Dots** entfallen, weil Inline-Scroll. Label „Intake" bleibt unter dem Container (klein, uppercase, wie heute).
+- **Container-Styling:** identisch zu `SideGrid` (rounded-3xl, Punktraster-Background, `bg-surface-1/0.3`, Padding 7) — nur Inhalt = vertikale Liste.
 
-- "Später"-Button aus `ZuordnungsBox` entfernen. Es gibt nur noch **eine** Aktion: "Zuordnen".
-- VOR Zuordnung können andre fragen nicht beantwortet werden
-- Entscheidung ist immer `confirm` mit entweder `project_id` (vorhandenes Projekt) oder `new_project_name` (neu anlegen).
-- Im `BoxFrame`-Footer wird in der Zuordnungsbox ausschließlich der "Zuordnen"-Button gerendert.
-- Backend: `commit-fact` → `handleAssignment` darf bei `box_type='assignment'` keine `decision='reject'` mehr akzeptieren. Falls doch → 400 mit klarer Meldung. Damit ist es auch über Direktaufrufe nicht mehr möglich.
+### 3. Drop-Overlay: kein Blocker mehr, nur ein schwebender Hinweis
 
-### 3. „Lisas Projekt" wird nicht vorausgewählt / vorgeschlagen
-
-**Bug:** Bei der Testdatei mit „Lisa Müller" liefert der Agent `reason_short` wie *„Die explizite Nennung von Lisa Müller legt Zuordnung zu Lisas Projekt nahe."* — aber:
-
-- Es existiert kein DB-Projekt namens „Lisas Projekt" → lexikalischer Score = 0 → `mode='new'`.
-- `suggested_new_name` vom Agent ist null (Tool-Schema erlaubt es, aber der Agent füllt es bei `project_id=null` häufig nicht).
-- Aktueller Fallback: `reason_short.split(/[.,;:–—-]/)[0]` → ergibt einen ganzen Halbsatz wie „Die explizite Nennung von Lisa Müller legt Zuordnung zu Lisas Projekt nahe", nicht „Lisas Projekt".
-
-**Fix in zwei Ebenen:**
-
-**a) Prompt-Klarstellung in `agentConfig.ts` (`ASSIGNMENT_SYSTEM_PROMPT`):**
-
-- Wenn `project_id=null`, MUSS `suggested_new_name` ein **knapper, sauberer Projektname** sein (max ~40 Zeichen), keine Erklärung. Beispiele in den Prompt aufnehmen: *„Lisas Projekt"*, *„Aurora-Angebot"*, nicht *„Projekt für Lisa"*.
-
-**b) Robusterer Server-Fallback in `intake-understand`:**
-
-- Wenn `suggested_new_name` leer ist:
-  1. Erstens: aus `reason_short` einen quotierten Namen extrahieren via Regex auf `„…"`, `"…"`, `'…'`. Bei der Testdatei matcht das auf `„Lisas Projekt"`.
-  2. Zweitens: dominanten Stakeholder/Topic-Namen aus den extrahierten `facts` ziehen. Bei „Lisa Müller" als Stakeholder-Fact → `"Lisa Müllers Projekt"`.
-  3. Erst danach: Dateiname-Fallback.
-- `defaultSelection` in `ZuordnungsBox`: bei `mode='new'` → `__new__` (steht schon richtig); das Textfeld bekommt den Default-Wert direkt aus `suggestedNewName` — heute schon korrekt verdrahtet. Wenn der Backend-Fallback greift, steht der Name automatisch im Eingabefeld.
-
-### 4. Bereits entschiedene Boxen müssen während der Session korrigierbar sein
-
-**Bug:** `BoxFrame` collapsed bestätigte Boxen (`collapsed = bestaetigt && !readonly`) → Aktionen weg, Inhalte weg, kein Weg zurück.
+**Bug:** `HomeDropOverlay` hat `bg-background/60 backdrop-blur-sm` über `inset-0` — das verdunkelt und verschleiert die ganze Oberfläche, auch wenn `pointer-events-none` gesetzt ist.
 
 **Fix:**
+- `HomeDropOverlay` komplett **ohne Hintergrund, ohne Blur, ohne Vollflächen-Container**. Stattdessen:
+  - Ein einzelner schwebender Hinweistext oben mittig (z. B. fixed `top-12 left-1/2 -translate-x-1/2`), groß und leicht (`text-3xl font-light`), mit weichem Text-Shadow gegen den Background.
+  - Bei `idle`: „Lass los — ich höre zu." (eine Zeile, optional Subline klein darunter).
+  - Bei `busy`-Drop-Versuch: „Noch beschäftigt — gleich wieder."
+  - `pointer-events-none` bleibt, damit nichts geklickt wird.
+- Kein `inset-0`, kein `bg-*`, kein `backdrop-blur-*`. Der Rest des Screens (SideGrid links, Sessions rechts, Kern, Top-Buttons) bleibt **vollständig sichtbar und unverändert**.
+- `EntityCore` darf während `dragActive` zusätzlich seinen vorhandenen Glow verstärken (das macht es heute schon via `state==='hover'`-Pfad). Keine weitere Maskierung.
+- `SideGrid`/`IntakeSessionsPanel` verlieren das `opacity-30 pointer-events-none`-Styling beim Drag — sie sollen **nicht** mehr ausgeblendet werden. Das `isDragActive`-Prop bleibt im Interface, wird aber zur No-Op (rückwärtskompatibel).
 
-- Im Edit-Modus bleiben bestätigte und verworfene Boxen sichtbar (Opacity wie heute), aber:
-  - Sie zeigen ihren finalen Zustand (Häkchen / durchgestrichen) ungeändert.
-  -  "Übernehmen/Verwerfen"-Aktionen bleibt änderbar  
+### 4. Manuelles Input-UI inline statt Fullscreen-Overlay
 
-  - Wichtig: das funktioniert nur lokal-zustandsmäßig vor dem nächsten Commit-Klick. Bei Klick auf "Übernehmen/Verwerfen" geht erneut ein `commitBox`-Call raus — der Backend-Code in `commit-fact` updated `review_cases.box_state` einfach idempotent, das ist heute schon so.
-- Im Read-Only-Modus (geschlossene Session)  Nur lesend.
+**Heute:** Klick auf den Kern → `InputOverlay` mit `fixed inset-0 bg-background/70 backdrop-blur-2xl` legt sich über alles.
 
-### 5. Auto-Close + Auto-Apply nach voller Beantwortung
+**Neu — Inline-Composer direkt im Home-Screen:**
 
-**Bug:** Wenn alle Boxen entschieden sind, bleibt der Dialog offen, der Nutzer muss manuell schließen.
+- `InputOverlay` wird zu **`InlineComposer`** (Datei umbenannt oder neue Komponente, alte behalten als ungenutzt/entfernen am Ende).
+- Position: **unter** dem Kern, da wo heute die kleine Hint-Zeile „Klick auf den Kern oder lege etwas hier ab" steht. Diese Hint-Zeile entfällt, sobald Composer offen.
+- Keine `fixed`-Positionierung, kein Backdrop, keine Maskierung. Der Composer ist Teil des normalen Layouts und wird via `animate-float-in` eingeblendet.
+- Optisches Format passt zum Screen:
+  - `max-w-xl`, zentriert.
+  - Container: `rounded-2xl bg-surface-1/30 backdrop-blur-sm border border-border/20 p-5`.
+  - Pills (`InputPills`) oben.
+  - Eingabefeld (Note/Link/File) darunter, kompakt (`min-h-[140px]` für Note, `h-12` für Link).
+  - Footer: linker Hinweis-Text + rechter „Übernehmen"-Button.
+  - X-Schließen-Button oben rechts im Container, **nicht** mehr screenfüllend.
+- Klick außerhalb des Composers schließt ihn **nicht** (kein Overlay-Pattern); nur ESC oder X schließen.
+- `SideGrid` und `IntakeSessionsPanel` bleiben sichtbar und **bedienbar**, während der Composer offen ist — der Nutzer kann während des Tippens parallel ein Projekt öffnen oder eine alte Session ansehen.
+- Submit-Verhalten unverändert (`onSubmit(payload)` → `intake()` → schließt Composer).
 
-**Fix:**
+### Zusammenspiel mit dem zentrierten Layout
 
-- In `DialogProvider`/`DialogOverlay`: kleiner Effect, der bei jedem `commitBox`-Erfolg prüft, ob alle Entscheidungs-Boxen (alle außer `kontext`) im End-Zustand sind (`END_STATES`).
-- Wenn ja:
-  - Kurze, leise Bestätigung (Voice oder kleines Toast: „Verstanden — abgeschlossen."), 1.2 s sichtbar.
-  - Dann `closeDialog()`.
-- Backend: `commit-fact.updateSessionProgress` setzt heute schon `status='completed'` wenn `resolved >= total` → die Session erscheint automatisch als grün im rechten Panel. Nichts zu ändern.
-- Nebenwirkung: `entityState` in `Index.tsx` darf nach Auto-Close zurück auf `idle` — der bestehende Effekt (`if (!dialogSession && entityState === "review-ready")`) greift, sobald der Dialog dicht ist.
-
-### 6. Overlay öffnet sich erst wenn die Entität fertig ist (Klärung)
-
-Heute korrekt verdrahtet: `dialog_sessions INSERT` → 1.4 s Voice-Beat → `openSessionFromDB`. Voraussetzung ist, dass `entityState` vorher auf `processing` steht (Heißfarbe) und beim Insert auf `review-ready` wechselt. Das stimmt im Code. Falls beim Test wieder nicht: in `pendingSessionId`-Logik die Race-Condition mit dem dialogSession-Auto-Close-Effect entschärfen — der setzt heute `entityState='idle'`, sobald `dialogSession === null`, was nach einem manuellen Schließen direkt das Overlay-Wieder-Öffnen verhindert. Wir entkoppeln das: `pendingSessionId` wird **nicht** in dem Effekt zurückgesetzt; nur `setEntityState('idle')`.
+`Index.tsx` ist heute via Flex zentriert. Der Composer würde unter dem Kern den Kern verschieben. Lösung:
+- Composer rendert in einem **eigenen absolut positionierten Container** unter dem Kern (`absolute top-[58%] left-1/2 -translate-x-1/2`, ähnlich wie heute `EntityVoice`/Hinweis).
+- Der Kern bleibt seine zentrale Verankerung; der Composer schwebt darunter und überlagert nichts außer der ursprünglichen Hint-Zeile.
 
 ---
 
 ### Betroffene Dateien
 
-- `src/components/entity/HomeDropOverlay.tsx` — bleibt strikt drag-only, kein Busy-Vollblocker
-- `src/components/dialog/boxes/ZuordnungsBox.tsx` — „Später"-Aktion entfernen, nur „Zuordnen"
-- `src/components/dialog/BoxFrame.tsx` — bestätigte Boxen mit „Korrigieren"-Link statt collapse
-- `src/components/dialog/DialogProvider.tsx` — Auto-Close bei vollständiger Beantwortung
-- `src/pages/Index.tsx` — Pending-Session-Effect sauber entkoppeln (kein vorzeitiger Reset)
-- `supabase/functions/_shared/agentConfig.ts` — Prompt schärft `suggested_new_name`
-- `supabase/functions/intake-understand/index.ts` — robusterer Fallback (quotierter Name → Stakeholder → Filename)
-- `supabase/functions/commit-fact/index.ts` — `box_type='assignment'` darf nicht `reject` werden
+**Geändert:**
+- `src/lib/voice/useEntityVoice.ts` — Auto-Clear bei `dialog_sessions UPDATE status=completed/cancelled` + 8 s-Fallback nach `ready`-Satz
+- `src/components/entity/IntakeSessionsPanel.tsx` — Layout auf 1-Spalten-Liste mit `ScrollArea`, Tile-Anatomie wie `ProjectTile`, Typ-Icon-Mapping
+- `src/components/entity/HomeDropOverlay.tsx` — Hintergrund/Blur/inset-0 raus, nur schwebender Text oben
+- `src/components/entity/InputOverlay.tsx` → wird zu `InlineComposer.tsx` (oder umgebaut): keine `fixed`-Position, kein Backdrop, keine Außenklick-Schließen
+- `src/pages/Index.tsx` — Composer absolut positioniert unter dem Kern, `isDragActive`-Maskierung von SideGrid/Sessions raus, Hint-Text bei offenem Composer ausblenden
+- `src/components/entity/SideGrid.tsx` — `isDragActive`-Opacity-Block entfernen (Prop bleibt für Rückwärtskompatibilität, ohne Effekt)
+
+**Nicht angefasst:**
+- `EntityCore`, `EntityVoice` (Stimme bleibt visuell wie sie ist, wird nur korrekt geräumt)
+- DialogProvider/Overlay/Boxen
+- Edge-Functions
 
 ### Akzeptanzkriterien
 
-- Während Verarbeitung ist die UI **voll** bedienbar; nichts liegt blockierend übers Bild.
-- Beim Drag erscheint das Overlay nur, solange tatsächlich gezogen wird, und verschwindet beim Loslassen.
-- Die Zuordnungsbox hat nur einen Button: „Zuordnen". Keine Möglichkeit zu überspringen.
-- Bei der Testdatei steht im neuen-Projekt-Feld bereits ein sauberer Name (z. B. „Lisas Projekt") als Default.
-- Während des Verstehens-Laufs lassen sich bereits entschiedene Boxen immer noch bearbeiten.
-- Sobald alle Boxen entschieden sind, schließt sich der Dialog automatisch nach kurzer Bestätigung.
-- Vom Panel rechts geöffnete, abgeschlossene Sessions bleiben strikt read-only (kein „Korrigieren"-Link).
+- Nach Abschluss eines Intakes verschwindet der Hinweistext unter dem Kern selbständig.
+- Rechts: vertikale Session-Liste mit `ProjectTile`-Look, eigene Icons je Intake-Typ, inline scrollbar.
+- Drop irgendwo auf dem Screen funktioniert; während des Drags erscheint **nur** ein schwebender Text — der Rest des Screens bleibt vollständig sichtbar und unverdunkelt.
+- Klick auf den Kern öffnet einen Inline-Composer unter dem Kern; SideGrid und Sessions bleiben sichtbar und klickbar.
+- Während Verarbeitung (`busy`) ist nichts geblockt; nur ein neuer Drop wird abgewiesen.
 
 ### Bewusst draußen
 
-- Kompletter Re-Open einer geschlossenen Session in den Edit-Modus.
-- Undo nach dem Auto-Close.
-- Re-Run von einzelnen Boxen gegen den Agent.
+- Composer-Animationen über mehr als ein Fade-In.
+- Persistenz von Composer-Entwürfen über Reload.
+- Filter/Suche in der Session-Liste.
+
