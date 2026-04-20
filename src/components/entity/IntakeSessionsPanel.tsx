@@ -1,9 +1,10 @@
 // =============================================================================
 //  IntakeSessionsPanel — rechtes Home-Panel.
 //  Vertikale Liste im ProjectTile-Look, inline scrollbar, Typ-Icons je Asset.
+//  + Failed-Tiles mit Retry (C2), + HoverCard Asset-Preview (C3)
 // =============================================================================
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import {
   StickyNote,
   Link as LinkIcon,
@@ -13,6 +14,7 @@ import {
   FileText,
   Presentation,
   File,
+  RefreshCw,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -20,23 +22,28 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useDialog } from "@/components/dialog/DialogProvider";
 import { formatRelative } from "@/lib/format/relativeTime";
+import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
+import { toast } from "sonner";
 import type { Database } from "@/integrations/supabase/types";
 
 type Session = Database["public"]["Tables"]["dialog_sessions"]["Row"];
 type Asset = Database["public"]["Tables"]["assets"]["Row"];
 
-type TileStatus = "pending" | "open" | "closed" | "rejected" | "empty";
+type TileStatus = "pending" | "open" | "closed" | "rejected" | "empty" | "failed";
 
 interface SessionTile {
   key: string;
   sessionId?: string;
+  assetId?: string;
   status: TileStatus;
   count: number;
   firstName: string;
   fileType?: string;
+  fileSize?: number | null;
   resolved?: number;
   total?: number;
   createdAt: string;
+  projectId?: string | null;
 }
 
 const LIMIT = 30;
@@ -62,31 +69,34 @@ const STATUS_BADGE: Record<TileStatus, { label: string; className: string }> = {
     label: "leer",
     className: "bg-foreground/5 text-muted-foreground/50 ring-1 ring-foreground/10",
   },
+  failed: {
+    label: "fehlgeschlagen",
+    className: "bg-destructive/15 text-destructive ring-1 ring-destructive/30",
+  },
 };
 
 const iconForType = (t?: string): LucideIcon => {
   switch (t) {
-    case "note":
-      return StickyNote;
+    case "note": return StickyNote;
     case "url":
-    case "link":
-      return LinkIcon;
-    case "image":
-      return ImageIcon;
-    case "audio":
-      return Mic;
+    case "link": return LinkIcon;
+    case "image": return ImageIcon;
+    case "audio": return Mic;
     case "eml":
-    case "email":
-      return Mail;
+    case "email": return Mail;
     case "pdf":
     case "doc":
-    case "docx":
-      return FileText;
-    case "pptx":
-      return Presentation;
-    default:
-      return File;
+    case "docx": return FileText;
+    case "pptx": return Presentation;
+    default: return File;
   }
+};
+
+const formatSize = (bytes: number | null | undefined) => {
+  if (!bytes) return null;
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 
 const sessionStatusToTile = (s: Session): TileStatus => {
@@ -96,8 +106,9 @@ const sessionStatusToTile = (s: Session): TileStatus => {
   return "open";
 };
 
+const FAILED_STATUSES = ["failed", "rate_limited", "payment_required"];
+
 interface Props {
-  // ungenutzt — Rückwärtskompatibilität
   isDragActive?: boolean;
 }
 
@@ -140,15 +151,30 @@ const IntakeSessionsPanel = (_props: Props) => {
     };
   }, []);
 
+  const handleRetry = useCallback(async (assetId: string) => {
+    toast("Wird nochmal versucht", { description: "Verstehens-Loop startet erneut" });
+    await supabase.functions.invoke("intake-understand", {
+      body: { asset_id: assetId, retry: true },
+    });
+  }, []);
+
   const tiles: SessionTile[] = useMemo(() => {
     const triggerIds = new Set(sessions.map((s) => s.trigger_ref_id).filter(Boolean));
+
+    // Pending assets (not yet in a session, still processing)
     const pendingAssets = assets.filter(
       (a) =>
         !triggerIds.has(a.id) &&
+        !FAILED_STATUSES.includes(a.understanding_status) &&
         (a.understanding_status === "pending" ||
           a.understanding_status === "running" ||
           a.processing_status === "pending" ||
           a.processing_status === "processing"),
+    );
+
+    // Failed assets (no session, failed status)
+    const failedAssets = assets.filter(
+      (a) => !triggerIds.has(a.id) && FAILED_STATUSES.includes(a.understanding_status),
     );
 
     const pendingGroups: SessionTile[] = [];
@@ -182,27 +208,46 @@ const IntakeSessionsPanel = (_props: Props) => {
     }
     flush();
 
+    const failedTiles: SessionTile[] = failedAssets.map((a) => ({
+      key: `failed-${a.id}`,
+      assetId: a.id,
+      status: "failed" as const,
+      count: 1,
+      firstName: a.file_name,
+      fileType: a.file_type,
+      fileSize: a.file_size,
+      createdAt: a.created_at,
+      projectId: a.project_id,
+    }));
+
     const sessionTiles: SessionTile[] = sessions.map((s) => {
       const linkedAsset = assets.find((a) => a.id === s.trigger_ref_id);
       return {
         key: `session-${s.id}`,
         sessionId: s.id,
+        assetId: linkedAsset?.id,
         status: sessionStatusToTile(s),
         count: 1,
         firstName: linkedAsset?.file_name ?? s.summary ?? "Verstehens-Lauf",
         fileType: linkedAsset?.file_type,
+        fileSize: linkedAsset?.file_size,
         resolved: s.resolved_boxes ?? 0,
         total: s.total_boxes ?? 0,
         createdAt: s.created_at,
+        projectId: linkedAsset?.project_id,
       };
     });
 
-    return [...pendingGroups, ...sessionTiles]
+    return [...pendingGroups, ...failedTiles, ...sessionTiles]
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       .slice(0, LIMIT);
   }, [sessions, assets]);
 
   const handleClick = (t: SessionTile) => {
+    if (t.status === "failed" && t.assetId) {
+      handleRetry(t.assetId);
+      return;
+    }
     if (t.status === "pending" || !t.sessionId) return;
     openSessionFromDB(t.sessionId);
   };
@@ -225,7 +270,7 @@ const IntakeSessionsPanel = (_props: Props) => {
           <ScrollArea className="h-[324px] w-[192px] pr-3">
             <div className="flex flex-col gap-3">
               {tiles.map((t) => {
-                const clickable = t.status !== "pending" && !!t.sessionId;
+                const clickable = t.status === "failed" || (t.status !== "pending" && !!t.sessionId);
                 const Icon = iconForType(t.fileType);
                 const open = (t.total ?? 0) - (t.resolved ?? 0);
                 const meta = [
@@ -236,7 +281,7 @@ const IntakeSessionsPanel = (_props: Props) => {
                   .join(" · ");
                 const badge = STATUS_BADGE[t.status];
 
-                return (
+                const tileContent = (
                   <button
                     key={t.key}
                     onClick={() => handleClick(t)}
@@ -259,11 +304,17 @@ const IntakeSessionsPanel = (_props: Props) => {
                     <span
                       className={cn(
                         "shrink-0 w-7 h-7 rounded-lg flex items-center justify-center",
-                        "bg-[hsl(var(--surface-1))] text-primary/80 group-hover:text-primary transition-colors",
+                        "bg-[hsl(var(--surface-1))]",
+                        t.status === "failed"
+                          ? "text-destructive/80 group-hover:text-destructive"
+                          : "text-primary/80 group-hover:text-primary",
+                        "transition-colors",
                       )}
                       aria-hidden
                     >
-                      {t.count > 1 ? (
+                      {t.status === "failed" ? (
+                        <RefreshCw size={13} strokeWidth={1.5} />
+                      ) : t.count > 1 ? (
                         <span className="text-[11px] font-medium tracking-wide">{t.count}</span>
                       ) : (
                         <Icon size={14} strokeWidth={1.5} />
@@ -292,6 +343,34 @@ const IntakeSessionsPanel = (_props: Props) => {
                     </span>
                   </button>
                 );
+
+                // HoverCard for completed/failed tiles with asset info
+                if (t.status !== "pending" && (t.fileSize || t.fileType)) {
+                  return (
+                    <HoverCard key={t.key} openDelay={400}>
+                      <HoverCardTrigger asChild>
+                        {tileContent}
+                      </HoverCardTrigger>
+                      <HoverCardContent side="left" className="w-56 bg-[hsl(var(--surface-2))] border-border/30 p-3">
+                        <div className="space-y-1.5">
+                          <p className="text-xs font-medium text-foreground/90 truncate">{t.firstName}</p>
+                          <div className="flex items-center gap-2 text-[10px] text-muted-foreground/60">
+                            {t.fileType && <span className="uppercase">{t.fileType}</span>}
+                            {t.fileSize && <span>{formatSize(t.fileSize)}</span>}
+                          </div>
+                          <p className="text-[10px] text-muted-foreground/50">
+                            {formatRelative(t.createdAt)}
+                          </p>
+                          {t.status === "failed" && (
+                            <p className="text-[10px] text-destructive/80 mt-1">Klick zum erneuten Versuch</p>
+                          )}
+                        </div>
+                      </HoverCardContent>
+                    </HoverCard>
+                  );
+                }
+
+                return tileContent;
               })}
             </div>
           </ScrollArea>
