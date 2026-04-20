@@ -52,7 +52,7 @@ export const DialogProvider = ({ children }: { children: ReactNode }) => {
   const commitBox = useCallback(
     async (boxId: string, decision: "confirm" | "reject", userDecision?: Record<string, any>) => {
       if (readonly) {
-        devlog.warn("dialog", "commitBox ignored — session is read-only");
+        devlog.warn("ui", "commitBox ignored — session is read-only");
         return;
       }
       const box = session?.boxes.find((b) => b.id === boxId);
