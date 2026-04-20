@@ -1,56 +1,88 @@
+## Was noch offen ist — Roadmap zur Vervollständigung
 
+Nach Abschluss von Phase 0–7.7 (Grundgerüst, Vier-Rollen-Projektscreen, Dialog-Overlay, Universeller Input, Upload-Pipeline, Verstehens-Loop) und der jüngsten UX-Korrekturen (Inline-Composer, Session-Panel-Badges, Sanitize-Storage-Keys) ist das Produkt funktional auf Demo-Niveau. Was zur „echten" Produktreife fehlt, sortiert nach Dringlichkeit:
 
-## Bugfix: „Invalid key" beim Upload von Dateien mit Umlauten/Sonderzeichen
+---
 
-### Problem
+### Block A — Kern-Lücken in der Intelligenz-Pipeline (Pflicht für V1)
 
-Supabase Storage akzeptiert in Object-Keys nur ein eingeschränktes ASCII-Zeichenset. Dateien wie `Re_ Termin Erklärfilm.msg` (mit `ä`, Leerzeichen, Doppelpunkt, etc.) führen beim `storage.upload(path, file)` in `useIntake.ts` zu `Invalid key: …`. Der Intake bricht ab, das Asset wird nie angelegt.
+**A1. Proposed-Facts-Generierung**  
+Aktuell wird geparst und auf den Kern gespiegelt, aber es entstehen keine reviewbaren Vorschläge. `intake-understand` muss aus `parsed_documents` strukturierte `proposed_facts` mit `delta_type` (neu / ergänzt / widerspricht / bestätigt) gegen bestehende `canonical_facts` erzeugen. Ohne diesen Schritt bleiben Dialog-Boxen leer bzw. werden nur aus Dummy-Triggern befüllt.
 
-### Fix
+**A2. Linking gegen bestehendes Wissen**  
+Vor dem Vorschlag: bestehende Personen, Organisationen, Themen, Termine, Aufgaben matchen (Name/Email/Domain-Heuristik + Embedding-Ähnlichkeit). Erst dadurch entsteht echte Konflikt- und Lückenerkennung statt isolierter Einzel-Extraktionen.
 
-Eine kleine Helferfunktion `sanitizeStorageName(name)` einführen und beim Bauen des Storage-Pfads anwenden — der **originale Dateiname** bleibt unverändert in der DB (`assets.file_name`), nur der **Storage-Key** wird normalisiert.
+**A3. Projekt-Zuordnung beim Intake**  
+Heute landen Assets ohne `project_id`. Eine `ZuordnungsBox` muss im Auto-Dialog erscheinen, wenn der Score nicht eindeutig ist; sonst Auto-Zuweisung mit sichtbarem Quellen-Marker. Scoring-Funktion existiert in `_shared/projectScoring.ts` und wird noch nicht in den Dialog-Flow eingebunden.
 
-#### Regeln für `sanitizeStorageName`
+**A4. Commit-Pfad vollständig**  
+`commit-fact` schreibt heute nur einzelne Fakten. Es fehlt: `change_events` befüllen, `corrections` erfassen wenn Werte im Dialog editiert wurden, `project_state_snapshots` nach jedem Commit aktualisieren, damit Lage/Verlauf des Projektscreens echte Bewegung zeigen.
 
-1. Unicode-Normalisierung NFKD und Diakritika strippen (`ä` → `a`, `ö` → `o`, `ß` → `ss` separat).
-2. Alle Zeichen außerhalb `[A-Za-z0-9._-]` durch `_` ersetzen.
-3. Mehrfach-`_` zu einem zusammenfassen, führende/nachfolgende `_`/`.` entfernen.
-4. Wenn Ergebnis leer (z. B. nur asiatische Zeichen) → Fallback `file`.
-5. Extension separat behandeln, damit sie erhalten bleibt (`name.split('.').pop()`).
-6. Länge auf ~120 Zeichen begrenzen.
+---
 
-Ergebnis für das Beispiel: `Re_Termin_Erklarfilm.msg`.
+### Block B — Echte Projekt-Anbindung (Pflicht)
 
-#### Änderung in `src/lib/intake/useIntake.ts`
+**B1. ProjectScreen liest echte Daten**  
+Heute zieht der Projektscreen aus `demoProject.ts`. Er muss live aus Supabase laden: `projects`, `canonical_facts`, `decisions`, `tasks`, `deadlines`, `open_points`, `gap_signals`, `dependencies`, `outcome_signals`, `contradictions`, `change_events`, `topics`, `assets`. Inklusive Realtime-Updates.
 
-- Neue lokale Funktion `sanitizeStorageName` direkt in der Datei (oder in `src/lib/intake/sanitizeStorageName.ts`, mit Test).
-- `path = ${user.id}/${assetId}/${sanitizeStorageName(file.name)}`.
-- `file_name` in der DB bleibt `file.name` (Originaltitel mit Umlauten — das ist UI-Anzeige).
-- `metadata.original_name = file.name` zusätzlich speichern, damit später nachvollziehbar.
+**B2. Projekt-Routing per ID**  
+URL `/projekt/:id`, ProjectTile-Klick auf Side-Grid führt zum spezifischen Projekt statt immer zum Demoprojekt.
 
-#### Bonus: defensiver Fehlerpfad
+**B3. Projekt anlegen / archivieren**  
+Mindestminimum: ein Projekt entsteht entweder durch erste Asset-Zuordnung mit „neues Projekt" in der ZuordnungsBox oder durch leeres Anlegen vom Side-Grid aus.
 
-In `useIntake.ts` beim `upErr` zusätzlich den **Pfad** und den ersten Konflikt-Hinweis ins Toast schreiben (`Upload abgelehnt: Dateiname enthält Sonderzeichen`), statt nur den Roh-Fehler. Verhindert, dass der Nutzer nochmal mit identischem Namen versucht.
+---
 
-### Mini-Test
+### Block C — Sichtbare Lücken am Entitäts-Screen
 
-`src/lib/intake/sanitizeStorageName.test.ts` mit drei Cases:
-- `Re_ Termin Erklärfilm.msg` → `Re_Termin_Erklarfilm.msg`
-- `Präsentation: Q3.pptx` → `Prasentation_Q3.pptx`
-- `日本語.pdf` → `file.pdf`
+**C1. Voice-Aufnahme echt machen**  
+Pill „Sprache" ist Platzhalter. MediaRecorder + Whisper-Transkription (über Lovable AI) → Notiz-Asset.
 
-### Betroffene Dateien
+**C2. Fehler- und Wiederholungspfade**  
+Asset im Status `failed` / `rate_limited` / `payment_required` braucht im Session-Panel einen klaren Wiederholungs-Knopf statt nur Stimme.
 
-- `src/lib/intake/useIntake.ts` — sanitize beim Pfadbau, freundlichere Fehlermeldung
-- `src/lib/intake/sanitizeStorageName.ts` — neu, reine Funktion
-- `src/lib/intake/sanitizeStorageName.test.ts` — neu, Vitest
+**C3. Asset-Detail / Quellansicht**  
+Klick auf einen Eintrag im rechten Panel zeigt momentan nichts. Mindestens: Inline-Card mit Originalname, Typ, Parser-Auszug, Verlinkung zum entstandenen Dialog.
 
-### Bewusst draußen
+---
 
-- Migration bestehender Assets mit kaputten Keys (es gibt aktuell keine — der fehlerhafte Upload ist gar nicht erst durchgekommen).
-- Server-seitige Validierung in der Edge-Function (Storage selbst lehnt es ja schon korrekt ab; wir korrigieren nur clientseitig).
+### Block D — Knowledge-Graph (Phase 7, separat)
 
-### Akzeptanzkriterium
+Graphiti-Anbindung ist als Entscheidung gesetzt, aber noch nicht implementiert. Realistisch erst nach Block A sinnvoll, weil ohne Proposed-Facts der Graph nichts zu speichern hätte. Vorschlag: **bewusst auf V1.1 verschieben**, V1 läuft auf direkter Supabase-Logik mit Embedding-Matching. Graphiti folgt, sobald A1–A4 stabil sind.
 
-Dateien mit Umlauten, Leerzeichen und Sonderzeichen im Namen können abgelegt werden. In der UI erscheint weiterhin der Originalname, im Storage liegt eine ASCII-saubere Variante.
+---
 
+### Block E — Politur (nach den Pflichtblöcken)
+
+- Dokument-Preview (PDF/Bild/Email-Body) im Substanz-Bereich
+- Versions-Verlinkung sichtbar machen (`version_links` wird geschrieben, aber nicht angezeigt)
+- Feedback-Button echt verdrahten (heute nur Toast-Brücke)
+- Suche über Projekte und Substanz
+- Mobile Layout (heute nur ab `lg` sinnvoll)
+
+---
+
+### Bewusst draußen für V1
+
+- Live-Mail-Sync, Team-Kollaboration, autonome Hintergrundimporte
+- Auto-Commit ohne Review
+- Dashboards, Diagramme
+- Mehrsprachige UI
+
+---
+
+### Empfohlene Reihenfolge
+
+1. **Block A** komplett — ohne echte Vorschläge ist alles andere Fassade
+2. **Block B** parallel zum Ende von A — sobald Fakten committet werden, muss der Projektscreen sie zeigen
+3. **Block C** als kurzer UX-Sweep
+4. **Block D (Graphiti)** als V1.1
+5. **Block E** kontinuierlich
+
+### Nächster konkreter Schritt
+
+Ich schlage vor, mit **A1 + A4 zusammen** zu starten: `intake-understand` erzeugt echte `proposed_facts`, daraus baut die bestehende Dialog-Logik echte Boxen, und `commit-fact` schreibt nicht nur Fakten, sondern auch `change_events` und triggert einen `project_state_snapshot`. Damit hat zum ersten Mal ein einziger Upload eine sichtbare Wirkung von Intake bis Projektscreen.
+
+&nbsp;
+
+Wir starten wie vorgeschlagen, aktualisieren den plan in den docs und fahren danach fort.
