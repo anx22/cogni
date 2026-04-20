@@ -1,36 +1,49 @@
 
 
-## Schlanker Ansatz: Nur eine Kennzeichnung, kein neues Datenmodell
+## Plan: manuell-Flag automatisch in Dialog-Boxen setzen
 
-### Prinzip
-- **Default:** Alles läuft normal nach Briefing (KI-Extraktion, Dialog-Bestätigung, Konflikte, Delta-Logik).
-- **Ausnahme:** Wenn ein Fakt durch **manuellen Eingriff** entstanden ist (Nutzer hat im Dialog selbst Text/Wert eingegeben oder überschrieben), bekommt er **eine kleine visuelle Kennzeichnung**. Mehr nicht.
-- **Re-Konflikte:** Brauchen keine Sonderlogik. Ein neues Dokument, das einem manuell gesetzten Fakt widerspricht, erzeugt einen **ganz normalen Konflikt** wie jeder andere auch. Die Kennzeichnung „manuell" ist dann nur Kontext im Konflikt — kein Veto, kein Sonderpfad.
+### Ziel
+Wenn ein Nutzer im Dialog etwas bestätigt/eingibt (EingabeBox, AuswahlBox, KonfliktBox), wird der zugehörige Fakt automatisch als `manuell: true` markiert — sichtbar via `SourceMarker`.
 
-### Was das konkret heißt
+### Problem
+Das Dialog-System ist heute eine isolierte Session ohne Rückkanal in `demoProject`. Boxen rufen `updateBoxPayload` + `updateBoxState` auf, aber das Ergebnis landet nirgends in den Listen (Handlungsbedarf, Verlauf etc.). Die `manuell`-Flags in `demoProject.ts` sind heute statisch gesetzt.
 
-**1. Ein neues Flag, sonst nichts**
-`SourceMarker` bekommt optional `manuell?: boolean`. Wenn true → kleines Personen-Icon neben dem Quellen-Label. Sonst unverändert.
+### Schlanker Lösungsansatz
 
-**2. Demo-Daten minimal erweitern**
-Ein, zwei Beispiel-Items in `demoProject` bekommen `manuell: true` an der Quelle (z. B. ein bestätigter Termin, eine geklärte Lücke), damit das Pattern im Prototyp sichtbar wird.
+**1. Globaler "manuell-bestätigt"-Store (Set von Quellen-IDs)**
+Neuer leichter Context `ManualOverridesProvider` mit:
+- `manualSources: Set<string>` (z. B. `"Gap #g3"`, `"h5"`, `"Mail Thomas"`)
+- `markManual(quelle: string)` Funktion
 
-**3. Konflikt-Verhalten unverändert**
-Konflikt-Box bleibt wie sie ist. Wenn einer der Fakten manuell entstanden ist, sieht man das durch die Kennzeichnung an der Quelle — keine eigene UI nötig.
+Kein Persistenz, kein Datenmodell-Eingriff, nur Runtime-State für den Prototyp.
 
-**4. Memory + Briefing-Klarstellung**
-- Neue Memory-Notiz `mem://features/manueller-eingriff`: „Manuelle Eingaben sind Ausnahme, bekommen Kennzeichnung, sonst keine Sonderbehandlung. Re-Konflikte sind normale Konflikte."
-- Kurzer Absatz in `docs/produkt-gesamt.md` analog.
+**2. Dialog-Boxen rufen `markManual` beim Bestätigen**
+- `EingabeBox.submit()` → `markManual(session.context)`
+- `AuswahlBox` Übernehmen → `markManual(session.context)`
+- `KonfliktBox.confirm()` → `markManual(session.context)`
 
-### Was wir explizit NICHT machen
-- Kein neues Quellen-Objekt mit `modus`/`autor`/`datum`.
-- Kein Re-Konflikt-Sondertyp.
-- Keine Author-Tags im Verlauf.
-- Keine Gewichtung manueller vs. KI-Quellen.
+Die `session.context` enthält bereits die Quellen-Referenz (z. B. `"Gap #g3"`, `"Konflikt #k1"`, Handlungsbedarf-ID).
+
+**3. `SourceMarker` liest aus dem Store**
+`manuell`-Prop wird zu `manuell?: boolean` (statischer Override aus Demo-Daten) ODER abgeleitet aus `useManualOverrides().has(quelle)`. Effektiv: `manuell || isManual(quelle)`.
+
+**4. Provider in `App.tsx` einhängen**
+Wrappt die App, damit alle Komponenten Zugriff haben.
+
+### Was wir NICHT machen
+- Keine Mutation von `demoProject.ts` zur Laufzeit.
+- Kein neues Feld am Datenmodell.
+- Keine Persistenz/Backend.
+- Kein Refactoring der Box-Signaturen.
 
 ### Betroffene Dateien
-- `src/components/project/shared/SourceMarker.tsx` — optionales `manuell`-Prop + Icon
-- `src/data/demoProject.ts` — 1–2 Beispiele markieren
-- `docs/produkt-gesamt.md` — kurzer Absatz
-- `mem://features/manueller-eingriff` — neue Notiz
+- `src/lib/dialog/manualOverrides.tsx` (neu) — Context + Provider + Hook
+- `src/App.tsx` — Provider einhängen
+- `src/components/dialog/boxes/EingabeBox.tsx` — `markManual` im submit
+- `src/components/dialog/boxes/AuswahlBox.tsx` — `markManual` beim Übernehmen
+- `src/components/dialog/boxes/KonfliktBox.tsx` — `markManual` im confirm
+- `src/components/project/shared/SourceMarker.tsx` — Store-Lookup ergänzen
+
+### Effekt im Prototyp
+Nutzer öffnet z. B. einen Handlungsbedarf-Item, gibt eine Antwort ein → schließt → der `SourceMarker` dieses Items zeigt jetzt das UserCheck-Icon + "manuell". Ohne Reload, ohne Datenänderung.
 
