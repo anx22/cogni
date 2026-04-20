@@ -78,19 +78,6 @@ const ProjectTile = forwardRef<HTMLButtonElement, ProjectTileProps>(
           isActive && "ring-1 ring-primary/40 bg-[hsl(var(--surface-3))]",
         )}
       >
-        {/* Initial chip */}
-        <span
-          className={cn(
-            "shrink-0 w-7 h-7 rounded-lg flex items-center justify-center",
-            "bg-[hsl(var(--surface-1))]",
-            "text-[10px] font-medium tracking-wide text-primary/80",
-            "group-hover:text-primary transition-colors",
-          )}
-          aria-hidden
-        >
-          {initial}
-        </span>
-
         {/* Title + meta */}
         <span className="flex flex-col min-w-0 flex-1 gap-0.5">
           <span className="text-[13px] font-medium text-foreground/90 truncate leading-tight">
@@ -103,6 +90,22 @@ const ProjectTile = forwardRef<HTMLButtonElement, ProjectTileProps>(
           )}
         </span>
 
+        {/* Status dots */}
+        {signals.length > 0 && (
+          <span className="absolute top-2 right-2 flex items-center gap-1">
+            {signals.map((s) => (
+              <span
+                key={s}
+                className={cn(
+                  "w-1.5 h-1.5 rounded-full",
+                  signalColor(s),
+                  s !== "calm" && "group-hover:animate-pulse",
+                )}
+                aria-hidden
+              />
+            ))}
+          </span>
+        )}
       </button>
     );
   },
