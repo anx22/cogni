@@ -1,88 +1,98 @@
-## Was noch offen ist — Roadmap zur Vervollständigung
 
-Nach Abschluss von Phase 0–7.7 (Grundgerüst, Vier-Rollen-Projektscreen, Dialog-Overlay, Universeller Input, Upload-Pipeline, Verstehens-Loop) und der jüngsten UX-Korrekturen (Inline-Composer, Session-Panel-Badges, Sanitize-Storage-Keys) ist das Produkt funktional auf Demo-Niveau. Was zur „echten" Produktreife fehlt, sortiert nach Dringlichkeit:
 
----
+## Block B1 — ProjectScreen liest live aus Supabase
 
-### Block A — Kern-Lücken in der Intelligenz-Pipeline (Pflicht für V1)
-
-**A1. Proposed-Facts-Generierung**  
-Aktuell wird geparst und auf den Kern gespiegelt, aber es entstehen keine reviewbaren Vorschläge. `intake-understand` muss aus `parsed_documents` strukturierte `proposed_facts` mit `delta_type` (neu / ergänzt / widerspricht / bestätigt) gegen bestehende `canonical_facts` erzeugen. Ohne diesen Schritt bleiben Dialog-Boxen leer bzw. werden nur aus Dummy-Triggern befüllt.
-
-**A2. Linking gegen bestehendes Wissen**  
-Vor dem Vorschlag: bestehende Personen, Organisationen, Themen, Termine, Aufgaben matchen (Name/Email/Domain-Heuristik + Embedding-Ähnlichkeit). Erst dadurch entsteht echte Konflikt- und Lückenerkennung statt isolierter Einzel-Extraktionen.
-
-**A3. Projekt-Zuordnung beim Intake**  
-Heute landen Assets ohne `project_id`. Eine `ZuordnungsBox` muss im Auto-Dialog erscheinen, wenn der Score nicht eindeutig ist; sonst Auto-Zuweisung mit sichtbarem Quellen-Marker. Scoring-Funktion existiert in `_shared/projectScoring.ts` und wird noch nicht in den Dialog-Flow eingebunden.
-
-**A4. Commit-Pfad vollständig**  
-`commit-fact` schreibt heute nur einzelne Fakten. Es fehlt: `change_events` befüllen, `corrections` erfassen wenn Werte im Dialog editiert wurden, `project_state_snapshots` nach jedem Commit aktualisieren, damit Lage/Verlauf des Projektscreens echte Bewegung zeigen.
+Echte Projekte (9 in der DB) statt `demoProject.ts` und `demoProjects.ts`. Side-Grid links, Projekt-Routing und Projekt-Screen werden komplett auf Live-Daten umgestellt. `demoProject.ts` bleibt nur als Typ-Quelle/Fallback erhalten, bis B2/B3 abgeschlossen sind.
 
 ---
 
-### Block B — Echte Projekt-Anbindung (Pflicht)
+### 1. Zentraler Hook `useProject(id)` — neu
 
-**B1. ProjectScreen liest echte Daten**  
-Heute zieht der Projektscreen aus `demoProject.ts`. Er muss live aus Supabase laden: `projects`, `canonical_facts`, `decisions`, `tasks`, `deadlines`, `open_points`, `gap_signals`, `dependencies`, `outcome_signals`, `contradictions`, `change_events`, `topics`, `assets`. Inklusive Realtime-Updates.
+`src/lib/project/useProject.ts`
 
-**B2. Projekt-Routing per ID**  
-URL `/projekt/:id`, ProjectTile-Klick auf Side-Grid führt zum spezifischen Projekt statt immer zum Demoprojekt.
+Lädt parallel und mappt auf das von den UI-Komponenten erwartete Shape:
 
-**B3. Projekt anlegen / archivieren**  
-Mindestminimum: ein Projekt entsteht entweder durch erste Asset-Zuordnung mit „neues Projekt" in der ZuordnungsBox oder durch leeres Anlegen vom Side-Grid aus.
+| UI-Feld                | Quelle                                                                                                         |
+|------------------------|----------------------------------------------------------------------------------------------------------------|
+| `name`, `description`, `status` | `projects` (eq id)                                                                                    |
+| `lagetext`             | aktuell: aus jüngstem `project_state_snapshots.summary` oder Fallback aus Counts                              |
+| `outcome`              | `outcome_signals` (eq project_id, neueste Zeile)                                                              |
+| `stats.naechsterTermin`| frühestes `deadlines.due_date` in der Zukunft                                                                |
+| `stats.letzteAenderung`| `MAX(updated_at)` aus relevanten Tabellen → relativer Zeitstring                                              |
+| `stats.budget`         | aus `canonical_facts` mit `fact_type='budget'` (falls vorhanden), sonst leer                                  |
+| `konflikte`            | `contradictions` mit `resolved=false`                                                                         |
+| `gaps`                 | `gap_signals` mit `status='open'`                                                                             |
+| `dependencies`         | `dependencies` mit `resolved=false`                                                                           |
+| `handlungsbedarf`      | abgeleitet: `decisions` (entscheiden), `gap_signals`+`open_points` (klaeren), `tasks` (umsetzen), `feedback` (pruefen), `dependencies` (klaeren+blocker) |
+| `verlauf`              | `change_events` (limit 100, sortiert)                                                                        |
+| `themen`               | `topics` + abgeleitete Counts via Aggregat-Query                                                              |
+| `dokumente`            | `assets` mit `project_id=eq id` (file_name, file_type, created_at, metadata.version ?? 1)                    |
+| `stakeholder`          | `project_stakeholder_links` joined mit `persons` und `organizations`                                          |
 
----
+Realtime-Subscription auf alle relevanten Tabellen (`canonical_facts`, `change_events`, `tasks`, `decisions`, `deadlines`, `gap_signals`, `dependencies`, `contradictions`, `assets`, `outcome_signals`, `topics`, `project_stakeholder_links`) gefiltert auf `project_id=eq.${id}` → invalidiert nur die betroffene Teilabfrage.
 
-### Block C — Sichtbare Lücken am Entitäts-Screen
-
-**C1. Voice-Aufnahme echt machen**  
-Pill „Sprache" ist Platzhalter. MediaRecorder + Whisper-Transkription (über Lovable AI) → Notiz-Asset.
-
-**C2. Fehler- und Wiederholungspfade**  
-Asset im Status `failed` / `rate_limited` / `payment_required` braucht im Session-Panel einen klaren Wiederholungs-Knopf statt nur Stimme.
-
-**C3. Asset-Detail / Quellansicht**  
-Klick auf einen Eintrag im rechten Panel zeigt momentan nichts. Mindestens: Inline-Card mit Originalname, Typ, Parser-Auszug, Verlinkung zum entstandenen Dialog.
-
----
-
-### Block D — Knowledge-Graph (Phase 7, separat)
-
-Graphiti-Anbindung ist als Entscheidung gesetzt, aber noch nicht implementiert. Realistisch erst nach Block A sinnvoll, weil ohne Proposed-Facts der Graph nichts zu speichern hätte. Vorschlag: **bewusst auf V1.1 verschieben**, V1 läuft auf direkter Supabase-Logik mit Embedding-Matching. Graphiti folgt, sobald A1–A4 stabil sind.
+Status: `loading | ready | empty | error`. `empty` zeigt einen leeren Lagebild-Platzhalter („Noch keine Erkenntnisse — leg etwas ab").
 
 ---
 
-### Block E — Politur (nach den Pflichtblöcken)
+### 2. ProjectScreen umbauen
 
-- Dokument-Preview (PDF/Bild/Email-Body) im Substanz-Bereich
-- Versions-Verlinkung sichtbar machen (`version_links` wird geschrieben, aber nicht angezeigt)
-- Feedback-Button echt verdrahten (heute nur Toast-Brücke)
-- Suche über Projekte und Substanz
-- Mobile Layout (heute nur ab `lg` sinnvoll)
+`src/components/project/ProjectScreen.tsx`
 
----
-
-### Bewusst draußen für V1
-
-- Live-Mail-Sync, Team-Kollaboration, autonome Hintergrundimporte
-- Auto-Commit ohne Review
-- Dashboards, Diagramme
-- Mehrsprachige UI
+- `demoProject` raus, stattdessen `useProject(projectId)`.
+- Bei `loading`: dezenter Skeleton (gleiche Höhe wie LageZone).
+- Bei `empty`: nur LageZone mit Lagebild „Noch keine Substanz" + Drop-Hinweis.
+- Bei `ready`: bestehende Komponenten unverändert weiterverwenden, Props kommen aus dem Hook.
+- `realProjectId` bleibt der einzige akzeptierte Wert; Demo-IDs (`p1` …) lösen einen Toast „Projekt nicht gefunden" + Zurück-Button aus.
 
 ---
 
-### Empfohlene Reihenfolge
+### 3. Side-Grid auf echte Projekte umstellen
 
-1. **Block A** komplett — ohne echte Vorschläge ist alles andere Fassade
-2. **Block B** parallel zum Ende von A — sobald Fakten committet werden, muss der Projektscreen sie zeigen
-3. **Block C** als kurzer UX-Sweep
-4. **Block D (Graphiti)** als V1.1
-5. **Block E** kontinuierlich
+`src/data/demoProjects.ts` wird **nicht gelöscht** (Typ `DemoProject`/`ProjectSignal` werden weiter referenziert), aber:
 
-### Nächster konkreter Schritt
+- Neuer Hook `src/lib/project/useProjects.ts` lädt alle Projekte des Users (`projects` + Aggregat-Counts pro Projekt: `open_count` aus `tasks`+`open_points`+`decisions(draft)`, `signal` aus `contradictions`/`gap_signals`/Deadline-Druck).
+- `Index.tsx` ersetzt `demoProjects` durch das Ergebnis dieses Hooks.
+- Mapping zur DemoProject-Shape: `initial = name.split(' ').map(w=>w[0]).join('').slice(0,3).toUpperCase()`, `lastChangedAt = updated_at`, `signal` deterministisch aus den Counts berechnet (`conflict` > `review` > `action` > `calm`).
 
-Ich schlage vor, mit **A1 + A4 zusammen** zu starten: `intake-understand` erzeugt echte `proposed_facts`, daraus baut die bestehende Dialog-Logik echte Boxen, und `commit-fact` schreibt nicht nur Fakten, sondern auch `change_events` und triggert einen `project_state_snapshot`. Damit hat zum ersten Mal ein einziger Upload eine sichtbare Wirkung von Intake bis Projektscreen.
+---
 
-&nbsp;
+### 4. Komponenten-Anpassungen (minimal)
 
-Wir starten wie vorgeschlagen, aktualisieren den plan in den docs und fahren danach fort.
+Alle vier Subkomponenten (`LageZone`, `HandlungsbedarfList`, `VerlaufFeed`, `SubstanzSection`) lesen heute via `typeof demoProject`. Damit sie weiter typsicher mit dem Hook-Output funktionieren, wird ein zentraler Typ `ProjectViewModel` in `src/lib/project/types.ts` definiert (entspricht dem bisherigen `demoProject`-Shape) und die Komponenten-Imports werden umgestellt.
+
+`VerlaufFeed` enthält bereits eine eigene Direkt-Query auf `change_events`. Diese wird **entfernt**, weil der Verlauf jetzt zentral aus dem Hook kommt (kein doppeltes Laden).
+
+---
+
+### 5. Bewusst draußen (gehört zu B2/B3)
+
+- URL-basiertes Routing `/projekt/:id` → B2.
+- Projekt anlegen / leerer Side-Grid-Add-Button verdrahtet → B3.
+- ZuordnungsBox „neues Projekt" → B3.
+- Echtes Stakeholder-CRUD, Themen-Merging, Dokument-Preview → Block E.
+
+---
+
+### 6. Akzeptanzkriterien
+
+- Klick auf eine echte Projektkachel öffnet den Projekt-Screen mit den **tatsächlichen** Counts und Inhalten dieses Projekts aus der DB.
+- Ein neuer Commit über den Verstehens-Loop ändert sichtbar: Lagebild-Counts, Verlauf bekommt einen Eintrag, Handlungsbedarf wächst — ohne Reload.
+- Side-Grid zeigt die 9 vorhandenen Projekte sortiert nach `updated_at`, mit Initial-Token und Signal-Punkt aus echten Konflikt/Gap-Daten.
+- Klick auf eine Demo-ID-Kachel (existiert nach Umstellung nicht mehr) ist ausgeschlossen, weil der Side-Grid nur noch echte UUIDs erzeugt.
+
+---
+
+### 7. Betroffene Dateien
+
+- `src/lib/project/useProject.ts` — neu
+- `src/lib/project/useProjects.ts` — neu
+- `src/lib/project/types.ts` — neu (`ProjectViewModel`)
+- `src/components/project/ProjectScreen.tsx` — Datenquelle umstellen, Loading/Empty
+- `src/components/project/LageZone.tsx` — Typ-Import umstellen
+- `src/components/project/HandlungsbedarfList.tsx` — Typ-Import umstellen
+- `src/components/project/VerlaufFeed.tsx` — eigene Query entfernen, Typ-Import umstellen
+- `src/components/project/SubstanzSection.tsx` — Typ-Import umstellen
+- `src/pages/Index.tsx` — `demoProjects` → `useProjects`-Hook
+- `docs/implementierung-aktuell.md` — Block B1 als erledigt markieren
+
