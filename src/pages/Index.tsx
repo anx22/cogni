@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import EntityCore from "@/components/EntityCore";
 import ProjectScreen from "@/components/project/ProjectScreen";
@@ -11,6 +11,7 @@ import { detectFromDrop } from "@/lib/intake/detectInputType";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { devlog } from "@/lib/devlog/devlog";
+import { useDialog } from "@/components/dialog/DialogProvider";
 
 type EntityState = "idle" | "hover" | "processing" | "review-ready" | "failed";
 type AppView = "entity" | "project";
@@ -23,6 +24,8 @@ const Index = () => {
   const [view, setView] = useState<AppView>("entity");
   const [activeProjectId, setActiveProjectId] = useState<string | undefined>();
   const [overlayOpen, setOverlayOpen] = useState(false);
+  const { openSessionFromDB } = useDialog();
+  const pendingSessionId = useRef<string | null>(null);
 
   const { intake } = useIntake({ setEntityState, setLastImpact });
 
@@ -32,7 +35,7 @@ const Index = () => {
     if (!loading && !session) navigate("/auth", { replace: true });
   }, [loading, session, navigate]);
 
-  // Realtime: spiegle Verarbeitungsstatus auf den Kern
+  // Realtime: Verarbeitungsstatus auf den Kern spiegeln
   useEffect(() => {
     if (!session?.user) return;
     const channel = supabase
@@ -49,11 +52,39 @@ const Index = () => {
           const status = row.processing_status;
           if (status === "processing") setEntityState("processing");
           else if (status === "completed") {
-            setEntityState("idle");
             setLastImpact("verarbeitet");
           } else if (status === "failed") {
             setEntityState("failed");
             setLastImpact("fehlgeschlagen");
+          }
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [session?.user]);
+
+  // Realtime: neue Dialog-Session → Kern wird "review-ready"
+  useEffect(() => {
+    if (!session?.user) return;
+    const channel = supabase
+      .channel("dialog-sessions-new")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "dialog_sessions",
+          filter: `user_id=eq.${session.user.id}`,
+        },
+        (payload) => {
+          const row = payload.new as { id?: string; status?: string };
+          devlog.realtime(`dialog_session INSERT → ${row.status}`, { id: row.id });
+          if (row.status === "open" && row.id) {
+            pendingSessionId.current = row.id;
+            setEntityState("review-ready");
+            setLastImpact("Vorschläge bereit");
           }
         },
       )
@@ -75,9 +106,21 @@ const Index = () => {
     setView("project");
   }, []);
 
-  const handleReviewClick = useCallback(() => {
-    console.log("Review triggered");
-  }, []);
+  const handleReviewClick = useCallback(async () => {
+    if (pendingSessionId.current) {
+      await openSessionFromDB(pendingSessionId.current);
+      pendingSessionId.current = null;
+      setEntityState("idle");
+    }
+  }, [openSessionFromDB]);
+
+  const handleCoreClick = useCallback(() => {
+    if (entityState === "review-ready" && pendingSessionId.current) {
+      handleReviewClick();
+    } else {
+      setOverlayOpen(true);
+    }
+  }, [entityState, handleReviewClick]);
 
   if (loading || !session) return null;
 
@@ -107,7 +150,7 @@ const Index = () => {
           state={entityState}
           onDrop={handleDrop}
           onReviewClick={handleReviewClick}
-          onClick={() => setOverlayOpen(true)}
+          onClick={handleCoreClick}
         />
 
         <p className="absolute bottom-[18%] text-muted-foreground text-sm tracking-wide opacity-60 animate-float-in">
