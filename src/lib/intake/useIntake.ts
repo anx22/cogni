@@ -12,6 +12,11 @@ interface UseIntakeOptions {
   setEntityState?: (s: EntityState) => void;
   setLastImpact?: (s: string) => void;
   onIntake?: (payload: IntakePayload) => void;
+  /**
+   * Wenn gesetzt, wird das Asset direkt diesem Projekt zugeordnet.
+   * → intake-understand überspringt die Zuordnungsbox (mode='explicit').
+   */
+  projectId?: string | null;
 }
 
 function fileTypeFromName(name: string): AssetType {
