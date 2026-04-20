@@ -25,7 +25,7 @@ import type { Database } from "@/integrations/supabase/types";
 type Session = Database["public"]["Tables"]["dialog_sessions"]["Row"];
 type Asset = Database["public"]["Tables"]["assets"]["Row"];
 
-type TileStatus = "pending" | "open" | "closed" | "empty";
+type TileStatus = "pending" | "open" | "closed" | "rejected" | "empty";
 
 interface SessionTile {
   key: string;
@@ -41,11 +41,27 @@ interface SessionTile {
 
 const LIMIT = 30;
 
-const STATUS_DOT: Record<TileStatus, string> = {
-  pending: "bg-amber-400 animate-pulse",
-  open: "bg-primary",
-  closed: "bg-emerald-500/70",
-  empty: "bg-foreground/25",
+const STATUS_BADGE: Record<TileStatus, { label: string; className: string }> = {
+  pending: {
+    label: "läuft",
+    className: "bg-amber-500/15 text-amber-300 ring-1 ring-amber-400/30",
+  },
+  open: {
+    label: "offen",
+    className: "bg-primary/15 text-primary ring-1 ring-primary/30 animate-pulse",
+  },
+  closed: {
+    label: "fertig",
+    className: "bg-emerald-500/15 text-emerald-300/90 ring-1 ring-emerald-400/25",
+  },
+  rejected: {
+    label: "ignoriert",
+    className: "bg-foreground/5 text-muted-foreground/60 ring-1 ring-foreground/10",
+  },
+  empty: {
+    label: "leer",
+    className: "bg-foreground/5 text-muted-foreground/50 ring-1 ring-foreground/10",
+  },
 };
 
 const iconForType = (t?: string): LucideIcon => {
@@ -74,7 +90,8 @@ const iconForType = (t?: string): LucideIcon => {
 };
 
 const sessionStatusToTile = (s: Session): TileStatus => {
-  if (s.status === "completed" || s.status === "cancelled") return "closed";
+  if (s.status === "cancelled") return "rejected";
+  if (s.status === "completed") return "closed";
   if ((s.resolved_boxes ?? 0) >= (s.total_boxes ?? 0) && (s.total_boxes ?? 0) > 0) return "closed";
   return "open";
 };
@@ -201,11 +218,11 @@ const IntakeSessionsPanel = (_props: Props) => {
         }}
       >
         {tiles.length === 0 ? (
-          <div className="w-[140px] h-[72px] flex items-center justify-center text-[10px] text-muted-foreground/40 tracking-wide">
+          <div className="w-[180px] h-[76px] flex items-center justify-center text-[10px] text-muted-foreground/40 tracking-wide">
             Noch nichts da
           </div>
         ) : (
-          <ScrollArea className="h-[324px] w-[152px] pr-3">
+          <ScrollArea className="h-[324px] w-[192px] pr-3">
             <div className="flex flex-col gap-3">
               {tiles.map((t) => {
                 const clickable = t.status !== "pending" && !!t.sessionId;
@@ -213,10 +230,11 @@ const IntakeSessionsPanel = (_props: Props) => {
                 const open = (t.total ?? 0) - (t.resolved ?? 0);
                 const meta = [
                   formatRelative(t.createdAt),
-                  t.status === "closed" ? "abgeschlossen" : t.status === "pending" ? "läuft" : open > 0 ? `${open} offen` : null,
+                  t.status === "open" && open > 0 ? `${open} offen` : null,
                 ]
                   .filter(Boolean)
                   .join(" · ");
+                const badge = STATUS_BADGE[t.status];
 
                 return (
                   <button
@@ -226,7 +244,7 @@ const IntakeSessionsPanel = (_props: Props) => {
                     title={t.firstName}
                     aria-label={t.firstName}
                     className={cn(
-                      "group relative w-[140px] h-[72px] rounded-2xl px-3 py-2.5",
+                      "group relative w-[180px] min-h-[76px] rounded-2xl px-3 py-2.5",
                       "flex items-center gap-3 text-left",
                       "bg-[hsl(var(--surface-2))]",
                       "shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_4px_12px_-4px_rgba(0,0,0,0.4)]",
@@ -235,7 +253,7 @@ const IntakeSessionsPanel = (_props: Props) => {
                       clickable
                         ? "hover:bg-[hsl(var(--surface-3))] hover:-translate-y-0.5 cursor-pointer"
                         : "cursor-default",
-                      t.status === "closed" && "opacity-70",
+                      (t.status === "closed" || t.status === "rejected") && "opacity-75",
                     )}
                   >
                     <span
@@ -252,24 +270,26 @@ const IntakeSessionsPanel = (_props: Props) => {
                       )}
                     </span>
 
-                    <span className="flex flex-col min-w-0 flex-1 gap-0.5">
+                    <span className="flex flex-col min-w-0 flex-1 gap-1">
                       <span className="text-[13px] font-medium text-foreground/90 truncate leading-tight">
                         {t.firstName}
                       </span>
-                      {meta && (
-                        <span className="text-[10px] text-muted-foreground/60 truncate leading-tight">
-                          {meta}
+                      <span className="flex items-center gap-1.5 min-w-0">
+                        <span
+                          className={cn(
+                            "shrink-0 px-1.5 py-0.5 rounded-md text-[9px] font-medium tracking-wide uppercase",
+                            badge.className,
+                          )}
+                        >
+                          {badge.label}
                         </span>
-                      )}
+                        {meta && (
+                          <span className="text-[10px] text-muted-foreground/50 truncate leading-tight">
+                            {meta}
+                          </span>
+                        )}
+                      </span>
                     </span>
-
-                    <span
-                      className={cn(
-                        "absolute top-2 right-2 w-1.5 h-1.5 rounded-full",
-                        STATUS_DOT[t.status],
-                      )}
-                      aria-hidden
-                    />
                   </button>
                 );
               })}
