@@ -4,14 +4,20 @@
 //  Diese Datei kapselt den eigentlichen KI-Aufruf. Aktuell: Lovable AI Gateway.
 //  Später (LangChain, eigener Agent-Service, ...) tauschst du NUR diese Datei.
 //
-//  Vertrag nach außen: callExtractFacts(text) → ExtractedFact[]
-//  Alle Modell-, Prompt- und Schema-Details kommen aus agentConfig.ts.
+//  Vertrag nach außen:
+//    - callExtractFacts(text)      → ExtractedFact[]
+//    - callSuggestAssignment(input) → AssignmentSuggestion
+//
+//  Modell-, Prompt- und Schema-Details kommen aus agentConfig.ts.
 // =============================================================================
 
 import {
   AGENT_MODEL,
   AGENT_SYSTEM_PROMPT,
+  AGENT_TIMEOUT_MS,
+  ASSIGNMENT_SYSTEM_PROMPT,
   EXTRACT_FACTS_TOOL,
+  SUGGEST_ASSIGNMENT_TOOL,
   type FactType,
 } from "./agentConfig.ts";
 
@@ -22,24 +28,77 @@ export interface ExtractedFact {
   confidence: number;
 }
 
+export interface AssignmentSuggestion {
+  project_id: string | null;
+  confidence: number;
+  reason_short: string;
+  suggested_new_name?: string | null;
+  alternatives?: { project_id: string; confidence: number }[];
+}
+
 export class AgentRateLimitError extends Error {
-  constructor() {
-    super("rate_limited");
-  }
+  constructor() { super("rate_limited"); }
 }
 export class AgentPaymentError extends Error {
-  constructor() {
-    super("payment_required");
-  }
+  constructor() { super("payment_required"); }
+}
+export class AgentTimeoutError extends Error {
+  constructor() { super("agent_timeout"); }
 }
 
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
-export async function callExtractFacts(text: string): Promise<ExtractedFact[]> {
+async function callGateway(body: unknown): Promise<any> {
   const apiKey = Deno.env.get("LOVABLE_API_KEY");
   if (!apiKey) throw new Error("LOVABLE_API_KEY ist nicht gesetzt");
 
-  const body = {
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), AGENT_TIMEOUT_MS);
+
+  let res: Response;
+  try {
+    res = await fetch(GATEWAY_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+      signal: ctl.signal,
+    });
+  } catch (err) {
+    if ((err as { name?: string })?.name === "AbortError") throw new AgentTimeoutError();
+    throw err;
+  } finally {
+    clearTimeout(t);
+  }
+
+  if (res.status === 429) throw new AgentRateLimitError();
+  if (res.status === 402) throw new AgentPaymentError();
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`Agent gateway ${res.status}: ${txt.slice(0, 300)}`);
+  }
+  return res.json();
+}
+
+function parseToolArgs(data: any, expectedName: string): unknown {
+  const toolCall = data?.choices?.[0]?.message?.tool_calls?.[0];
+  if (toolCall?.function?.name && toolCall.function.name !== expectedName) return null;
+  const argsRaw = toolCall?.function?.arguments;
+  if (!argsRaw) return null;
+  try {
+    return typeof argsRaw === "string" ? JSON.parse(argsRaw) : argsRaw;
+  } catch {
+    return null;
+  }
+}
+
+// ----------------------------------------------------------------------------
+//  Extract Facts
+// ----------------------------------------------------------------------------
+export async function callExtractFacts(text: string): Promise<ExtractedFact[]> {
+  const data = await callGateway({
     model: AGENT_MODEL,
     messages: [
       { role: "system", content: AGENT_SYSTEM_PROMPT },
@@ -47,39 +106,13 @@ export async function callExtractFacts(text: string): Promise<ExtractedFact[]> {
     ],
     tools: [EXTRACT_FACTS_TOOL],
     tool_choice: { type: "function", function: { name: "extract_facts" } },
-  };
-
-  const res = await fetch(GATEWAY_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
   });
 
-  if (res.status === 429) throw new AgentRateLimitError();
-  if (res.status === 402) throw new AgentPaymentError();
-  if (!res.ok) {
-    const t = await res.text();
-    throw new Error(`Agent gateway ${res.status}: ${t.slice(0, 300)}`);
-  }
-
-  const data = await res.json();
-  const toolCall = data?.choices?.[0]?.message?.tool_calls?.[0];
-  const argsRaw = toolCall?.function?.arguments;
-  if (!argsRaw) return [];
-
-  let parsed: unknown;
-  try {
-    parsed = typeof argsRaw === "string" ? JSON.parse(argsRaw) : argsRaw;
-  } catch {
-    return [];
-  }
-  const facts = (parsed as { facts?: unknown }).facts;
+  const parsed = parseToolArgs(data, "extract_facts") as { facts?: unknown } | null;
+  if (!parsed) return [];
+  const facts = parsed.facts;
   if (!Array.isArray(facts)) return [];
 
-  // Defensive Filterung — was nicht ins Schema passt, fliegt raus.
   return facts.filter(
     (f): f is ExtractedFact =>
       !!f &&
@@ -88,4 +121,79 @@ export async function callExtractFacts(text: string): Promise<ExtractedFact[]> {
       typeof (f as ExtractedFact).content === "object" &&
       typeof (f as ExtractedFact).confidence === "number",
   );
+}
+
+// ----------------------------------------------------------------------------
+//  Suggest Project Assignment
+// ----------------------------------------------------------------------------
+export interface AssignmentInput {
+  text: string;
+  projects: {
+    id: string;
+    name: string;
+    description?: string | null;
+    topics?: string[];
+    stakeholder_initials?: string[];
+  }[];
+  lexicalHints: {
+    project_id: string;
+    score: number;
+    reasons: string[];
+  }[];
+}
+
+export async function callSuggestAssignment(
+  input: AssignmentInput,
+): Promise<AssignmentSuggestion | null> {
+  if (input.projects.length === 0) {
+    return { project_id: null, confidence: 0.9, reason_short: "Noch keine Projekte vorhanden." };
+  }
+
+  const projectsBlock = input.projects
+    .map((p) => {
+      const parts = [`- ${p.name} (${p.id})`];
+      if (p.description) parts.push(`  Beschreibung: ${p.description.slice(0, 200)}`);
+      if (p.topics?.length) parts.push(`  Themen: ${p.topics.join(", ")}`);
+      if (p.stakeholder_initials?.length) parts.push(`  Stakeholder: ${p.stakeholder_initials.join(", ")}`);
+      return parts.join("\n");
+    })
+    .join("\n\n");
+
+  const hintsBlock = input.lexicalHints.length
+    ? input.lexicalHints
+        .map((h) => `- ${h.project_id} · Score ${h.score} · ${h.reasons.join("; ")}`)
+        .join("\n")
+    : "(keine wörtlichen Treffer)";
+
+  const userMsg = `## Roh-Text
+${input.text.slice(0, 8000)}
+
+## Vorhandene Projekte
+${projectsBlock}
+
+## Lexikalische Hinweise
+${hintsBlock}`;
+
+  const data = await callGateway({
+    model: AGENT_MODEL,
+    messages: [
+      { role: "system", content: ASSIGNMENT_SYSTEM_PROMPT },
+      { role: "user", content: userMsg },
+    ],
+    tools: [SUGGEST_ASSIGNMENT_TOOL],
+    tool_choice: { type: "function", function: { name: "suggest_project_assignment" } },
+  });
+
+  const parsed = parseToolArgs(data, "suggest_project_assignment") as
+    | AssignmentSuggestion
+    | null;
+  if (!parsed) return null;
+
+  // Defensive Validierung
+  const validIds = new Set(input.projects.map((p) => p.id));
+  if (parsed.project_id && !validIds.has(parsed.project_id)) {
+    parsed.project_id = null;
+    parsed.reason_short = "Agent nannte unbekanntes Projekt — eher neues Projekt.";
+  }
+  return parsed;
 }

@@ -1,20 +1,16 @@
 // =============================================================================
 //  commit-fact
 // -----------------------------------------------------------------------------
-//  Schritt 4 der Pipeline: ein vom Nutzer entschiedenes review_case wird
-//  endgültig festgeschrieben — oder verworfen.
+//  Schritt 4: ein review_case wird vom Nutzer entschieden.
 //
-//  decision = 'confirm':
-//    - canonical_facts eintragen (mit Provenance)
-//    - change_event eintragen
-//    - proposed_facts.status = 'committed'
-//    - review_cases.box_state = 'bestaetigt'
+//  Spezialbehandlung Phase 7.5:
+//  - box_type='assignment' → schreibt Projektwahl in dialog_sessions.metadata,
+//    legt ggf. neues Projekt an, propagiert die project_id auf alle
+//    proposed_facts dieser Session.
+//  - fact_type='open_point' → zusätzlich gap_signals
+//  - fact_type='reference'  → zusätzlich dependencies
 //
-//  decision = 'reject':
-//    - proposed_facts.status = 'rejected'
-//    - review_cases.box_state = 'verworfen'
-//
-//  Wenn alle Cases der Session abgeschlossen sind → dialog_session.status='completed'
+//  Liest Projektzuordnung aus Session-Metadaten — kein Lazy "Allgemein" mehr.
 // =============================================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
@@ -38,7 +34,6 @@ Deno.serve(async (req) => {
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const admin = createClient(supabaseUrl, serviceKey);
 
-  // Auth: wir validieren JWT manuell und stellen Owner-Check sicher.
   const authHeader = req.headers.get("Authorization") ?? "";
   const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
     global: { headers: { Authorization: authHeader } },
@@ -51,14 +46,20 @@ Deno.serve(async (req) => {
     const { review_case_id, decision, user_decision } = (await req.json()) as Payload;
     if (!review_case_id || !decision) throw new Error("review_case_id + decision erforderlich");
 
-    // 1. review_case + proposed_fact laden -----------------------------------
     const { data: rc, error: rcErr } = await admin
       .from("review_cases")
-      .select("*, proposed_fact:proposed_facts(*)")
+      .select("*, proposed_fact:proposed_facts(*), session:dialog_sessions(*)")
       .eq("id", review_case_id)
       .single();
     if (rcErr || !rc) throw new Error(`review_case nicht gefunden: ${rcErr?.message}`);
     if (rc.user_id !== user.id) return fail("kein Zugriff", 403);
+
+    // ==== Sonderfall: Zuordnungsbox =====================================
+    if (rc.box_type === "assignment") {
+      await handleAssignment(admin, user.id, rc, decision, user_decision);
+      await updateSessionProgress(admin, rc.session_id);
+      return ok({});
+    }
 
     const pf = rc.proposed_fact as
       | {
@@ -78,33 +79,16 @@ Deno.serve(async (req) => {
     if (decision === "confirm") {
       if (!pf) throw new Error("proposed_fact fehlt — kann nicht festschreiben");
 
-      // 2a. canonical_facts schreiben ---------------------------------------
-      // project_id ist NOT NULL — V1: wir nehmen project_id vom proposed_fact
-      // oder erstellen lazy ein Default-Projekt, falls noch keines existiert.
-      let project_id = pf.project_id;
+      // Projekt-ID aus Session bevorzugen, sonst proposed_fact, sonst Fehler
+      const sessionMeta = (rc.session?.metadata ?? {}) as Record<string, any>;
+      const sessionProjectId =
+        sessionMeta?.assignment?.assigned_project_id ?? rc.session?.project_id ?? null;
+      const project_id = sessionProjectId ?? pf.project_id;
+
       if (!project_id) {
-        const { data: existingProj } = await admin
-          .from("projects")
-          .select("id")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: true })
-          .limit(1)
-          .maybeSingle();
-        if (existingProj) {
-          project_id = existingProj.id;
-        } else {
-          const { data: newProj, error: pErr } = await admin
-            .from("projects")
-            .insert({
-              user_id: user.id,
-              name: "Allgemein",
-              description: "Standardprojekt für unsortierte Inputs",
-            })
-            .select("id")
-            .single();
-          if (pErr) throw new Error(`Default-Projekt: ${pErr.message}`);
-          project_id = newProj.id;
-        }
+        throw new Error(
+          "Keine Projektzuordnung — bitte zuerst Zuordnungsbox entscheiden.",
+        );
       }
 
       const { data: cf, error: cfErr } = await admin
@@ -127,14 +111,35 @@ Deno.serve(async (req) => {
         .single();
       if (cfErr) throw new Error(`canonical_facts: ${cfErr.message}`);
 
-      // 2b. change_event ----------------------------------------------------
+      // Spezial-Schreibpfade: Gap & Dependency
+      if (pf.fact_type === "open_point") {
+        const c = pf.content ?? {};
+        await admin.from("gap_signals").insert({
+          user_id: user.id,
+          project_id,
+          canonical_fact_id: cf!.id,
+          title: (c as any).title ?? "Offener Punkt",
+          impact: typeof (c as any).impact === "string" ? (c as any).impact : null,
+          affects: typeof (c as any).affects === "string" ? (c as any).affects : null,
+          status: "open",
+        });
+      }
+      if (pf.fact_type === "reference") {
+        const c = pf.content ?? {};
+        await admin.from("dependencies").insert({
+          user_id: user.id,
+          project_id,
+          source_id: cf!.id,
+          source_type: "canonical_fact",
+          target_id: cf!.id, // V1: Self-Ref bis echtes Linking kommt (Phase 8)
+          target_type: typeof (c as any).target_type === "string" ? (c as any).target_type : "external",
+          dependency_type: "haengt_ab_von",
+          description: typeof (c as any).description === "string" ? (c as any).description : null,
+        });
+      }
+
       const eventType = (pf.delta_type ?? "add") as
-        | "confirm"
-        | "add"
-        | "replace"
-        | "contradict"
-        | "merge"
-        | "discard";
+        | "confirm" | "add" | "replace" | "contradict" | "merge" | "discard";
       await admin.from("change_events").insert({
         user_id: user.id,
         project_id,
@@ -145,52 +150,22 @@ Deno.serve(async (req) => {
         previous_value: null,
       });
 
-      await admin
-        .from("proposed_facts")
-        .update({ status: "committed" })
-        .eq("id", pf.id);
-
+      await admin.from("proposed_facts").update({ status: "committed" }).eq("id", pf.id);
       await admin
         .from("review_cases")
-        .update({
-          box_state: "bestaetigt",
-          user_decision: user_decision ?? { decision: "confirm" },
-        })
+        .update({ box_state: "confirmed", user_decision: user_decision ?? { decision: "confirm" } })
         .eq("id", review_case_id);
     } else {
-      // reject
       if (pf) {
         await admin.from("proposed_facts").update({ status: "rejected" }).eq("id", pf.id);
       }
       await admin
         .from("review_cases")
-        .update({
-          box_state: "verworfen",
-          user_decision: user_decision ?? { decision: "reject" },
-        })
+        .update({ box_state: "rejected", user_decision: user_decision ?? { decision: "reject" } })
         .eq("id", review_case_id);
     }
 
-    // 3. Session-Fortschritt aktualisieren -----------------------------------
-    const { data: caseStats } = await admin
-      .from("review_cases")
-      .select("box_state")
-      .eq("session_id", rc.session_id);
-    const total = caseStats?.length ?? 0;
-    const resolved =
-      caseStats?.filter((c) =>
-        ["bestaetigt", "verworfen", "eskaliert"].includes(c.box_state),
-      ).length ?? 0;
-
-    await admin
-      .from("dialog_sessions")
-      .update({
-        resolved_boxes: resolved,
-        total_boxes: total,
-        status: total > 0 && resolved >= total ? "completed" : "in_progress",
-      })
-      .eq("id", rc.session_id);
-
+    await updateSessionProgress(admin, rc.session_id);
     return ok({});
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -199,8 +174,119 @@ Deno.serve(async (req) => {
   }
 });
 
+// ----------------------------------------------------------------------------
+
+async function handleAssignment(
+  admin: any,
+  user_id: string,
+  rc: any,
+  decision: "confirm" | "reject",
+  user_decision?: Record<string, unknown> | null,
+) {
+  const ctx = (rc.context ?? {}) as any;
+  const sessionMeta = (rc.session?.metadata ?? {}) as any;
+  let chosenProjectId: string | null = null;
+
+  if (decision === "confirm") {
+    // user_decision kann enthalten: { project_id?: string, new_project_name?: string }
+    const ud = (user_decision ?? {}) as { project_id?: string; new_project_name?: string };
+    if (ud.project_id) {
+      chosenProjectId = ud.project_id;
+    } else if (ud.new_project_name) {
+      const { data: np, error: npErr } = await admin
+        .from("projects")
+        .insert({ user_id, name: ud.new_project_name })
+        .select("id")
+        .single();
+      if (npErr) throw new Error(`Neues Projekt: ${npErr.message}`);
+      chosenProjectId = np.id;
+    } else if (ctx.assignment_mode === "auto" && ctx.candidates?.[0]?.project_id) {
+      // Default-Bestätigung der Auto-Zuordnung
+      chosenProjectId = ctx.candidates[0].project_id;
+    } else if (ctx.assignment_mode === "new" && ctx.suggested_new_name) {
+      const { data: np, error: npErr } = await admin
+        .from("projects")
+        .insert({ user_id, name: ctx.suggested_new_name })
+        .select("id")
+        .single();
+      if (npErr) throw new Error(`Neues Projekt: ${npErr.message}`);
+      chosenProjectId = np.id;
+    } else {
+      throw new Error("Keine Projektwahl getroffen");
+    }
+  } else {
+    // verwerfen → wir tun nichts an Zuordnung; User soll andere Box neu wählen
+    await admin
+      .from("review_cases")
+      .update({ box_state: "rejected", user_decision: user_decision ?? { decision: "reject" } })
+      .eq("id", rc.id);
+    return;
+  }
+
+  // Session, Asset, alle proposed_facts dieser Session updaten
+  await admin
+    .from("dialog_sessions")
+    .update({
+      project_id: chosenProjectId,
+      metadata: {
+        ...sessionMeta,
+        assignment: {
+          ...(sessionMeta.assignment ?? {}),
+          assigned_project_id: chosenProjectId,
+          decided_at: new Date().toISOString(),
+        },
+      },
+    })
+    .eq("id", rc.session_id);
+
+  if (ctx.asset_id) {
+    await admin
+      .from("assets")
+      .update({ project_id: chosenProjectId })
+      .eq("id", ctx.asset_id);
+  }
+
+  // alle pending proposed_facts dieser Session bekommen project_id
+  const sessionMetaRunId = sessionMeta?.extraction_run_id;
+  if (sessionMetaRunId) {
+    await admin
+      .from("proposed_facts")
+      .update({ project_id: chosenProjectId })
+      .eq("user_id", user_id)
+      .eq("extraction_run_id", sessionMetaRunId);
+  }
+
+  await admin
+    .from("review_cases")
+    .update({
+      box_state: "confirmed",
+      user_decision: { ...user_decision, project_id: chosenProjectId },
+    })
+    .eq("id", rc.id);
+}
+
+async function updateSessionProgress(admin: any, session_id: string) {
+  const { data: caseStats } = await admin
+    .from("review_cases")
+    .select("box_state")
+    .eq("session_id", session_id);
+  const total = caseStats?.length ?? 0;
+  const resolved =
+    caseStats?.filter((c: any) =>
+      ["confirmed", "rejected", "escalated"].includes(c.box_state),
+    ).length ?? 0;
+  await admin
+    .from("dialog_sessions")
+    .update({
+      resolved_boxes: resolved,
+      total_boxes: total,
+      status: total > 0 && resolved >= total ? "completed" : "in_progress",
+    })
+    .eq("id", session_id);
+}
+
 function ok(payload: unknown) {
-  return new Response(JSON.stringify({ ok: true, ...payload as object }), {
+  return new Response(JSON.stringify({ ok: true, ...(payload as object) }), {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }

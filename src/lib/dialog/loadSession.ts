@@ -1,11 +1,22 @@
 // =============================================================================
 //  loadSession — lädt eine echte Dialog-Session aus der Datenbank.
 //  Mappt review_cases → DialogBox (UI-Form).
+//  WICHTIG: DB-box_state ist englisch (proposed/confirmed/rejected/...),
+//  UI-Layer nutzt deutsche Werte. Hier wird gemappt.
 // =============================================================================
 
 import { supabase } from "@/integrations/supabase/client";
-import type { DialogBox, DialogSession } from "./types";
+import type { DialogBox, DialogSession, BoxState } from "./types";
 import { dbBoxTypeToUI } from "./boxMapping";
+
+const DB_TO_UI_STATE: Record<string, BoxState> = {
+  proposed: "vorgeschlagen",
+  expanded: "aufgeklappt",
+  modified: "geaendert",
+  confirmed: "bestaetigt",
+  rejected: "verworfen",
+  escalated: "eskaliert",
+};
 
 export async function loadDialogSession(sessionId: string): Promise<DialogSession | null> {
   const { data: session, error: sErr } = await supabase
@@ -23,26 +34,47 @@ export async function loadDialogSession(sessionId: string): Promise<DialogSessio
   if (cErr) return null;
 
   const boxes: DialogBox[] = (cases ?? []).map((c) => {
-    const ctx = (c.context ?? {}) as { fact_type?: string; content?: Record<string, unknown> };
-    const content = ctx.content ?? {};
+    const ctx = (c.context ?? {}) as Record<string, unknown>;
+    const factType = ctx.fact_type as string | undefined;
+    const content = (ctx.content ?? {}) as Record<string, unknown>;
+
+    // Zuordnungsbox: spezielles Payload mit Kandidaten
+    if (c.box_type === "assignment") {
+      const candidates = (ctx.candidates ?? []) as {
+        project_id: string;
+        name: string;
+        score: number;
+        reasons: string[];
+      }[];
+      return {
+        id: c.id,
+        type: "zuordnung",
+        state: DB_TO_UI_STATE[c.box_state] ?? "vorgeschlagen",
+        title: c.title ?? "Projektzuordnung",
+        payload: {
+          assignment_mode: ctx.assignment_mode,
+          candidates,
+          suggested_new_name: ctx.suggested_new_name,
+          agent_reason: ctx.agent_reason,
+          asset_id: ctx.asset_id,
+          frage: c.description ?? "Welches Projekt passt?",
+          __reviewCaseId: c.id,
+        },
+      };
+    }
+
     return {
       id: c.id,
       type: dbBoxTypeToUI(c.box_type),
-      state: c.box_state as DialogBox["state"],
+      state: DB_TO_UI_STATE[c.box_state] ?? "vorgeschlagen",
       title: c.title ?? "(ohne Titel)",
       payload: {
-        // gemeinsame Felder für die existierenden Boxen-Renderer:
         sachverhalt: c.description ?? "",
-        // Zusatzinfos für spezialisierte Boxen
-        factType: ctx.fact_type,
+        factType,
         content,
-        // Konflikt: Varianten kommen später aus against_fact + content
         beschreibung: c.description ?? "",
-        // Gap
         wirkung: typeof content.impact === "string" ? content.impact : undefined,
-        // Quelle (V1: wir setzen den DB-Hinweis als Quelle)
-        quelle: ctx.fact_type ? `vorgeschlagen · ${ctx.fact_type}` : "vorgeschlagen",
-        // Persistenz-Marker — wird vom Provider erkannt
+        quelle: factType ? `vorgeschlagen · ${factType}` : "vorgeschlagen",
         __reviewCaseId: c.id,
       },
     };

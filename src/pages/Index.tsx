@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import EntityCore from "@/components/EntityCore";
+import EntityVoice from "@/components/entity/EntityVoice";
 import ProjectScreen from "@/components/project/ProjectScreen";
 import SideGrid from "@/components/entity/SideGrid";
 import RecentAssets from "@/components/entity/RecentAssets";
@@ -12,6 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { devlog } from "@/lib/devlog/devlog";
 import { useDialog } from "@/components/dialog/DialogProvider";
+import { useEntityVoice } from "@/lib/voice/useEntityVoice";
 
 type EntityState = "idle" | "hover" | "processing" | "review-ready" | "failed";
 type AppView = "entity" | "project";
@@ -20,14 +22,14 @@ const Index = () => {
   const navigate = useNavigate();
   const { session, loading, signOut } = useAuth();
   const [entityState, setEntityState] = useState<EntityState>("idle");
-  const [lastImpact, setLastImpact] = useState<string | null>(null);
   const [view, setView] = useState<AppView>("entity");
   const [activeProjectId, setActiveProjectId] = useState<string | undefined>();
   const [overlayOpen, setOverlayOpen] = useState(false);
   const { openSessionFromDB } = useDialog();
   const pendingSessionId = useRef<string | null>(null);
 
-  const { intake } = useIntake({ setEntityState, setLastImpact });
+  const { intake } = useIntake({ setEntityState });
+  const voice = useEntityVoice(session?.user?.id);
 
   const isDragActive = entityState === "hover";
 
@@ -35,27 +37,39 @@ const Index = () => {
     if (!loading && !session) navigate("/auth", { replace: true });
   }, [loading, session, navigate]);
 
-  // Realtime: Verarbeitungsstatus auf den Kern spiegeln
+  // Realtime: understanding_status auf den Kern spiegeln
   useEffect(() => {
     if (!session?.user) return;
     const channel = supabase
-      .channel("assets-status")
+      .channel("assets-understanding")
       .on(
         "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "assets" },
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "assets",
+          filter: `user_id=eq.${session.user.id}`,
+        },
         (payload) => {
-          const row = payload.new as { id?: string; processing_status?: string; file_name?: string };
-          devlog.realtime(`assets UPDATE → ${row.processing_status}`, {
-            id: row.id,
-            file_name: row.file_name,
-          });
-          const status = row.processing_status;
-          if (status === "processing") setEntityState("processing");
-          else if (status === "completed") {
-            setLastImpact("verarbeitet");
-          } else if (status === "failed") {
+          const row = payload.new as {
+            id?: string;
+            understanding_status?: string;
+            processing_status?: string;
+          };
+          devlog.realtime(
+            `assets UPDATE → parsing:${row.processing_status} understanding:${row.understanding_status}`,
+            { id: row.id },
+          );
+          if (row.processing_status === "processing" || row.understanding_status === "running") {
+            setEntityState("processing");
+          } else if (
+            row.understanding_status === "failed" ||
+            row.understanding_status === "rate_limited" ||
+            row.understanding_status === "payment_required"
+          ) {
             setEntityState("failed");
-            setLastImpact("fehlgeschlagen");
+          } else if (row.understanding_status === "empty") {
+            setEntityState("idle");
           }
         },
       )
@@ -84,7 +98,6 @@ const Index = () => {
           if (row.status === "open" && row.id) {
             pendingSessionId.current = row.id;
             setEntityState("review-ready");
-            setLastImpact("Vorschläge bereit");
           }
         },
       )
@@ -122,6 +135,14 @@ const Index = () => {
     }
   }, [entityState, handleReviewClick]);
 
+  const handleRetry = useCallback(async (assetId: string) => {
+    devlog.edge("retry intake-understand", { assetId });
+    setEntityState("processing");
+    await supabase.functions.invoke("intake-understand", {
+      body: { asset_id: assetId, retry: true },
+    });
+  }, []);
+
   if (loading || !session) return null;
 
   if (view === "project") {
@@ -153,21 +174,15 @@ const Index = () => {
           onClick={handleCoreClick}
         />
 
-        <p className="absolute bottom-[18%] text-muted-foreground text-sm tracking-wide opacity-60 animate-float-in">
-          Klick auf den Kern oder lege etwas hier ab — Datei, Link, Notiz
-        </p>
-      </div>
+        {/* Live-Stimme der Intelligenz: schwebt mittig unter dem Kern */}
+        <div className="absolute bottom-[22%] z-20 pointer-events-auto">
+          <EntityVoice voice={voice} onRetry={handleRetry} />
+        </div>
 
-      <div className="absolute bottom-8 flex items-center gap-8 text-xs text-muted-foreground/60">
-        {lastImpact && <span className="animate-float-in">{lastImpact}</span>}
-
-        {entityState === "review-ready" && (
-          <button
-            onClick={handleReviewClick}
-            className="text-primary/80 hover:text-primary transition-colors tracking-wide"
-          >
-            Review öffnen
-          </button>
+        {!voice.text && (
+          <p className="absolute bottom-[14%] text-muted-foreground text-sm tracking-wide opacity-50 animate-float-in">
+            Klick auf den Kern oder lege etwas hier ab — Datei, Link, Notiz
+          </p>
         )}
       </div>
 

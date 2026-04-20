@@ -25,6 +25,9 @@ export type Database = {
           processing_status: Database["public"]["Enums"]["processing_status"]
           project_id: string | null
           storage_path: string | null
+          understanding_attempt: number
+          understanding_error: string | null
+          understanding_status: Database["public"]["Enums"]["understanding_status"]
           updated_at: string
           user_id: string
         }
@@ -38,6 +41,9 @@ export type Database = {
           processing_status?: Database["public"]["Enums"]["processing_status"]
           project_id?: string | null
           storage_path?: string | null
+          understanding_attempt?: number
+          understanding_error?: string | null
+          understanding_status?: Database["public"]["Enums"]["understanding_status"]
           updated_at?: string
           user_id: string
         }
@@ -51,6 +57,9 @@ export type Database = {
           processing_status?: Database["public"]["Enums"]["processing_status"]
           project_id?: string | null
           storage_path?: string | null
+          understanding_attempt?: number
+          understanding_error?: string | null
+          understanding_status?: Database["public"]["Enums"]["understanding_status"]
           updated_at?: string
           user_id?: string
         }
@@ -1411,6 +1420,14 @@ export type Database = {
       gap_status: "open" | "in_clarification" | "resolved" | "obsolete"
       processing_status: "pending" | "processing" | "completed" | "failed"
       review_status: "open" | "in_progress" | "completed" | "cancelled"
+      understanding_status:
+        | "pending"
+        | "running"
+        | "empty"
+        | "review_ready"
+        | "failed"
+        | "rate_limited"
+        | "payment_required"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1582,6 +1599,15 @@ export const Constants = {
       gap_status: ["open", "in_clarification", "resolved", "obsolete"],
       processing_status: ["pending", "processing", "completed", "failed"],
       review_status: ["open", "in_progress", "completed", "cancelled"],
+      understanding_status: [
+        "pending",
+        "running",
+        "empty",
+        "review_ready",
+        "failed",
+        "rate_limited",
+        "payment_required",
+      ],
     },
   },
 } as const
