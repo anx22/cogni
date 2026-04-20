@@ -5,26 +5,27 @@ import BoxFrame, { ActionBtn } from "../BoxFrame";
 import type { DialogBox } from "@/lib/dialog/types";
 
 const EingabeBox = ({ box }: { box: DialogBox }) => {
-  const { updateBoxState, updateBoxPayload } = useDialog();
+  const { updateBoxState, updateBoxPayload, closeDialog } = useDialog();
   const [text, setText] = useState(box.payload?.text ?? "");
+
+  const submit = () => {
+    if (!text.trim()) return;
+    updateBoxPayload(box.id, { text });
+    updateBoxState(box.id, "bestaetigt");
+    setTimeout(closeDialog, 250);
+  };
 
   return (
     <BoxFrame
       box={box}
       actions={
-        <>
-          <ActionBtn
-            variant="primary"
-            icon={<Check className="w-3 h-3" />}
-            onClick={() => {
-              updateBoxPayload(box.id, { text });
-              if (text.trim()) updateBoxState(box.id, "bestaetigt");
-            }}
-          >
-            Senden
-          </ActionBtn>
-          <ActionBtn onClick={() => updateBoxState(box.id, "verworfen")}>Verwerfen</ActionBtn>
-        </>
+        <ActionBtn
+          variant="primary"
+          icon={<Check className="w-3 h-3" />}
+          onClick={submit}
+        >
+          Senden
+        </ActionBtn>
       }
     >
       {box.payload?.hinweis && (

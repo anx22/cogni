@@ -1,19 +1,19 @@
 # Produktintelligenz — Geplante Umsetzungen & Roadmap (v2)
 
-## Phase 4: Dialog-Overlay (NÄCHSTER SCHRITT)
+## Phase 4: Dialog-Overlay ✓ (abgeschlossen, V1-Minimalprinzip)
 
-- Vollbild-Overlay über beide Screens
-- **8 Gesprächsbox-Typen** (inkl. neuer Gap-Box) mit 6 Zuständen
-- Dynamische Komposition aus Review Cases
-- Commit-Flow → kanonischer Zustand
-- **Übergangs-Aufgabe**: Bestehende Toast-Brücken im Projekt-Screen durch echte Box-Aufrufe ersetzen
-  - Konflikt-Items (`ConflictBanner`, Verlauf-Konflikt-Einträge) → Konfliktbox
-  - Themen-Karten (`SubstanzSection`) → Themen-/Selection-Box
-  - Handlungsbedarf-Buttons (Bearbeiten / Inline antworten) → passende Action-/Knowledge-Box
-  - SourceMarker → Kontext-Box mit Quellen-Detail
-  - Feedback-Buttons (Lagebild, Verlauf) → Korrektur-Box
-  - Gap-Items (`SignalStrip`, Handlungsbedarf) → Gap-Box
-  - Dependency-Items → Action-Box mit Relations-Kontext
+**Leitprinzip:** Die 8 Box-Typen sind ein **Systembaukasten, kein Pflichtsatz pro Fall**. Einfache Projekt-Overlays folgen dem Muster **Inhalt + ggf. Widerspruch/Kontext + Antwort** — meist 1–2 Boxen.
+
+**Standardmuster nach Trigger:**
+- Handlungsbedarf → Sachverhalt + Antwort
+- Konflikt → Konflikt mit eingebauter Auswahl + optionaler Begründung
+- Gap → Lücke mit eingebauter Antwort
+- Feedback → nur Eingabefeld
+- Dokument / Quelle / Thema / Verlauf → reine Kontext-Box
+
+**Begriffe (V1):** `Antworten` als Einstieg, `Übernehmen` als Abschluss. Eingabe-/Konflikt-/Gap-Boxen schließen die Session selbst beim Senden. Eskalieren / Mergen / separater Aktionsblock entfernt aus der Standard-UI (intern weiter verfügbar).
+
+**Nicht in V1 sichtbar:** `vorgeschlagen`, `aufgeklappt`, `eskaliert` als prominente Nutzerlabels.
 
 ## Phase 5: Universeller Input
 

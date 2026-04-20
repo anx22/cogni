@@ -2,7 +2,6 @@ import type { DialogBox, DialogSession } from "./types";
 
 let counter = 0;
 const uid = (prefix = "b") => `${prefix}_${Date.now()}_${counter++}`;
-
 const sessionId = () => `s_${Date.now()}_${counter++}`;
 
 const mkBox = (b: Omit<DialogBox, "id" | "state"> & { state?: DialogBox["state"] }): DialogBox => ({
@@ -12,6 +11,7 @@ const mkBox = (b: Omit<DialogBox, "id" | "state"> & { state?: DialogBox["state"]
 });
 
 // ---------------------- Konflikt ----------------------
+// Minimal: Konflikt (mit Auswahl + optionaler Begründung) — schließt sich selbst ab.
 export const buildKonfliktSession = (k: {
   id: string;
   title: string;
@@ -32,25 +32,11 @@ export const buildKonfliktSession = (k: {
         faktB: k.faktB,
       },
     }),
-    mkBox({
-      type: "kontext",
-      title: "Hintergrund",
-      state: "vorgeschlagen",
-      payload: {
-        auszug: k.beschreibung,
-        quelle: `Konflikt #${k.id}`,
-        begruendung: "Beide Fakten stammen aus unterschiedlichen Quellen.",
-      },
-    }),
-    mkBox({
-      type: "aktion",
-      title: "Entscheidung übernehmen",
-      payload: {},
-    }),
   ],
 });
 
 // ---------------------- Gap ----------------------
+// Minimal: Gap mit eingebauter Antwort.
 export const buildGapSession = (g: {
   id: string;
   titel: string;
@@ -68,19 +54,14 @@ export const buildGapSession = (g: {
       payload: {
         wirkung: g.wirkung,
         lebensdauer: g.lebensdauer,
+        betrifft: g.betrifft,
       },
     }),
-    mkBox({
-      type: "eingabe",
-      title: "Begründung / Quelle",
-      state: "vorgeschlagen",
-      payload: { placeholder: "Woher stammt die Information?", hinweis: `Betrifft: ${g.betrifft}` },
-    }),
-    mkBox({ type: "aktion", title: "Lücke abschließen", payload: {} }),
   ],
 });
 
 // ---------------------- Handlungsbedarf ----------------------
+// Minimal: Sachverhalt + Antwort. Kein separater Aktionsblock.
 export const buildHandlungsbedarfSession = (item: {
   id: string;
   titel: string;
@@ -88,7 +69,7 @@ export const buildHandlungsbedarfSession = (item: {
   quelle: string;
 }): DialogSession => ({
   id: sessionId(),
-  anlass: "Handlungsbedarf bearbeiten",
+  anlass: "Handlungsbedarf",
   context: item.id,
   boxes: [
     mkBox({
@@ -98,11 +79,9 @@ export const buildHandlungsbedarfSession = (item: {
     }),
     mkBox({
       type: "eingabe",
-      title: "Antwort / Bearbeitung",
-      state: "vorgeschlagen",
+      title: "Antwort",
       payload: { placeholder: "Antwort, Notiz oder Korrektur…" },
     }),
-    mkBox({ type: "aktion", title: "Bearbeitung übernehmen", payload: {} }),
   ],
 });
 
@@ -116,7 +95,7 @@ export const buildThemaSession = (t: {
   dokumente: number;
 }): DialogSession => ({
   id: sessionId(),
-  anlass: "Thema öffnen",
+  anlass: "Thema",
   context: t.name,
   boxes: [
     mkBox({
@@ -126,15 +105,6 @@ export const buildThemaSession = (t: {
         auszug: t.beschreibung,
         begruendung: `${t.entscheidungen} Entscheidungen · ${t.offenePunkte} offen · ${t.dokumente} Dokumente`,
         quelle: `Thema #${t.id}`,
-      },
-    }),
-    mkBox({
-      type: "zuordnung",
-      title: "Inhalt diesem Thema zuordnen?",
-      state: "vorgeschlagen",
-      payload: {
-        frage: "Sollen neue Erkenntnisse automatisch hier landen?",
-        optionen: ["Ja, automatisch", "Nur mit Bestätigung", "Nein"],
       },
     }),
   ],
@@ -150,7 +120,7 @@ export const buildDokumentSession = (d: {
   thema?: string | null;
 }): DialogSession => ({
   id: sessionId(),
-  anlass: "Dokument öffnen",
+  anlass: "Dokument",
   context: `${d.typ.toUpperCase()} v${d.version}`,
   boxes: [
     mkBox({
@@ -173,44 +143,28 @@ export const buildVerlaufSession = (e: {
   quelle: string;
   delta: string;
   ereignisTyp: string;
-}): DialogSession => {
-  const isConflict = e.ereignisTyp === "konflikt" || e.delta === "widersprochen";
-  return {
-    id: sessionId(),
-    anlass: isConflict ? "Verlaufseintrag · Konflikt" : "Verlaufseintrag",
-    context: e.datum,
-    boxes: [
-      mkBox({
-        type: "kontext",
-        title: e.inhalt,
-        payload: {
-          auszug: `${e.delta.toUpperCase()} · ${e.datum}`,
-          quelle: e.quelle,
-          begruendung: "Originalereignis aus dem Projektverlauf.",
-        },
-      }),
-      ...(isConflict
-        ? [
-            mkBox({
-              type: "konflikt" as const,
-              title: "Verknüpfter Konflikt",
-              state: "vorgeschlagen" as const,
-              payload: {
-                beschreibung: e.inhalt,
-                faktA: "Variante A (siehe Konfliktliste)",
-                faktB: "Variante B (siehe Konfliktliste)",
-              },
-            }),
-          ]
-        : []),
-    ],
-  };
-};
+}): DialogSession => ({
+  id: sessionId(),
+  anlass: "Verlaufseintrag",
+  context: e.datum,
+  boxes: [
+    mkBox({
+      type: "kontext",
+      title: e.inhalt,
+      payload: {
+        auszug: `${e.delta.toUpperCase()} · ${e.datum}`,
+        quelle: e.quelle,
+        begruendung: "Originalereignis aus dem Projektverlauf.",
+      },
+    }),
+  ],
+});
 
 // ---------------------- Feedback ----------------------
+// Minimal: nur Eingabe — Senden schließt selbst ab.
 export const buildFeedbackSession = (context: string): DialogSession => ({
   id: sessionId(),
-  anlass: "Feedback / Korrektur",
+  anlass: "Feedback",
   context,
   boxes: [
     mkBox({
@@ -218,14 +172,13 @@ export const buildFeedbackSession = (context: string): DialogSession => ({
       title: "Was stimmt nicht oder fehlt?",
       payload: { placeholder: "Korrektur, Hinweis oder Frage…" },
     }),
-    mkBox({ type: "aktion", title: "Feedback abschicken", payload: {} }),
   ],
 });
 
 // ---------------------- Source ----------------------
 export const buildSourceSession = (quelle: string): DialogSession => ({
   id: sessionId(),
-  anlass: "Quelle ansehen",
+  anlass: "Quelle",
   context: quelle,
   boxes: [
     mkBox({
