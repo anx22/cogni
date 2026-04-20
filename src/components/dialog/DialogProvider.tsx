@@ -1,5 +1,6 @@
-import { useCallback, useState, ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, ReactNode } from "react";
 import type { BoxState, DialogSession } from "@/lib/dialog/types";
+import { END_STATES } from "@/lib/dialog/types";
 import DialogOverlay from "./DialogOverlay";
 import { DialogContext } from "./dialogContext";
 import { supabase } from "@/integrations/supabase/client";
