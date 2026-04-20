@@ -2,7 +2,6 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import EntityCore from "@/components/EntityCore";
 import EntityVoice from "@/components/entity/EntityVoice";
-import ProjectScreen from "@/components/project/ProjectScreen";
 import SideGrid from "@/components/entity/SideGrid";
 import IntakeSessionsPanel from "@/components/entity/IntakeSessionsPanel";
 import HomeDropOverlay from "@/components/entity/HomeDropOverlay";
@@ -18,14 +17,11 @@ import { useEntityVoice } from "@/lib/voice/useEntityVoice";
 import { toast } from "sonner";
 
 type EntityState = "idle" | "hover" | "processing" | "review-ready" | "failed";
-type AppView = "entity" | "project";
 
 const Index = () => {
   const navigate = useNavigate();
   const { session, loading, signOut } = useAuth();
   const [entityState, setEntityState] = useState<EntityState>("idle");
-  const [view, setView] = useState<AppView>("entity");
-  const [activeProjectId, setActiveProjectId] = useState<string | undefined>();
   const [overlayOpen, setOverlayOpen] = useState(false);
   const { openSessionFromDB, session: dialogSession } = useDialog();
   const pendingSessionId = useRef<string | null>(null);
@@ -235,9 +231,8 @@ const Index = () => {
   );
 
   const handleProjectClick = useCallback((id: string) => {
-    setActiveProjectId(id);
-    setView("project");
-  }, []);
+    navigate(`/projekt/${id}`);
+  }, [navigate]);
 
   const handleReviewClick = useCallback(async () => {
     if (pendingSessionId.current) {
@@ -266,10 +261,6 @@ const Index = () => {
 
   if (loading || !session) return null;
 
-  if (view === "project") {
-    return <ProjectScreen onBack={() => setView("entity")} projectId={activeProjectId} />;
-  }
-
   return (
     <div
       className="relative flex flex-col items-center justify-center min-h-screen overflow-hidden bg-background"
@@ -284,7 +275,7 @@ const Index = () => {
             side="left"
             label="Projekte"
             projects={liveProjects}
-            activeId={activeProjectId}
+            activeId={undefined}
             onProjectClick={handleProjectClick}
             isDragActive={isDragActive}
           />
@@ -322,7 +313,7 @@ const Index = () => {
       <div className="absolute top-6 right-6 flex items-center gap-4">
         <button
           className="text-xs text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors tracking-widest uppercase"
-          onClick={() => setView("project")}
+          onClick={() => navigate("/projekt/" + (liveProjects?.[0]?.id ?? ""))}
         >
           Projekte
         </button>
