@@ -90,36 +90,58 @@ export function useIntake(options: UseIntakeOptions = {}) {
           toast(`${label} aufgenommen`, { description: "wird verarbeitet" });
           setLastImpact?.(`${label} aufgenommen`);
         } else if (payload.type === "url" && payload.url) {
-          const { error } = await supabase.from("assets").insert({
-            user_id: user.id,
-            file_name: payload.url,
-            file_type: "other",
-            processing_status: "completed",
-            metadata: { kind: "url", url: payload.url },
-          });
+          const { data, error } = await supabase
+            .from("assets")
+            .insert({
+              user_id: user.id,
+              file_name: payload.url,
+              file_type: "other",
+              processing_status: "completed",
+              metadata: { kind: "url", url: payload.url },
+            })
+            .select("id")
+            .single();
           if (error) {
             devlog.error("link insert failed", error);
             throw error;
           }
-          devlog.db("link inserted", { url: payload.url });
-          toast("Link aufgenommen");
+          devlog.db("link inserted", { url: payload.url, id: data.id });
+          toast("Link aufgenommen", { description: "wird verstanden" });
           setLastImpact?.("Link aufgenommen");
+          devlog.edge("invoke intake-understand (link)", { assetId: data.id });
+          supabase.functions
+            .invoke("intake-understand", { body: { asset_id: data.id } })
+            .then((res) => {
+              if (res.error) devlog.error("intake-understand error", res.error);
+              else devlog.edge("intake-understand responded", res.data);
+            });
         } else if (payload.type === "text" && payload.text) {
           const preview = payload.text.slice(0, 60);
-          const { error } = await supabase.from("assets").insert({
-            user_id: user.id,
-            file_name: preview,
-            file_type: "note",
-            processing_status: "completed",
-            metadata: { kind: "note", text: payload.text },
-          });
+          const { data, error } = await supabase
+            .from("assets")
+            .insert({
+              user_id: user.id,
+              file_name: preview,
+              file_type: "note",
+              processing_status: "completed",
+              metadata: { kind: "note", text: payload.text },
+            })
+            .select("id")
+            .single();
           if (error) {
             devlog.error("note insert failed", error);
             throw error;
           }
-          devlog.db("note inserted", { length: payload.text.length });
-          toast("Notiz aufgenommen");
+          devlog.db("note inserted", { length: payload.text.length, id: data.id });
+          toast("Notiz aufgenommen", { description: "wird verstanden" });
           setLastImpact?.("Notiz aufgenommen");
+          devlog.edge("invoke intake-understand (note)", { assetId: data.id });
+          supabase.functions
+            .invoke("intake-understand", { body: { asset_id: data.id } })
+            .then((res) => {
+              if (res.error) devlog.error("intake-understand error", res.error);
+              else devlog.edge("intake-understand responded", res.data);
+            });
         }
 
         onIntake?.(payload);

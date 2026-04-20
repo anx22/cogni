@@ -23,7 +23,7 @@ interface BoxFrameProps {
 }
 
 const BoxFrame = ({ box, children, hideActions, actions }: BoxFrameProps) => {
-  const { updateBoxState } = useDialog();
+  const { commitBox } = useDialog();
   const dim = box.state === "verworfen";
   const collapsed = box.state === "bestaetigt";
 
@@ -54,13 +54,13 @@ const BoxFrame = ({ box, children, hideActions, actions }: BoxFrameProps) => {
               <>
                 <ActionBtn
                   variant="primary"
-                  onClick={() => updateBoxState(box.id, "bestaetigt")}
+                  onClick={() => commitBox(box.id, "confirm")}
                   icon={<Check className="w-3 h-3" />}
                 >
                   Übernehmen
                 </ActionBtn>
                 <ActionBtn
-                  onClick={() => updateBoxState(box.id, "verworfen")}
+                  onClick={() => commitBox(box.id, "reject")}
                   icon={<X className="w-3 h-3" />}
                 >
                   Verwerfen

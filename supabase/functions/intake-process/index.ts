@@ -87,6 +87,20 @@ Deno.serve(async (req) => {
       .update({ processing_status: "completed" })
       .eq("id", asset_id);
 
+    // Verstehens-Loop anstoßen (fire-and-forget — Frontend hört per Realtime auf dialog_sessions)
+    try {
+      await fetch(`${supabaseUrl}/functions/v1/intake-understand`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${serviceKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ asset_id }),
+      });
+    } catch (e) {
+      console.error("intake-understand chain failed:", e);
+    }
+
     return new Response(JSON.stringify({ ok: true, segments_count: Array.isArray(segments) ? segments.length : 0 }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

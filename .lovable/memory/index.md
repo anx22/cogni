@@ -18,3 +18,4 @@ Keine klassische Sidebar. Orientierung über Zustandswechsel.
 - [Manueller Eingriff](mem://features/manueller-eingriff) — Nutzer-Werte nur visuell markiert, kein eigenes Datenmodell
 - [Universeller Input](mem://features/universeller-input) — Phase 5: Drop am Kern, Klick öffnet Overlay mit Pills, kein Auto-Switch
 - [DevLog](mem://features/devlog) — Dev-only Transparenz-Layer, Singleton-Logger + UI-Panel, erweiterbar via addSink()
+- [Verstehens-Loop](mem://features/verstehens-loop) — Phase 7: Agent-Config zentral in supabase/functions/_shared/agentConfig.ts, Provider-Adapter agentClient.ts austauschbar, intake-understand + commit-fact
