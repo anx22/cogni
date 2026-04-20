@@ -1,3 +1,9 @@
+// =============================================================================
+//  InlineComposer (vormals InputOverlay) — inline statt Fullscreen.
+//  Fügt sich unter dem Kern ein, blockiert NICHTS, kein Backdrop, kein
+//  Außenklick-Schließen. Nur ESC oder X schließen.
+// =============================================================================
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { X, Paperclip } from "lucide-react";
@@ -5,6 +11,7 @@ import InputPills, { type InputMode } from "./InputPills";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
   detectFromPaste,
   detectFromText,
@@ -17,28 +24,26 @@ interface InputOverlayProps {
   open: boolean;
   onClose: () => void;
   onSubmit: (payload: IntakePayload) => void;
+  className?: string;
 }
 
-const InputOverlay = ({ open, onClose, onSubmit }: InputOverlayProps) => {
+const InputOverlay = ({ open, onClose, onSubmit, className }: InputOverlayProps) => {
   const [mode, setMode] = useState<InputMode>("note");
   const [noteText, setNoteText] = useState("");
   const [linkText, setLinkText] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const noteRef = useRef<HTMLTextAreaElement>(null);
 
-  // Reset on close
   useEffect(() => {
     if (!open) {
       setMode("note");
       setNoteText("");
       setLinkText("");
     } else {
-      // autofocus on open
       window.setTimeout(() => noteRef.current?.focus(), 50);
     }
   }, [open]);
 
-  // ESC to close
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -110,110 +115,109 @@ const InputOverlay = ({ open, onClose, onSubmit }: InputOverlayProps) => {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-2xl animate-float-in"
-      onClick={onClose}
+      className={cn(
+        "relative w-full max-w-xl rounded-2xl border border-border/20 bg-[hsl(var(--surface-1)/0.6)] backdrop-blur-md p-5 animate-float-in shadow-[0_20px_60px_-30px_rgba(0,0,0,0.6)]",
+        className,
+      )}
       onPaste={handlePaste}
     >
       <button
         type="button"
         onClick={onClose}
-        className="absolute top-6 right-6 text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+        className="absolute top-3 right-3 text-muted-foreground/40 hover:text-muted-foreground transition-colors"
         aria-label="Schließen"
       >
-        <X className="size-5" />
+        <X className="size-4" />
       </button>
 
-      <div
-        className="w-full max-w-2xl px-8"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="mb-8 flex justify-center">
-          <InputPills active={mode} onChange={setMode} />
-        </div>
-
-        {mode === "note" && (
-          <div className="space-y-4">
-            <Textarea
-              ref={noteRef}
-              value={noteText}
-              onChange={(e) => setNoteText(e.target.value)}
-              onKeyDown={handleNoteKey}
-              placeholder="Notiz, Gedanke, gepasteter Text…"
-              className="min-h-[220px] resize-none border-border/30 bg-background/40 text-base leading-relaxed focus-visible:ring-primary/30"
-            />
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground/50 tracking-wide">
-                ⌘/Ctrl + Enter zum Übernehmen
-              </span>
-              <Button
-                onClick={submitNote}
-                disabled={!noteText.trim()}
-                variant="outline"
-                className="border-primary/30 text-primary hover:bg-primary/10 hover:text-primary"
-              >
-                Übernehmen
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {mode === "link" && (
-          <div className="space-y-4">
-            <Input
-              autoFocus
-              type="url"
-              value={linkText}
-              onChange={(e) => setLinkText(e.target.value)}
-              onKeyDown={handleLinkKey}
-              placeholder="https://…"
-              className="h-14 border-border/30 bg-background/40 text-base focus-visible:ring-primary/30"
-            />
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground/50 tracking-wide">
-                Enter zum Übernehmen
-              </span>
-              <Button
-                onClick={submitLink}
-                disabled={!linkText.trim()}
-                variant="outline"
-                className="border-primary/30 text-primary hover:bg-primary/10 hover:text-primary"
-              >
-                Übernehmen
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {mode === "file" && (
-          <div className="space-y-4">
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="flex min-h-[220px] w-full flex-col items-center justify-center gap-3 rounded-md border border-dashed border-border/40 bg-background/30 text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
-            >
-              <Paperclip className="size-6 opacity-60" />
-              <span className="text-sm tracking-wide">Datei auswählen</span>
-              <span className="text-xs opacity-50">PDF, DOCX, PPTX, Bilder, EML</span>
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              className="hidden"
-              onChange={(e) => submitFiles(Array.from(e.target.files ?? []))}
-            />
-            <p className="text-center text-xs text-muted-foreground/40 tracking-wide">
-              Drag & Drop funktioniert auch direkt auf dem Kern.
-            </p>
-          </div>
-        )}
-
-        {mode === "voice" && (
-          <div className="flex min-h-[220px] flex-col items-center justify-center gap-3 rounded-md border border-dashed border-border/30 bg-background/20 text-muted-foreground/60">
-            <span className="text-sm tracking-wide">Sprachaufnahme kommt in Phase 6</span>
-          </div>
-        )}
+      <div className="mb-4 flex justify-center">
+        <InputPills active={mode} onChange={setMode} />
       </div>
+
+      {mode === "note" && (
+        <div className="space-y-3">
+          <Textarea
+            ref={noteRef}
+            value={noteText}
+            onChange={(e) => setNoteText(e.target.value)}
+            onKeyDown={handleNoteKey}
+            placeholder="Notiz, Gedanke, gepasteter Text…"
+            className="min-h-[140px] resize-none border-border/30 bg-background/40 text-sm leading-relaxed focus-visible:ring-primary/30"
+          />
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] text-muted-foreground/50 tracking-wide">
+              ⌘/Ctrl + Enter zum Übernehmen
+            </span>
+            <Button
+              onClick={submitNote}
+              disabled={!noteText.trim()}
+              variant="outline"
+              size="sm"
+              className="border-primary/30 text-primary hover:bg-primary/10 hover:text-primary"
+            >
+              Übernehmen
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {mode === "link" && (
+        <div className="space-y-3">
+          <Input
+            autoFocus
+            type="url"
+            value={linkText}
+            onChange={(e) => setLinkText(e.target.value)}
+            onKeyDown={handleLinkKey}
+            placeholder="https://…"
+            className="h-12 border-border/30 bg-background/40 text-sm focus-visible:ring-primary/30"
+          />
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] text-muted-foreground/50 tracking-wide">
+              Enter zum Übernehmen
+            </span>
+            <Button
+              onClick={submitLink}
+              disabled={!linkText.trim()}
+              variant="outline"
+              size="sm"
+              className="border-primary/30 text-primary hover:bg-primary/10 hover:text-primary"
+            >
+              Übernehmen
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {mode === "file" && (
+        <div className="space-y-3">
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="flex min-h-[140px] w-full flex-col items-center justify-center gap-2 rounded-md border border-dashed border-border/40 bg-background/30 text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
+          >
+            <Paperclip className="size-5 opacity-60" />
+            <span className="text-sm tracking-wide">Datei auswählen</span>
+            <span className="text-[11px] opacity-50">PDF, DOCX, PPTX, Bilder, EML</span>
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={(e) => submitFiles(Array.from(e.target.files ?? []))}
+          />
+          <p className="text-center text-[11px] text-muted-foreground/40 tracking-wide">
+            Drag & Drop funktioniert auch direkt auf dem Kern.
+          </p>
+        </div>
+      )}
+
+      {mode === "voice" && (
+        <div className="flex min-h-[140px] flex-col items-center justify-center gap-3 rounded-md border border-dashed border-border/30 bg-background/20 text-muted-foreground/60">
+          <span className="text-sm tracking-wide">Sprachaufnahme kommt in Phase 6</span>
+        </div>
+      )}
     </div>
   );
 };
