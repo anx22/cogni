@@ -160,7 +160,7 @@ const Index = () => {
   if (loading || !session) return null;
 
   if (view === "project") {
-    return <ProjectScreen onBack={() => setView("entity")} />;
+    return <ProjectScreen onBack={() => setView("entity")} projectId={activeProjectId} />;
   }
 
   return (

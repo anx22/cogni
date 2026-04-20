@@ -12,6 +12,11 @@ interface UseIntakeOptions {
   setEntityState?: (s: EntityState) => void;
   setLastImpact?: (s: string) => void;
   onIntake?: (payload: IntakePayload) => void;
+  /**
+   * Wenn gesetzt, wird das Asset direkt diesem Projekt zugeordnet.
+   * → intake-understand überspringt die Zuordnungsbox (mode='explicit').
+   */
+  projectId?: string | null;
 }
 
 function fileTypeFromName(name: string): AssetType {
@@ -25,7 +30,7 @@ function fileTypeFromName(name: string): AssetType {
 }
 
 export function useIntake(options: UseIntakeOptions = {}) {
-  const { setEntityState, setLastImpact, onIntake } = options;
+  const { setEntityState, setLastImpact, onIntake, projectId } = options;
 
   const intake = useCallback(
     async (payload: IntakePayload) => {
@@ -70,6 +75,7 @@ export function useIntake(options: UseIntakeOptions = {}) {
               file_size: file.size,
               storage_path: path,
               processing_status: "pending",
+              project_id: projectId ?? null,
             });
             if (insErr) {
               devlog.error("assets insert failed", insErr);
@@ -98,6 +104,7 @@ export function useIntake(options: UseIntakeOptions = {}) {
               file_type: "other",
               processing_status: "completed",
               understanding_status: "pending",
+              project_id: projectId ?? null,
               metadata: { kind: "url", url: payload.url },
             })
             .select("id")
@@ -126,6 +133,7 @@ export function useIntake(options: UseIntakeOptions = {}) {
               file_type: "note",
               processing_status: "completed",
               understanding_status: "pending",
+              project_id: projectId ?? null,
               metadata: { kind: "note", text: payload.text },
             })
             .select("id")
@@ -157,7 +165,7 @@ export function useIntake(options: UseIntakeOptions = {}) {
 
       window.setTimeout(() => setEntityState?.("idle"), 1200);
     },
-    [setEntityState, setLastImpact, onIntake],
+    [setEntityState, setLastImpact, onIntake, projectId],
   );
 
   return { intake };
