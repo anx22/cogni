@@ -278,7 +278,8 @@ export const demoProject = {
       ereignisTyp: "entscheidung" as const,
       inhalt: "Budget 210k EUR bestätigt",
       objekt: "Entscheidung",
-      quelle: "CFO-Freigabe",
+      quelle: "Manuell bestätigt durch dich",
+      manuell: true,
     },
     {
       id: "v3",
