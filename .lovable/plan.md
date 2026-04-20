@@ -1,88 +1,109 @@
-## Phase 7.6 — Intake als eine einzige Bewegung
 
-Fünf zusammenhängende Eingriffe, damit Drop → Stimme → Dialog sich wie **ein** Fluss anfühlt, nicht wie drei getrennte Bildschirme. Kein neues Feature, nur Politur da wo der Fluss heute bricht.
+
+## Phase 7.7 — Home als geführter Intake-Hub
+
+Drei zusammenhängende UX-Verbesserungen, zusätzlich zu Phase 7.6.1, damit der Home-Screen Intake-Sessions als persistente, wiederaufrufbare Einheiten behandelt — nicht als lose Files.
 
 ---
 
-### 1. Drop-Guard & heiße Denk-Farbe
+### 1. Rechtes Home-Panel: von Files zu Intake-Sessions
 
-**Problem heute:** Man kann während der Verarbeitung munter weiter droppen — neue Inserts überschreiben die laufende Stimme, neue Sessions stapeln sich. Außerdem bleibt der Kern kühl-blau, während er „denkt".
+**Heute:** `RecentAssets` zeigt einzelne Files als Kacheln. Multi-Drops wirken wie unverbundene Einzelteile, abgebrochene Sessions sind unsichtbar, ein Klick auf ein File öffnet nur einen Toast.
 
-**Fix:**
+**Neu:** Das Panel rechts wird zu **„Intake-Sessions"**. Jede Kachel = eine `dialog_session`, gruppiert die Assets, die zusammen verarbeitet wurden, und ist klickbar.
 
-- `EntityCore` und globaler Drop lehnen neue Drops ab, solange `entityState ∈ {processing, review-ready}`. Visuell: Cursor wird `not-allowed`, ein kurzer „Ich bin noch beschäftigt." Stimm-Puls erscheint als Voice (tone `calm`, 1.8s), danach kehrt die eigentliche Stimme zurück.
-- Processing-Gradient wechselt auf **warmes Bernstein/Gold** (amber → rose → gold konisch, leicht pulsierend), nicht blau. Innerer Kern bekommt dezenten warmen Glühkern. Review-ready bleibt grünlich-gold, idle bleibt blau. So gibt die Farbe unmissverständlich Rückmeldung: blau=ruhend, heiß=denkt, grün=fertig.
-- Voice `tone='working'` bekommt dezenten warmen Tint (amber/200), passend zum heißen Kern.
+Visuelles Modell pro Kachel:
+- Großes Icon mit der Anzahl der Assets in der Session (z.B. „1", „3").
+- Status-Punkt:
+  - **amber/pulsierend** → Session läuft noch (Assets parsen/verstehen, oder Status `open` mit unentschiedenen Boxen).
+  - **blau** → `open`/`in_progress`, Boxen warten auf Entscheidung.
+  - **grün** → `closed`/alle Boxen entschieden → Read-Only.
+  - **grau** → leer/abgebrochen.
+- Hover: Tooltip mit erstem Asset-Namen + „N Sachen, M offen".
 
-### 2. Overlay öffnet sich selbst
+Quelle:
+- `dialog_sessions` (für offene/geschlossene Sessions) **+** „Sessions in Entstehung": Assets ohne `session_id`, die gerade parsen/verstehen — als virtuelle Pending-Kachel pro Asset-Bündel (gruppiert nach engem Zeitfenster, z.B. innerhalb von 5s).
+- Limit: letzte 20 Sessions, gemischt mit pending Bündeln.
+- Realtime: Subscription auf `dialog_sessions` und `assets` (für Pending-Bündel).
 
-**Problem heute:** Spec sagt „bei review-ready öffnet sich das Gesprächsoverlay". Real: Kern wird golden, Nutzer muss klicken. Zwei Mal Arbeit für einen Gedanken.
+Klick-Verhalten:
+- **Pending-Bündel** (noch keine Session) → kein Klick möglich, nur visueller Status.
+- **Offene Session** → `openSessionFromDB(id)`, Overlay öffnet sich im **Edit-Modus** (heutiges Verhalten).
+- **Geschlossene Session** → `openSessionFromDB(id)`, Overlay öffnet sich im **Read-Only-Modus** (siehe Punkt 2).
 
-**Fix:**
+### 2. Read-Only-Modus für abgeschlossene Sessions
 
-- In `Index.tsx`, Listener auf `dialog_sessions INSERT`: nach Stimm-Beat „Bereit. N Sachen für dich." (ca. 1.6s Verzögerung, damit der Satz gelesen wird) ruft er `openSessionFromDB(row.id)` selbst auf, setzt `pendingSessionId=null`, `entityState='idle'`.
-- `handleCoreClick` und `handleReviewClick` bleiben als manueller Fallback (falls Nutzer das Overlay zwischendurch schließt und wieder rein will).
+**Wozu:** Der Nutzer soll vergangene Verstehens-Läufe nachvollziehen können — was vorgeschlagen, was bestätigt, was verworfen wurde — ohne etwas versehentlich zu ändern.
 
-### 3. Overlay im Entity-Voice-Stil
+**Wie:**
+- `DialogSession` bekommt Feld `mode: "edit" | "readonly"`, abgeleitet aus `dialog_sessions.status`:
+  - `closed`, `committed`, oder „alle Boxen final" → `readonly`.
+  - sonst → `edit`.
+- `DialogProvider.openSessionFromDB` setzt den Modus beim Laden.
+- `BoxFrame` blendet im Read-Only-Modus den Aktions-Footer komplett aus.
+- Boxen zeigen ihren Endzustand:
+  - bestätigt: Opacity 60% + ✓.
+  - verworfen: Opacity 40% + durchgestrichener Titel.
+  - geändert: Amber-Punkt + finale Userwerte sichtbar.
+- Header bekommt einen leisen Hinweis: „Abgeschlossen am …" rechts neben dem Titel-Eyebrow.
+- ESC oder X schließt wie gewohnt — keine commit-fact-Calls möglich.
 
-**Problem heute:** Modal wirkt wie Panel-Wüste — Header-Chip, Trennlinien, State-Bars, Badges, Uppercase-Mini-Buttons, kleine Boxen mit Rändern. Kollidiert mit der Ruhe der Stimme.
+Datenmodell:
+- Keine Schema-Änderung nötig. `dialog_sessions.status` reicht: wir behandeln `closed` und Sessions, in denen `resolved_boxes >= total_boxes`, als read-only.
+- Optional: `closeDialogSession` Edge-Hilfsfunktion oder einfacher Update-Call, der `status='closed'` setzt, sobald die letzte Box im Overlay entschieden wurde. Realtime-Update sorgt dafür, dass das Panel rechts grün wird.
 
-**Fix — `DialogOverlay` + `BoxFrame` neu aufziehen:**
+### 3. Fullscreen-Drop-Mechanik auf dem Home-Screen
 
-- **Keine Modal-Karte mehr.** Stattdessen: volle Fläche, `bg-background/92 backdrop-blur-xl`, mittig zentriert. Header schrumpft auf eine einzige Zeile: linke Seite in `text-[10px] tracking-[0.3em]` Muted (z.B. „VERSTEHENS-LAUF ZU TESTDATEI.TXT"), rechts ein dezentes X. Kein Border, kein Chip.
-- **Boxen werden Schwebekarten mit gradient Rahmen.** `BoxFrame` verliert /Shadow/State-Bar-Streifen/Badges. Stattdessen:
-  - Box-Titel in `text-2xl font-light tracking-wide text-foreground/90`, Hierarchie via Größe, nicht via Rahmen.
-  - Inhalt drunter in `text-base text-muted-foreground/80 font-light`.
-  - Trennung zwischen Boxen: großzügiger vertikaler Abstand (48–64px) + optionaler 1px Hairline `border-border-subtle/20`, nicht umschlossene Karte.
-  - State-Rückmeldung: bestätigte Boxen fahren in 200ms auf Opacity 40% + kleines ✓ links vom Titel (kein Badge). Verworfene: Opacity 30% + durchgestrichener Titel. Geänderte: dezenter Amber-Punkt vor dem Titel.
-- **Aktionen minimal & leise.** Statt `ActionBtn` in Uppercase-Kapsel: zwei Text-Links unter dem Inhalt, `text-sm text-muted-foreground/60 hover:text-foreground`, Abstand 6 zueinander. „Übernehmen" (hover: primary), „Verwerfen" (hover: muted). Kein Icon, kein Uppercase, kein Rahmen.
-- **Animation:** Boxen faden mit 80ms-Staffel und leichtem `translateY(8px)` ein, genau wie EntityVoice.
+**Heute:** Drops landen nur, wenn man genau auf dem `EntityCore` (kleiner Kreis) loslässt. Außerhalb verschluckt der Browser die Datei und öffnet sie als Tab.
 
-Alles in allem: der Dialog sieht aus wie die Stimme, nur länger.
+**Neu:** Wie auf `ProjectScreen`:
+- `Index.tsx` bekommt einen vollflächigen `onDragOver/Leave/Drop` Handler.
+- Während eines aktiven Drags (mit `Files`) erscheint ein **Fullscreen-Overlay** mit großem leichtem Text:
+  - Idle: „Lass los — ich höre zu." + Untertitel „Datei, Link oder Notiz."
+  - Busy (`processing`/`review-ready`): „Noch beschäftigt." + „Warte kurz, dann gerne." — Drop wird abgewiesen (kein Intake-Call), Voice-Hinweis spielt kurz ab.
+- Overlay nutzt `bg-background/70 backdrop-blur-md`, dasselbe „schwebende" Design wie der Dialog.
+- `EntityCore` behält seine eigene Drop-Zone als visuellen Anker (zentriert, Glow), aber der gesamte Viewport nimmt jetzt Drops an.
+- `SideGrid` und `RecentAssets` sind während des Drags via `pointer-events-none opacity-30` ruhiggestellt (heute schon halb implementiert über `isDragActive`).
 
-### 4. Zuordnungsbox endlich richtig vorausgewählt
-
-**Befund aus dem Screenshot:** „Lisa Müller" wird korrekt vom Agent interpretiert („Die explizite Nennung … legt Zuordnung zu 'Lisas Projekt' nahe"), aber die Box zeigt nur „Neues Projekt" ohne vorbelegten Namen. Das liegt an zwei Dingen:
-
-1. **Keine Kandidaten-Liste gerendert**, weil lexikalisches Scoring ohne echte DB-Projekte 0 Treffer liefert. Korrekt — aber dann ist der Modus `new`, und der Vorschlagsname bleibt leer weil `suggested_new_name` nicht vom Agent belegt wurde (Agent gab nur `reason_short`).
-2. **Frage + Reason stehen doppelt**: Titel = „Welches Projekt passt?" (aus `description` gesetzt? nein — aus `c.description` wird ctx.reason, und die Box zeigt zusätzlich `box.payload.frage`).
-
-**Fix in `intake-understand`:**
-
-- Wenn `mode='new'` und der Agent einen `reason_short` liefert, der „Lisas Projekt"/„Aurora-Angebot" o. ä. explizit als Wunschnamen nennt, fällt der `suggested_new_name` auf einen deterministisch extrahierten Namen aus dem Reason zurück (Regex auf `'…'` oder `„…"`). Falls nichts greift: Fallback auf den dominanten Entitätsnamen aus den extrahierten Fakten (z.B. Topic-Titel „Aurora-Angebot"). So bekommt das Textfeld einen sinnvollen Default und ist **vorausgewählt** (radio `__new__` ist heute schon default — das stimmt).
-- Wenn `mode='uncertain'`/`auto` UND Kandidaten existieren: kein zusätzlicher expliziter Default nötig, ZuordnungsBox wählt bereits Top-Kandidat.
-
-**Fix in `ZuordnungsBox.tsx`:**
-
-- Titel-Zeile oben: nur **eine** Zeile. Wenn `agent_reason` existiert, ist sie der Titel (groß, leicht, wie Voice-Stil). Die Frage „Welches Projekt passt?" fällt weg, weil die Reason den Kontext selbst beantwortet. Ohne Reason: „Welches Projekt passt?"
-- Radio-Liste ohne Karten-Hintergrund: einfache Zeilen mit Radio, Projektname, optional ein sehr kleiner grauer Grund („Lisa Müller · 2 Treffer"). Hover nur Textfarbe, kein Border-Wechsel.
-- Textfeld für neuen Namen: grenzlos, nur `border-b border-border-subtle focus:border-primary`, großer `text-xl font-light`, Platzhalter = suggested_new_name in Muted.
-- Buttons in neuer, leiser Aktionsschreibweise (siehe Punkt 3).
-
-### 5. Kleiner Verlauf-Check
-
-- `WissensBox`, `GapBox`, `KonfliktBox`, `AuswahlBox`, `EingabeBox`, `AktionsBox` erben automatisch den neuen `BoxFrame`-Stil — sie benutzen ihn alle. Nur interne Abstände und Typografie müssen in jedem Sub-File leicht angehoben werden (Titel von `text-sm` auf die neue Größe passiert via BoxFrame; Body von `text-sm` auf `text-base`).
-- Der „vorgeschlagen · task"-Chip in WissensBox wird zu einer dünnen, nicht umrandeten Zeile `text-xs text-muted-foreground/50` unter dem Sachverhalt. Kein Pill-Look mehr.
+Counter-Verhalten:
+- DragEnter/Leave-Counter (Browser-typisches Problem mit verschachtelten Kindern) sauber lösen via Counter-Increment statt boolean — verhindert, dass das Overlay flackert, wenn man über ein Kind-Element zieht.
 
 ---
 
 ### Betroffene Dateien
 
-- `src/pages/Index.tsx` — Drop-Guard während processing/review-ready; Auto-Open des Overlays nach Session-Insert (mit 1.6s Delay für Voice-Beat)
-- `src/components/EntityCore.tsx` — Drop während processing ablehnen; heißer Gradient für `processing`
-- `src/components/entity/EntityVoice.tsx` — warmer Tint für `tone='working'`
-- `src/components/dialog/DialogOverlay.tsx` — Full-Bleed statt Modal-Karte, minimaler Header, großzügige vertikale Rhythmik
-- `src/components/dialog/BoxFrame.tsx` — Rahmen/Bars/Badges raus; Typo groß & dünn; State nur via Opacity/Icon; Actions als Textlinks
-- `src/components/dialog/boxes/ZuordnungsBox.tsx` — einzeilige Überschrift (Reason ersetzt Frage), rahmenlose Radios, unterstrichenes Input, Default-Name-Logik
-- `src/components/dialog/boxes/WissensBox.tsx` — Quelle als dünne Zeile statt Pill
-- `supabase/functions/intake-understand/index.ts` — `suggested_new_name` aus Reason/Entität ableiten wenn leer
+**Neu:**
+- `src/components/entity/IntakeSessionsPanel.tsx` — ersetzt `RecentAssets` rechts; lädt Sessions + Pending-Asset-Bündel, rendert Kacheln, öffnet Session via `openSessionFromDB`.
+- `src/components/entity/HomeDropOverlay.tsx` — Fullscreen-Drop-Layer mit busy/idle-Texten.
+- `src/lib/dialog/sessionMode.ts` — kleine Helper-Funktion `deriveSessionMode(session, cases)`.
 
-### Was bewusst draußen bleibt
+**Geändert:**
+- `src/pages/Index.tsx` — Fullscreen-Drop-Handler + DropOverlay einhängen; rechts `IntakeSessionsPanel` statt `RecentAssets`; Drop-Guard greift auch hier.
+- `src/lib/dialog/types.ts` — `DialogSession` erhält `mode: "edit" | "readonly"` und optional `closedAt`.
+- `src/lib/dialog/loadSession.ts` — Modus aus `status` + `resolved_boxes/total_boxes` ableiten; `closedAt` mitgeben.
+- `src/components/dialog/DialogProvider.tsx` — Modus durch Context, `commitBox` no-op im Read-Only.
+- `src/components/dialog/DialogOverlay.tsx` — „Abgeschlossen am …" wenn read-only; ESC/Close arbeiten gleich.
+- `src/components/dialog/BoxFrame.tsx` — Aktionen unterdrücken wenn `session.mode === "readonly"`; visuelle End-Zustände konsistent.
+- `src/components/entity/RecentAssets.tsx` — bleibt vorerst als Komponente bestehen, wird aber im Home nicht mehr eingebunden (Aufräumen optional in späterer Phase).
 
-- Keyboard-Navigation durch Boxen (Pfeiltasten, Enter=Übernehmen)
-- Undo nach einer Entscheidung
-- Drag-Reorder der Boxen
-- Preview der extrahierten Entität im Overlay-Header  
-  
-  
-BITTE die textgrößen alle etwas anheben, wir wollen hier keine microcopy keine supersmall texts, alles im dialog overlay muss plakativ sein
+**Edge / DB:**
+- Keine Schema-Migration zwingend nötig.
+- Optional: kleine SQL-Migration, die `dialog_sessions.status` auf `'closed'` setzt, sobald `resolved_boxes >= total_boxes` (per Trigger). **Bewusst draußen** in diesem Schnitt — wir leiten den Modus zunächst clientseitig ab, das reicht für die UX.
+
+### Akzeptanzkriterien
+
+- Rechtes Home-Panel zeigt Intake-Sessions, nicht mehr einzelne Files.
+- Multi-Drops erscheinen als **eine** Kachel.
+- Tab-Reload während laufendem Intake → die Session ist weiter sichtbar und kann fortgesetzt werden.
+- Klick auf eine geschlossene Session öffnet das Overlay **nur lesend** — keine Buttons, keine Commits.
+- Klick auf eine offene Session öffnet das Overlay normal.
+- Drop irgendwo auf dem Home-Screen funktioniert; Drop während Verarbeitung wird sichtbar abgewiesen.
+- Pending-Bündel (Assets ohne Session) zeigen amber-pulsierenden Status, schalten automatisch auf die echte Session um, sobald `dialog_session` entsteht.
+
+### Bewusst nicht in diesem Schnitt
+
+- Löschen / Archivieren von Sessions.
+- Multi-Session-Verlaufsansicht („alle Sessions zu Projekt X").
+- Echte Trigger-basierte Auto-Close-Logik in der DB.
+- Reorder/Pinning von Session-Kacheln.
+
