@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { IntakePayload } from "./detectInputType";
 import type { Database } from "@/integrations/supabase/types";
+import { devlog } from "@/lib/devlog/devlog";
 
 type EntityState = "idle" | "hover" | "processing" | "review-ready" | "failed";
 type AssetType = Database["public"]["Enums"]["asset_type"];
@@ -28,9 +29,17 @@ export function useIntake(options: UseIntakeOptions = {}) {
 
   const intake = useCallback(
     async (payload: IntakePayload) => {
+      devlog.intake("intake() called", {
+        type: payload.type,
+        files: payload.files?.map((f) => ({ name: f.name, size: f.size })),
+        url: payload.url,
+        textPreview: payload.text?.slice(0, 80),
+      });
+
       const { data: userData } = await supabase.auth.getUser();
       const user = userData.user;
       if (!user) {
+        devlog.warn("intake", "intake aborted — no user");
         toast.error("Bitte zuerst anmelden");
         return;
       }
@@ -42,11 +51,16 @@ export function useIntake(options: UseIntakeOptions = {}) {
           for (const file of payload.files) {
             const assetId = crypto.randomUUID();
             const path = `${user.id}/${assetId}/${file.name}`;
+            devlog.intake(`upload start: ${file.name}`, { assetId, path, size: file.size });
 
             const { error: upErr } = await supabase.storage
               .from("intake-files")
               .upload(path, file);
-            if (upErr) throw upErr;
+            if (upErr) {
+              devlog.error(`storage upload failed: ${file.name}`, upErr);
+              throw upErr;
+            }
+            devlog.intake(`upload done: ${file.name}`, { assetId });
 
             const { error: insErr } = await supabase.from("assets").insert({
               id: assetId,
@@ -57,10 +71,20 @@ export function useIntake(options: UseIntakeOptions = {}) {
               storage_path: path,
               processing_status: "pending",
             });
-            if (insErr) throw insErr;
+            if (insErr) {
+              devlog.error("assets insert failed", insErr);
+              throw insErr;
+            }
+            devlog.db("assets insert ok", { assetId, file_name: file.name });
 
             // Async parsing — kein await blockiert UI
-            supabase.functions.invoke("intake-process", { body: { asset_id: assetId } });
+            devlog.edge("invoke intake-process", { assetId });
+            supabase.functions
+              .invoke("intake-process", { body: { asset_id: assetId } })
+              .then((res) => {
+                if (res.error) devlog.error("intake-process invoke error", res.error);
+                else devlog.edge("intake-process responded", res.data);
+              });
           }
           const label = `${payload.files.length} ${payload.files.length === 1 ? "Datei" : "Dateien"}`;
           toast(`${label} aufgenommen`, { description: "wird verarbeitet" });
@@ -73,7 +97,11 @@ export function useIntake(options: UseIntakeOptions = {}) {
             processing_status: "completed",
             metadata: { kind: "url", url: payload.url },
           });
-          if (error) throw error;
+          if (error) {
+            devlog.error("link insert failed", error);
+            throw error;
+          }
+          devlog.db("link inserted", { url: payload.url });
           toast("Link aufgenommen");
           setLastImpact?.("Link aufgenommen");
         } else if (payload.type === "text" && payload.text) {
@@ -85,7 +113,11 @@ export function useIntake(options: UseIntakeOptions = {}) {
             processing_status: "completed",
             metadata: { kind: "note", text: payload.text },
           });
-          if (error) throw error;
+          if (error) {
+            devlog.error("note insert failed", error);
+            throw error;
+          }
+          devlog.db("note inserted", { length: payload.text.length });
           toast("Notiz aufgenommen");
           setLastImpact?.("Notiz aufgenommen");
         }
@@ -93,6 +125,7 @@ export function useIntake(options: UseIntakeOptions = {}) {
         onIntake?.(payload);
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Fehler";
+        devlog.error(`intake failed: ${msg}`, err);
         toast.error(msg);
         setEntityState?.("failed");
         return;
