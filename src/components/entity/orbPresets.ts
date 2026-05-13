@@ -32,8 +32,8 @@ export interface SurfaceRange {
   dotSize: Range; // px
   dotSpacing: Range; // multiplier of dotSize for tile (>=2)
   dotColor: ColorRange;
-  innerHole: Range; // 0–60 (% of surface radius — fully transparent inside)
-  outerFade: Range; // 50–100 (% of surface radius — fade to transparent at)
+  innerHole: Range; // EXTRA clearance beyond orb edge (% of surface radius). 0 = ring starts at orb edge.
+  outerFade: Range; // EXTRA reach beyond orb edge before fade-out (% of surface radius).
   opacity: Range; // 0–1
   blendMode: SurfaceBlend;
   rotationDuration: Range; // seconds; 0 = no rotation
@@ -116,8 +116,8 @@ const DEFAULT_SURFACE: SurfaceRange = {
     c: { min: 0.02, max: 0.05 },
     h: { min: 220, max: 250 },
   },
-  innerHole: { min: 28, max: 34 },
-  outerFade: { min: 70, max: 85 },
+  innerHole: { min: 2, max: 5 },
+  outerFade: { min: 22, max: 30 },
   opacity: { min: 0.5, max: 0.7 },
   blendMode: "screen",
   rotationDuration: { min: 0, max: 0 },

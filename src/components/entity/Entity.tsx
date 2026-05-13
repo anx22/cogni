@@ -99,10 +99,9 @@ const Entity = ({
       className="relative inline-flex items-center justify-center"
       style={{ width: size, height: size }}
     >
-      {/* Surface sits behind the orb, scaled larger than it. */}
-      <div className="absolute inset-0 flex items-center justify-center">
-        <EntitySurface orbSize={orbPx} surface={active.surface} />
-      </div>
+      {/* Surface sits behind the orb, scaled larger than it.
+          EntitySurface positions itself absolutely (translate-centered). */}
+      <EntitySurface orbSize={orbPx} surface={active.surface} />
 
       <button
         type="button"
