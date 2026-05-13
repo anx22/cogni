@@ -258,10 +258,12 @@ Deno.serve(async (req) => {
     }
 
     if (action === "test-mirror") {
-      // Spiegel-Test: nimmt ein bestehendes canonical_fact, sendet eine Episode
-      // an Graphiti und schreibt graphiti_uuid zurück. Validiert den Pfad
-      // commit-fact → addMessage → DB-Update isoliert.
-      const { canonical_fact_id } = body;
+      // Spiegel-Test: nimmt ein bestehendes canonical_fact, queued eine Episode
+      // bei Graphiti (OHNE UUID — sonst NodeNotFoundError im Worker, validiert
+      // 2026-05-13) und prüft, ob danach in Neo4j Episodic-Nodes erscheinen.
+      // `graphiti_uuid` wird NICHT mehr gesetzt — Korrelation läuft über
+      // `source_description`.
+      const { canonical_fact_id, wait_ms } = body;
       if (!canonical_fact_id) throw new Error("canonical_fact_id required");
       const sbUrl = Deno.env.get("SUPABASE_URL")!;
       const sbKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -279,7 +281,7 @@ Deno.serve(async (req) => {
       const rest = Object.entries(c).filter(([k,v]) => k !== "title" && v != null && v !== "")
         .map(([k,v]) => `${k}: ${typeof v === "string" ? v : JSON.stringify(v)}`).join(" · ");
       const episodeContent = rest ? `${title} — ${rest}` : title;
-      const uuid = crypto.randomUUID();
+      const sourceDesc = `canonical_fact:${cf.id}`;
       const epRes = await fetch(`${gBase}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(gToken ? { Authorization: `Bearer ${gToken}` } : {}) },
@@ -288,27 +290,35 @@ Deno.serve(async (req) => {
           messages: [{
             content: episodeContent, role_type: "system", role: "produktintelligenz",
             name: `${cf.fact_type}:${cf.id.slice(0,8)}`,
-            source_description: `canonical_fact:${cf.id}`,
-            timestamp: new Date().toISOString(), uuid,
+            source_description: sourceDesc,
+            timestamp: new Date().toISOString(),
+            // KEIN uuid-Feld — Server generiert selbst.
           }],
         }),
       });
       const epStatus = epRes.status;
       const epBody = await epRes.text();
-      let upStatus = 0, upBody = "";
-      if (epRes.ok) {
-        const upRes = await fetch(`${sbUrl}/rest/v1/canonical_facts?id=eq.${cf.id}`, {
-          method: "PATCH",
-          headers: { apikey: sbKey, Authorization: `Bearer ${sbKey}`, "Content-Type": "application/json", Prefer: "return=minimal" },
-          body: JSON.stringify({ graphiti_uuid: uuid }),
+
+      // Optional: warten und dann via /episodes prüfen ob die Episode in
+      // Graphiti angekommen + verarbeitet wurde.
+      const waitMs = typeof wait_ms === "number" ? Math.min(wait_ms, 60000) : 0;
+      let episodesProbe: unknown = null;
+      if (waitMs > 0) {
+        await new Promise((r) => setTimeout(r, waitMs));
+        const epListRes = await fetch(`${gBase}/episodes/${encodeURIComponent(cf.project_id)}?last_n=20`, {
+          headers: gToken ? { Authorization: `Bearer ${gToken}` } : {},
         });
-        upStatus = upRes.status; upBody = await upRes.text();
+        const epListBody = await epListRes.text();
+        episodesProbe = { status: epListRes.status, body: epListBody.slice(0, 800) };
       }
+
       return new Response(JSON.stringify({
-        canonical_fact_id: cf.id, project_id: cf.project_id, episode_uuid: uuid,
+        canonical_fact_id: cf.id, project_id: cf.project_id,
         episode_content: episodeContent.slice(0, 200),
-        graphiti: { status: epStatus, body: epBody.slice(0, 300) },
-        update: { status: upStatus, body: upBody.slice(0, 200) },
+        source_description: sourceDesc,
+        graphiti_post: { status: epStatus, body: epBody.slice(0, 300) },
+        episodes_after_wait: episodesProbe,
+        note: "graphiti_uuid is NOT set anymore — server-generated, retrievable via source_description match.",
       }, null, 2), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 

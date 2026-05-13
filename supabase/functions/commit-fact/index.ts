@@ -494,7 +494,7 @@ async function mirrorToGraphiti(
   const episodeContent = rest ? `${title} — ${rest}` : title;
 
   try {
-    const { uuid } = await graphitiAddMessage({
+    await graphitiAddMessage({
       project_id: args.project_id,
       content: episodeContent,
       role_type: "system",
@@ -503,12 +503,33 @@ async function mirrorToGraphiti(
       source_description: `canonical_fact:${args.canonical_fact_id}`,
     });
 
+    // Graphiti `/messages` ist asynchron und liefert KEINE Episode-UUID
+    // zurück. Wir setzen `graphiti_uuid` daher NICHT mehr blind — sonst
+    // referenziert es Phantome. Die Rückverknüpfung läuft über das
+    // `source_description`-Feld (`canonical_fact:<id>`) und kann später
+    // von einem Reconciler in `graphiti_uuid` aufgelöst werden.
+    const { data: cur } = await admin
+      .from("canonical_facts")
+      .select("provenance")
+      .eq("id", args.canonical_fact_id)
+      .single();
+    const prov = (cur?.provenance ?? {}) as Record<string, unknown>;
     const { error: uErr } = await admin
       .from("canonical_facts")
-      .update({ graphiti_uuid: uuid })
+      .update({
+        provenance: {
+          ...prov,
+          graphiti: {
+            queued: true,
+            queued_at: new Date().toISOString(),
+            mode: "async_no_episode_uuid",
+            source_description: `canonical_fact:${args.canonical_fact_id}`,
+          },
+        },
+      })
       .eq("id", args.canonical_fact_id);
     if (uErr) {
-      console.warn("mirrorToGraphiti: graphiti_uuid-Update fehlgeschlagen:", uErr.message);
+      console.warn("mirrorToGraphiti: provenance-Update fehlgeschlagen:", uErr.message);
     }
   } catch (err) {
     const errInfo =
