@@ -1,70 +1,83 @@
-# Welle A — gebaut, bereit zum Test
+# Docs-Refresh: AOL Welle A + Graphiti-Mirror einarbeiten
 
-## Geliefert (heute)
+## Ausgangslage
 
-**S1 — `intake-understand` mit `graph_hint`** (deployt)
-- Optionaler Body-Param `graph_hint: string | null`. Ohne ihn läuft alles wie
-  zuvor (Idempotenz-Hash, Scoring, Assignment, Stakeholder-Linking unangetastet).
-- `_shared/agentClient.ts → callExtractFacts(text, graphHint?)` hängt den
-  Hint als zweite System-Message vor den User-Text. Reines Prompt-Enrichment,
-  kein Schemawechsel, kein Tool-Eingriff. Hint-Limit: 4 KB.
+Die letzten Stunden brachten substanzielle Backend-Änderungen, die in `docs/` nirgends auftauchen:
 
-**S2 — `aol-service/app/graph.py → context_loader`**
-- Ruft Graphiti `POST /get-memory` mit `group_id = project_id`, `max_facts: 20`.
-- Macht aus Antwort eine kompakte `- bullet`-Liste (max 240 Zeichen je Eintrag).
-- Bei Fehler / fehlendem Secret → leerer Kontext + `state.error`, niemals werfen.
+- **commit-fact** spiegelt Fakten nach Graphiti (URL-Härtung, async `/messages`, Client-UUID, `graphiti_uuid` zurück nach `canonical_facts`)
+- **AOL-Service auf Railway** als Kontext-Provider (LangGraph, Knoten: `router → context_loader → condenser → END`)
+- **Welle A**: `intake-trigger` holt `graph_context` aus AOL und reicht ihn als `graph_hint` an `intake-understand`; `_shared/agentClient.ts` hängt den Hint als zweite System-Message vor den User-Text (4 KB Limit)
+- **Besitzschnitt**: Railway hat KEINEN Service-Role-Key, KEINEN DB-Zugriff. Alle Schreibpfade bleiben in Lovable Cloud.
 
-**S3 — Besitzschnitt korrigiert**
-- Railway ruft `intake-understand` nicht auf und braucht keinen Service-Role-Key.
-- `/aol/run` liefert nur `graph_context` zurück. Danach ruft `intake-trigger`
-  Cloud-intern `intake-understand` mit `graph_hint` auf.
-- Damit bleiben alle DB-Schreibpfade und Admin-Secrets ausschließlich in Lovable Cloud.
+Gleichzeitig sind Teile der Docs überholt:
+- `implementierung-aktuell.md` endet bei „Phase 6 als nächster Schritt", obwohl Phasen 6–9 längst durch sind
+- `geplant.md` führt Phase 10 (Knowledge-Graph) als offen, obwohl Welle A live ist
+- `produkt-gesamt.md` schreibt „Graphiti vs. Cognee — Entscheidung offen", obwohl die Entscheidung längst auf Graphiti gefallen ist (siehe `mem://features/entscheidungen`)
+- `.lovable/plan.md` ist ein Sprint-Snapshot von heute Mittag, der bereits überholt ist (referenziert Knoten, die so nicht mehr existieren)
 
-**S4 — `condenser` no-op**
-- Reicht `last_node` + `graph_context` weiter.
-- Schreiben passiert komplett in der Edge Function — eine Codebasis, kein Drift.
-- Kommentar im Code zeigt, wo Welle B (conflict/gap/dependency) später ansetzt.
+## Zielbild
 
-**S5 — `aol-callback`**
-- Bleibt optionaler Statuskanal. `/aol/run` meldet nur `running`/Knotenstatus,
-  nicht den finalen Schreibstatus; den setzt `intake-trigger` nach
-  `intake-understand`.
+Drei kanonische Doku-Files mit klaren Rollen, plus ein gepflegter Sprint-Notizblock:
 
-**S6 — Switch in `intake-trigger`**
-- Bereits vorhanden: AOL bei gesetzten Secrets, sonst Legacy-Fallback. Kein
-  Parallel-Run, kein Schatten-Modus.
+```text
+docs/produkt-gesamt.md       Vision + Modell + Stack (langlebig, selten geändert)
+docs/implementierung-aktuell.md    Was steht heute, mit Datenfluss-Schaubild
+docs/geplant.md              Roadmap nach vorn, abgeschlossene Phasen knapp
+.lovable/plan.md             aktueller Sprint, immer aktuell
+```
 
-## Was du JETZT tun musst (Railway-Seite)
+## Änderungen im Detail
 
-Keinen Service-Role-Key setzen. Railway braucht nur:
-`GRAPHITI_SERVICE_URL`, optional `GRAPHITI_SERVICE_TOKEN`, `AOL_SERVICE_TOKEN`,
-optional `AOL_CALLBACK_URL`/`AOL_CALLBACK_TOKEN`, `LANGSMITH_API_KEY`.
+### 1. `docs/produkt-gesamt.md`
+- **Techstack-Abschnitt** aktualisieren: Graphiti ist gesetzt, Cognee gestrichen. AOL-Service (Railway, LangGraph) als vierter Baustein einführen mit Ein-Satz-Beschreibung des Besitzschnitts (Railway = Kontext, Cloud = Schreiben).
+- **Intelligenz-Pipeline** (Schritte 1–7): Schritt 3 „Extraction" um den Hinweis ergänzen, dass vorab ein Graph-Kontext geladen wird (Welle A). Schritt 6 „Commit" um den Graphiti-Spiegel ergänzen.
+- Rest unverändert (Vision, Rollen, Designhaltung sind stabil).
 
-Nach dem Setzen: Railway-Service neu deployen (push reicht).
+### 2. `docs/implementierung-aktuell.md`
+- **Status-Header** auf „Phase 0–9 abgeschlossen + Welle A (Graph-Enrichment) live" ziehen.
+- **Neuer Abschnitt „Backend-Architektur"** mit ASCII-Datenflussbild:
+  ```text
+  Asset ─► intake-trigger ─► AOL /aol/run (Railway)
+                              └─ context_loader → Graphiti /get-memory
+                              └─ liefert graph_context
+                          ─► intake-understand (graph_hint)
+                              └─ Lovable AI Gateway, Tool-Calling
+                              └─ proposed_facts + review_cases
+                          ─► User-Review ─► commit-fact
+                              └─ canonical_facts + change_events
+                              └─ Graphiti /messages (async, Client-UUID)
+                              └─ graphiti_uuid zurückgeschrieben
+  ```
+- **Komponenten-Inventar** um Edge-Functions/Services ergänzen: `intake-trigger`, `intake-understand`, `commit-fact`, `_shared/agentClient.ts`, `_shared/graphiti.ts`, `aol-service/`.
+- **Bekannte Phase-4-Aufhängungen** bleiben (sind noch gültig).
+- **Nächster Schritt** auf „Welle B (linker, conflict, gap, dependency)" umformulieren.
 
-## Verifikation (nachdem Railway redeployed hat)
+### 3. `docs/geplant.md`
+- Phase 10 in zwei Stufen splitten:
+  - **Phase 10a — Welle A (Graph-Enrichment) ✓** mit Stichpunkten zu `context_loader`, `graph_hint`, Graphiti-Mirror in commit-fact
+  - **Phase 10b — Welle B (offen)**: linker gegen Graph statt Title-Match, conflict_detector, gap_detector, dependency_detector zwischen interpreter und condenser
+- „Erledigte Phasen" am Fuß um Phase 7.6, 8, 9, 10a ergänzen.
+- „Nicht in V1"-Liste unverändert.
 
-1. Asset hochladen → DevLog: `aol_runs` mit `status: completed`,
-   `current_node: aol_enriched` oder `cloud_understand`.
-2. F1-Inspector „Pipeline-Trace" zeigt die Edge-Function-Calls + LangSmith
-   verlinkt den Run.
-3. Confirm drücken → `canonical_facts.graphiti_uuid` gesetzt
-   (inspect-pipeline).
-4. Zweites Asset im selben Projekt → in den AOL-Logs taucht in
-   `context_loader` ein nicht-leerer Kontext auf, Extraction sollte das
-   bestehende Faktum als `confirm` statt `add` einsortieren.
+### 4. `.lovable/plan.md`
+- Komplett ersetzen durch knappen aktuellen Sprint-Stand: Welle A deployt, Graphiti-Mirror läuft, offene Aufgabe = Verifikation am zweiten Asset im selben Projekt (Reuse-Check) und Vorbereitung Welle B.
+- Verifikationsschritte und „Was bewusst NICHT gemacht wurde" beibehalten — die sind noch gültig und schützen vor Wieder-Diskussionen.
 
-## Was bewusst NICHT gemacht wurde
+### 5. `docs/input/veraltet/`
+- Falls dort noch lebende Inhalte stehen, die in keinem der drei kanonischen Files referenziert sind: nicht anfassen. Verzeichnis ist als Archiv markiert. Nur prüfen, nichts verschieben.
 
-- Keine Portierung von Scoring/Assignment/Hashing nach Python.
-- Kein Schreibzugriff aus Python auf `proposed_facts` / `review_cases`.
-- Kein Auto-Commit, Review-First bleibt.
-- Kein Parallel-Run.
-- `commit-fact` (Graphiti-Mirror) unverändert — läuft seit gestern.
+## Was bewusst NICHT geändert wird
 
-## Welle B (später)
+- Memory unter `mem://` (separater Lebenszyklus, ist aktuell)
+- `README.md` (3 Zeilen, irrelevant)
+- `aol-service/README.md` (wurde heute schon mit angepasst)
+- Source-Code (das ist eine reine Doku-Aufgabe)
 
-`linker` (Graph-basiertes Matching), `conflict_detector`, `gap_detector`,
-`dependency_detector` zwischen `interpreter` und `condenser` einfügen,
-sobald Welle A produktiv Daten in den Graph legt. Dann macht Welle B
-Aussagen, die heute noch keine Datenbasis hätten.
+## Reihenfolge der Edits
+
+1. `produkt-gesamt.md` — Techstack + Pipeline
+2. `implementierung-aktuell.md` — Statusblock + Architektur-Diagramm + Komponenten
+3. `geplant.md` — Phase 10 splitten + Erledigt-Liste verlängern
+4. `.lovable/plan.md` — Sprint-Reset
+
+Vier sequentielle, kleine Edits. Keine parallelen Schreibvorgänge auf dieselben Files.
