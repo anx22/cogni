@@ -81,10 +81,11 @@ Ein einziges Eingangs-Modul nimmt heterogene Inputs entgegen:
 
 ## Techstack
 
-- **Lovable** — Experience Layer / UI
-- **Supabase** — Kanonischer Kernzustand, Auth, Storage, Realtime
+- **Lovable** — Experience Layer / UI, Edge Functions, kanonische Schreibpfade
+- **Supabase (Lovable Cloud)** — Kanonischer Kernzustand, Auth, Storage, Realtime
 - **Unstructured** — Document Intelligence / Parsing
-- **Knowledge Graph** — Graphiti vs. Cognee, Entscheidung in v2 wieder offen
+- **Graphiti** — Knowledge Graph, gesetzt (Cognee verworfen)
+- **AOL-Service (Railway, LangGraph)** — Kontext-Provider. Lädt Graph-Kontext für Extraction. Hat bewusst keinen DB- oder Service-Role-Zugriff: Railway liest nur, alle Schreibpfade bleiben in Lovable Cloud.
 
 ## Manuelle Eingriffe
 
