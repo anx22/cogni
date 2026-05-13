@@ -8,6 +8,7 @@ import Index from "./pages/Index.tsx";
 import Project from "./pages/Project.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import Auth from "./pages/Auth.tsx";
+import OrbLab from "./pages/OrbLab.tsx";
 import { DialogProvider } from "./components/dialog/DialogProvider";
 import { ManualOverridesProvider } from "./lib/dialog/manualOverrides";
 import DevLogPanel from "./components/devlog/DevLogPanel";
@@ -33,6 +34,7 @@ const App = () => {
                 <Route path="/" element={<Index />} />
                 <Route path="/projekt/:id" element={<Project />} />
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/orb-lab" element={<OrbLab />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
