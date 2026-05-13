@@ -26,8 +26,9 @@
 - Kommentar im Code zeigt, wo Welle B (conflict/gap/dependency) später ansetzt.
 
 **S5 — `aol-callback`**
-- Bereits vorhanden, unverändert. `/aol/run` in `main.py` ruft ihn am Ende mit
-  `status: completed`, `current_node`, `facts_written`, `session_id`.
+- Bleibt optionaler Statuskanal. `/aol/run` meldet nur `running`/Knotenstatus,
+  nicht den finalen Schreibstatus; den setzt `intake-trigger` nach
+  `intake-understand`.
 
 **S6 — Switch in `intake-trigger`**
 - Bereits vorhanden: AOL bei gesetzten Secrets, sonst Legacy-Fallback. Kein
