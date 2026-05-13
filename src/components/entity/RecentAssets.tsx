@@ -59,14 +59,36 @@ const RecentAssets = ({ isDragActive }: Props) => {
     };
   }, []);
 
-  const handleClick = (a: Asset) => {
+  const handleClick = async (a: Asset) => {
     const meta = (a.metadata as Record<string, unknown>) ?? {};
+
+    // AOL-Run-Status nachladen (falls vorhanden) — gibt dem User echte
+    // Sichtbarkeit auf den LangGraph-Pipeline-Zustand pro Asset.
+    const { data: run } = await supabase
+      .from("aol_runs")
+      .select("status, current_node, error, ended_at")
+      .eq("asset_id", a.id)
+      .order("started_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const aolBits = run
+      ? [
+          `AOL: ${run.status}${run.current_node ? ` · ${run.current_node}` : ""}`,
+          run.error ? `Fehler: ${(run.error as { message?: string })?.message ?? "unbekannt"}` : null,
+        ].filter(Boolean).join("\n")
+      : null;
+
     if (meta.kind === "url") {
-      toast(`Link · ${meta.url ?? a.file_name}`);
+      toast(`Link · ${meta.url ?? a.file_name}`, aolBits ? { description: aolBits } : undefined);
     } else if (meta.kind === "note") {
-      toast("Notiz", { description: String(meta.text ?? "").slice(0, 140) });
+      toast("Notiz", {
+        description: `${String(meta.text ?? "").slice(0, 140)}${aolBits ? `\n\n${aolBits}` : ""}`,
+      });
     } else {
-      toast(a.file_name, { description: `Status: ${a.processing_status}` });
+      toast(a.file_name, {
+        description: `Status: ${a.processing_status}${aolBits ? `\n${aolBits}` : ""}`,
+      });
     }
   };
 
