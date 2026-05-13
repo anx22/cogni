@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import EntityCore from "@/components/EntityCore";
+import Entity from "@/components/entity/Entity";
 import EntityVoice from "@/components/entity/EntityVoice";
 import SideGrid from "@/components/entity/SideGrid";
 import IntakeSessionsPanel from "@/components/entity/IntakeSessionsPanel";
@@ -300,12 +300,13 @@ const Index = () => {
           <IntakeSessionsPanel isDragActive={isDragActive} />
         </div>
 
-        <EntityCore
+        <Entity
           state={entityState}
           onDrop={handleDrop}
           onReviewClick={handleReviewClick}
           onClick={handleCoreClick}
           busy={busy}
+          voiceTone={voice.tone}
         />
 
         <div className="absolute bottom-[22%] z-20 pointer-events-auto">
