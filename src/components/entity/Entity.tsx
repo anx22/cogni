@@ -1,13 +1,16 @@
 // =============================================================================
-//  Entity — visuelle Entität. Wrapper um SiriOrb.
-//  Sample-basiert: jeder State-Wechsel rollt neue Werte aus dem Range-Profil.
+//  Entity — visuelle Entität. Wrapper um EntitySurface (Punktraster dahinter)
+//  und SiriOrb (der Orb selbst). Sample-basiert: jeder State-Wechsel rollt
+//  neue Werte aus dem aktuellen Range-Profil.
 // =============================================================================
 
 import { useCallback, useEffect, useState } from "react";
 import SiriOrb from "./SiriOrb";
+import EntitySurface from "./EntitySurface";
 import {
-  ORB_PRESETS,
+  useOrbPresets,
   samplePreset,
+  ORB_PRESETS_DEFAULT,
   type EntityState,
   type SampledPreset,
 } from "./orbPresets";
@@ -32,19 +35,20 @@ const Entity = ({
   size = "320px",
   presetOverride,
 }: EntityProps) => {
+  const { presets } = useOrbPresets();
   const [internal, setInternal] = useState<EntityState>(state);
   const [sample, setSample] = useState<SampledPreset>(() =>
-    samplePreset(ORB_PRESETS[state]),
+    samplePreset(ORB_PRESETS_DEFAULT[state]),
   );
 
   useEffect(() => {
     setInternal(state);
   }, [state]);
 
-  // Bei jedem Wechsel des sichtbaren States neue Werte würfeln.
+  // Re-sample on state change OR when the preset definition for the active state changes.
   useEffect(() => {
-    setSample(samplePreset(ORB_PRESETS[internal]));
-  }, [internal]);
+    setSample(samplePreset(presets[internal]));
+  }, [internal, presets]);
 
   const handleDragOver = useCallback(
     (e: React.DragEvent) => {
@@ -88,25 +92,36 @@ const Entity = ({
   }, [state, onClick, onReviewClick]);
 
   const active = presetOverride ?? sample;
+  const orbPx = Number.parseInt(size.replace("px", ""), 10) || 320;
 
   return (
-    <button
-      type="button"
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
-      onClick={handleClick}
-      aria-label="Entität öffnen"
-      className="relative rounded-full outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-transform duration-300 hover:scale-[1.02] active:scale-[0.99]"
+    <div
+      className="relative inline-flex items-center justify-center"
       style={{ width: size, height: size }}
     >
-      <SiriOrb
-        size={size}
-        colors={active.colors}
-        animationDuration={active.duration}
-        className="pointer-events-none"
-      />
-    </button>
+      {/* Surface sits behind the orb, scaled larger than it. */}
+      <div className="absolute inset-0 flex items-center justify-center">
+        <EntitySurface orbSize={orbPx} surface={active.surface} />
+      </div>
+
+      <button
+        type="button"
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        onClick={handleClick}
+        aria-label="Entität öffnen"
+        className="relative rounded-full outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-transform duration-300 hover:scale-[1.02] active:scale-[0.99]"
+        style={{ width: size, height: size }}
+      >
+        <SiriOrb
+          size={size}
+          colors={active.colors}
+          animationDuration={active.duration}
+          className="pointer-events-none"
+        />
+      </button>
+    </div>
   );
 };
 
