@@ -41,28 +41,30 @@ const NEO4J_VARS: Record<string, string> = {
 };
 
 async function listAll() {
-  return await gql(`
-    query {
-      teams {
-        edges {
-          node {
-            id
-            name
-            projects {
-              edges {
-                node {
-                  id
-                  name
-                  environments { edges { node { id name } } }
-                  services { edges { node { id name } } }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  `);
+  const ws = await gql(`{ apiToken { workspaces { id name } } }`) as any;
+  const workspaces = ws?.apiToken?.workspaces ?? [];
+  const out: unknown[] = [];
+  for (const w of workspaces) {
+    const data = await gql(
+      `query($wid: String!) {
+         workspace(workspaceId: $wid) {
+           id name
+           projects {
+             edges {
+               node {
+                 id name
+                 environments { edges { node { id name } } }
+                 services { edges { node { id name } } }
+               }
+             }
+           }
+         }
+       }`,
+      { wid: w.id },
+    );
+    out.push(data);
+  }
+  return { workspaces: out };
 }
 
 async function projectDetails(projectId: string) {
