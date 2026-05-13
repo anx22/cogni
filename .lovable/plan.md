@@ -1,109 +1,80 @@
-# Reality-Check + 2-Phasen-Finalisierung
+# Phase F2 — Phase 10 echt einschalten
 
-## 1. Wo ich halluziniert habe (sorry)
+F1 (Inspectors) steht. Jetzt der eigentliche Kern: die LangGraph-Knoten produktiv machen und endlich in Graphiti schreiben.
 
-Aus dem letzten Plan war zu viel Karton-Polish. Ehrlich gegengeprüft:
+## 0. Vorab-Fix (5 Min, kommt zuerst)
 
-| Vorschlag | Realität |
-|---|---|
-| Voice-Recorder Cancel, Limits | Funktioniert. Nicht beobachtet, dass etwas fehlt. |
-| EntityVoice Stille-Übergänge / Flicker | Erfunden, nie als Bug aufgetreten. |
-| Diff in Konfliktbox | Erfunden, kein Trigger. |
-| Realtime Re-Mount-Flicker im ProjectScreen | Erfunden. |
-| Side-Grids Tastaturnavigation | Steht laut `implementierung-aktuell.md` bereits. |
-| Dialog-Submit-Sprache | Phase 4 hat das vereinheitlicht. |
-| Empty-State neues Projekt | Inline-Name-Edit existiert. |
+Die runtime errors zeigen: `GRAPHITI_SERVICE_URL` ist ohne `https://` gespeichert → jeder Graphiti-Aufruf bricht mit *„Invalid URL"*. Ich härte `_shared/graphiti.ts` so, dass fehlendes Schema automatisch ergänzt wird, und logge eine klare Warnung. Zusätzlich frage ich dich (per `update_secret`-Tool), das Secret korrekt zu setzen — das siehst du als kleinen Klick.
 
-**Echte offene Lücken** (mit Hebel, nicht Kosmetik):
+## 1. AOL-Knoten füllen (`aol-service/app/graph.py`)
 
-1. **Phase 10 ist nur Skelett.** `aol-service/` läuft auf Railway, FastAPI + LangGraph stehen, aber `COMPILED.invoke()` ist Stub — Knoten bauen Wissen, Linking, Konflikt, Gap, Commit nicht echt. `intake-trigger` ruft Railway zwar, bekommt aber ein No-op.
-2. **Graphiti wird nicht beschrieben.** `_shared/graphiti.ts` ist fertig, `canonical_facts.graphiti_uuid` bleibt aber NULL. Kein einziger produktiver Episode-Insert.
-3. **Beobachtbarkeit der externen Tools fehlt mir komplett.** Ich kann Supabase-Logs lesen (`supabase--edge_function_logs`, `analytics_query`), aber Railway-Logs, LangSmith-Traces, Graphiti/Neo4j-Inhalte und Unstructured-Antworten sehe ich nicht. Ohne das ist Phase 10 Blindflug.
+Aktuell sind alle 10 Knoten Stubs. Ich aktiviere sie in zwei Wellen:
 
-Punkt 3 ist Voraussetzung für 1+2. Daher die folgende Reihenfolge.
+**Welle A — Minimal-Pfad (router → context_loader → interpreter → condenser):**
 
----
+- `context_loader` ruft Graphiti `/search` mit `group_id=project_id`, lädt letzten Snapshot über Supabase-RPC.
+- `interpreter` ruft Lovable AI Gateway (`google/gemini-2.5-flash`), portiert den Prompt aus `src/lib/agentConfig.ts`, gibt `candidates[]` zurück.
+- `condenser` ruft `aol-callback` → schreibt `proposed_facts` + `aol_runs.completed`.
 
-## 2. Zwei Phasen — straff, mit Phase-10-Vorbereitung verzahnt
+**Welle B — Volle Logik (linker, delta, gap, dependency, conflict, case_builder):**
 
-### Phase F1 — Observability-Bridge (Voraussetzung für alles Weitere)
+- Portiert die bestehende Logik aus `intake-understand` 1:1 als LangGraph-Nodes (kein Re-Design, nur Strukturwechsel).
+- Jeder Knoten loggt nach LangSmith via `LANGCHAIN_TRACING_V2=true` — sichtbar im F1-Inspector.
 
-**Ziel:** Ich (Lovable Agent) sehe jeden Vorgang — Supabase, Railway, Graphiti, LangSmith, Unstructured — über einen einheitlichen Inspektor. Du selbst siehst dasselbe im erweiterten DevLog-Panel.
+## 2. Graphiti-Schreibpfad (Commit-Schritt)
 
-Vier neue Edge Functions als „Inspector-API". Sie sind das Brücken-Werkzeug zwischen externen Diensten und meinen Tools (`supabase--curl_edge_functions`, `edge_function_logs`):
+Heute bleibt `canonical_facts.graphiti_uuid` immer NULL. Ich erweitere `commit-fact`:
 
-| Function | Was sie tut | Externes Tool |
-|---|---|---|
-| `inspect-railway` | GraphQL gegen `backboard.railway.com/graphql/v2` mit `RAILWAY_API_TOKEN`. Liefert Deploy-Status, neueste Logs des AOL-Service. | Railway Public API (GraphQL, Account-Token) |
-| `inspect-langsmith` | REST gegen `api.smith.langchain.com` mit `LANGSMITH_API_KEY` (existiert). Holt Run-Trace zu einer `aol_runs.id` oder `langgraph_thread_id`. | LangSmith API |
-| `inspect-graphiti` | Ruft `${GRAPHITI_SERVICE_URL}/healthcheck` + `/search` (group_id=project_id) und optional Neo4j-Cypher-Stats über die Graphiti-REST. | Graphiti-Server + Neo4j (via Graphiti) |
-| `inspect-pipeline` | End-to-End-Trace eines Assets: joined `assets → parsed_documents → proposed_facts → review_cases → canonical_facts → change_events → project_state_snapshots → aol_runs`. Zeigt wo ein Asset hängt. | nur Supabase-DB |
+- Nach erfolgreichem Insert in `canonical_facts` → `Graphiti.addMessage({ project_id, content: fact_summary, role_type: "system", source_description: "canonical_fact:<id>" })`.
+- Rückgabe-UUID landet in `canonical_facts.graphiti_uuid`.
+- Fehler werden in `change_events.metadata.graphiti_error` festgehalten — Commit selbst bleibt erfolgreich (Supabase = Master, Graphiti = Spiegel).
 
-**Frontend:**
-- DevLog-Panel um „Inspector"-Tab erweitert: Eingabefeld asset_id / run_id / project_id, Buttons rufen die vier Edge Functions, Ergebnis als JSON anzeigbar. Bleibt `import.meta.env.DEV`-only.
+## 3. Sauberer Umschalter
 
-**Secrets:**
-- `RAILWAY_API_TOKEN` (musst du anlegen lassen, Schritt-für-Schritt unten)
-- `LANGSMITH_API_KEY` ist da
-- `GRAPHITI_SERVICE_URL/TOKEN`, `NEO4J_*` sind da
+In `intake-trigger`:
 
-**Was du danach hast:**
-- Wenn ein Upload „nicht ankommt", sage ich dir in einer Antwort, in welchem Schritt er hängt — ohne zu raten.
-- Du klickst im DevLog auf eine Asset-ID und siehst die ganze Kette.
-- Phase 10 wird debugbar, sonst sind die LangGraph-Knoten eine Blackbox.
+```ts
+if (Deno.env.get("AOL_SERVICE_URL")) → Railway-Pfad (POST /aol/run)
+else → bestehender intake-understand-Pfad
+```
 
-### Phase F2 — Phase 10 echt einschalten
+So bleibt nichts kaputt, falls Railway down ist. Heute ist der Schalter nominal da, aber der Railway-Pfad liefert nur den Stub — nach F2 liefert er echte Ergebnisse.
 
-Mit der Observability aus F1 baue ich endlich die Wertschöpfung:
+## 4. UI-Sichtbarkeit (minimal)
 
-1. **AOL-Knoten füllen** (`aol-service/app/graph.py`):
-   - `extract` → Lovable AI Gateway (existierender Prompt aus `agentConfig.ts` portiert)
-   - `link_against_canonical` → Cypher gegen Graphiti-Search
-   - `detect_conflicts` / `detect_gaps` → bestehende Logik aus `intake-understand` als LangGraph-Node
-   - `compose_review` → schreibt `proposed_facts` + `review_cases` via `aol-callback`
-   - `commit_to_graph` (über `/aol/confirm` aus `commit-fact` getriggert) → `Graphiti.addMessage` mit `group_id=project_id`, schreibt UUID in `canonical_facts.graphiti_uuid`
+- `RecentAssetsHoverCard` zeigt zusätzlich `aol_runs.current_node` + `last_error`. Kein neues Panel, nur 2 Zeilen Status.
+- Im F1-Inspector funktioniert „Pipeline-Trace" jetzt End-to-End (heute zeigt er nur Supabase-Daten, nach F2 sieht man die echten Knoten-Übergänge in `aol_runs.events`).
 
-2. **Umschalter sauber:** wenn `AOL_SERVICE_URL` gesetzt → Railway-Pfad, sonst Fallback zum bestehenden `intake-understand`. So bleibt nichts kaputt während des Schaltens.
+## 5. Verifikation (mache ich automatisch)
 
-3. **`aol_runs`-Trace im UI:** kleines Dropdown im RecentAssets-HoverCard zeigt `current_node` + Fehler. Kein neues Panel, nur Statusrückmeldung.
+Nach Deploy ziehe ich für ein Test-Asset folgenden Trace und zeige ihn dir:
 
-4. **Verifikation per F1-Inspectors**: jeder Schritt überprüfbar.
+1. `inspect-pipeline` → asset hat `proposed_facts > 0`
+2. `inspect-langsmith` → alle 10 Knoten haben Trace-Einträge
+3. `inspect-graphiti` → `/search` findet die Episode mit `group_id=projekt-id`
+4. `canonical_facts.graphiti_uuid IS NOT NULL` per `read_query`
 
-**Was bewusst NICHT mehr drin ist:** Face-Pill-Cleanup, Side-Grid-Polish, Re-Mount-Optimierungen, Dialog-Diffs. Wenn du etwas konkret als Bug erlebst, fixe ich es punktuell, aber kein Pauschal-Polish.
+Wenn einer der vier Schritte rot ist, fixe ich gezielt — kein Halluzinieren, nur das, was die Inspectors sagen.
 
----
+## Was bewusst NICHT drin ist
 
-## 3. Step-by-Step — was du selbst tun musst
+- Kein Polish an Entity, FacePill, Side-Grids, Voice. Wenn dir konkret etwas auffällt → punktuell.
+- Kein neues UI-Panel. Status fließt in bestehende Komponenten.
+- Kein Schema-Change (Tabellen + Spalten existieren alle, nur die Felder werden endlich befüllt).
 
-Da du nicht-technisch bist, hier glasklar:
+## Was du tun musst
 
-**Vor Phase F1:**
-1. **Railway API-Token erstellen** (3 Klicks): in Railway oben rechts dein Avatar → *Account Settings* → *Tokens* → *Create New Token* (Typ: „Account Token"). Token kopieren.
-2. Im Lovable-Cloud-Connectors-Panel oder in der Secrets-UI das Secret `RAILWAY_API_TOKEN` hinzufügen — ich sag dir Bescheid, wenn das dran ist (über meinen `add_secret`-Tool-Aufruf), du klickst nur „speichern".
-3. Mehr nicht. Alles andere baue ich.
+1. Klick „Implement plan".
+2. Wenn ich `update_secret` für `GRAPHITI_SERVICE_URL` aufrufe → den richtigen Wert mit `https://` einfügen (Railway-URL aus deinem Graphiti-Service, oben in der Railway-Übersicht).
+3. Sonst nichts. Ich liefere am Ende einen End-to-End-Trace eines Test-Assets als Beweis, dass es echt läuft.
 
-**Vor Phase F2:**
-4. Nichts. F2 nutzt nur Secrets, die schon da sind (`AOL_SERVICE_*`, `GRAPHITI_*`, `NEO4J_*`, `LOVABLE_API_KEY`).
+## Spec-Abgleich
 
-**Während/nach jeder Phase:**
-5. Du klickst „Implement plan", ich baue. Am Ende verifiziere ich mit den eigenen Inspectors und zeige dir konkret den End-to-End-Trace eines Test-Assets.
-
----
-
-## 4. Spec-Abgleich (kurz)
-
-- `docs/produkt-gesamt.md` Punkt 4: Datenfluss ⇒ App→Supabase→Unstructured→Graphiti/Cognee→Supabase→App. F2 schließt genau diesen letzten Schritt (Graphiti-Rückschreibung).
-- `docs/input/07-09-…` Punkt 7.1: „Graph nie als Wahrheit". F2 schreibt nach Commit, nie davor — Supabase bleibt Master.
-- `mem://features/produkt-prinzipien`: Provenance + Delta. AOL-Knoten erzeugen `delta_type` wie heute, nichts ändert sich am Vertrag.
-- `mem://features/entscheidungen`: Graphiti gesetzt — F2 löst genau das ein.
-- `aol-service/README.md`: Architektur „kein DB-Key auf Railway, Callback statt direkter Schreibzugriff" bleibt unverändert; F1 fügt nur Lese-Inspectors hinzu, keine Writes von außerhalb.
-
----
-
-## 5. Frage an dich
-
-Drei Stellschrauben, dann starte ich F1:
-
-1. F1 + F2 in dieser Reihenfolge ok?
-2. Machst du das Railway-Token, oder soll ich F1 ohne `inspect-railway` starten und du holst es nach?
-3. Soll der Inspektor auch in Production sichtbar sein (hinter Auth), oder strikt dev-only?
+- `docs/produkt-gesamt.md` §4: Datenfluss App→Supabase→Graphiti — F2 schließt den Graphiti-Teil.
+- `docs/input/07-09…` §7.1: „Graph nie als Wahrheit" — Graphiti wird **nach** Commit beschrieben, Supabase bleibt Master.
+- `mem://features/produkt-prinzipien`: Provenance + Delta — `delta_type` bleibt unverändert, nur die Knoten produzieren ihn jetzt selbst.
+- `mem://features/entscheidungen`: „Graphiti gesetzt" — F2 löst das ein.  
+  
+  
+überprüfe anschliessend nochmal ob du auf alle relevanten vorgägne zugriff hast und transparent für dich ist.  
+Prüfe double checked unsere Core LOGICs... wir sind nun am MAGIC CORE unserer app idee. Knowledge Graph, temporales Gedächtnis, advanced RAG und vector retrievals... stelle sicher das wir hier präzise arbeiten keine fehler machen, best practices nutzen, Docs validieren, nicht halluzinieren.
