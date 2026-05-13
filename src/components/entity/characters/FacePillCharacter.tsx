@@ -131,7 +131,10 @@ const FacePill = ({ state, size, sample, onPickInputMode }: FacePillProps) => {
           setHovering(false);
           resetTilt();
         }}
-        onClick={() => setOpen((o) => !o)}
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen((o) => !o);
+        }}
       >
         {/* Bälle-Layer */}
         <div
