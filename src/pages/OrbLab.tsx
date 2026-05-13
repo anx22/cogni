@@ -6,8 +6,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Dices, RotateCcw } from "lucide-react";
+import { toast } from "sonner";
 import Entity from "@/components/entity/Entity";
 import SiriOrb from "@/components/entity/SiriOrb";
+import { CHARACTER_LIST, DEFAULT_CHARACTER_ID } from "@/components/entity/characters/registry";
+import type { CharacterId } from "@/components/entity/characters/types";
 import EntitySurface from "@/components/entity/EntitySurface";
 import {
   useOrbPresets,
@@ -190,6 +193,7 @@ const OrbLab = () => {
   const [seed, setSeed] = useState(0);
   const [autoRoll, setAutoRoll] = useState(false);
   const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [characterId, setCharacterId] = useState<CharacterId>(DEFAULT_CHARACTER_ID);
 
   const current = presets[state];
 
@@ -237,6 +241,24 @@ const OrbLab = () => {
           <SavedIndicator at={savedAt} />
         </header>
 
+        {/* Charakter-Auswahl */}
+        <Tabs
+          value={characterId}
+          onValueChange={(v) => setCharacterId(v as CharacterId)}
+        >
+          <TabsList className="bg-card/40 p-1">
+            {CHARACTER_LIST.map((c) => (
+              <TabsTrigger
+                key={c.id}
+                value={c.id}
+                className="text-xs data-[state=active]:bg-primary/20"
+              >
+                {c.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+
         {/* Live-Orb */}
         <Card className="bg-card/30 border-border/50">
           <CardContent className="flex flex-col items-center gap-6 py-12">
@@ -244,7 +266,9 @@ const OrbLab = () => {
               state={state}
               size={`${size}px`}
               presetOverride={sample}
+              character={characterId}
               onClick={() => setSeed((s) => s + 1)}
+              onPickInputMode={(m) => toast.info(`Input-Mode: ${m}`)}
             />
             <div className="flex items-center gap-2 flex-wrap justify-center">
               <Button size="sm" variant="secondary" onClick={() => setSeed((s) => s + 1)}>
