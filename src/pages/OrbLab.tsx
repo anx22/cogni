@@ -131,11 +131,15 @@ const ColorBlock = ({ title, range, swatch, onChange }: ColorBlockProps) => (
 // ---- Saved indicator -------------------------------------------------------
 
 const SavedIndicator = ({ at }: { at: number | null }) => {
-  const rel = useRelativeTime(at ? new Date(at).toISOString() : null);
+  const [, force] = useState(0);
+  useEffect(() => {
+    const i = window.setInterval(() => force((n) => n + 1), 15_000);
+    return () => window.clearInterval(i);
+  }, []);
   if (!at) return null;
   return (
     <span className="text-[11px] text-muted-foreground">
-      Gespeichert · {rel}
+      Gespeichert · {formatRelative(new Date(at).toISOString())}
     </span>
   );
 };
