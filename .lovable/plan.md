@@ -1,95 +1,76 @@
+# Welle A — gebaut, bereit zum Test
 
-# Plan — Welle A sauber, ohne Doppelpipeline
+## Geliefert (heute)
 
-## Klarstellung vorab (wo wir wirklich stehen)
+**S1 — `intake-understand` mit `graph_hint`** (deployt)
+- Optionaler Body-Param `graph_hint: string | null`. Ohne ihn läuft alles wie
+  zuvor (Idempotenz-Hash, Scoring, Assignment, Stakeholder-Linking unangetastet).
+- `_shared/agentClient.ts → callExtractFacts(text, graphHint?)` hängt den
+  Hint als zweite System-Message vor den User-Text. Reines Prompt-Enrichment,
+  kein Schemawechsel, kein Tool-Eingriff. Hint-Limit: 4 KB.
 
-Du hast Schritt 1 deiner Liste schon — heute gebaut:
-- `_shared/graphiti.ts`: URL-Härtung (`https://` auto-ergänzt), `addMessage` async-korrekt (Client-UUID, HTTP 202 → queued).
-- `commit-fact/index.ts`: spiegelt nach erfolgreichem Insert nach Graphiti, schreibt `canonical_facts.graphiti_uuid`, Fehler landen in `provenance.graphiti_error`, niemals geworfen.
+**S2 — `aol-service/app/graph.py → context_loader`**
+- Ruft Graphiti `POST /get-memory` mit `group_id = project_id`, `max_facts: 20`.
+- Macht aus Antwort eine kompakte `- bullet`-Liste (max 240 Zeichen je Eintrag).
+- Bei Fehler / fehlendem Secret → leerer Kontext + `state.error`, niemals werfen.
 
-Also: **Schritt 1 ist live.** Wir starten direkt mit Welle A.
+**S3 — `interpreter`-Knoten**
+- Calls `${SUPABASE_URL}/functions/v1/intake-understand` mit Service-Role-Auth,
+  übergibt `asset_id`, `retry`, `graph_hint`. Antwort (`facts`, `session_id`)
+  fließt in `state["facts_written"] / state["session_id"]`.
+- Timeout 120 s (LLM + DB).
 
-## Was du eigentlich willst — in einem Satz
+**S4 — `condenser` no-op**
+- Reicht nur `last_node` + `facts_written` + `session_id` weiter.
+- Schreiben passiert komplett in der Edge Function — eine Codebasis, kein Drift.
+- Kommentar im Code zeigt, wo Welle B (conflict/gap/dependency) später ansetzt.
 
-Bevor `intake-understand` extrahiert, soll der AOL erst im **Projekt-Graphen nachsehen**, was zu diesem Asset schon bekannt ist (Stakeholder, Entitäten, frühere Fakten), und das als Kontext in den Extraktions-Prompt mitgeben. Resultat: weniger Duplikate, sauberere Verknüpfungen, weniger Konflikte downstream — ohne dass wir die getunte 482-Zeilen-Logik von `intake-understand` doppelt nachbauen.
+**S5 — `aol-callback`**
+- Bereits vorhanden, unverändert. `/aol/run` in `main.py` ruft ihn am Ende mit
+  `status: completed`, `current_node`, `facts_written`, `session_id`.
 
-## Architektur (gemäß Spec & Standards)
+**S6 — Switch in `intake-trigger`**
+- Bereits vorhanden: AOL bei gesetzten Secrets, sonst Legacy-Fallback. Kein
+  Parallel-Run, kein Schatten-Modus.
 
-```text
-intake-trigger
-    │
-    ├── AOL_SERVICE_URL gesetzt? ──► POST /aol/run (Railway)
-    │                                    │
-    │                                    ▼
-    │                              router → context_loader (Graphiti.search/getMemory)
-    │                                    │            │
-    │                                    │            ▼
-    │                                    │      graph_context
-    │                                    ▼            │
-    │                              interpreter ◄──────┘  (ruft intake-understand mit hint=graph_context)
-    │                                    │
-    │                                    ▼
-    │                              condenser (no-op in Welle A — intake-understand schreibt selbst)
-    │                                    │
-    │                                    ▼
-    │                              aol-callback (status: completed)
-    │
-    └── sonst Fallback: direkt intake-understand (heute)
+## Was du JETZT tun musst (Railway-Seite)
+
+Der AOL-Container in Railway braucht zwei Env-Vars zusätzlich, damit
+`interpreter` die Edge Function callen kann:
+
+```
+SUPABASE_URL=https://zeazrfidtpdtgcrbnhbo.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=<Service-Role-Key aus Lovable Cloud>
 ```
 
-**Warum das spec-konform ist:**
-- Supabase bleibt Master, Graphiti bleibt Spiegel (mem://features/graphiti-semantik).
-- Review-First bleibt unberührt — `intake-understand` schreibt weiter `proposed_facts` + `review_cases`.
-- LangGraph macht nur das, wofür es da ist: Orchestrierung + Tracing (LangSmith).
-- Kein Eigenbau-LLM-Pfad in Python — wir nutzen weiter Lovable AI Gateway via die existierende `agentClient.ts`.
+(`GRAPHITI_SERVICE_URL`, `GRAPHITI_SERVICE_TOKEN`, `AOL_CALLBACK_URL`,
+`AOL_CALLBACK_TOKEN`, `LANGSMITH_API_KEY`, `AOL_SERVICE_TOKEN` sind schon da.)
 
-## Konkrete Schritte (klein, prüfbar)
+Nach dem Setzen: Railway-Service neu deployen (push reicht).
 
-### S1 — `intake-understand` minimal-invasiv erweitern
-Neuen optionalen Body-Parameter `graph_hint` (string, max ~4 KB) annehmen. Wenn gesetzt: in den System-Prompt der Extraction als „Bekanntes aus dem Projektgraph" einfügen. **Keine** Änderung an Scoring, Assignment, Stakeholder-Linking, dem Idempotenz-Hash. Reine Prompt-Erweiterung.
-*Risiko: niedrig. Test: ohne `graph_hint` muss Output bit-identisch sein.*
+## Verifikation (nachdem Railway redeployed hat)
 
-### S2 — AOL-Knoten `context_loader` füllen
-In `aol-service/app/graph.py`:
-- `context_loader`: HTTP-Call gegen Graphiti (`/get-memory` oder `/search` mit `group_id = project_id`, `max_facts: 20`). Resultat als kompakter String in `state["graph_context"]`.
-- Robust: bei Graphiti-Fehler → leerer Kontext + `state["error"]` setzen, **niemals werfen**. Run läuft weiter.
+1. Asset hochladen → DevLog: `aol_runs` mit `status: completed`,
+   `current_node: condenser`.
+2. F1-Inspector „Pipeline-Trace" zeigt die Edge-Function-Calls + LangSmith
+   verlinkt den Run.
+3. Confirm drücken → `canonical_facts.graphiti_uuid` gesetzt
+   (inspect-pipeline).
+4. Zweites Asset im selben Projekt → in den AOL-Logs taucht in
+   `context_loader` ein nicht-leerer Kontext auf, Extraction sollte das
+   bestehende Faktum als `confirm` statt `add` einsortieren.
 
-### S3 — AOL-Knoten `interpreter` füllen
-Ruft via `httpx` die Edge Function `intake-understand` mit Service-Role-Auth, übergibt `asset_id`, `user_id`, `project_id`, `graph_hint=state["graph_context"]`. Antwort (proposed_facts-Anzahl, session_id) in State.
-
-### S4 — `condenser` als No-op markieren (Welle A)
-Nur `last_node` setzen. Schreiben übernimmt `intake-understand`. Kommentar `# Welle B: hier conflict/gap/dependency-Detection`.
-
-### S5 — `aol-callback` schon vorhanden, nur prüfen
-`status: completed` mit `current_node`, `facts_written`, `session_id` zurück nach Supabase (in `aol_runs`). Kein Neubau.
-
-### S6 — Switch in `intake-trigger`
-Wenn `AOL_SERVICE_URL` gesetzt → `POST {url}/aol/run` mit `AOL_SERVICE_TOKEN`. Sonst Fallback heute. **Ein** Pfad pro Asset, nie beide. Kein Schatten-Modus.
-
-### S7 — Verifikation (manuell, du)
-1. Asset hochladen → in DevLog `aol_runs` taucht auf, Status `completed`.
-2. F1-Inspector „Pipeline-Trace" zeigt `graph_context` (kurzer Auszug) → `proposed_facts > 0`.
-3. Confirm drücken → `canonical_facts.graphiti_uuid` gesetzt (inspect-pipeline).
-4. Zweites Asset im selben Projekt → `graph_context` enthält jetzt das erste Faktum.
-
-## Was wir bewusst NICHT tun (Schutz vor Eigenbau)
+## Was bewusst NICHT gemacht wurde
 
 - Keine Portierung von Scoring/Assignment/Hashing nach Python.
-- Keine Schreibzugriffe aus Python auf `proposed_facts` / `review_cases` (nur über Edge Functions).
-- Kein Bypass von Review (kein Auto-Commit aus AOL).
-- Kein Parallel-Run (keine doppelten Kosten, keine Drift).
-- Keine Änderung an `commit-fact` (gerade fertig, läuft).
+- Kein Schreibzugriff aus Python auf `proposed_facts` / `review_cases`.
+- Kein Auto-Commit, Review-First bleibt.
+- Kein Parallel-Run.
+- `commit-fact` (Graphiti-Mirror) unverändert — läuft seit gestern.
 
-## Welle B (später, nicht jetzt)
+## Welle B (später)
 
-`linker` (Graph-basiertes Matching statt Title), `conflict_detector`, `gap_detector`, `dependency_detector` — erst wenn Welle A produktiv stabil ist und wir echte Daten im Graph haben, gegen die Welle B arbeiten kann. Vorher hätten diese Knoten nichts, womit sie arbeiten könnten.
-
-## Erwartete Datei-Änderungen
-
-- `supabase/functions/intake-understand/index.ts` — `graph_hint` annehmen + in Prompt einbauen (~10 Zeilen).
-- `supabase/functions/intake-trigger/index.ts` — Switch auf AOL bei vorhandenem Secret (~15 Zeilen).
-- `aol-service/app/graph.py` — `context_loader` + `interpreter` mit echtem Code, `condenser` als No-op-Stub belassen.
-- `aol-service/app/main.py` — keine Änderung erwartet, evtl. ENV `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` lesen für `interpreter`.
-- `.lovable/plan.md` — auf Welle A aktualisieren.
-
-## Sag „Go", dann S1 → S2 → S3 → S4 → S6, jeder Schritt einzeln verifizierbar.
+`linker` (Graph-basiertes Matching), `conflict_detector`, `gap_detector`,
+`dependency_detector` zwischen `interpreter` und `condenser` einfügen,
+sobald Welle A produktiv Daten in den Graph legt. Dann macht Welle B
+Aussagen, die heute noch keine Datenbasis hätten.
