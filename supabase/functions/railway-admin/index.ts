@@ -209,8 +209,6 @@ Deno.serve(async (req) => {
     }
 
     if (action === "diagnose") {
-      // Vergleicht Token-Prefixes Supabase ↔ Railway und pingt AOL/Graphiti
-      // mit dem Supabase-Token. Zeigt sofort, ob ein Sync nötig ist.
       const sb = {
         AOL_SERVICE_TOKEN: prefix(Deno.env.get("AOL_SERVICE_TOKEN")),
         GRAPHITI_SERVICE_TOKEN: prefix(Deno.env.get("GRAPHITI_SERVICE_TOKEN")),
@@ -218,25 +216,16 @@ Deno.serve(async (req) => {
         GRAPHITI_SERVICE_URL: Deno.env.get("GRAPHITI_SERVICE_URL") ?? null,
         LANGSMITH_API_KEY: prefix(Deno.env.get("LANGSMITH_API_KEY")),
       };
-      // Railway-Werte für Vergleich (aus aol-service Vars)
       const aolVars = await gql(
         `query($p:String!,$e:String!,$s:String!){variables(projectId:$p,environmentId:$e,serviceId:$s)}`,
         { p: body.projectId, e: body.environmentId, s: body.aolServiceId },
       ) as any;
       const rwAol = aolVars?.variables ?? {};
       const compare = {
-        aol_token: {
-          supabase: sb.AOL_SERVICE_TOKEN,
-          railway: prefix(rwAol.AOL_SERVICE_TOKEN),
-          match: prefix(Deno.env.get("AOL_SERVICE_TOKEN")) === prefix(rwAol.AOL_SERVICE_TOKEN),
-        },
-        langsmith: {
-          supabase: sb.LANGSMITH_API_KEY,
-          railway: prefix(rwAol.LANGSMITH_API_KEY),
-          match: prefix(Deno.env.get("LANGSMITH_API_KEY")) === prefix(rwAol.LANGSMITH_API_KEY),
-        },
+        aol_token: { supabase: sb.AOL_SERVICE_TOKEN, railway: prefix(rwAol.AOL_SERVICE_TOKEN), match: prefix(Deno.env.get("AOL_SERVICE_TOKEN")) === prefix(rwAol.AOL_SERVICE_TOKEN) },
+        langsmith: { supabase: sb.LANGSMITH_API_KEY, railway: prefix(rwAol.LANGSMITH_API_KEY), match: prefix(Deno.env.get("LANGSMITH_API_KEY")) === prefix(rwAol.LANGSMITH_API_KEY) },
+        graphiti_url: { supabase: sb.GRAPHITI_SERVICE_URL, railway_aol: rwAol.GRAPHITI_SERVICE_URL ?? null, match: sb.GRAPHITI_SERVICE_URL === rwAol.GRAPHITI_SERVICE_URL },
       };
-      // Live-Ping AOL mit Supabase-Token
       let aolPing: unknown = null;
       const aolUrl = (sb.AOL_SERVICE_URL ?? "").replace(/\/+$/, "");
       const aolHttps = aolUrl && !/^https?:\/\//i.test(aolUrl) ? `https://${aolUrl}` : aolUrl;
@@ -244,14 +233,33 @@ Deno.serve(async (req) => {
         try {
           const r = await fetch(`${aolHttps}/health`);
           aolPing = { health_status: r.status, health_body: (await r.text()).slice(0, 200) };
-        } catch (e) {
-          aolPing = { error: String(e) };
-        }
+        } catch (e) { aolPing = { error: String(e) }; }
       }
-      return new Response(
-        JSON.stringify({ supabase: sb, compare, aolPing }, null, 2),
-        { headers: { ...cors, "Content-Type": "application/json" } },
-      );
+      return new Response(JSON.stringify({ supabase: sb, compare, aolPing }, null, 2), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
+    if (action === "sync-supabase-to-railway") {
+      // Drückt die kanonischen Supabase-Secret-Werte in Railway-Vars (Service folgt Cloud).
+      // Pro Service eine Allowlist, damit wir keine fremden Vars überschreiben.
+      const { projectId, environmentId, services } = body as {
+        projectId: string; environmentId: string;
+        services: { serviceId: string; serviceName: string; vars: string[] }[];
+      };
+      if (!projectId || !environmentId || !Array.isArray(services)) {
+        throw new Error("projectId, environmentId, services[] required");
+      }
+      const out: unknown[] = [];
+      for (const svc of services) {
+        const payload: Record<string, string> = {};
+        for (const name of svc.vars) {
+          const v = Deno.env.get(name);
+          if (v) payload[name] = v;
+        }
+        const r = await setVars(projectId, environmentId, svc.serviceId, payload);
+        const dep = await redeploy(svc.serviceId, environmentId);
+        out.push({ service: svc.serviceName, set: r.map((x: any) => ({ name: x.name, prefix: prefix(x.value) })), deploy: dep });
+      }
+      return new Response(JSON.stringify({ ok: true, services: out }, null, 2), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
     return new Response(JSON.stringify({ error: "unknown action" }), {
