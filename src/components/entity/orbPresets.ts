@@ -93,7 +93,14 @@ export function getActivePresets(): Record<EntityState, OrbPresetRange> {
     "review-ready": o["review-ready"] ?? ORB_PRESETS_DEFAULT["review-ready"],
     failed: o.failed ?? ORB_PRESETS_DEFAULT.failed,
     "busy-blocked": o["busy-blocked"] ?? ORB_PRESETS_DEFAULT["busy-blocked"],
-  };
+};
+
+/** Backwards-compatible Alias. Liest immer die aktiven (override-aware) Presets. */
+export const ORB_PRESETS = new Proxy({} as Record<EntityState, OrbPresetRange>, {
+  get: (_t, prop: string) => getActivePresets()[prop as EntityState],
+  ownKeys: () => Object.keys(ORB_PRESETS_DEFAULT),
+  getOwnPropertyDescriptor: () => ({ enumerable: true, configurable: true }),
+});
 }
 
 const ORB_PRESETS_DEFAULT: Record<EntityState, OrbPresetRange> = {
