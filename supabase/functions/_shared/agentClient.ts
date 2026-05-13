@@ -97,11 +97,29 @@ function parseToolArgs(data: any, expectedName: string): unknown {
 // ----------------------------------------------------------------------------
 //  Extract Facts
 // ----------------------------------------------------------------------------
-export async function callExtractFacts(text: string): Promise<ExtractedFact[]> {
+export async function callExtractFacts(
+  text: string,
+  graphHint?: string | null,
+): Promise<ExtractedFact[]> {
+  // graphHint: kompakter Kontext aus dem Projekt-Graphen (Graphiti).
+  // Wird – falls vorhanden – als zusätzliche System-Notiz vor den User-Text
+  // gestellt. Pures Prompt-Enrichment, keine Schema-/Logikänderung.
+  const systemMessages: Array<{ role: "system"; content: string }> = [
+    { role: "system", content: AGENT_SYSTEM_PROMPT },
+  ];
+  const trimmed = (graphHint ?? "").trim();
+  if (trimmed) {
+    systemMessages.push({
+      role: "system",
+      content:
+        "Bekanntes aus dem Projekt-Wissensgraph (nur als Kontext, nicht zitieren, " +
+        "nicht doppelt extrahieren):\n" + trimmed.slice(0, 4000),
+    });
+  }
   const data = await callGateway({
     model: AGENT_MODEL,
     messages: [
-      { role: "system", content: AGENT_SYSTEM_PROMPT },
+      ...systemMessages,
       { role: "user", content: text },
     ],
     tools: [EXTRACT_FACTS_TOOL],
