@@ -13,7 +13,20 @@
 //    sondern diese Helper benutzen.
 // =============================================================================
 
-const BASE = (Deno.env.get("GRAPHITI_SERVICE_URL") ?? "").replace(/\/+$/, "");
+// URL-Härtung: fehlendes Schema → https:// ergänzen, trailing slashes weg.
+// So bricht Graphiti nicht still wegen "Invalid URL", wenn das Secret ohne
+// Schema gesetzt wurde (häufiger Railway-Copy-Paste-Fehler).
+function normalizeBase(raw: string): string {
+  const t = raw.trim().replace(/\/+$/, "");
+  if (!t) return "";
+  if (/^https?:\/\//i.test(t)) return t;
+  console.warn(
+    "[graphiti] GRAPHITI_SERVICE_URL ohne Schema gesetzt — ergänze 'https://' automatisch.",
+  );
+  return `https://${t}`;
+}
+
+const BASE = normalizeBase(Deno.env.get("GRAPHITI_SERVICE_URL") ?? "");
 const TOKEN = Deno.env.get("GRAPHITI_SERVICE_TOKEN") ?? "";
 
 export class GraphitiUnavailableError extends Error {}
