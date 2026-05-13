@@ -51,9 +51,22 @@
 - Retry-Knopf für `failed`/`rate_limited`/`payment_required` ✓
 - Asset-Detail-Inline-Card (HoverCard) im Session-Panel ✓
 
-## Phase 10: Knowledge-Graph (V1.1)
+## Phase 10a: Knowledge-Graph — Welle A (Graph-Enrichment) ✓
 
-- Graphiti anbinden (Entscheidung gesetzt), erst nach stabilem Block A+B
+- Graphiti als Knowledge-Graph gesetzt (Cognee verworfen)
+- `commit-fact` spiegelt jeden Commit nach Graphiti (`/messages`, async, Client-UUID, Idempotenz, `graphiti_uuid` zurück nach `canonical_facts`)
+- AOL-Service auf Railway (FastAPI + LangGraph): `router → context_loader → condenser`
+- `context_loader` lädt projektspezifischen Kontext via `POST /get-memory` (group_id = project_id, max 20 Facts)
+- `intake-trigger` reicht `graph_context` als `graph_hint` an `intake-understand`; Hint wird als 2. System-Message vor den User-Text gehängt (4 KB Limit)
+- Besitzschnitt: Railway hat keinen DB-/Service-Role-Zugriff. Schreiben bleibt in Cloud.
+
+## Phase 10b: Knowledge-Graph — Welle B
+
+- `linker` (Graph-basiertes Matching statt Title-Match)
+- `conflict_detector` (Widersprüche gegen Graph statt nur gegen `canonical_facts`)
+- `gap_detector` (Lücken aus Graph-Kanten ableiten)
+- `dependency_detector` (Beziehungen aus Graph traversieren)
+- Eingebaut zwischen `interpreter` und `condenser`. Erst sinnvoll, wenn Welle A produktiv Daten in den Graph legt und der Reuse-Check stabil ist.
 
 ## Nicht in V1
 
@@ -71,7 +84,12 @@
 - ✓ Phase 2.5: Datenmodell-Erweiterung (gap_signals, dependencies, outcome_signals, dialog_sessions, gap_box)
 - ✓ Phase 3.5: Vier-Rollen-Projektscreen
 - ✓ Phase 3.6: Side-Grids Entity-Screen + Audit-Verfeinerung Projekt-Screen
-- ✓ Phase 3.7: Auflösung „Signale"-Zone + Manuell-Kennzeichnung
-- ✓ Phase 4: Dialog-Overlay (Minimalprinzip, manuell-Flag automatisch)
-- ✓ Phase 5: Universeller Input (Drop am Kern + Click-Overlay mit Pills)
-- ✓ Phase 6: Upload-Pipeline V1 (Auth + Storage + Edge Function + Realtime)
+- ✓ Phase 3.7: Manuell-Kennzeichnung
+- ✓ Phase 4: Dialog-Overlay (Minimalprinzip)
+- ✓ Phase 5: Universeller Input
+- ✓ Phase 6: Upload-Pipeline V1
+- ✓ Phase 7 + 7.5: Verstehens-Loop
+- ✓ Phase 7.6: Commit-Pfad vollständig
+- ✓ Phase 8: Echte Projekt-Anbindung (B1/B2/B3)
+- ✓ Phase 9: UX-Sweep (Voice, Retry, HoverCard)
+- ✓ Phase 10a: Welle A (Graphiti-Mirror + AOL-Context-Enrichment)
