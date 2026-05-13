@@ -88,7 +88,7 @@ export function useNamespace<T = unknown>(
       debouncers.current[key] = window.setTimeout(async () => {
         const { data: auth } = await supabase.auth.getUser();
         const uid = auth.user?.id ?? null;
-        await supabase.from("app_settings").upsert(
+        const { error } = await supabase.from("app_settings").upsert(
           {
             namespace,
             key,
@@ -97,13 +97,12 @@ export function useNamespace<T = unknown>(
             user_id: scope === "user" ? uid : null,
             updated_by: uid,
           },
-          {
-            onConflict:
-              scope === "global"
-                ? "namespace,key"
-                : "namespace,key,user_id",
-          },
+          { onConflict: "namespace,key,user_id" },
         );
+        if (error) {
+          // eslint-disable-next-line no-console
+          console.error("[useNamespace] upsert failed", { namespace, key, scope, error });
+        }
       }, 300);
     },
     [namespace, scope],
