@@ -16,8 +16,7 @@ import { devlog } from "@/lib/devlog/devlog";
 import { useDialog } from "@/components/dialog/DialogProvider";
 import { useEntityVoice } from "@/lib/voice/useEntityVoice";
 import { toast } from "sonner";
-
-type EntityState = "idle" | "hover" | "processing" | "review-ready" | "failed";
+import type { EntityState } from "@/components/entity/orbPresets";
 
 const Index = () => {
   const navigate = useNavigate();

@@ -115,7 +115,6 @@ const Entity = ({
         state: internal,
         size: orbPx,
         sample: active,
-        onClick: handleClick,
         onPickInputMode,
       })}
     </div>
