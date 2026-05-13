@@ -238,6 +238,25 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ supabase: sb, compare, aolPing }, null, 2), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
+    if (action === "graphiti-probe") {
+      const gUrl = (Deno.env.get("GRAPHITI_SERVICE_URL") ?? "").replace(/\/+$/, "");
+      const gBase = gUrl && !/^https?:\/\//i.test(gUrl) ? `https://${gUrl}` : gUrl;
+      const gToken = Deno.env.get("GRAPHITI_SERVICE_TOKEN") ?? "";
+      const headers = { "Content-Type": "application/json", ...(gToken ? { Authorization: `Bearer ${gToken}` } : {}) };
+      const { project_id, query } = body;
+      const epRes = await fetch(`${gBase}/episodes/${encodeURIComponent(project_id)}?last_n=20`, { headers });
+      const epBody = await epRes.text();
+      const sRes = await fetch(`${gBase}/search`, {
+        method: "POST", headers,
+        body: JSON.stringify({ query: query ?? "Teinacher", group_ids: [project_id], max_facts: 20 }),
+      });
+      const sBody = await sRes.text();
+      return new Response(JSON.stringify({
+        episodes: { status: epRes.status, body: epBody.slice(0, 1500) },
+        search:   { status: sRes.status,  body: sBody.slice(0, 1500) },
+      }, null, 2), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
     if (action === "test-mirror") {
       // Spiegel-Test: nimmt ein bestehendes canonical_fact, sendet eine Episode
       // an Graphiti und schreibt graphiti_uuid zurück. Validiert den Pfad
