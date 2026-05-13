@@ -109,8 +109,9 @@ async function redeploy(serviceId: string, environmentId: string) {
 
 async function autoDiscover(targetServiceName: string) {
   const data = await listAll() as any;
-  for (const teamEdge of data?.teams?.edges ?? []) {
-    for (const projEdge of teamEdge?.node?.projects?.edges ?? []) {
+  for (const wsBlock of data?.workspaces ?? []) {
+    const ws = wsBlock?.workspace;
+    for (const projEdge of ws?.projects?.edges ?? []) {
       const proj = projEdge.node;
       const svc = proj.services?.edges?.find(
         (e: any) => e?.node?.name?.toLowerCase() === targetServiceName.toLowerCase(),
@@ -118,6 +119,7 @@ async function autoDiscover(targetServiceName: string) {
       if (svc) {
         const env = proj.environments?.edges?.[0]?.node;
         return {
+          workspaceId: ws.id,
           projectId: proj.id,
           projectName: proj.name,
           environmentId: env?.id,
