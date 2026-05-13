@@ -1,8 +1,8 @@
 // =============================================================================
-//  FacePillCharacter — 1:1 Port von Cobp/serious-mule-50.
-//  Squircle-Card 12rem (skaliert), 4 rotierende Blur-Bälle, blinzelnde Augen,
-//  Smiley bei Hover, 3D-Tilt nach Mausposition. Im offenen Zustand erscheinen
-//  vier Input-Mode-Buttons. Bewusst KEIN prefers-reduced-motion-Bremsen.
+//  FacePillCharacter — Squircle-Pill mit blinzelnden Augen, Smiley bei Hover,
+//  3D-Tilt nach Mausposition (Hit-Area = 2× Pill-Größe), 4 organisch
+//  schwebende Blur-Bälle (Lissajous-Trajektorien). Im offenen Zustand
+//  4 Input-Mode-Buttons. Bewusst KEIN reduced-motion-Bremsen.
 // =============================================================================
 
 import { useRef, useState, type CSSProperties, type PointerEvent } from "react";
@@ -20,15 +20,15 @@ const MODES: { id: InputMode; label: string; Icon: typeof FileText }[] = [
 
 // State → Variation. idle/hover bleiben Original-Look.
 const STATE_TUNE = {
-  idle:           { ballSpeed: 10, eyeMode: "normal",  ballFilter: "none",                     pulseCard: false },
-  hover:          { ballSpeed: 10, eyeMode: "smile",   ballFilter: "none",                     pulseCard: false, ballsPaused: true },
-  processing:     { ballSpeed: 4,  eyeMode: "half",    ballFilter: "none",                     pulseCard: true },
-  "review-ready": { ballSpeed: 8,  eyeMode: "smile",   ballFilter: "brightness(1.15)",         pulseCard: false, glowBurst: true },
-  failed:         { ballSpeed: 26, eyeMode: "sad",     ballFilter: "saturate(0.4) brightness(0.7)", pulseCard: false },
-  "busy-blocked": { ballSpeed: 22, eyeMode: "closed",  ballFilter: "saturate(0.5)",            pulseCard: false },
+  idle:           { speedMul: 1.0, eyeMode: "normal",  ballFilter: "none",                            pulseCard: false },
+  hover:          { speedMul: 1.0, eyeMode: "smile",   ballFilter: "none",                            pulseCard: false },
+  processing:     { speedMul: 0.4, eyeMode: "half",    ballFilter: "brightness(1.1)",                 pulseCard: true },
+  "review-ready": { speedMul: 0.7, eyeMode: "smile",   ballFilter: "brightness(1.15)",                pulseCard: false, glowBurst: true },
+  failed:         { speedMul: 2.4, eyeMode: "sad",     ballFilter: "saturate(0.4) brightness(0.7)",   pulseCard: false },
+  "busy-blocked": { speedMul: 2.0, eyeMode: "closed",  ballFilter: "saturate(0.5)",                   pulseCard: false },
 } as const;
 
-type Tune = (typeof STATE_TUNE)[keyof typeof STATE_TUNE] & { ballsPaused?: boolean; glowBurst?: boolean };
+type Tune = (typeof STATE_TUNE)[keyof typeof STATE_TUNE] & { glowBurst?: boolean };
 
 export const FacePillCharacter: Character = {
   id: "face-pill",
@@ -49,9 +49,9 @@ const FacePill = ({ state, size, sample, onPickInputMode }: FacePillProps) => {
   const [hovering, setHovering] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const tune = (STATE_TUNE[state as keyof typeof STATE_TUNE] ?? STATE_TUNE.idle) as Tune;
-  const { c1, c2, c3 } = sample.colors;
+  const { c1, c2, c3, bg } = sample.colors;
 
-  // Skalierung gegenüber Original (12rem = 192px)
+  // Skalierung (12rem = 192px Original)
   const k = size / 192;
   const closedSide = 192 * k;
   const openW = 260 * k;
@@ -62,24 +62,23 @@ const FacePill = ({ state, size, sample, onPickInputMode }: FacePillProps) => {
 
   const eyeW = 26 * k;
   const eyeH = 52 * k;
-  const eyeGap = 32 * k; // 2rem
+  const eyeGap = 32 * k;
   const smileySize = 60 * k;
-  const ballSize = 96 * k; // 6rem
-  const ballBlur = 30 * k;
+  const ballSize = 110 * k;
+  const ballBlur = 32 * k;
   const tz = 45 * k;
 
   const showSmile = tune.eyeMode === "smile" || hovering;
-  const ballsPaused = hovering || tune.ballsPaused;
 
-  // 3D Pointer Tilt
+  // 3D Pointer Tilt — bezogen auf die Card-Bounds, Events vom großen Hit-Layer
   const handlePointerMove = (e: PointerEvent<HTMLDivElement>) => {
     const card = cardRef.current;
     if (!card) return;
     const rect = card.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width;
     const y = (e.clientY - rect.top) / rect.height;
-    const rx = clamp(-(y - 0.5) * 30, -15, 15);
-    const ry = clamp((x - 0.5) * 30, -15, 15);
+    const rx = clamp(-(y - 0.5) * 30, -22, 22);
+    const ry = clamp((x - 0.5) * 30, -22, 22);
     card.style.transition = "transform 80ms linear";
     card.style.transform = `perspective(1000px) rotateX(${rx}deg) rotateY(${ry}deg) translateZ(${tz}px)`;
   };
@@ -91,23 +90,17 @@ const FacePill = ({ state, size, sample, onPickInputMode }: FacePillProps) => {
     card.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg) translateZ(0px)`;
   };
 
-  const cardStyle: CSSProperties = {
-    width: w,
-    height: h,
-    borderRadius: radius,
-    transformStyle: "preserve-3d",
-    willChange: "transform",
-  };
+  const speedVar = { ["--orbit-speed" as string]: tune.speedMul } as CSSProperties;
 
   return (
     <div
       className="absolute inset-0 grid place-items-center"
       style={{ width: size, height: size, perspective: `${1000 * k}px` }}
     >
-      {/* :after-Pad aus der Quelle: subtiler Backdrop hinter der Card */}
+      {/* :after-Pad: subtiler Glow hinter der Card */}
       <div
         aria-hidden
-        className="absolute rounded-[2.6rem] bg-card/40 blur-2xl"
+        className="absolute rounded-[2.6rem] bg-card/40 blur-2xl pointer-events-none"
         style={{
           width: w * 0.95,
           height: h * 0.92,
@@ -115,52 +108,36 @@ const FacePill = ({ state, size, sample, onPickInputMode }: FacePillProps) => {
         }}
       />
 
+      {/* Card (visuell, nicht für Pointer-Tracking zuständig) */}
       <div
         ref={cardRef}
         className={cn(
-          "relative cursor-pointer select-none overflow-hidden",
+          "relative select-none overflow-hidden pointer-events-none",
           "border border-white/10 bg-background/30 backdrop-blur-xl",
           "shadow-[0_20px_60px_-15px_rgba(0,0,0,0.6),inset_0_0_20px_rgba(255,255,255,0.05)]",
           tune.pulseCard && "animate-[face-pill-breathe_1.2s_ease-in-out_infinite]",
           tune.glowBurst && "animate-[face-pill-glow_800ms_ease-out]",
         )}
-        style={cardStyle}
-        onPointerMove={handlePointerMove}
-        onPointerEnter={() => setHovering(true)}
-        onPointerLeave={() => {
-          setHovering(false);
-          resetTilt();
-        }}
-        onClick={(e) => {
-          e.stopPropagation();
-          setOpen((o) => !o);
+        style={{
+          width: w,
+          height: h,
+          borderRadius: radius,
+          transformStyle: "preserve-3d",
+          willChange: "transform",
         }}
       >
         {/* Bälle-Layer */}
         <div
           aria-hidden
           className="absolute inset-0 overflow-hidden"
-          style={{ borderRadius: radius }}
+          style={{ borderRadius: radius, ...speedVar }}
         >
-          <div
-            className="absolute left-1/2 top-1/2"
-            style={{
-              width: ballSize * 2.2,
-              height: ballSize * 2.2,
-              marginLeft: -(ballSize * 1.1),
-              marginTop: -(ballSize * 1.1),
-              animation: `face-pill-rotate ${tune.ballSpeed}s linear infinite reverse`,
-              animationPlayState: ballsPaused ? "paused" : "running",
-              filter: tune.ballFilter,
-            }}
-          >
-            <Ball top={0} left="50%" tx="-50%" ty="0" size={ballSize} blur={ballBlur} color="#ec4899" />
-            <Ball bottom={0} left="50%" tx="-50%" ty="0" size={ballSize} blur={ballBlur} color={c1 || "#9147ff"} />
-            <Ball top="50%" left={0} tx="0" ty="-50%" size={ballSize} blur={ballBlur} color={c2 || "#34d399"} />
-            <Ball top="50%" right={0} tx="0" ty="-50%" size={ballSize} blur={ballBlur} color={c3 || "#05e0f5"} />
-          </div>
-          {/* Milchglas */}
-          <div className="absolute inset-0 bg-white/10" />
+          <Orbit name="a" size={ballSize} blur={ballBlur} color={c1 || "#ec4899"} duration={18} delay={0}    paused={hovering} filter={tune.ballFilter} />
+          <Orbit name="b" size={ballSize} blur={ballBlur} color={c2 || "#9147ff"} duration={22} delay={-7}   paused={hovering} filter={tune.ballFilter} />
+          <Orbit name="c" size={ballSize} blur={ballBlur} color={c3 || "#34d399"} duration={16} delay={-3}   paused={hovering} filter={tune.ballFilter} />
+          <Orbit name="d" size={ballSize} blur={ballBlur} color={bg || "#05e0f5"} duration={20} delay={-11}  paused={hovering} filter={tune.ballFilter} />
+          {/* Milchglas-Schicht über den Bällen */}
+          <div className="absolute inset-0 bg-white/5" />
         </div>
 
         {/* Augen / Smiley */}
@@ -180,8 +157,8 @@ const FacePill = ({ state, size, sample, onPickInputMode }: FacePillProps) => {
             </>
           ) : (
             <>
-              <Eye w={eyeW} h={eyeH} mode={tune.eyeMode} delay={0} />
-              <Eye w={eyeW} h={eyeH} mode={tune.eyeMode} delay={0} />
+              <Eye w={eyeW} h={eyeH} mode={tune.eyeMode} />
+              <Eye w={eyeW} h={eyeH} mode={tune.eyeMode} />
             </>
           )}
         </div>
@@ -189,7 +166,7 @@ const FacePill = ({ state, size, sample, onPickInputMode }: FacePillProps) => {
         {/* Open-State: Input-Mode-Buttons */}
         <div
           className={cn(
-            "absolute inset-0 z-20 flex flex-wrap items-center justify-center gap-2 p-4",
+            "absolute inset-0 z-20 flex flex-wrap items-center justify-center gap-2 p-4 pointer-events-auto",
             "transition-opacity duration-300",
             open ? "opacity-100" : "opacity-0 pointer-events-none",
           )}
@@ -218,10 +195,56 @@ const FacePill = ({ state, size, sample, onPickInputMode }: FacePillProps) => {
         </div>
       </div>
 
+      {/* Hit-Layer: 2× Größe für großzügige Pointer-Hot-Area */}
+      <div
+        className="absolute"
+        style={{
+          width: size * 2,
+          height: size * 2,
+          left: -size / 2,
+          top: -size / 2,
+          cursor: "pointer",
+        }}
+        onPointerEnter={() => setHovering(true)}
+        onPointerMove={handlePointerMove}
+        onPointerLeave={() => {
+          setHovering(false);
+          resetTilt();
+        }}
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen((o) => !o);
+        }}
+      />
+
       <style>{`
-        @keyframes face-pill-rotate {
-          from { transform: rotate(360deg); }
-          to   { transform: rotate(0deg); }
+        @keyframes face-pill-orbit-a {
+          0%   { transform: translate(-32%, -48%) scale(1); }
+          25%  { transform: translate(22%, -42%)  scale(1.08); }
+          50%  { transform: translate(38%, 12%)   scale(0.94); }
+          75%  { transform: translate(-12%, 30%)  scale(1.05); }
+          100% { transform: translate(-32%, -48%) scale(1); }
+        }
+        @keyframes face-pill-orbit-b {
+          0%   { transform: translate(28%, 30%)   scale(1.02); }
+          20%  { transform: translate(-20%, 20%)  scale(0.96); }
+          45%  { transform: translate(-36%, -28%) scale(1.1); }
+          70%  { transform: translate(10%, -36%)  scale(0.98); }
+          100% { transform: translate(28%, 30%)   scale(1.02); }
+        }
+        @keyframes face-pill-orbit-c {
+          0%   { transform: translate(-40%, 8%)   scale(0.98); }
+          30%  { transform: translate(8%, 32%)    scale(1.06); }
+          55%  { transform: translate(34%, -10%)  scale(0.92); }
+          80%  { transform: translate(-4%, -32%)  scale(1.04); }
+          100% { transform: translate(-40%, 8%)   scale(0.98); }
+        }
+        @keyframes face-pill-orbit-d {
+          0%   { transform: translate(18%, -34%)  scale(1.04); }
+          25%  { transform: translate(36%, 6%)    scale(0.95); }
+          50%  { transform: translate(0%, 36%)    scale(1.08); }
+          75%  { transform: translate(-34%, 4%)   scale(1.0); }
+          100% { transform: translate(18%, -34%)  scale(1.04); }
         }
         @keyframes face-pill-blink {
           0%, 46%, 50%, 96%, 100% { transform: scaleY(1); }
@@ -241,28 +264,39 @@ const FacePill = ({ state, size, sample, onPickInputMode }: FacePillProps) => {
   );
 };
 
-// ----- Bälle -----
-interface BallProps {
+// ----- Einzelner organisch schwebender Ball -----
+const Orbit = ({
+  name,
+  size,
+  blur,
+  color,
+  duration,
+  delay,
+  paused,
+  filter,
+}: {
+  name: "a" | "b" | "c" | "d";
   size: number;
   blur: number;
   color: string;
-  top?: number | string;
-  bottom?: number | string;
-  left?: number | string;
-  right?: number | string;
-  tx: string;
-  ty: string;
-}
-const Ball = ({ size, blur, color, top, bottom, left, right, tx, ty }: BallProps) => (
+  duration: number;
+  delay: number;
+  paused: boolean;
+  filter: string;
+}) => (
   <span
-    className="absolute rounded-full"
+    className="absolute left-1/2 top-1/2 rounded-full"
     style={{
-      top, bottom, left, right,
       width: size,
       height: size,
-      transform: `translate(${tx}, ${ty})`,
+      marginLeft: -size / 2,
+      marginTop: -size / 2,
       background: color,
-      filter: `blur(${blur}px)`,
+      filter: `blur(${blur}px) ${filter !== "none" ? filter : ""}`.trim(),
+      animation: `face-pill-orbit-${name} calc(${duration}s * var(--orbit-speed, 1)) ease-in-out infinite`,
+      animationDelay: `${delay}s`,
+      animationPlayState: paused ? "paused" : "running",
+      willChange: "transform",
     }}
   />
 );
@@ -272,14 +306,11 @@ const Eye = ({
   w,
   h,
   mode,
-  delay,
 }: {
   w: number;
   h: number;
   mode: "normal" | "half" | "sad" | "closed" | "smile";
-  delay: number;
 }) => {
-  // mode → finale Höhe & Animation
   let scaleY = 1;
   let animate = true;
   if (mode === "half") { scaleY = 0.45; animate = false; }
@@ -295,7 +326,7 @@ const Eye = ({
         borderRadius: Math.min(w, h) * 0.45,
         transform: `scaleY(${scaleY})`,
         transformOrigin: "center",
-        animation: animate ? `face-pill-blink 10s ${delay}s infinite linear` : undefined,
+        animation: animate ? `face-pill-blink 10s linear infinite` : undefined,
         transition: "transform 300ms ease",
       }}
     />
@@ -304,13 +335,7 @@ const Eye = ({
 
 // ----- Smiley (1:1 SVG aus Quelle) -----
 const Smiley = ({ size }: { size: number }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    style={{ color: "#fff" }}
-  >
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={{ color: "#fff" }}>
     <path
       fill="currentColor"
       d="M8.28386 16.2843C8.9917 15.7665 9.8765 14.731 12 14.731C14.1235 14.731 15.0083 15.7665 15.7161 16.2843C17.8397 17.8376 18.7542 16.4845 18.9014 15.7665C19.4323 13.1777 17.6627 11.1066 17.3088 10.5888C16.3844 9.23666 14.1235 8 12 8C9.87648 8 7.61556 9.23666 6.69122 10.5888C6.33728 11.1066 4.56771 13.1777 5.09858 15.7665C5.24582 16.4845 6.16034 17.8376 8.28386 16.2843Z"
