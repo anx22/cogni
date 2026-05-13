@@ -1,11 +1,26 @@
 # AOL — Agentic Orchestration Layer
 
 Python/FastAPI + LangGraph. Orchestriert die 10 Pflichtschritte aus Briefing 7.2
-als Knoten in einem persistenten StateGraph. Spricht Graphiti (Wissensgraph),
-Postgres (Wahrheit) und das Lovable AI Gateway als Tools an.
+als Knoten in einem persistenten StateGraph. Spricht Graphiti (Wissensgraph) und
+das Lovable AI Gateway als Tools an.
 
-> **Status:** Skelett. Health + leerer StateGraph + Auth + FastAPI-Routen
-> stehen. Knoten werden in Phase D2/D3 ausgebaut.
+> **Status:** Skelett. Health + leerer StateGraph + Auth + FastAPI-Routen +
+> Lovable-Cloud-Callback stehen. Knoten werden in Phase D2/D3 ausgebaut.
+
+## Architektur (DB-Zugriff)
+
+Railway bekommt **keinen** Datenbank-Key. Stattdessen ruft der AOL-Service
+nach jedem Schritt eine geschützte Edge Function in Lovable Cloud zurück
+(`aol-callback`), die mit dem intern verfügbaren Service-Key in `aol_runs`
+(später `proposed_facts`, `dialog_sessions`, `review_cases`) schreibt.
+
+```
+intake-trigger (Lovable Cloud)
+   -> POST /aol/run (Bearer AOL_SERVICE_TOKEN) -> Railway
+        -> LangGraph läuft
+        -> POST {AOL_CALLBACK_URL} (Bearer AOL_CALLBACK_TOKEN) -> Lovable Cloud
+             -> Update aol_runs / Inserts
+```
 
 ## Endpoints
 
@@ -23,17 +38,30 @@ Alle `/aol/*`-Routen erwarten `Authorization: Bearer ${AOL_SERVICE_TOKEN}`.
 | Name | Beschreibung |
 |------|--------------|
 | `AOL_SERVICE_TOKEN` | Bearer-Secret. Muss exakt mit dem Lovable-Cloud-Secret übereinstimmen. |
+| `AOL_CALLBACK_URL` | Vollständige URL der `aol-callback` Edge Function in Lovable Cloud. |
+| `AOL_CALLBACK_TOKEN` | Shared Secret. Muss exakt mit dem gleichnamigen Lovable-Cloud-Secret übereinstimmen. |
 | `GRAPHITI_SERVICE_URL` | URL des deployten graphiti-server (ohne trailing /). |
 | `GRAPHITI_SERVICE_TOKEN` | Optional, falls dein Graphiti-Server Bearer erwartet. |
 | `NEO4J_URI` / `NEO4J_USER` / `NEO4J_PASSWORD` | Nur falls AOL Neo4j auch direkt liest (sonst nicht nötig). |
 | `OPENAI_API_KEY` | Embeddings via Graphiti (indirekt). |
-| `LANGSMITH_API_KEY` | Aktiviert Tracing. |
-| `LANGCHAIN_TRACING_V2` | `true` |
-| `LANGCHAIN_PROJECT` | z.B. `produktintelligenz-aol` |
-| `SUPABASE_URL` | Postgres-REST-Basis. |
-| `SUPABASE_SERVICE_ROLE_KEY` | Schreibrechte für proposed_facts/dialog_sessions/aol_runs. |
 | `LOVABLE_API_KEY` | Für Lovable AI Gateway (Gemini). |
-| `DATABASE_URL` | Optional. Direkter Postgres-DSN für LangGraph PostgresSaver. |
+| `LANGSMITH_API_KEY` | Optional. Aktiviert Tracing. |
+| `LANGCHAIN_PROJECT` | Optional. z.B. `produktintelligenz-aol` |
+
+> **Nicht mehr nötig:** `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
+> `DATABASE_URL`. Datenbank-Schreibzugriffe laufen ausschließlich über den
+> Callback in Lovable Cloud.
+
+### `AOL_CALLBACK_URL` herausfinden
+
+Format:
+```
+https://<project-ref>.functions.supabase.co/aol-callback
+```
+Für dieses Projekt:
+```
+https://zeazrfidtpdtgcrbnhbo.functions.supabase.co/aol-callback
+```
 
 ## Lokal starten
 
@@ -45,7 +73,7 @@ uvicorn app.main:app --reload --port 8000
 
 ## Railway-Deploy
 
-1. Neues Service im selben Railway-Projekt anlegen
+1. Neues Service im Railway-Projekt anlegen
 2. Source: dieses Verzeichnis (`aol-service/`)
 3. Build: Dockerfile (Railway erkennt automatisch)
 4. ENV-Vars siehe oben

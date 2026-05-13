@@ -6,6 +6,7 @@ import os
 import uuid
 from typing import Any, Optional
 
+import httpx
 from fastapi import Depends, FastAPI, HTTPException
 from pydantic import BaseModel
 
@@ -23,6 +24,9 @@ if LANGSMITH:
     os.environ.setdefault("LANGCHAIN_PROJECT", "produktintelligenz-aol")
     os.environ.setdefault("LANGCHAIN_API_KEY", LANGSMITH)
     log.info("LangSmith-Tracing aktiv")
+
+CALLBACK_URL = (os.environ.get("AOL_CALLBACK_URL") or "").rstrip("/")
+CALLBACK_TOKEN = os.environ.get("AOL_CALLBACK_TOKEN") or ""
 
 
 # ---------- Schemas ---------------------------------------------------------
@@ -43,6 +47,31 @@ class ConfirmRequest(BaseModel):
     user_id: str
 
 
+# ---------- Callback --------------------------------------------------------
+
+
+def _post_callback(payload: dict[str, Any]) -> None:
+    """Schreibt Status zurück in Lovable Cloud (aol-callback Edge Function).
+
+    Best-effort: Fehler werden nur geloggt, niemals geworfen — der Run-Erfolg
+    hängt nicht am Callback.
+    """
+    if not CALLBACK_URL or not CALLBACK_TOKEN:
+        log.warning("AOL_CALLBACK_URL/TOKEN fehlt — Callback übersprungen")
+        return
+    try:
+        with httpx.Client(timeout=10.0) as c:
+            r = c.post(
+                CALLBACK_URL,
+                json=payload,
+                headers={"Authorization": f"Bearer {CALLBACK_TOKEN}"},
+            )
+            if r.status_code >= 300:
+                log.error("Callback fehlgeschlagen %s: %s", r.status_code, r.text[:300])
+    except Exception:
+        log.exception("Callback-Request scheiterte")
+
+
 # ---------- Routes ----------------------------------------------------------
 
 
@@ -52,7 +81,7 @@ def health() -> dict[str, Any]:
         "ok": True,
         "service": "aol",
         "graphiti_url": bool(os.environ.get("GRAPHITI_SERVICE_URL")),
-        "supabase_url": bool(os.environ.get("SUPABASE_URL")),
+        "callback_url": bool(CALLBACK_URL),
         "langsmith": bool(LANGSMITH),
     }
 
@@ -61,6 +90,10 @@ def health() -> dict[str, Any]:
 def run(req: RunRequest) -> dict[str, Any]:
     thread_id = req.run_id or str(uuid.uuid4())
     log.info("AOL run start asset=%s thread=%s", req.asset_id, thread_id)
+
+    # Sofort "running" zurückmelden, damit die UI den Status sieht.
+    if req.run_id:
+        _post_callback({"run_id": req.run_id, "status": "running", "current_node": "router"})
 
     initial = {
         "asset_id": req.asset_id,
@@ -71,18 +104,36 @@ def run(req: RunRequest) -> dict[str, Any]:
     }
     try:
         # TODO D2: durabler Aufruf mit Checkpointer + Tools.
-        # Für das Skelett synchroner Lauf der Stub-Knoten.
         result = COMPILED.invoke(initial)
     except Exception as e:
         log.exception("AOL run failed")
+        if req.run_id:
+            _post_callback({
+                "run_id": req.run_id,
+                "status": "failed",
+                "error": {"message": str(e), "where": "graph_invoke"},
+            })
         raise HTTPException(status_code=500, detail=str(e))
+
+    facts_written = result.get("facts_written", 0)
+    session_id = result.get("session_id")
+    last_node = result.get("last_node")
+
+    if req.run_id:
+        _post_callback({
+            "run_id": req.run_id,
+            "status": "completed",
+            "current_node": last_node,
+            "facts_written": facts_written,
+            "session_id": session_id,
+        })
 
     return {
         "ok": True,
         "thread_id": thread_id,
-        "last_node": result.get("last_node"),
-        "facts_written": result.get("facts_written", 0),
-        "session_id": result.get("session_id"),
+        "last_node": last_node,
+        "facts_written": facts_written,
+        "session_id": session_id,
     }
 
 
