@@ -1,1 +1,4 @@
 project_id = "zeazrfidtpdtgcrbnhbo"
+
+[functions.aol-callback]
+verify_jwt = false
