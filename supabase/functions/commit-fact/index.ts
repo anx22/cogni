@@ -14,6 +14,12 @@
 // =============================================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import {
+  addMessage as graphitiAddMessage,
+  isGraphitiConfigured,
+  GraphitiUnavailableError,
+  GraphitiHttpError,
+} from "../_shared/graphiti.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
