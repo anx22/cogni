@@ -154,7 +154,6 @@ const OrbLab = () => {
   const [seed, setSeed] = useState(0);
   const [autoRoll, setAutoRoll] = useState(false);
   const [savedAt, setSavedAt] = useState<number | null>(null);
-  const skipNextSave = useRef(true);
 
   const current = presets[state];
 
@@ -170,17 +169,9 @@ const OrbLab = () => {
     return () => window.clearInterval(i);
   }, [autoRoll]);
 
-  // Track when DB sees an updated preset for the active state → "Saved · …"
-  useEffect(() => {
-    if (skipNextSave.current) {
-      skipNextSave.current = false;
-      return;
-    }
-    setSavedAt(Date.now());
-  }, [current]);
-
   const update = (patch: Partial<OrbPresetRange>) => {
     setPreset(state, { ...current, ...patch });
+    setSavedAt(Date.now());
     setSeed((s) => s + 1);
   };
   const updateColor = (k: ColorKey, next: { l: Range; c: Range; h: Range }) =>
@@ -190,6 +181,7 @@ const OrbLab = () => {
     update({ surface: { ...current.surface, ...patch } });
   const reset = () => {
     resetPreset(state);
+    setSavedAt(Date.now());
     setSeed((s) => s + 1);
   };
 
