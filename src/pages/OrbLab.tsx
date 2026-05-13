@@ -359,35 +359,39 @@ const OrbLab = () => {
                     Geometrie
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <RangeRow
-                    label="Scale (× Orb)"
-                    value={surface.scale}
+                <CardContent className="space-y-3">
+                  <ValueRow
+                    label="Scale"
+                    value={centerOf(surface.scale)}
                     min={1}
                     max={3}
                     step={0.05}
                     precision={2}
-                    onChange={(scale) => updateSurface({ scale })}
+                    jitter={0.05}
+                    onChange={(_, scale) => updateSurface({ scale })}
                   />
-                  <RangeRow
+                  <ValueRow
                     label="Dot size px"
-                    value={surface.dotSize}
+                    value={centerOf(surface.dotSize)}
                     min={0.3}
                     max={6}
                     step={0.1}
                     precision={2}
-                    onChange={(dotSize) => updateSurface({ dotSize })}
+                    jitter={0.15}
+                    onChange={(_, dotSize) => updateSurface({ dotSize })}
                   />
-                  <RangeRow
-                    label="Spacing × dot"
-                    value={surface.dotSpacing}
+                  <ValueRow
+                    label="Spacing"
+                    value={centerOf(surface.dotSpacing)}
                     min={2}
                     max={12}
                     step={0.1}
                     precision={1}
-                    onChange={(dotSpacing) => updateSurface({ dotSpacing })}
+                    jitter={0.4}
+                    onChange={(_, dotSpacing) => updateSurface({ dotSpacing })}
                   />
                 </CardContent>
+
               </Card>
 
               <Card className="bg-card/40 border-border/50">
