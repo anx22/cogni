@@ -204,6 +204,7 @@ const FacePill = ({ state, size, sample, onPickInputMode }: FacePillProps) => {
           left: -size / 2,
           top: -size / 2,
           cursor: "pointer",
+          pointerEvents: open ? "none" : "auto",
         }}
         onPointerEnter={() => setHovering(true)}
         onPointerMove={handlePointerMove}
