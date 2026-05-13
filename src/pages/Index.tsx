@@ -306,7 +306,6 @@ const Index = () => {
           onReviewClick={handleReviewClick}
           onClick={handleCoreClick}
           busy={busy}
-          voiceTone={voice.tone}
         />
 
         <div className="absolute bottom-[22%] z-20 pointer-events-auto">
