@@ -42,7 +42,7 @@ export function useNamespace<T = unknown>(
     })();
 
     const channel = supabase
-      .channel(`app_settings:${namespace}:${scope}`)
+      .channel(`app_settings:${namespace}:${scope}:${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         {
