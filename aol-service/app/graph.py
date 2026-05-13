@@ -80,9 +80,12 @@ def n_context_loader(state: AolState) -> dict[str, Any]:
     if GRAPHITI_TOKEN:
         headers["Authorization"] = f"Bearer {GRAPHITI_TOKEN}"
 
+    # Graphiti /get-memory verlangt center_node_uuid als Pflichtfeld (auch wenn null).
+    # Ohne dieses Feld antwortet Graphiti 422 — kein Kontext, keine Anreicherung.
     body = {
         "group_id": str(project_id),
         "max_facts": 20,
+        "center_node_uuid": None,
         "messages": [],
     }
     try:
