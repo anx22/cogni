@@ -16,7 +16,7 @@ class AolState(TypedDict, total=False):
     parsed_document_id: Optional[str]
 
     # Graphiti-Kontext (vom context_loader gefüllt)
-    graph_context: dict[str, Any]
+    graph_context: str
 
     # Vom interpreter erkannte Kandidaten
     candidates: list[dict[str, Any]]
