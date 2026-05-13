@@ -13,6 +13,7 @@ const CATEGORIES: (DevLogCategory | "all")[] = [
 export default function DevLogPanel() {
   const { entries, paused, enabled, clear, setPaused } = useDevLog();
   const [open, setOpen] = useState(false);
+  const [tab, setTab] = useState<Tab>("log");
   const [filter, setFilter] = useState<DevLogCategory | "all">("all");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
@@ -74,34 +75,54 @@ export default function DevLogPanel() {
             {/* Header */}
             <div className="flex items-center justify-between gap-3 border-b border-border/30 px-4 py-2.5">
               <div className="flex items-center gap-2">
-                <span className="text-xs uppercase tracking-widest text-muted-foreground">
+                <button
+                  onClick={() => setTab("log")}
+                  className={cn(
+                    "text-xs uppercase tracking-widest transition-colors",
+                    tab === "log" ? "text-foreground" : "text-muted-foreground/60 hover:text-foreground",
+                  )}
+                >
                   System-Log
-                </span>
-                <span className="text-[10px] text-muted-foreground/50">
-                  {filtered.length}/{entries.length}
-                </span>
+                </button>
+                <span className="text-muted-foreground/30">/</span>
+                <button
+                  onClick={() => setTab("inspector")}
+                  className={cn(
+                    "text-xs uppercase tracking-widest transition-colors",
+                    tab === "inspector" ? "text-foreground" : "text-muted-foreground/60 hover:text-foreground",
+                  )}
+                >
+                  Inspector
+                </button>
+                {tab === "log" && (
+                  <span className="text-[10px] text-muted-foreground/50 ml-1">
+                    {filtered.length}/{entries.length}
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setPaused(!paused)}
-                  className="rounded px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                >
-                  {paused ? "▶ resume" : "⏸ pause"}
-                </button>
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(JSON.stringify(filtered, null, 2));
-                  }}
-                  className="rounded px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                >
-                  copy
-                </button>
-                <button
-                  onClick={clear}
-                  className="rounded px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                >
-                  clear
-                </button>
+                {tab === "log" && (
+                  <>
+                    <button
+                      onClick={() => setPaused(!paused)}
+                      className="rounded px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                    >
+                      {paused ? "▶ resume" : "⏸ pause"}
+                    </button>
+                    <button
+                      onClick={() => navigator.clipboard.writeText(JSON.stringify(filtered, null, 2))}
+                      className="rounded px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                    >
+                      copy
+                    </button>
+                    <button
+                      onClick={clear}
+                      className="rounded px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                    >
+                      clear
+                    </button>
+                  </>
+                )}
                 <button
                   onClick={() => setOpen(false)}
                   className="rounded px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-muted/50"
@@ -111,55 +132,58 @@ export default function DevLogPanel() {
               </div>
             </div>
 
-            {/* Filter */}
-            <div className="flex flex-wrap gap-1 border-b border-border/30 px-3 py-2">
-              {CATEGORIES.map((c) => {
-                const active = filter === c;
-                const color = c === "all" ? "#94a3b8" : CATEGORY_COLOR[c];
-                return (
-                  <button
-                    key={c}
-                    onClick={() => setFilter(c)}
-                    className={cn(
-                      "rounded-full px-2.5 py-0.5 text-[10px] uppercase tracking-wider transition-colors border",
-                      active
-                        ? "border-border/60 bg-muted/40 text-foreground"
-                        : "border-transparent text-muted-foreground/70 hover:text-foreground",
-                    )}
-                    style={active ? { boxShadow: `inset 0 0 0 1px ${color}40` } : undefined}
-                  >
-                    {c}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Liste */}
-            <div className="flex-1 overflow-y-auto px-2 py-1 font-mono text-[11px]">
-              {filtered.length === 0 ? (
-                <div className="flex h-full items-center justify-center text-muted-foreground/50 text-xs">
-                  keine Einträge
+            {tab === "inspector" ? (
+              <InspectorPanel />
+            ) : (
+              <>
+                {/* Filter */}
+                <div className="flex flex-wrap gap-1 border-b border-border/30 px-3 py-2">
+                  {CATEGORIES.map((c) => {
+                    const active = filter === c;
+                    const color = c === "all" ? "#94a3b8" : CATEGORY_COLOR[c];
+                    return (
+                      <button
+                        key={c}
+                        onClick={() => setFilter(c)}
+                        className={cn(
+                          "rounded-full px-2.5 py-0.5 text-[10px] uppercase tracking-wider transition-colors border",
+                          active
+                            ? "border-border/60 bg-muted/40 text-foreground"
+                            : "border-transparent text-muted-foreground/70 hover:text-foreground",
+                        )}
+                        style={active ? { boxShadow: `inset 0 0 0 1px ${color}40` } : undefined}
+                      >
+                        {c}
+                      </button>
+                    );
+                  })}
                 </div>
-              ) : (
-                filtered
-                  .slice()
-                  .reverse()
-                  .map((e) => (
-                    <Row
-                      key={e.id}
-                      entry={e}
-                      open={expanded.has(e.id)}
-                      onToggle={() =>
-                        setExpanded((prev) => {
-                          const n = new Set(prev);
-                          n.has(e.id) ? n.delete(e.id) : n.add(e.id);
-                          return n;
-                        })
-                      }
-                    />
-                  ))
-              )}
-            </div>
+
+                {/* Liste */}
+                <div className="flex-1 overflow-y-auto px-2 py-1 font-mono text-[11px]">
+                  {filtered.length === 0 ? (
+                    <div className="flex h-full items-center justify-center text-muted-foreground/50 text-xs">
+                      keine Einträge
+                    </div>
+                  ) : (
+                    filtered.slice().reverse().map((e) => (
+                      <Row
+                        key={e.id}
+                        entry={e}
+                        open={expanded.has(e.id)}
+                        onToggle={() =>
+                          setExpanded((prev) => {
+                            const n = new Set(prev);
+                            n.has(e.id) ? n.delete(e.id) : n.add(e.id);
+                            return n;
+                          })
+                        }
+                      />
+                    ))
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
