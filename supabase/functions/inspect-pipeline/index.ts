@@ -1,10 +1,8 @@
 // =============================================================================
 //  inspect-pipeline
 // -----------------------------------------------------------------------------
-//  End-to-End-Trace eines Assets durch unsere Daten-Pipeline. Liest nur (RLS
-//  per Service-Role bypassed; aber der Aufruf ist auf eingeloggte User
-//  beschränkt und gibt nur Eigentümer-Daten zurück, indem der User-Filter
-//  redundant geprüft wird, soweit Tabellen einen owner haben).
+//  End-to-End-Trace eines Assets / Runs / Projekts durch die Pipeline.
+//  Aufruf nur mit gültigem User-JWT. Datenrückgabe wird auf user_id gefiltert.
 // =============================================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
@@ -35,48 +33,58 @@ Deno.serve(async (req) => {
 
   try {
     if (body.asset_id) {
-      const [{ data: asset }, { data: parsed }, { data: proposed }, { data: runs }] = await Promise.all([
-        sb.from("assets").select("*").eq("id", body.asset_id).maybeSingle(),
-        sb.from("parsed_documents").select("*").eq("asset_id", body.asset_id).order("created_at", { ascending: false }),
-        sb.from("proposed_facts").select("*").eq("source_asset_id", body.asset_id).order("created_at", { ascending: false }),
-        sb.from("aol_runs").select("*").eq("asset_id", body.asset_id).order("created_at", { ascending: false }),
+      const [{ data: asset }, { data: parsed }, { data: runs }] = await Promise.all([
+        sb.from("assets").select("*").eq("id", body.asset_id).eq("user_id", userId).maybeSingle(),
+        sb.from("parsed_documents").select("*").eq("asset_id", body.asset_id).eq("user_id", userId).order("created_at", { ascending: false }),
+        sb.from("aol_runs").select("*").eq("asset_id", body.asset_id).eq("user_id", userId).order("created_at", { ascending: false }),
       ]);
       trace.asset = asset;
       trace.parsed_documents = parsed;
-      trace.proposed_facts = proposed;
       trace.aol_runs = runs;
 
-      const proposedIds = (proposed ?? []).map((p: { id: string }) => p.id);
-      if (proposedIds.length) {
-        const { data: cases } = await sb.from("review_cases")
-          .select("*").in("proposed_fact_id", proposedIds);
+      const parsedIds = (parsed ?? []).map((p: { id: string }) => p.id);
+      let proposed: { id: string; status: string; fact_type: string; delta_type: string | null; confidence: number | null; created_at: string }[] = [];
+      if (parsedIds.length) {
+        const { data } = await sb.from("proposed_facts")
+          .select("id, status, fact_type, delta_type, confidence, created_at, graphiti_episode_uuid")
+          .in("parsed_document_id", parsedIds)
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false });
+        proposed = data ?? [];
+      }
+      trace.proposed_facts = proposed;
+
+      if (proposed.length) {
+        const proposedIds = proposed.map((p) => p.id);
+        const [{ data: cases }, { data: facts }] = await Promise.all([
+          sb.from("review_cases").select("*").in("proposed_fact_id", proposedIds).eq("user_id", userId),
+          sb.from("canonical_facts")
+            .select("id, fact_type, source_proposed_fact_id, valid_from, valid_until, superseded_by, graphiti_uuid")
+            .in("source_proposed_fact_id", proposedIds).eq("user_id", userId),
+        ]);
         trace.review_cases = cases;
-        const caseIds = (cases ?? []).map((c: { id: string }) => c.id);
-        if (caseIds.length) {
-          const { data: facts } = await sb.from("canonical_facts")
-            .select("*").in("review_case_id", caseIds);
-          trace.canonical_facts = facts;
-        }
+        trace.canonical_facts = facts;
       }
     }
 
     if (body.run_id) {
-      const { data: run } = await sb.from("aol_runs").select("*").eq("id", body.run_id).maybeSingle();
+      const { data: run } = await sb.from("aol_runs").select("*").eq("id", body.run_id).eq("user_id", userId).maybeSingle();
       trace.aol_run = run;
     }
 
     if (body.project_id) {
       const [{ data: snapshot }, { data: events }, { data: facts }] = await Promise.all([
-        sb.from("project_state_snapshots").select("*").eq("project_id", body.project_id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
-        sb.from("change_events").select("*").eq("project_id", body.project_id).order("created_at", { ascending: false }).limit(20),
-        sb.from("canonical_facts").select("id, kind, key, value, graphiti_uuid, valid_from, invalidated_at").eq("project_id", body.project_id).limit(50),
+        sb.from("project_state_snapshots").select("*").eq("project_id", body.project_id).eq("user_id", userId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+        sb.from("change_events").select("*").eq("project_id", body.project_id).eq("user_id", userId).order("created_at", { ascending: false }).limit(20),
+        sb.from("canonical_facts").select("id, fact_type, graphiti_uuid, valid_from, valid_until, superseded_by").eq("project_id", body.project_id).eq("user_id", userId).limit(200),
       ]);
       trace.project_state_snapshot = snapshot;
       trace.change_events = events;
-      trace.canonical_facts_sample = facts;
+      trace.canonical_facts_sample = (facts ?? []).slice(0, 50);
       trace.graphiti_coverage = facts ? {
         total: facts.length,
         with_uuid: facts.filter((f: { graphiti_uuid: string | null }) => f.graphiti_uuid).length,
+        active: facts.filter((f: { valid_until: string | null; superseded_by: string | null }) => !f.valid_until && !f.superseded_by).length,
       } : null;
     }
 
