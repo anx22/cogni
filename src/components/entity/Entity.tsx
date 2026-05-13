@@ -1,11 +1,16 @@
 // =============================================================================
-//  Entity — die visuelle Entität. Wrapper um SiriOrb.
-//  Übernimmt Drop / Click / Review-Click und mappt App-States auf Orb-Presets.
+//  Entity — visuelle Entität. Wrapper um SiriOrb.
+//  Sample-basiert: jeder State-Wechsel rollt neue Werte aus dem Range-Profil.
 // =============================================================================
 
 import { useCallback, useEffect, useState } from "react";
 import SiriOrb from "./SiriOrb";
-import { ORB_PRESETS, modulateDuration, type EntityState } from "./orbPresets";
+import {
+  ORB_PRESETS,
+  samplePreset,
+  type EntityState,
+  type SampledPreset,
+} from "./orbPresets";
 
 interface EntityProps {
   state?: EntityState;
@@ -13,9 +18,9 @@ interface EntityProps {
   onClick?: () => void;
   onReviewClick?: () => void;
   busy?: boolean;
-  /** Tonfall der Voice (calm | working | ready | alert) — beeinflusst Speed. */
-  voiceTone?: string;
   size?: string;
+  /** Optional: erzwinge ein gesampletes Preset (z.B. für OrbLab). */
+  presetOverride?: SampledPreset;
 }
 
 const Entity = ({
@@ -24,14 +29,22 @@ const Entity = ({
   onClick,
   onReviewClick,
   busy,
-  voiceTone,
   size = "320px",
+  presetOverride,
 }: EntityProps) => {
   const [internal, setInternal] = useState<EntityState>(state);
+  const [sample, setSample] = useState<SampledPreset>(() =>
+    samplePreset(ORB_PRESETS[state]),
+  );
 
   useEffect(() => {
     setInternal(state);
   }, [state]);
+
+  // Bei jedem Wechsel des sichtbaren States neue Werte würfeln.
+  useEffect(() => {
+    setSample(samplePreset(ORB_PRESETS[internal]));
+  }, [internal]);
 
   const handleDragOver = useCallback(
     (e: React.DragEvent) => {
@@ -74,8 +87,7 @@ const Entity = ({
     onClick?.();
   }, [state, onClick, onReviewClick]);
 
-  const preset = ORB_PRESETS[internal] ?? ORB_PRESETS.idle;
-  const duration = modulateDuration(preset.duration, voiceTone);
+  const active = presetOverride ?? sample;
 
   return (
     <button
@@ -90,8 +102,8 @@ const Entity = ({
     >
       <SiriOrb
         size={size}
-        colors={preset.colors}
-        animationDuration={duration}
+        colors={active.colors}
+        animationDuration={active.duration}
         className="pointer-events-none"
       />
     </button>
