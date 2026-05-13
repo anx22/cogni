@@ -45,6 +45,9 @@ const corsHeaders = {
 interface Payload {
   asset_id: string;
   retry?: boolean;
+  // Optionaler Kontext aus dem Projekt-Graphen (Graphiti), vom AOL-context_loader
+  // mitgegeben. Reines Prompt-Enrichment — bei fehlendem Wert läuft alles wie bisher.
+  graph_hint?: string | null;
 }
 
 Deno.serve(async (req) => {
@@ -59,6 +62,7 @@ Deno.serve(async (req) => {
     const body = (await req.json()) as Payload;
     asset_id = body.asset_id;
     const isRetry = !!body.retry;
+    const graphHint = typeof body.graph_hint === "string" ? body.graph_hint : null;
     if (!asset_id) throw new Error("asset_id fehlt");
 
     // 1. Asset laden ----------------------------------------------------------
@@ -142,7 +146,7 @@ Deno.serve(async (req) => {
     // 3. Agent: Fakten extrahieren -------------------------------------------
     let extracted: ExtractedFact[] = [];
     try {
-      extracted = await callExtractFacts(text);
+      extracted = await callExtractFacts(text, graphHint);
     } catch (err) {
       return await handleAgentError(admin, asset_id, err);
     }
