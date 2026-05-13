@@ -1,180 +1,48 @@
-## Ziel
+## Befund (visuell verifiziert)
 
-1. **Generischer App-Settings-Store in der DB** — nicht nur Orb-Presets, sondern ein Fundament für alle App-weiten Konfig-/Preset-Werte (jetzt und später).
-2. **Punktraster aus dem Orb extrahieren** und als eigene Schicht **hinter** dem Orb rendern — etwas größer als der Orb, wie eine abstrakte digitale Fläche, auf der der Orb sitzt.
-3. **Lab steuert wirklich alles**, was Orb + neue Punktfläche visuell hergeben.
+Im Screenshot von `/orb-lab` sieht man zwei klare Defekte am Punktraster:
 
----
+1. **Form ist oval** — das Punktfeld ist sichtbar höher als breit.
+   Ursache: `EntitySurface` wird in `<div class="absolute inset-0 flex items-center justify-center">` gerendert und hat eine Pixel-Breite (z. B. 480 px), aber der Flex-Container ist nur 320 px breit. Mit Default `flex-shrink: 1` wird die Breite auf 320 px geschrumpft, während die Höhe (Cross-Axis) auf 480 px bleibt → Rechteck/Oval.
 
-## Teil A — Generischer Settings-Store
+2. **Dots liegen auf dem Orb** — am oberen Rand sieht man die Punktstruktur über der türkisen Orb-Fläche.
+   Ursache: Die Maske `radial-gradient(circle, transparent 0%, transparent 30%, black …)` benutzt Default-Endform `farthest-corner`. 30 % davon ergeben für ein 480 px Surface ca. 102 px Radius — der Orb hat aber 160 px Radius. Der Punktring (Radien 102–264) überlappt also einen Großteil des Orbs. Da der Orb intern `transparent`-Stops in seinen conic-gradients hat, scheinen die Dots durch.
 
-### Tabelle `app_settings`
+## Fix-Plan
 
-Eine flache Key-Value-Tabelle mit JSON-Payload und einem groben Namespace. Reicht für Orb-Presets heute und für alles kommende (z.B. `voice.thresholds`, `intake.defaults`, `theme.tokens`) ohne weiteres Schema-Wachstum.
+### 1. `EntitySurface.tsx` — echte quadratische Form, mathematisch korrekte Maske
 
-```text
-app_settings
-  namespace   text         -- z.B. 'orb', 'voice', 'theme'
-  key         text         -- z.B. 'preset.idle', 'preset.hover', 'thresholds'
-  value       jsonb        -- frei definiertes Payload
-  scope       text         -- 'global' | 'user'  (für später)
-  user_id     uuid null    -- nur gefüllt wenn scope='user'
-  updated_by  uuid         -- letzter Editor
-  updated_at  timestamptz default now()
-  PRIMARY KEY (namespace, key, scope, coalesce(user_id, '00000000-…'))
-```
+- Eigene absolute Positionierung statt im Flex-Wrapper hängen lassen:
+  `position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);`
+  Damit gibt es keine Flex-Shrink-Klemme mehr, das Element bleibt quadratisch.
+- Maske auf `radial-gradient(circle closest-side, …)` umstellen, damit `100%` exakt der Surface-Radius ist (intuitiv).
+- Inner-Hole automatisch so groß rechnen, dass er den Orb mindestens abdeckt:
+  `holeRatio = (orbRadius / surfaceRadius) + clearance`
+  also `100 / scale + clearance` in Prozent. So sitzt der Orb immer sauber im Loch, egal welche Scale gerollt wurde.
+- Outer-Fade analog automatisch ans Surface-Ende relativ zum Orb hängen.
 
-Index: `(namespace, scope)` für schnelles Bulk-Laden eines ganzen Namespaces.
+### 2. Semantik der Surface-Slider angleichen
 
-Realtime auf `app_settings` an → Lab-Edits propagieren live in offene Tabs.
+Die Range-Felder `innerHole` und `outerFade` werden umgedeutet von „% des Surfaces" zu **„extra Clearance jenseits des Orb-Rands, in % des Surface-Radius"**:
 
-### RLS
+- `innerHole`: 0 = Punktring beginnt direkt am Orb-Rand. 5–15 = etwas Luft.
+- `outerFade`: wie weit über den Orb hinaus die Punkte ausfaden (z. B. 35–55 %).
 
-- **scope='global'**: jeder eingeloggte User darf SELECT/INSERT/UPDATE. Kein DELETE (Reset = Upsert mit Default).
-- **scope='user'**: nur eigener User (`auth.uid() = user_id`) darf alles.
+Defaults entsprechend anpassen, sodass beim ersten Render eine ruhige, deutliche Punktscheibe **um** den Orb sitzt (kein Überlappen, kleiner heller Ring).
 
-(Heute nutzen wir nur `global` für Orb-Presets. `user` ist vorgesehen, aber unbenutzt.)
+OrbLab-Labels: „Inner clearance %" und „Outer fade %".
 
-### Helper-Layer im Frontend
+### 3. `Entity.tsx` aufräumen
 
-Neuer kleiner Modul-Block:
-```
-src/lib/settings/
-  types.ts        -- generische Typen: Setting<T>, Scope
-  useSetting.ts   -- useSetting<T>(namespace, key, defaultValue) → [value, setValue]
-  useNamespace.ts -- useNamespace<T>(namespace) → Record<key, T>, lädt + Realtime
-```
+- Inneren Flex-Wrapper um `<EntitySurface/>` entfernen, da Surface sich jetzt selbst zentriert.
+- Reihenfolge bleibt: Surface zuerst (hinten), Orb-Button danach (vorn).
 
-- `useSetting` = generischer Hook mit Realtime-Subscription, debounced upsert (300 ms).
-- Nichts orb-spezifisch. Orb ist nur erster Konsument.
+### 4. Visuelle Verifikation
 
-### Orb-Anbindung
+Nach den Edits per Browser-Screenshot in `/orb-lab` prüfen:
+- Bei Default-Idle: Punktring exakt um den Orb, kein Dot auf der Orb-Fläche.
+- Form quadratisch / kreisrund, nicht oval (gleiche Breite wie Höhe messen).
+- Re-Roll mehrfach + State-Wechsel (idle → processing → failed): Loch bleibt immer korrekt am Orb-Rand.
+- Auch bei kleiner Size (z. B. 160 px) und großer Size (z. B. 460 px) prüfen.
 
-`src/components/entity/orbPresets.ts`
-- `ORB_PRESETS_DEFAULT` bleibt als Seed im Code.
-- Neuer Hook `useOrbPresets()` baut auf `useNamespace('orb')` auf, mappt `preset.<state>` → `OrbPresetRange`, mergt über Defaults.
-- localStorage-Code raus. Proxy-Konstruktion raus.
-
-`Entity.tsx` und `OrbLab.tsx`:
-- `Entity` liest Presets per `useOrbPresets()`.
-- `OrbLab` ruft `setSetting('orb', 'preset.<state>', range)` bei jedem Slider-Change.
-- Snippet-Box raus, dezenter "Saved · vor 3s"-Indikator rein.
-
----
-
-## Teil B — Punktraster aus dem Orb extrahieren
-
-### Status quo (woher das Raster heute kommt)
-
-In `SiriOrb.tsx` ist das `::after`-Pseudo-Element das Punktraster:
-```css
-background-image: radial-gradient(circle at center, var(--bg) var(--dot-size), transparent var(--dot-size));
-background-size: calc(var(--dot-size) * 2) calc(var(--dot-size) * 2);
-mask-image: radial-gradient(black var(--mask-radius), transparent 75%);
-mix-blend-mode: overlay;
-```
-Das gibt dem Orb seine innere Körnung. Du willst das nicht im Orb, sondern als **Fläche dahinter**.
-
-### Neue Architektur
-
-Das Raster wird **eigene Komponente** und sitzt im `Entity`-Wrapper hinter dem Orb:
-
-```
-src/components/entity/
-  EntitySurface.tsx   ← neuer Punktraster-Hintergrund
-  SiriOrb.tsx         ← bleibt, aber ::after-Punktraster RAUS
-  Entity.tsx          ← rendert <EntitySurface/> + <SiriOrb/> übereinander
-```
-
-`EntitySurface.tsx`:
-- Quadratisches/rundes Element, Größe = `orbSize * surfaceScale` (z.B. 1.6×).
-- Position: `absolute`, zentriert hinter dem Orb (`Entity` wird zu `relative`-Container).
-- Punktraster identisch zur bisherigen `::after`-Logik:
-  ```css
-  background-image: radial-gradient(circle, var(--surface-dot-color) var(--dot-size), transparent var(--dot-size));
-  background-size: calc(var(--dot-size) * 2) calc(var(--dot-size) * 2);
-  ```
-- **Maske invers** zur bisherigen — der Orb verdeckt die Mitte, also blenden wir die Mitte des Rasters etwas aus, damit es nicht hinter dem Orb hervorblitzt:
-  ```css
-  mask-image: radial-gradient(circle, transparent 0%, transparent 30%, black 55%, transparent 100%);
-  ```
-  Effekt: Ring aus Punkten **um** den Orb, weicher Innen- und Außenrand. Wie eine digitale Standfläche.
-- Optional `mix-blend-mode: screen` oder `overlay` gegen den App-Hintergrund — wird Lab-steuerbar.
-
-`SiriOrb.tsx`:
-- Das `::after`-Element entfällt **nicht komplett**, denn es bringt aktuell auch Glow + Halbton in den Orb selbst. Sauberster Schnitt: das Punktraster aus `::after` raus, `::after` behält nur einen weichen Inneren Glow (oder fällt weg, falls überflüssig). Entscheidung beim Bauen je nach Optik — wenn der Orb ohne `::after` bereits gut aussieht, fliegt es raus.
-- `dotSize`, `maskRadius` werden aus `SiriOrbProps` entfernt (sie gehören jetzt zu `EntitySurface`).
-
-### Neue Props auf `EntitySurface`
-
-Alle über das Lab steuerbar (mit Range):
-
-| Prop | Wirkung |
-|---|---|
-| `surfaceScale` | Größe relativ zum Orb (1.2–2.5) |
-| `dotSize` | Punktdurchmesser in px |
-| `dotSpacing` | Tile-Größe relativ zu `dotSize` (heute fix `*2`) |
-| `dotColor` | Farbe der Punkte (OKLCH range) |
-| `innerHole` | Wie weit die Mitte ausgespart wird (% des Surface-Radius) |
-| `outerFade` | Wo die Punkte nach außen verblassen (% des Surface-Radius) |
-| `blendMode` | `normal` / `screen` / `overlay` / `soft-light` |
-| `opacity` | Gesamtdeckkraft 0–1 |
-| `rotationDuration` | Optionale ganz langsame Rotation der Fläche (oder `none`) für „lebendige Tiefe" |
-
-### Datenmodell-Erweiterung für Orb-Presets
-
-`OrbPresetRange` bekommt optional einen `surface`-Block (pro State unterschiedlich, z.B. failed = Fläche dunkler/dichter):
-```ts
-interface OrbPresetRange {
-  // bisher
-  bg, c1, c2, c3, duration
-
-  surface?: {
-    scale:       Range
-    dotSize:     Range
-    dotSpacing:  Range
-    dotColor:    ColorRange
-    innerHole:   Range   // %
-    outerFade:   Range   // %
-    opacity:     Range
-    blendMode:   'normal' | 'screen' | 'overlay' | 'soft-light'
-  }
-}
-```
-Default: jeder State erbt eine ruhige Surface-Konfiguration; Lab erlaubt pro State Override.
-
-### Lab-Erweiterung
-
-`OrbLab.tsx` bekommt einen zweiten Block **„Surface"** mit allen Surface-Slidern. Live-Vorschau zeigt Orb + Surface zusammen, sodass die räumliche Wirkung beurteilbar ist.
-
----
-
-## Teil C — Audit der Steuerbarkeit
-
-Heute steuert das Lab: `bg/c1/c2/c3` (alle als L/C/H-Range) + `duration`. Das deckt alle offiziellen `SiriOrb`-Props ab. Mit der Umbau-Runde:
-
-| Bereich | War im Lab? | Nach Umbau |
-|---|---|---|
-| Orb-Farben (bg, c1–c3) | ja | ja |
-| Orb-Animation-Duration | ja | ja |
-| Orb interne Blur/Contrast/Shadow | nein (size-derived) | bleibt size-derived (gehört zur Komponentensignatur, nicht zum Preset) |
-| Punktraster / Surface | nein | **ja, vollständig** (Teil B) |
-
-Damit fehlt nichts mehr, was die sichtbare Wirkung des Orbs ausmacht.
-
----
-
-## Reihenfolge der Umsetzung
-
-1. Migration `app_settings` + RLS + Realtime aktivieren.
-2. `src/lib/settings/` Helpers (`useSetting`, `useNamespace`).
-3. `EntitySurface.tsx` neu, Punktraster-Logik aus `SiriOrb::after` herausziehen.
-4. `Entity.tsx` umstellen: `relative`-Container, Surface hinter Orb.
-5. `orbPresets.ts` um `surface`-Block + `useOrbPresets()` erweitern, localStorage-Code raus.
-6. `OrbLab.tsx`: zweiter Block „Surface", Snippet-Box durch Saved-Indikator ersetzen, Persistenz über `useSetting`.
-
----
-
-## Antwort zur Punktraster-Frage (kurz, falls nicht oben gelesen)
-
-Das Punktraster kommt aktuell aus `SiriOrb`s `::after`: ein einzelner radialer Gradient (`var(--bg)` als Punkt, transparent außenrum) wird in einem `dot-size * 2`-Quadrat gekachelt — das ergibt das gleichmäßige Halbton-Punktraster. Eine zusätzliche `mask-image` blendet die Mitte aus, damit das Raster nur im Außenbereich des Orbs sichtbar wird. `mix-blend-mode: overlay` mischt es in die Farbschlieren des `::before`-Gradients. Genau diese Mechanik ziehen wir in `EntitySurface` und drehen die Maske um, sodass das Raster **um** den Orb sitzt statt **in** ihm.
+Falls noch Artefakte sichtbar sind, iterativ nachjustieren bis sauber.
