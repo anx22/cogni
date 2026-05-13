@@ -405,35 +405,38 @@ const OrbLab = () => {
                     aria-hidden
                   />
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <RangeRow
+                <CardContent className="space-y-3">
+                  <ValueRow
                     label="Lightness %"
-                    value={surface.dotColor.l}
+                    value={centerOf(surface.dotColor.l)}
                     min={0}
                     max={100}
                     step={1}
-                    onChange={(l) =>
+                    jitter={3}
+                    onChange={(_, l) =>
                       updateSurface({ dotColor: { ...surface.dotColor, l } })
                     }
                   />
-                  <RangeRow
+                  <ValueRow
                     label="Chroma"
-                    value={surface.dotColor.c}
+                    value={centerOf(surface.dotColor.c)}
                     min={0}
                     max={0.4}
                     step={0.005}
                     precision={3}
-                    onChange={(c) =>
+                    jitter={0.01}
+                    onChange={(_, c) =>
                       updateSurface({ dotColor: { ...surface.dotColor, c } })
                     }
                   />
-                  <RangeRow
-                    label="Hue °"
-                    value={surface.dotColor.h}
+                  <ValueRow
+                    label="Hue"
+                    value={centerOf(surface.dotColor.h)}
                     min={0}
                     max={360}
                     step={1}
-                    onChange={(h) =>
+                    jitter={6}
+                    onChange={(_, h) =>
                       updateSurface({ dotColor: { ...surface.dotColor, h } })
                     }
                   />
@@ -446,39 +449,43 @@ const OrbLab = () => {
                     Maske · Mischung
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <RangeRow
+                <CardContent className="space-y-3">
+                  <ValueRow
                     label="Inner clearance %"
-                    value={surface.innerHole}
+                    value={centerOf(surface.innerHole)}
                     min={0}
                     max={60}
                     step={1}
-                    onChange={(innerHole) => updateSurface({ innerHole })}
+                    jitter={2}
+                    onChange={(_, innerHole) => updateSurface({ innerHole })}
                   />
-                  <RangeRow
+                  <ValueRow
                     label="Outer reach %"
-                    value={surface.outerFade}
-                    min={50}
+                    value={centerOf(surface.outerFade)}
+                    min={5}
                     max={100}
                     step={1}
-                    onChange={(outerFade) => updateSurface({ outerFade })}
+                    jitter={3}
+                    onChange={(_, outerFade) => updateSurface({ outerFade })}
                   />
-                  <RangeRow
+                  <ValueRow
                     label="Opacity"
-                    value={surface.opacity}
+                    value={centerOf(surface.opacity)}
                     min={0}
                     max={1}
                     step={0.02}
                     precision={2}
-                    onChange={(opacity) => updateSurface({ opacity })}
+                    jitter={0.05}
+                    onChange={(_, opacity) => updateSurface({ opacity })}
                   />
-                  <RangeRow
+                  <ValueRow
                     label="Rotation s (0 = aus)"
-                    value={surface.rotationDuration}
+                    value={centerOf(surface.rotationDuration)}
                     min={0}
                     max={120}
                     step={1}
-                    onChange={(rotationDuration) =>
+                    jitter={0}
+                    onChange={(_, rotationDuration) =>
                       updateSurface({ rotationDuration })
                     }
                   />
