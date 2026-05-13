@@ -174,6 +174,17 @@ Deno.serve(async (req) => {
         .single();
       if (cfErr) throw new Error(`canonical_facts: ${cfErr.message}`);
 
+      // Graphiti-Spiegelung: Supabase bleibt Master, Graphiti bekommt das
+      // Faktum als Episode (group_id=project_id). Async, daher generieren wir
+      // die UUID selbst und schreiben sie direkt in canonical_facts.graphiti_uuid.
+      // Fehler dürfen den Commit NIEMALS killen — Graphiti ist Spiegel, nicht Wahrheit.
+      await mirrorToGraphiti(admin, {
+        canonical_fact_id: cf!.id,
+        project_id,
+        fact_type: pf.fact_type,
+        content: finalContent,
+      });
+
       if (wasCorrected) {
         await admin.from("corrections").insert({
           user_id: user.id,
