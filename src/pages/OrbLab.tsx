@@ -321,7 +321,6 @@ const OrbLab = () => {
                   key={k}
                   title={k}
                   range={current[k]}
-                  swatch={sample.colors[k]}
                   onChange={(next) => updateColor(k, next)}
                 />
               ))}
@@ -335,13 +334,14 @@ const OrbLab = () => {
             </div>
             <Card className="bg-card/40 border-border/50 max-w-md">
               <CardContent className="pt-4">
-                <RangeRow
+                <ValueRow
                   label="Duration s"
-                  value={current.duration}
+                  value={centerOf(current.duration)}
                   min={1}
                   max={60}
                   step={0.5}
-                  onChange={updateDuration}
+                  jitter={1.5}
+                  onChange={(_, d) => updateDuration(d)}
                 />
               </CardContent>
             </Card>
