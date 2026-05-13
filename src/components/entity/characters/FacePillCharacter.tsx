@@ -1,10 +1,11 @@
 // =============================================================================
-//  FacePillCharacter — Pill mit Augen + rotierende Blur-Bälle.
-//  Im offenen Zustand erscheinen vier Input-Mode-Buttons (Notiz/Link/Datei/
-//  Sprache) im Stil von InputPills. KEIN Textarea, kein Submit.
+//  FacePillCharacter — 1:1 Port von Cobp/serious-mule-50.
+//  Squircle-Card 12rem (skaliert), 4 rotierende Blur-Bälle, blinzelnde Augen,
+//  Smiley bei Hover, 3D-Tilt nach Mausposition. Im offenen Zustand erscheinen
+//  vier Input-Mode-Buttons. Bewusst KEIN prefers-reduced-motion-Bremsen.
 // =============================================================================
 
-import { useState, type CSSProperties } from "react";
+import { useRef, useState, type CSSProperties, type PointerEvent } from "react";
 import { FileText, Link as LinkIcon, Paperclip, Mic } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Character } from "./types";
@@ -17,30 +18,22 @@ const MODES: { id: InputMode; label: string; Icon: typeof FileText }[] = [
   { id: "voice", label: "Sprache", Icon: Mic },
 ];
 
-const STATE_TUNE: Record<
-  string,
-  { ballSpeed: number; eyeOpen: number; ballOpacity: number }
-> = {
-  idle: { ballSpeed: 14, eyeOpen: 1, ballOpacity: 0.85 },
-  hover: { ballSpeed: 7, eyeOpen: 1, ballOpacity: 1 },
-  processing: { ballSpeed: 3, eyeOpen: 0.15, ballOpacity: 1 },
-  "review-ready": { ballSpeed: 9, eyeOpen: 1, ballOpacity: 1 },
-  failed: { ballSpeed: 26, eyeOpen: 0.4, ballOpacity: 0.55 },
-  "busy-blocked": { ballSpeed: 22, eyeOpen: 0.35, ballOpacity: 0.45 },
-};
+// State → Variation. idle/hover bleiben Original-Look.
+const STATE_TUNE = {
+  idle:           { ballSpeed: 10, eyeMode: "normal",  ballFilter: "none",                     pulseCard: false },
+  hover:          { ballSpeed: 10, eyeMode: "smile",   ballFilter: "none",                     pulseCard: false, ballsPaused: true },
+  processing:     { ballSpeed: 4,  eyeMode: "half",    ballFilter: "none",                     pulseCard: true },
+  "review-ready": { ballSpeed: 8,  eyeMode: "smile",   ballFilter: "brightness(1.15)",         pulseCard: false, glowBurst: true },
+  failed:         { ballSpeed: 26, eyeMode: "sad",     ballFilter: "saturate(0.4) brightness(0.7)", pulseCard: false },
+  "busy-blocked": { ballSpeed: 22, eyeMode: "closed",  ballFilter: "saturate(0.5)",            pulseCard: false },
+} as const;
+
+type Tune = (typeof STATE_TUNE)[keyof typeof STATE_TUNE] & { ballsPaused?: boolean; glowBurst?: boolean };
 
 export const FacePillCharacter: Character = {
   id: "face-pill",
   label: "Face Pill",
-  render: ({ state, size, sample, onClick, onPickInputMode }) => (
-    <FacePill
-      state={state}
-      size={size}
-      sample={sample}
-      onClick={onClick}
-      onPickInputMode={onPickInputMode}
-    />
-  ),
+  render: (props) => <FacePill {...props} />,
 };
 
 interface FacePillProps {
@@ -51,133 +44,149 @@ interface FacePillProps {
   onPickInputMode?: (mode: InputMode) => void;
 }
 
-const FacePill = ({ state, size, sample, onClick, onPickInputMode }: FacePillProps) => {
+const FacePill = ({ state, size, sample, onPickInputMode }: FacePillProps) => {
   const [open, setOpen] = useState(false);
-  const tune = STATE_TUNE[state] ?? STATE_TUNE.idle;
-  const { c1, c2, c3, bg } = sample.colors;
+  const [hovering, setHovering] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const tune = (STATE_TUNE[state as keyof typeof STATE_TUNE] ?? STATE_TUNE.idle) as Tune;
+  const { c1, c2, c3 } = sample.colors;
 
-  // Pill-Maße relativ zur Orb-Größe
-  const closedW = Math.round(size * 0.62);
-  const closedH = Math.round(size * 0.42);
-  const openW = Math.min(Math.round(size * 1.0), 360);
-  const openH = Math.round(size * 0.55);
+  // Skalierung gegenüber Original (12rem = 192px)
+  const k = size / 192;
+  const closedSide = 192 * k;
+  const openW = 260 * k;
+  const openH = 160 * k;
+  const w = open ? openW : closedSide;
+  const h = open ? openH : closedSide;
+  const radius = (open ? 32 : 48) * k;
 
-  const w = open ? openW : closedW;
-  const h = open ? openH : closedH;
-  const ballSize = Math.round(size * 0.35);
-  const eyeW = Math.max(6, Math.round(size * 0.045));
-  const eyeH = Math.max(14, Math.round(size * 0.115));
-  const eyeGap = Math.round(size * 0.085);
+  const eyeW = 26 * k;
+  const eyeH = 52 * k;
+  const eyeGap = 32 * k; // 2rem
+  const smileySize = 60 * k;
+  const ballSize = 96 * k; // 6rem
+  const ballBlur = 30 * k;
+  const tz = 45 * k;
 
-  const handleClick = () => {
-    setOpen((o) => !o);
-    onClick?.();
+  const showSmile = tune.eyeMode === "smile" || hovering;
+  const ballsPaused = hovering || tune.ballsPaused;
+
+  // 3D Pointer Tilt
+  const handlePointerMove = (e: PointerEvent<HTMLDivElement>) => {
+    const card = cardRef.current;
+    if (!card) return;
+    const rect = card.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+    const rx = clamp(-(y - 0.5) * 30, -15, 15);
+    const ry = clamp((x - 0.5) * 30, -15, 15);
+    card.style.transition = "transform 80ms linear";
+    card.style.transform = `perspective(1000px) rotateX(${rx}deg) rotateY(${ry}deg) translateZ(${tz}px)`;
   };
 
-  const pillStyle: CSSProperties = {
+  const resetTilt = () => {
+    const card = cardRef.current;
+    if (!card) return;
+    card.style.transition = "transform 600ms ease";
+    card.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg) translateZ(0px)`;
+  };
+
+  const cardStyle: CSSProperties = {
     width: w,
     height: h,
-    borderRadius: h / 2,
-    background: `${bg}cc`,
+    borderRadius: radius,
+    transformStyle: "preserve-3d",
+    willChange: "transform",
   };
 
   return (
     <div
       className="absolute inset-0 grid place-items-center"
-      style={{ width: size, height: size }}
+      style={{ width: size, height: size, perspective: `${1000 * k}px` }}
     >
-      <button
-        type="button"
-        onClick={handleClick}
-        aria-label={open ? "Schließen" : "Öffnen"}
-        className={cn(
-          "relative overflow-hidden border border-white/10 backdrop-blur-xl",
-          "transition-all duration-500 ease-out",
-          "shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5),inset_0_0_10px_rgba(255,255,255,0.05)]",
-          "hover:shadow-[0_14px_50px_-10px_rgba(0,0,0,0.6),inset_0_0_14px_rgba(255,255,255,0.08)]",
-          "active:scale-[0.98]",
-        )}
-        style={pillStyle}
-      >
-        {/* Rotierende Blur-Bälle */}
-        <span
-          aria-hidden
-          className="absolute left-1/2 top-1/2 -z-0 motion-reduce:animate-none"
-          style={{
-            width: ballSize * 2.4,
-            height: ballSize * 2.4,
-            transform: "translate(-50%, -50%)",
-            animation: `face-pill-rotate ${tune.ballSpeed}s linear infinite`,
-            opacity: tune.ballOpacity,
-          }}
-        >
-          <span
-            className="absolute rounded-full"
-            style={{
-              top: 0,
-              left: "50%",
-              width: ballSize,
-              height: ballSize,
-              transform: "translateX(-50%)",
-              background: c1,
-              filter: "blur(28px)",
-            }}
-          />
-          <span
-            className="absolute rounded-full"
-            style={{
-              bottom: 0,
-              left: "50%",
-              width: ballSize,
-              height: ballSize,
-              transform: "translateX(-50%)",
-              background: c2,
-              filter: "blur(28px)",
-            }}
-          />
-          <span
-            className="absolute rounded-full"
-            style={{
-              top: "50%",
-              left: 0,
-              width: ballSize,
-              height: ballSize,
-              transform: "translateY(-50%)",
-              background: c3,
-              filter: "blur(28px)",
-            }}
-          />
-          <span
-            className="absolute rounded-full"
-            style={{
-              top: "50%",
-              right: 0,
-              width: ballSize,
-              height: ballSize,
-              transform: "translateY(-50%)",
-              background: c1,
-              filter: "blur(28px)",
-            }}
-          />
-        </span>
+      {/* :after-Pad aus der Quelle: subtiler Backdrop hinter der Card */}
+      <div
+        aria-hidden
+        className="absolute rounded-[2.6rem] bg-card/40 blur-2xl"
+        style={{
+          width: w * 0.95,
+          height: h * 0.92,
+          transition: "all 500ms ease",
+        }}
+      />
 
-        {/* Augen oder Input-Modi */}
-        <span
+      <div
+        ref={cardRef}
+        className={cn(
+          "relative cursor-pointer select-none overflow-hidden",
+          "border border-white/10 bg-background/30 backdrop-blur-xl",
+          "shadow-[0_20px_60px_-15px_rgba(0,0,0,0.6),inset_0_0_20px_rgba(255,255,255,0.05)]",
+          tune.pulseCard && "animate-[face-pill-breathe_1.2s_ease-in-out_infinite]",
+          tune.glowBurst && "animate-[face-pill-glow_800ms_ease-out]",
+        )}
+        style={cardStyle}
+        onPointerMove={handlePointerMove}
+        onPointerEnter={() => setHovering(true)}
+        onPointerLeave={() => {
+          setHovering(false);
+          resetTilt();
+        }}
+        onClick={() => setOpen((o) => !o)}
+      >
+        {/* Bälle-Layer */}
+        <div
+          aria-hidden
+          className="absolute inset-0 overflow-hidden"
+          style={{ borderRadius: radius }}
+        >
+          <div
+            className="absolute left-1/2 top-1/2"
+            style={{
+              width: ballSize * 2.2,
+              height: ballSize * 2.2,
+              marginLeft: -(ballSize * 1.1),
+              marginTop: -(ballSize * 1.1),
+              animation: `face-pill-rotate ${tune.ballSpeed}s linear infinite reverse`,
+              animationPlayState: ballsPaused ? "paused" : "running",
+              filter: tune.ballFilter,
+            }}
+          >
+            <Ball top={0} left="50%" tx="-50%" ty="0" size={ballSize} blur={ballBlur} color="#ec4899" />
+            <Ball bottom={0} left="50%" tx="-50%" ty="0" size={ballSize} blur={ballBlur} color={c1 || "#9147ff"} />
+            <Ball top="50%" left={0} tx="0" ty="-50%" size={ballSize} blur={ballBlur} color={c2 || "#34d399"} />
+            <Ball top="50%" right={0} tx="0" ty="-50%" size={ballSize} blur={ballBlur} color={c3 || "#05e0f5"} />
+          </div>
+          {/* Milchglas */}
+          <div className="absolute inset-0 bg-white/10" />
+        </div>
+
+        {/* Augen / Smiley */}
+        <div
           aria-hidden
           className={cn(
-            "relative z-10 flex items-center justify-center",
+            "absolute inset-0 z-10 flex items-center justify-center",
             "transition-opacity duration-300",
             open ? "opacity-0 pointer-events-none" : "opacity-100",
           )}
-          style={{ gap: eyeGap, height: eyeH }}
+          style={{ gap: eyeGap }}
         >
-          <Eye w={eyeW} h={eyeH} openness={tune.eyeOpen} />
-          <Eye w={eyeW} h={eyeH} openness={tune.eyeOpen} delay={0.4} />
-        </span>
+          {showSmile ? (
+            <>
+              <Smiley size={smileySize} />
+              <Smiley size={smileySize} />
+            </>
+          ) : (
+            <>
+              <Eye w={eyeW} h={eyeH} mode={tune.eyeMode} delay={0} />
+              <Eye w={eyeW} h={eyeH} mode={tune.eyeMode} delay={0} />
+            </>
+          )}
+        </div>
 
+        {/* Open-State: Input-Mode-Buttons */}
         <div
           className={cn(
-            "absolute inset-0 z-10 flex items-center justify-center gap-2 px-3",
+            "absolute inset-0 z-20 flex flex-wrap items-center justify-center gap-2 p-4",
             "transition-opacity duration-300",
             open ? "opacity-100" : "opacity-0 pointer-events-none",
           )}
@@ -194,8 +203,8 @@ const FacePill = ({ state, size, sample, onClick, onPickInputMode }: FacePillPro
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5",
                 "text-[11px] tracking-wide transition-colors",
-                "border-white/15 bg-background/30 text-foreground/85",
-                "hover:border-primary/50 hover:bg-primary/15 hover:text-primary",
+                "border-white/20 bg-background/40 text-foreground/90",
+                "hover:border-primary/60 hover:bg-primary/20 hover:text-primary",
                 "backdrop-blur-md",
               )}
             >
@@ -204,47 +213,107 @@ const FacePill = ({ state, size, sample, onClick, onPickInputMode }: FacePillPro
             </button>
           ))}
         </div>
-      </button>
+      </div>
 
       <style>{`
         @keyframes face-pill-rotate {
-          from { transform: translate(-50%, -50%) rotate(0deg); }
-          to   { transform: translate(-50%, -50%) rotate(360deg); }
+          from { transform: rotate(360deg); }
+          to   { transform: rotate(0deg); }
         }
-        @media (prefers-reduced-motion: reduce) {
-          [style*="face-pill-rotate"] { animation: none !important; }
+        @keyframes face-pill-blink {
+          0%, 46%, 50%, 96%, 100% { transform: scaleY(1); }
+          48%, 98% { transform: scaleY(0.18); }
+        }
+        @keyframes face-pill-breathe {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(0.97); }
+        }
+        @keyframes face-pill-glow {
+          0% { box-shadow: 0 0 0 rgba(255,255,255,0); }
+          50% { box-shadow: 0 0 60px rgba(255,255,255,0.4); }
+          100% { box-shadow: 0 20px 60px -15px rgba(0,0,0,0.6); }
         }
       `}</style>
     </div>
   );
 };
 
+// ----- Bälle -----
+interface BallProps {
+  size: number;
+  blur: number;
+  color: string;
+  top?: number | string;
+  bottom?: number | string;
+  left?: number | string;
+  right?: number | string;
+  tx: string;
+  ty: string;
+}
+const Ball = ({ size, blur, color, top, bottom, left, right, tx, ty }: BallProps) => (
+  <span
+    className="absolute rounded-full"
+    style={{
+      top, bottom, left, right,
+      width: size,
+      height: size,
+      transform: `translate(${tx}, ${ty})`,
+      background: color,
+      filter: `blur(${blur}px)`,
+    }}
+  />
+);
+
+// ----- Auge -----
 const Eye = ({
   w,
   h,
-  openness,
-  delay = 0,
+  mode,
+  delay,
 }: {
   w: number;
   h: number;
-  openness: number;
-  delay?: number;
-}) => (
-  <span
-    className="rounded-full bg-white motion-reduce:animate-none"
-    style={{
-      width: w,
-      height: h * openness,
-      transition: "height 300ms ease",
-      animation: `face-pill-blink 6s ${delay}s infinite`,
-      ["--eye-h" as string]: `${h * openness}px`,
-    } as CSSProperties}
+  mode: "normal" | "half" | "sad" | "closed" | "smile";
+  delay: number;
+}) => {
+  // mode → finale Höhe & Animation
+  let scaleY = 1;
+  let animate = true;
+  if (mode === "half") { scaleY = 0.45; animate = false; }
+  else if (mode === "sad") { scaleY = 0.25; animate = false; }
+  else if (mode === "closed") { scaleY = 0.06; animate = false; }
+
+  return (
+    <span
+      className="block bg-white"
+      style={{
+        width: w,
+        height: h,
+        borderRadius: Math.min(w, h) * 0.45,
+        transform: `scaleY(${scaleY})`,
+        transformOrigin: "center",
+        animation: animate ? `face-pill-blink 10s ${delay}s infinite linear` : undefined,
+        transition: "transform 300ms ease",
+      }}
+    />
+  );
+};
+
+// ----- Smiley (1:1 SVG aus Quelle) -----
+const Smiley = ({ size }: { size: number }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    style={{ color: "#fff" }}
   >
-    <style>{`
-      @keyframes face-pill-blink {
-        0%, 92%, 100% { height: var(--eye-h); }
-        95% { height: 2px; }
-      }
-    `}</style>
-  </span>
+    <path
+      fill="currentColor"
+      d="M8.28386 16.2843C8.9917 15.7665 9.8765 14.731 12 14.731C14.1235 14.731 15.0083 15.7665 15.7161 16.2843C17.8397 17.8376 18.7542 16.4845 18.9014 15.7665C19.4323 13.1777 17.6627 11.1066 17.3088 10.5888C16.3844 9.23666 14.1235 8 12 8C9.87648 8 7.61556 9.23666 6.69122 10.5888C6.33728 11.1066 4.56771 13.1777 5.09858 15.7665C5.24582 16.4845 6.16034 17.8376 8.28386 16.2843Z"
+    />
+  </svg>
 );
+
+const clamp = (v: number, min: number, max: number) =>
+  Math.max(min, Math.min(max, v));
