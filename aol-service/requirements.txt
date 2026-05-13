@@ -1,0 +1,9 @@
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+pydantic==2.9.2
+httpx==0.27.2
+langgraph==0.2.50
+langgraph-checkpoint-postgres==2.0.7
+langsmith==0.1.142
+psycopg[binary,pool]==3.2.3
+python-dotenv==1.0.1

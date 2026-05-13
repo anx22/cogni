@@ -91,12 +91,12 @@ Deno.serve(async (req) => {
     // korrekt gesetzt sind. Fire-and-forget: kein await, damit intake-process
     // schnell zurückkommt; Frontend hört per Realtime auf dialog_sessions/assets.
     admin.functions
-      .invoke("intake-understand", { body: { asset_id } })
+      .invoke("intake-trigger", { body: { asset_id } })
       .then((res) => {
-        if (res.error) console.error("intake-understand chain error:", res.error);
-        else console.log("intake-understand chain ok:", res.data);
+        if (res.error) console.error("intake-trigger chain error:", res.error);
+        else console.log("intake-trigger chain ok:", res.data);
       })
-      .catch((e) => console.error("intake-understand chain failed:", e));
+      .catch((e) => console.error("intake-trigger chain failed:", e));
 
     return new Response(JSON.stringify({ ok: true, segments_count: Array.isArray(segments) ? segments.length : 0 }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

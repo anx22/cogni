@@ -15,7 +15,7 @@ interface UseIntakeOptions {
   onIntake?: (payload: IntakePayload) => void;
   /**
    * Wenn gesetzt, wird das Asset direkt diesem Projekt zugeordnet.
-   * → intake-understand überspringt die Zuordnungsbox (mode='explicit').
+   * → intake-trigger überspringt die Zuordnungsbox (mode='explicit').
    */
   projectId?: string | null;
 }
@@ -122,12 +122,12 @@ export function useIntake(options: UseIntakeOptions = {}) {
           devlog.db("link inserted", { url: payload.url, id: data.id });
           toast("Link aufgenommen", { description: "wird verstanden" });
           setLastImpact?.("Link aufgenommen");
-          devlog.edge("invoke intake-understand (link)", { assetId: data.id });
+          devlog.edge("invoke intake-trigger (link)", { assetId: data.id });
           supabase.functions
-            .invoke("intake-understand", { body: { asset_id: data.id } })
+            .invoke("intake-trigger", { body: { asset_id: data.id } })
             .then((res) => {
-              if (res.error) devlog.error("intake-understand error", res.error);
-              else devlog.edge("intake-understand responded", res.data);
+              if (res.error) devlog.error("intake-trigger error", res.error);
+              else devlog.edge("intake-trigger responded", res.data);
             });
         } else if (payload.type === "text" && payload.text) {
           const preview = payload.text.slice(0, 60);
@@ -151,12 +151,12 @@ export function useIntake(options: UseIntakeOptions = {}) {
           devlog.db("note inserted", { length: payload.text.length, id: data.id });
           toast("Notiz aufgenommen", { description: "wird verstanden" });
           setLastImpact?.("Notiz aufgenommen");
-          devlog.edge("invoke intake-understand (note)", { assetId: data.id });
+          devlog.edge("invoke intake-trigger (note)", { assetId: data.id });
           supabase.functions
-            .invoke("intake-understand", { body: { asset_id: data.id } })
+            .invoke("intake-trigger", { body: { asset_id: data.id } })
             .then((res) => {
-              if (res.error) devlog.error("intake-understand error", res.error);
-              else devlog.edge("intake-understand responded", res.data);
+              if (res.error) devlog.error("intake-trigger error", res.error);
+              else devlog.edge("intake-trigger responded", res.data);
             });
         }
 

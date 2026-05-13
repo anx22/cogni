@@ -241,6 +241,16 @@ Deno.serve(async (req) => {
     }
 
     await updateSessionProgress(admin, rc.session_id);
+
+    // Best-effort: AOL informieren, damit confirm_to_graph-Knoten den Wissens-
+    // graphen aktualisiert (Episode/Invalidation). Fehler dürfen den User-Flow
+    // niemals blockieren — wir loggen nur.
+    notifyAol({
+      review_case_id,
+      decision,
+      user_id: user.id,
+    }).catch((e) => console.warn("aol-confirm notify failed:", e?.message ?? e));
+
     return ok({});
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -404,6 +414,33 @@ async function writeProjectSnapshot(
   } catch (err) {
     // Snapshot-Fehler dürfen den Commit-Pfad nicht killen
     console.warn("writeProjectSnapshot failed:", err);
+  }
+}
+
+// ----------------------------------------------------------------------------
+// AOL-Bridge: bei jeder bestätigten/abgelehnten Box informieren wir den
+// LangGraph-Service, damit der confirm_to_graph-Knoten den Wissensgraphen
+// nachzieht (Episode oder Invalidation). No-op solange AOL_SERVICE_URL fehlt.
+// ----------------------------------------------------------------------------
+async function notifyAol(payload: {
+  review_case_id: string;
+  decision: "confirm" | "reject";
+  user_id: string;
+}): Promise<void> {
+  const url = (Deno.env.get("AOL_SERVICE_URL") ?? "").replace(/\/+$/, "");
+  const token = Deno.env.get("AOL_SERVICE_TOKEN") ?? "";
+  if (!url || !token) return;
+  const res = await fetch(`${url}/aol/confirm`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`AOL confirm ${res.status}: ${txt.slice(0, 200)}`);
   }
 }
 
