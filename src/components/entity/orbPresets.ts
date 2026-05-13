@@ -54,7 +54,56 @@ export function samplePreset(p: OrbPresetRange): SampledPreset {
   };
 }
 
-export const ORB_PRESETS: Record<EntityState, OrbPresetRange> = {
+// ---- Persistenz: Overrides aus localStorage --------------------------------
+const STORAGE_KEY = "orb-presets-v1";
+
+export function loadOverrides(): Partial<Record<EntityState, OrbPresetRange>> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+export function saveOverrides(o: Partial<Record<EntityState, OrbPresetRange>>): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(o));
+    window.dispatchEvent(new CustomEvent("orb-presets-changed"));
+  } catch {
+    /* ignore */
+  }
+}
+
+export function clearOverrides(): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(STORAGE_KEY);
+  window.dispatchEvent(new CustomEvent("orb-presets-changed"));
+}
+
+/** Aktive Presets: Defaults + gespeicherte Overrides. */
+export function getActivePresets(): Record<EntityState, OrbPresetRange> {
+  const o = loadOverrides();
+  return {
+    idle: o.idle ?? ORB_PRESETS_DEFAULT.idle,
+    hover: o.hover ?? ORB_PRESETS_DEFAULT.hover,
+    processing: o.processing ?? ORB_PRESETS_DEFAULT.processing,
+    "review-ready": o["review-ready"] ?? ORB_PRESETS_DEFAULT["review-ready"],
+    failed: o.failed ?? ORB_PRESETS_DEFAULT.failed,
+    "busy-blocked": o["busy-blocked"] ?? ORB_PRESETS_DEFAULT["busy-blocked"],
+};
+
+/** Backwards-compatible Alias. Liest immer die aktiven (override-aware) Presets. */
+export const ORB_PRESETS = new Proxy({} as Record<EntityState, OrbPresetRange>, {
+  get: (_t, prop: string) => getActivePresets()[prop as EntityState],
+  ownKeys: () => Object.keys(ORB_PRESETS_DEFAULT),
+  getOwnPropertyDescriptor: () => ({ enumerable: true, configurable: true }),
+});
+}
+
+const ORB_PRESETS_DEFAULT: Record<EntityState, OrbPresetRange> = {
   // Ruhig, kühl, leicht atmend.
   idle: {
     bg: { l: { min: 16, max: 20 }, c: { min: 0.015, max: 0.03 }, h: { min: 255, max: 275 } },
