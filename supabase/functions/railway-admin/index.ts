@@ -238,6 +238,61 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ supabase: sb, compare, aolPing }, null, 2), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
+    if (action === "test-mirror") {
+      // Spiegel-Test: nimmt ein bestehendes canonical_fact, sendet eine Episode
+      // an Graphiti und schreibt graphiti_uuid zurück. Validiert den Pfad
+      // commit-fact → addMessage → DB-Update isoliert.
+      const { canonical_fact_id } = body;
+      if (!canonical_fact_id) throw new Error("canonical_fact_id required");
+      const sbUrl = Deno.env.get("SUPABASE_URL")!;
+      const sbKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      const cfRes = await fetch(`${sbUrl}/rest/v1/canonical_facts?id=eq.${canonical_fact_id}&select=id,project_id,fact_type,content`, {
+        headers: { apikey: sbKey, Authorization: `Bearer ${sbKey}` },
+      });
+      const cfArr = await cfRes.json();
+      if (!Array.isArray(cfArr) || !cfArr.length) throw new Error("canonical_fact not found");
+      const cf = cfArr[0];
+      const gUrl = (Deno.env.get("GRAPHITI_SERVICE_URL") ?? "").replace(/\/+$/, "");
+      const gBase = gUrl && !/^https?:\/\//i.test(gUrl) ? `https://${gUrl}` : gUrl;
+      const gToken = Deno.env.get("GRAPHITI_SERVICE_TOKEN") ?? "";
+      const c = cf.content ?? {};
+      const title = (c as any).title?.toString().trim() || cf.fact_type;
+      const rest = Object.entries(c).filter(([k,v]) => k !== "title" && v != null && v !== "")
+        .map(([k,v]) => `${k}: ${typeof v === "string" ? v : JSON.stringify(v)}`).join(" · ");
+      const episodeContent = rest ? `${title} — ${rest}` : title;
+      const uuid = crypto.randomUUID();
+      const epRes = await fetch(`${gBase}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(gToken ? { Authorization: `Bearer ${gToken}` } : {}) },
+        body: JSON.stringify({
+          group_id: cf.project_id,
+          messages: [{
+            content: episodeContent, role_type: "system", role: "produktintelligenz",
+            name: `${cf.fact_type}:${cf.id.slice(0,8)}`,
+            source_description: `canonical_fact:${cf.id}`,
+            timestamp: new Date().toISOString(), uuid,
+          }],
+        }),
+      });
+      const epStatus = epRes.status;
+      const epBody = await epRes.text();
+      let upStatus = 0, upBody = "";
+      if (epRes.ok) {
+        const upRes = await fetch(`${sbUrl}/rest/v1/canonical_facts?id=eq.${cf.id}`, {
+          method: "PATCH",
+          headers: { apikey: sbKey, Authorization: `Bearer ${sbKey}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+          body: JSON.stringify({ graphiti_uuid: uuid }),
+        });
+        upStatus = upRes.status; upBody = await upRes.text();
+      }
+      return new Response(JSON.stringify({
+        canonical_fact_id: cf.id, project_id: cf.project_id, episode_uuid: uuid,
+        episode_content: episodeContent.slice(0, 200),
+        graphiti: { status: epStatus, body: epBody.slice(0, 300) },
+        update: { status: upStatus, body: upBody.slice(0, 200) },
+      }, null, 2), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
     if (action === "test-aol") {
       // Direkter /aol/run-Aufruf mit dem Supabase-seitigen AOL_SERVICE_TOKEN.
       const token = Deno.env.get("AOL_SERVICE_TOKEN");
