@@ -1,66 +1,87 @@
-## Korrektur
+## Ziel
 
-Du hast recht: In der Lovable-Cloud-UI gibt es für dich keinen verlässlichen sichtbaren Zugang, um den `SUPABASE_SERVICE_ROLE_KEY` zu kopieren. Meine vorherigen Schritte waren falsch.
+Den selbstgebauten radial-gradient-Kern (`EntityCore`) und die Voice-Visualisierung durch die **Siri Orb**-Komponente ersetzen. Der Orb reagiert sichtbar auf Zustände der App (idle, hover, processing, review-ready, failed) über Farb- und Geschwindigkeits-Presets, und auf Voice-Input über `animationDuration`-Modulation.
 
-## Neuer Plan ohne Service-Role-Key in Railway
+## Klarstellung Scope
 
-Statt Railway direkten Datenbankzugriff zu geben, bleibt der private Datenbank-Key komplett in Lovable Cloud. Railway ruft nur noch eine geschützte Backend-Funktion in Lovable Cloud zurück.
+Du hast „alles unter `src/components/entity` + `EntityCore`" gesagt. Diese Ordner enthalten aber zwei sehr verschiedene Dinge:
+
+**Visuell der Kern (wird ersetzt):**
+
+- `src/components/EntityCore.tsx`
+- `src/components/entity/EntityVoice.tsx` (visueller Teil — die Voice-Logik in `useEntityVoice.ts` bleibt)
+
+**Layout/Funktion drumherum (bleibt):**
+
+- `SideGrid`, `IntakeSessionsPanel`, `ProjectTile`, `RecentAssets`, `InputPills`, `HomeDropOverlay`, `InputOverlay`
+
+Diese Dinge sind keine Visualisierung der Entität, sondern Listen, Drop-Zonen und Eingabefelder. Sie zu löschen würde Drop, Projektnavigation und Intake-Sessions kaputtmachen. Falls du sie trotzdem weghaben willst, sag's — dann mache ich daraus einen separaten Schritt.
+
+## Architektur
 
 ```text
-App / Edge Function
-  -> AOL-Service auf Railway
-      -> Graphiti / LangGraph arbeitet
-      -> ruft Lovable-Cloud Callback auf
-          -> Lovable Cloud schreibt proposed_facts / review_cases / aol_runs
+src/components/entity/
+  SiriOrb.tsx          ← Pure Komponente (Port aus smoothui)
+  Entity.tsx           ← Wrapper: State-Preset + Drop/Click + Voice-Reaktion
+  presets.ts           ← State → Color/Duration Map
+src/index.css
+  @keyframes orb-rotate
+  prefers-reduced-motion override
 ```
 
-## Was du dann auf Railway brauchst
+`Index.tsx` rendert dann nur noch `<Entity state={entityState} onDrop={...} onClick={...} voiceLevel={voice.level} />` statt `EntityCore + EntityVoice` getrennt.
 
-Nur noch diese Variablen:
+## Komponente
 
-- `AOL_SERVICE_TOKEN`
-- `GRAPHITI_SERVICE_URL`
-- `GRAPHITI_SERVICE_TOKEN`
-- `NEO4J_URI`
-- `NEO4J_USER`
-- `NEO4J_PASSWORD`
-- `OPENAI_API_KEY`
-- `LANGSMITH_API_KEY`
-- `LOVABLE_API_KEY`
-- neu: `AOL_CALLBACK_URL`
-- neu: `AOL_CALLBACK_TOKEN`
+`**SiriOrb.tsx**` — 1:1 Port der smoothui-Komponente:
 
-Nicht mehr nötig:
+- Props `size`, `className`, `colors {bg,c1,c2,c3}`, `animationDuration`
+- Conic-gradient + radial-gradient mit `filter: blur() contrast()`
+- Mask, damit der Kern transparent bleibt
+- CSS-Animation `orb-rotate 20s linear infinite` (Duration aus Prop)
+- Größenabhängige Skalierung (Blur, Contrast, Dot-Size, Shadow) aus den Konstanten der Original-Source
+- Reduced-motion: Animation pausieren
 
-- `SUPABASE_URL`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- optional erstmal auch `DATABASE_URL`
+`**presets.ts**` — Mapping pro State:
 
-## Umsetzung
 
-1. Neue Lovable-Cloud Backend-Funktion `aol-callback` anlegen.
-   - Sie nimmt Ergebnisse vom Railway-AOL-Service entgegen.
-   - Sie prüft `Authorization: Bearer AOL_CALLBACK_TOKEN`.
-   - Sie schreibt mit intern verfügbarem Datenbankzugriff in `aol_runs`, später `proposed_facts`, `dialog_sessions`, `review_cases`.
+| State        | bg                     | c1 (akzent)                             | c2        | c3        | duration |
+| ------------ | ---------------------- | --------------------------------------- | --------- | --------- | -------- |
+| idle         | dunkles blau           | kühles Pastell-Blau                     | Lavendel  | Petrol    | 20s      |
+| hover        | leicht heller          | helles Cyan                             | Lavendel  | Petrol    | 12s      |
+| processing   | warm-dunkel            | Amber                                   | Coral     | Gold      | 4s       |
+| review-ready | tief-türkis            | Mint                                    | Aqua      | Soft-Gold | 8s       |
+| failed       | fast schwarz           | Rot                                     | Anthrazit | Anthrazit | 10s      |
+| busy-blocked | wie idle, aber gedimmt | (idle-Farben mit reduzierter Sättigung) | &nbsp;    | &nbsp;    | 25s      |
 
-2. `AOL_CALLBACK_TOKEN` als Lovable-Cloud Secret anlegen.
-   - Gleicher Wert kommt als Railway Variable rein.
-   - Das ist nur ein gemeinsames Secret zwischen Railway und Lovable Cloud, kein Datenbank-Key.
 
-3. AOL-Service auf Railway umbauen.
-   - Entfernt Pflicht auf `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY`.
-   - Nach `/aol/run` ruft der Service `AOL_CALLBACK_URL` auf.
-   - Payload enthält `run_id`, `asset_id`, `status`, `last_node`, `facts_written`, später extrahierte Facts/Cases.
+Voice: solange `voice.isRecording` oder `voice.level > 0`, wird `animationDuration` reaktiv kürzer (z. B. `Math.max(2, 12 - level*10)`). Sobald Voice still ist, fällt es zurück auf den State-Preset.
 
-4. `aol-service/README.md` korrigieren.
-   - Keine falsche Anleitung mehr mit Service-Role-Key.
-   - Railway-Setup wird auf die echte Lovable-Cloud-Variante reduziert.
+`**Entity.tsx**` — Wrapper:
 
-5. Danach testen.
-   - Health von Railway prüfen.
-   - `intake-trigger` aus Lovable Cloud aufrufen.
-   - Verifizieren, dass `aol_runs` von `pending/running` auf `completed` oder `failed` aktualisiert wird.
+- Übernimmt die bisherigen Drop/Drag-Handler aus `EntityCore` (`onDrop`, `busy`, `onClick`, `onReviewClick`)
+- Click-Layer als unsichtbarer `button` über dem Orb (Accessibility: `aria-label="Entität öffnen"`)
+- Liest optional `voiceLevel: number` aus, moduliert duration
+- State-Wechsel mit CSS-Transition auf `--orb-c1` etc. (~600 ms), damit Farbwechsel butterweich wird
 
-## Ergebnis
+## Integration in Index.tsx
 
-Du musst keinen versteckten Backend-Key suchen. Railway bekommt nur normale API-/Service-Secrets und spricht für Datenbank-Schreibvorgänge zurück zu Lovable Cloud.
+- Imports `EntityCore` und `EntityVoice` raus, `Entity` rein
+- `EntityVoice` als sichtbares UI-Element entfällt; die Voice-Steuerung (Mic-Button, Transcript-Text) bleibt sichtbar als kleines Control unter dem Orb. Falls du Voice komplett unsichtbar in den Orb verschmelzen willst → bitte bestätigen, sonst lasse ich das kleine Mic-Control stehen.
+- `voice.level` (RMS aus `useEntityVoice`) wird in `<Entity>` reingegeben
+
+## Aufräumen
+
+- Lösche `src/components/EntityCore.tsx`
+- Lösche `src/components/entity/EntityVoice.tsx`
+- Andere Dateien unter `src/components/entity/` bleiben unverändert
+
+## Was ich nicht machen werde, ohne Rückfrage
+
+1. SideGrid / IntakeSessionsPanel / Projekt-Tiles entfernen — die sind Funktion, nicht Deko.
+2. Eine neue Voice-UI bauen — nur Reaktivität via Level. Falls du die Mic-Steuerung komplett aus dem UI haben willst, brauche ich ein OK.
+3. Den Orb als Drop-Target globaler machen (aktuell ist `Index.tsx` der globale DragOver-Handler — bleibt so).
+
+## Offene Frage vor Build
+
+Soll der bestehende kleine Mic/Voice-Button (`EntityVoice.tsx` enthält UI für Recording-Indikator + Transcript) als kleines Control unter dem Orb erhalten bleiben oder komplett verschwinden und nur noch der Orb pulsiert?
