@@ -12,7 +12,6 @@ export interface CharacterRenderProps {
   state: EntityState;
   size: number;
   sample: SampledPreset;
-  onClick?: () => void;
   /** Nur relevant für Charaktere mit Input-Mode-Picker (face-pill). */
   onPickInputMode?: (mode: InputMode) => void;
 }
