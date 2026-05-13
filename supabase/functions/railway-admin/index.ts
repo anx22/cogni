@@ -31,19 +31,17 @@ Deno.serve(async (req) => {
     const action = body.action ?? "list";
 
     if (action === "list") {
+      // Project tokens: use projectToken query (no `me`)
       const data = await gql(`
         query {
-          me {
-            projects {
-              edges {
-                node {
-                  id
-                  name
-                  environments { edges { node { id name } } }
-                  services { edges { node { id name } } }
-                }
-              }
+          projectToken {
+            project {
+              id
+              name
+              environments { edges { node { id name } } }
+              services { edges { node { id name } } }
             }
+            environment { id name }
           }
         }
       `);
