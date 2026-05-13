@@ -238,6 +238,29 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ supabase: sb, compare, aolPing }, null, 2), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
+    if (action === "test-aol") {
+      // Direkter /aol/run-Aufruf mit dem Supabase-seitigen AOL_SERVICE_TOKEN.
+      const token = Deno.env.get("AOL_SERVICE_TOKEN");
+      const base = (Deno.env.get("AOL_SERVICE_URL") ?? "").replace(/\/+$/, "");
+      const url = base && !/^https?:\/\//i.test(base) ? `https://${base}` : base;
+      if (!token || !url) throw new Error("AOL_SERVICE_TOKEN/URL missing");
+      const { project_id, asset_id, user_id, trigger_type } = body;
+      const r = await fetch(`${url}/aol/run`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          project_id, asset_id, user_id,
+          trigger_type: trigger_type ?? "reuse_check_test",
+        }),
+      });
+      const text = await r.text();
+      let parsed: unknown = text;
+      try { parsed = JSON.parse(text); } catch { /* keep raw */ }
+      return new Response(JSON.stringify({ status: r.status, body: parsed }, null, 2), {
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
+    }
+
     if (action === "sync-supabase-to-railway") {
       // Drückt die kanonischen Supabase-Secret-Werte in Railway-Vars (Service folgt Cloud).
       // Pro Service eine Allowlist, damit wir keine fremden Vars überschreiben.
