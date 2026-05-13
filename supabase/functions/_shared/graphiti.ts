@@ -97,8 +97,17 @@ export interface AddMessageInput {
   uuid?: string;
 }
 
-export async function addMessage(input: AddMessageInput): Promise<unknown> {
-  return request("/messages", {
+// WICHTIG zur Semantik:
+// Der Server-Endpoint /messages liefert HTTP 202 + { message, success } und
+// queued das Episode-Processing asynchron (siehe getzep/graphiti server
+// graph_service/routers/ingest.py). Es gibt KEINE Server-UUID im Response —
+// der Aufrufer muss `uuid` selbst generieren und mitsenden, damit er die
+// Verbindung zwischen Supabase-Datensatz und Graphiti-Episode behält.
+// `addMessage` gibt deshalb die mitgesendete (oder neu generierte) UUID
+// zurück, nicht das Server-Response-Body.
+export async function addMessage(input: AddMessageInput): Promise<{ uuid: string; queued: true }> {
+  const uuid = input.uuid ?? crypto.randomUUID();
+  await request("/messages", {
     method: "POST",
     body: JSON.stringify({
       group_id: input.project_id,
@@ -110,11 +119,12 @@ export async function addMessage(input: AddMessageInput): Promise<unknown> {
           name: input.name,
           source_description: input.source_description,
           timestamp: input.timestamp ?? new Date().toISOString(),
-          uuid: input.uuid,
+          uuid,
         },
       ],
     }),
   });
+  return { uuid, queued: true };
 }
 
 // ---------- Suche -----------------------------------------------------------
