@@ -1,19 +1,24 @@
 // =============================================================================
 //  OrbLab — Visuelles Test-Panel für die Entity.
-//  Granularer Editor: Range-Sliders pro State, Re-Roll, Live-Matrix, Snippet.
+//  Granularer Editor: Range-Sliders pro State für Farben, Animation und
+//  die Punktraster-Surface. Persistiert direkt in die DB (app_settings).
 // =============================================================================
 
 import { useEffect, useMemo, useState } from "react";
-import { Dices, RotateCcw, Copy, Check } from "lucide-react";
+import { Dices, RotateCcw } from "lucide-react";
 import Entity from "@/components/entity/Entity";
 import SiriOrb from "@/components/entity/SiriOrb";
+import EntitySurface from "@/components/entity/EntitySurface";
 import {
-  ORB_PRESETS,
+  useOrbPresets,
   samplePreset,
+  ORB_PRESETS_DEFAULT,
   type EntityState,
   type OrbPresetRange,
   type Range,
   type SampledPreset,
+  type SurfaceBlend,
+  type SurfaceRange,
 } from "@/components/entity/orbPresets";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
@@ -22,7 +27,14 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Toggle } from "@/components/ui/toggle";
-import { toast } from "sonner";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { formatRelative } from "@/lib/format/relativeTime";
 
 const STATES: EntityState[] = [
   "idle",
@@ -63,7 +75,7 @@ const RangeRow = ({ label, value, min, max, step, precision = 1, onChange }: Ran
       step={step}
       value={[value.min, value.max]}
       onValueChange={([mn, mx]) => onChange({ min: mn, max: mx })}
-      minStepsBetweenThumbs={1}
+      minStepsBetweenThumbs={0}
     />
   </div>
 );
@@ -116,20 +128,39 @@ const ColorBlock = ({ title, range, swatch, onChange }: ColorBlockProps) => (
   </Card>
 );
 
+// ---- Saved indicator -------------------------------------------------------
+
+const SavedIndicator = ({ at }: { at: number | null }) => {
+  const [, force] = useState(0);
+  useEffect(() => {
+    const i = window.setInterval(() => force((n) => n + 1), 15_000);
+    return () => window.clearInterval(i);
+  }, []);
+  if (!at) return null;
+  return (
+    <span className="text-[11px] text-muted-foreground">
+      Gespeichert · {formatRelative(new Date(at).toISOString())}
+    </span>
+  );
+};
+
 // ---- Page --------------------------------------------------------------------
 
 const OrbLab = () => {
-  const [presets, setPresets] = useState<Record<EntityState, OrbPresetRange>>(ORB_PRESETS);
+  const { presets, loaded, setPreset, resetPreset } = useOrbPresets();
+
   const [state, setState] = useState<EntityState>("idle");
   const [size, setSize] = useState(320);
   const [seed, setSeed] = useState(0);
   const [autoRoll, setAutoRoll] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [savedAt, setSavedAt] = useState<number | null>(null);
+
+  const current = presets[state];
 
   const sample: SampledPreset = useMemo(
-    () => samplePreset(presets[state]),
+    () => samplePreset(current),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [presets, state, seed],
+    [current, state, seed],
   );
 
   useEffect(() => {
@@ -138,28 +169,23 @@ const OrbLab = () => {
     return () => window.clearInterval(i);
   }, [autoRoll]);
 
-  const updateColor = (k: ColorKey, next: { l: Range; c: Range; h: Range }) => {
-    setPresets((p) => ({ ...p, [state]: { ...p[state], [k]: next } }));
+  const update = (patch: Partial<OrbPresetRange>) => {
+    setPreset(state, { ...current, ...patch });
+    setSavedAt(Date.now());
     setSeed((s) => s + 1);
   };
-  const updateDuration = (d: Range) => {
-    setPresets((p) => ({ ...p, [state]: { ...p[state], duration: d } }));
-    setSeed((s) => s + 1);
-  };
+  const updateColor = (k: ColorKey, next: { l: Range; c: Range; h: Range }) =>
+    update({ [k]: next } as Partial<OrbPresetRange>);
+  const updateDuration = (d: Range) => update({ duration: d });
+  const updateSurface = (patch: Partial<SurfaceRange>) =>
+    update({ surface: { ...current.surface, ...patch } });
   const reset = () => {
-    setPresets((p) => ({ ...p, [state]: ORB_PRESETS[state] }));
+    resetPreset(state);
+    setSavedAt(Date.now());
     setSeed((s) => s + 1);
   };
 
-  const snippet = JSON.stringify({ [state]: presets[state] }, null, 2);
-  const copy = async () => {
-    await navigator.clipboard.writeText(snippet);
-    setCopied(true);
-    toast.success("Snippet kopiert");
-    setTimeout(() => setCopied(false), 1500);
-  };
-
-  const current = presets[state];
+  const surface = current.surface;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -169,12 +195,10 @@ const OrbLab = () => {
           <div className="flex items-baseline gap-3">
             <h1 className="text-2xl tracking-tight font-light">Orb Lab</h1>
             <Badge variant="outline" className="text-[10px] font-normal text-muted-foreground">
-              Range-basiert
+              {loaded ? "DB" : "lädt …"}
             </Badge>
           </div>
-          <p className="text-xs uppercase tracking-widest text-muted-foreground hidden md:block">
-            Jeder Roll ist leicht anders
-          </p>
+          <SavedIndicator at={savedAt} />
         </header>
 
         {/* Live-Orb */}
@@ -250,35 +274,199 @@ const OrbLab = () => {
             </Button>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {COLOR_KEYS.map((k) => (
-              <ColorBlock
-                key={k}
-                title={k}
-                range={current[k]}
-                swatch={sample.colors[k]}
-                onChange={(next) => updateColor(k, next)}
-              />
-            ))}
+          {/* Block 1 — Orb-Farben */}
+          <div className="space-y-3">
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
+              Orb · Farben
+            </div>
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              {COLOR_KEYS.map((k) => (
+                <ColorBlock
+                  key={k}
+                  title={k}
+                  range={current[k]}
+                  swatch={sample.colors[k]}
+                  onChange={(next) => updateColor(k, next)}
+                />
+              ))}
+            </div>
           </div>
 
-          <Card className="bg-card/40 border-border/50 max-w-md">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
-                Animation
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <RangeRow
-                label="Duration s"
-                value={current.duration}
-                min={1}
-                max={60}
-                step={0.5}
-                onChange={updateDuration}
-              />
-            </CardContent>
-          </Card>
+          {/* Block 2 — Animation */}
+          <div className="space-y-3">
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
+              Orb · Animation
+            </div>
+            <Card className="bg-card/40 border-border/50 max-w-md">
+              <CardContent className="pt-4">
+                <RangeRow
+                  label="Duration s"
+                  value={current.duration}
+                  min={1}
+                  max={60}
+                  step={0.5}
+                  onChange={updateDuration}
+                />
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Block 3 — Surface (Punktraster) */}
+          <div className="space-y-3">
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
+              Surface · Punktraster hinter dem Orb
+            </div>
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              <Card className="bg-card/40 border-border/50">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
+                    Geometrie
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <RangeRow
+                    label="Scale (× Orb)"
+                    value={surface.scale}
+                    min={1}
+                    max={3}
+                    step={0.05}
+                    precision={2}
+                    onChange={(scale) => updateSurface({ scale })}
+                  />
+                  <RangeRow
+                    label="Dot size px"
+                    value={surface.dotSize}
+                    min={0.3}
+                    max={6}
+                    step={0.1}
+                    precision={2}
+                    onChange={(dotSize) => updateSurface({ dotSize })}
+                  />
+                  <RangeRow
+                    label="Spacing × dot"
+                    value={surface.dotSpacing}
+                    min={2}
+                    max={12}
+                    step={0.1}
+                    precision={1}
+                    onChange={(dotSpacing) => updateSurface({ dotSpacing })}
+                  />
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card/40 border-border/50">
+                <CardHeader className="pb-3 flex-row items-center justify-between space-y-0">
+                  <CardTitle className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
+                    Punktfarbe
+                  </CardTitle>
+                  <span
+                    className="h-4 w-4 rounded-full border border-white/10 shadow-inner"
+                    style={{ background: sample.surface.dotColor }}
+                    aria-hidden
+                  />
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <RangeRow
+                    label="Lightness %"
+                    value={surface.dotColor.l}
+                    min={0}
+                    max={100}
+                    step={1}
+                    onChange={(l) =>
+                      updateSurface({ dotColor: { ...surface.dotColor, l } })
+                    }
+                  />
+                  <RangeRow
+                    label="Chroma"
+                    value={surface.dotColor.c}
+                    min={0}
+                    max={0.4}
+                    step={0.005}
+                    precision={3}
+                    onChange={(c) =>
+                      updateSurface({ dotColor: { ...surface.dotColor, c } })
+                    }
+                  />
+                  <RangeRow
+                    label="Hue °"
+                    value={surface.dotColor.h}
+                    min={0}
+                    max={360}
+                    step={1}
+                    onChange={(h) =>
+                      updateSurface({ dotColor: { ...surface.dotColor, h } })
+                    }
+                  />
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card/40 border-border/50">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
+                    Maske · Mischung
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <RangeRow
+                    label="Inner hole %"
+                    value={surface.innerHole}
+                    min={0}
+                    max={60}
+                    step={1}
+                    onChange={(innerHole) => updateSurface({ innerHole })}
+                  />
+                  <RangeRow
+                    label="Outer fade %"
+                    value={surface.outerFade}
+                    min={50}
+                    max={100}
+                    step={1}
+                    onChange={(outerFade) => updateSurface({ outerFade })}
+                  />
+                  <RangeRow
+                    label="Opacity"
+                    value={surface.opacity}
+                    min={0}
+                    max={1}
+                    step={0.02}
+                    precision={2}
+                    onChange={(opacity) => updateSurface({ opacity })}
+                  />
+                  <RangeRow
+                    label="Rotation s (0 = aus)"
+                    value={surface.rotationDuration}
+                    min={0}
+                    max={120}
+                    step={1}
+                    onChange={(rotationDuration) =>
+                      updateSurface({ rotationDuration })
+                    }
+                  />
+                  <div className="space-y-2">
+                    <Label className="text-[11px] text-muted-foreground font-normal">
+                      Blend mode
+                    </Label>
+                    <Select
+                      value={surface.blendMode}
+                      onValueChange={(v) =>
+                        updateSurface({ blendMode: v as SurfaceBlend })
+                      }
+                    >
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="normal">normal</SelectItem>
+                        <SelectItem value="screen">screen</SelectItem>
+                        <SelectItem value="overlay">overlay</SelectItem>
+                        <SelectItem value="soft-light">soft-light</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         </section>
 
         {/* Matrix */}
@@ -288,7 +476,7 @@ const OrbLab = () => {
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             {STATES.map((s) => {
-              const sm = samplePreset(presets[s]);
+              const sm = samplePreset(presets[s] ?? ORB_PRESETS_DEFAULT[s]);
               return (
                 <Card
                   key={`${s}-${seed}`}
@@ -300,7 +488,16 @@ const OrbLab = () => {
                   }`}
                 >
                   <CardContent className="flex flex-col items-center gap-3 p-4">
-                    <SiriOrb size="110px" colors={sm.colors} animationDuration={sm.duration} />
+                    <div className="relative h-[130px] w-[130px] flex items-center justify-center">
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <EntitySurface orbSize={110} surface={sm.surface} />
+                      </div>
+                      <SiriOrb
+                        size="110px"
+                        colors={sm.colors}
+                        animationDuration={sm.duration}
+                      />
+                    </div>
                     <div className="text-xs text-foreground">{s}</div>
                     <div className="text-[10px] text-muted-foreground tabular-nums">
                       {sm.duration.toFixed(1)}s
@@ -311,28 +508,6 @@ const OrbLab = () => {
             })}
           </div>
         </section>
-
-        {/* Snippet */}
-        <Card className="bg-card/30 border-border/50">
-          <CardHeader className="pb-3 flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
-              Snippet — orbPresets.ts
-            </CardTitle>
-            <Button size="sm" variant="ghost" onClick={copy} className="h-7 text-xs">
-              {copied ? (
-                <Check className="h-3 w-3 mr-1.5" />
-              ) : (
-                <Copy className="h-3 w-3 mr-1.5" />
-              )}
-              {copied ? "Kopiert" : "Kopieren"}
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <pre className="text-[11px] leading-relaxed p-4 rounded-md border border-border/40 bg-black/40 overflow-x-auto text-foreground/80 font-mono">
-{snippet}
-            </pre>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

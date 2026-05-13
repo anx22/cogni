@@ -1,87 +1,180 @@
 ## Ziel
 
-Den selbstgebauten radial-gradient-Kern (`EntityCore`) und die Voice-Visualisierung durch die **Siri Orb**-Komponente ersetzen. Der Orb reagiert sichtbar auf Zustände der App (idle, hover, processing, review-ready, failed) über Farb- und Geschwindigkeits-Presets, und auf Voice-Input über `animationDuration`-Modulation.
+1. **Generischer App-Settings-Store in der DB** — nicht nur Orb-Presets, sondern ein Fundament für alle App-weiten Konfig-/Preset-Werte (jetzt und später).
+2. **Punktraster aus dem Orb extrahieren** und als eigene Schicht **hinter** dem Orb rendern — etwas größer als der Orb, wie eine abstrakte digitale Fläche, auf der der Orb sitzt.
+3. **Lab steuert wirklich alles**, was Orb + neue Punktfläche visuell hergeben.
 
-## Klarstellung Scope
+---
 
-Du hast „alles unter `src/components/entity` + `EntityCore`" gesagt. Diese Ordner enthalten aber zwei sehr verschiedene Dinge:
+## Teil A — Generischer Settings-Store
 
-**Visuell der Kern (wird ersetzt):**
+### Tabelle `app_settings`
 
-- `src/components/EntityCore.tsx`
-- `src/components/entity/EntityVoice.tsx` (visueller Teil — die Voice-Logik in `useEntityVoice.ts` bleibt)
-
-**Layout/Funktion drumherum (bleibt):**
-
-- `SideGrid`, `IntakeSessionsPanel`, `ProjectTile`, `RecentAssets`, `InputPills`, `HomeDropOverlay`, `InputOverlay`
-
-Diese Dinge sind keine Visualisierung der Entität, sondern Listen, Drop-Zonen und Eingabefelder. Sie zu löschen würde Drop, Projektnavigation und Intake-Sessions kaputtmachen. Falls du sie trotzdem weghaben willst, sag's — dann mache ich daraus einen separaten Schritt.
-
-## Architektur
+Eine flache Key-Value-Tabelle mit JSON-Payload und einem groben Namespace. Reicht für Orb-Presets heute und für alles kommende (z.B. `voice.thresholds`, `intake.defaults`, `theme.tokens`) ohne weiteres Schema-Wachstum.
 
 ```text
-src/components/entity/
-  SiriOrb.tsx          ← Pure Komponente (Port aus smoothui)
-  Entity.tsx           ← Wrapper: State-Preset + Drop/Click + Voice-Reaktion
-  presets.ts           ← State → Color/Duration Map
-src/index.css
-  @keyframes orb-rotate
-  prefers-reduced-motion override
+app_settings
+  namespace   text         -- z.B. 'orb', 'voice', 'theme'
+  key         text         -- z.B. 'preset.idle', 'preset.hover', 'thresholds'
+  value       jsonb        -- frei definiertes Payload
+  scope       text         -- 'global' | 'user'  (für später)
+  user_id     uuid null    -- nur gefüllt wenn scope='user'
+  updated_by  uuid         -- letzter Editor
+  updated_at  timestamptz default now()
+  PRIMARY KEY (namespace, key, scope, coalesce(user_id, '00000000-…'))
 ```
 
-`Index.tsx` rendert dann nur noch `<Entity state={entityState} onDrop={...} onClick={...} voiceLevel={voice.level} />` statt `EntityCore + EntityVoice` getrennt.
+Index: `(namespace, scope)` für schnelles Bulk-Laden eines ganzen Namespaces.
 
-## Komponente
+Realtime auf `app_settings` an → Lab-Edits propagieren live in offene Tabs.
 
-`**SiriOrb.tsx**` — 1:1 Port der smoothui-Komponente:
+### RLS
 
-- Props `size`, `className`, `colors {bg,c1,c2,c3}`, `animationDuration`
-- Conic-gradient + radial-gradient mit `filter: blur() contrast()`
-- Mask, damit der Kern transparent bleibt
-- CSS-Animation `orb-rotate 20s linear infinite` (Duration aus Prop)
-- Größenabhängige Skalierung (Blur, Contrast, Dot-Size, Shadow) aus den Konstanten der Original-Source
-- Reduced-motion: Animation pausieren
+- **scope='global'**: jeder eingeloggte User darf SELECT/INSERT/UPDATE. Kein DELETE (Reset = Upsert mit Default).
+- **scope='user'**: nur eigener User (`auth.uid() = user_id`) darf alles.
 
-`**presets.ts**` — Mapping pro State:
+(Heute nutzen wir nur `global` für Orb-Presets. `user` ist vorgesehen, aber unbenutzt.)
 
+### Helper-Layer im Frontend
 
-| State        | bg                     | c1 (akzent)                             | c2        | c3        | duration |
-| ------------ | ---------------------- | --------------------------------------- | --------- | --------- | -------- |
-| idle         | dunkles blau           | kühles Pastell-Blau                     | Lavendel  | Petrol    | 20s      |
-| hover        | leicht heller          | helles Cyan                             | Lavendel  | Petrol    | 12s      |
-| processing   | warm-dunkel            | Amber                                   | Coral     | Gold      | 4s       |
-| review-ready | tief-türkis            | Mint                                    | Aqua      | Soft-Gold | 8s       |
-| failed       | fast schwarz           | Rot                                     | Anthrazit | Anthrazit | 10s      |
-| busy-blocked | wie idle, aber gedimmt | (idle-Farben mit reduzierter Sättigung) | &nbsp;    | &nbsp;    | 25s      |
+Neuer kleiner Modul-Block:
+```
+src/lib/settings/
+  types.ts        -- generische Typen: Setting<T>, Scope
+  useSetting.ts   -- useSetting<T>(namespace, key, defaultValue) → [value, setValue]
+  useNamespace.ts -- useNamespace<T>(namespace) → Record<key, T>, lädt + Realtime
+```
 
+- `useSetting` = generischer Hook mit Realtime-Subscription, debounced upsert (300 ms).
+- Nichts orb-spezifisch. Orb ist nur erster Konsument.
 
-Voice: solange `voice.isRecording` oder `voice.level > 0`, wird `animationDuration` reaktiv kürzer (z. B. `Math.max(2, 12 - level*10)`). Sobald Voice still ist, fällt es zurück auf den State-Preset.
+### Orb-Anbindung
 
-`**Entity.tsx**` — Wrapper:
+`src/components/entity/orbPresets.ts`
+- `ORB_PRESETS_DEFAULT` bleibt als Seed im Code.
+- Neuer Hook `useOrbPresets()` baut auf `useNamespace('orb')` auf, mappt `preset.<state>` → `OrbPresetRange`, mergt über Defaults.
+- localStorage-Code raus. Proxy-Konstruktion raus.
 
-- Übernimmt die bisherigen Drop/Drag-Handler aus `EntityCore` (`onDrop`, `busy`, `onClick`, `onReviewClick`)
-- Click-Layer als unsichtbarer `button` über dem Orb (Accessibility: `aria-label="Entität öffnen"`)
-- Liest optional `voiceLevel: number` aus, moduliert duration
-- State-Wechsel mit CSS-Transition auf `--orb-c1` etc. (~600 ms), damit Farbwechsel butterweich wird
+`Entity.tsx` und `OrbLab.tsx`:
+- `Entity` liest Presets per `useOrbPresets()`.
+- `OrbLab` ruft `setSetting('orb', 'preset.<state>', range)` bei jedem Slider-Change.
+- Snippet-Box raus, dezenter "Saved · vor 3s"-Indikator rein.
 
-## Integration in Index.tsx
+---
 
-- Imports `EntityCore` und `EntityVoice` raus, `Entity` rein
-- `EntityVoice` als sichtbares UI-Element entfällt; die Voice-Steuerung (Mic-Button, Transcript-Text) bleibt sichtbar als kleines Control unter dem Orb. Falls du Voice komplett unsichtbar in den Orb verschmelzen willst → bitte bestätigen, sonst lasse ich das kleine Mic-Control stehen.
-- `voice.level` (RMS aus `useEntityVoice`) wird in `<Entity>` reingegeben
+## Teil B — Punktraster aus dem Orb extrahieren
 
-## Aufräumen
+### Status quo (woher das Raster heute kommt)
 
-- Lösche `src/components/EntityCore.tsx`
-- Lösche `src/components/entity/EntityVoice.tsx`
-- Andere Dateien unter `src/components/entity/` bleiben unverändert
+In `SiriOrb.tsx` ist das `::after`-Pseudo-Element das Punktraster:
+```css
+background-image: radial-gradient(circle at center, var(--bg) var(--dot-size), transparent var(--dot-size));
+background-size: calc(var(--dot-size) * 2) calc(var(--dot-size) * 2);
+mask-image: radial-gradient(black var(--mask-radius), transparent 75%);
+mix-blend-mode: overlay;
+```
+Das gibt dem Orb seine innere Körnung. Du willst das nicht im Orb, sondern als **Fläche dahinter**.
 
-## Was ich nicht machen werde, ohne Rückfrage
+### Neue Architektur
 
-1. SideGrid / IntakeSessionsPanel / Projekt-Tiles entfernen — die sind Funktion, nicht Deko.
-2. Eine neue Voice-UI bauen — nur Reaktivität via Level. Falls du die Mic-Steuerung komplett aus dem UI haben willst, brauche ich ein OK.
-3. Den Orb als Drop-Target globaler machen (aktuell ist `Index.tsx` der globale DragOver-Handler — bleibt so).
+Das Raster wird **eigene Komponente** und sitzt im `Entity`-Wrapper hinter dem Orb:
 
-## Offene Frage vor Build
+```
+src/components/entity/
+  EntitySurface.tsx   ← neuer Punktraster-Hintergrund
+  SiriOrb.tsx         ← bleibt, aber ::after-Punktraster RAUS
+  Entity.tsx          ← rendert <EntitySurface/> + <SiriOrb/> übereinander
+```
 
-Soll der bestehende kleine Mic/Voice-Button (`EntityVoice.tsx` enthält UI für Recording-Indikator + Transcript) als kleines Control unter dem Orb erhalten bleiben oder komplett verschwinden und nur noch der Orb pulsiert?
+`EntitySurface.tsx`:
+- Quadratisches/rundes Element, Größe = `orbSize * surfaceScale` (z.B. 1.6×).
+- Position: `absolute`, zentriert hinter dem Orb (`Entity` wird zu `relative`-Container).
+- Punktraster identisch zur bisherigen `::after`-Logik:
+  ```css
+  background-image: radial-gradient(circle, var(--surface-dot-color) var(--dot-size), transparent var(--dot-size));
+  background-size: calc(var(--dot-size) * 2) calc(var(--dot-size) * 2);
+  ```
+- **Maske invers** zur bisherigen — der Orb verdeckt die Mitte, also blenden wir die Mitte des Rasters etwas aus, damit es nicht hinter dem Orb hervorblitzt:
+  ```css
+  mask-image: radial-gradient(circle, transparent 0%, transparent 30%, black 55%, transparent 100%);
+  ```
+  Effekt: Ring aus Punkten **um** den Orb, weicher Innen- und Außenrand. Wie eine digitale Standfläche.
+- Optional `mix-blend-mode: screen` oder `overlay` gegen den App-Hintergrund — wird Lab-steuerbar.
+
+`SiriOrb.tsx`:
+- Das `::after`-Element entfällt **nicht komplett**, denn es bringt aktuell auch Glow + Halbton in den Orb selbst. Sauberster Schnitt: das Punktraster aus `::after` raus, `::after` behält nur einen weichen Inneren Glow (oder fällt weg, falls überflüssig). Entscheidung beim Bauen je nach Optik — wenn der Orb ohne `::after` bereits gut aussieht, fliegt es raus.
+- `dotSize`, `maskRadius` werden aus `SiriOrbProps` entfernt (sie gehören jetzt zu `EntitySurface`).
+
+### Neue Props auf `EntitySurface`
+
+Alle über das Lab steuerbar (mit Range):
+
+| Prop | Wirkung |
+|---|---|
+| `surfaceScale` | Größe relativ zum Orb (1.2–2.5) |
+| `dotSize` | Punktdurchmesser in px |
+| `dotSpacing` | Tile-Größe relativ zu `dotSize` (heute fix `*2`) |
+| `dotColor` | Farbe der Punkte (OKLCH range) |
+| `innerHole` | Wie weit die Mitte ausgespart wird (% des Surface-Radius) |
+| `outerFade` | Wo die Punkte nach außen verblassen (% des Surface-Radius) |
+| `blendMode` | `normal` / `screen` / `overlay` / `soft-light` |
+| `opacity` | Gesamtdeckkraft 0–1 |
+| `rotationDuration` | Optionale ganz langsame Rotation der Fläche (oder `none`) für „lebendige Tiefe" |
+
+### Datenmodell-Erweiterung für Orb-Presets
+
+`OrbPresetRange` bekommt optional einen `surface`-Block (pro State unterschiedlich, z.B. failed = Fläche dunkler/dichter):
+```ts
+interface OrbPresetRange {
+  // bisher
+  bg, c1, c2, c3, duration
+
+  surface?: {
+    scale:       Range
+    dotSize:     Range
+    dotSpacing:  Range
+    dotColor:    ColorRange
+    innerHole:   Range   // %
+    outerFade:   Range   // %
+    opacity:     Range
+    blendMode:   'normal' | 'screen' | 'overlay' | 'soft-light'
+  }
+}
+```
+Default: jeder State erbt eine ruhige Surface-Konfiguration; Lab erlaubt pro State Override.
+
+### Lab-Erweiterung
+
+`OrbLab.tsx` bekommt einen zweiten Block **„Surface"** mit allen Surface-Slidern. Live-Vorschau zeigt Orb + Surface zusammen, sodass die räumliche Wirkung beurteilbar ist.
+
+---
+
+## Teil C — Audit der Steuerbarkeit
+
+Heute steuert das Lab: `bg/c1/c2/c3` (alle als L/C/H-Range) + `duration`. Das deckt alle offiziellen `SiriOrb`-Props ab. Mit der Umbau-Runde:
+
+| Bereich | War im Lab? | Nach Umbau |
+|---|---|---|
+| Orb-Farben (bg, c1–c3) | ja | ja |
+| Orb-Animation-Duration | ja | ja |
+| Orb interne Blur/Contrast/Shadow | nein (size-derived) | bleibt size-derived (gehört zur Komponentensignatur, nicht zum Preset) |
+| Punktraster / Surface | nein | **ja, vollständig** (Teil B) |
+
+Damit fehlt nichts mehr, was die sichtbare Wirkung des Orbs ausmacht.
+
+---
+
+## Reihenfolge der Umsetzung
+
+1. Migration `app_settings` + RLS + Realtime aktivieren.
+2. `src/lib/settings/` Helpers (`useSetting`, `useNamespace`).
+3. `EntitySurface.tsx` neu, Punktraster-Logik aus `SiriOrb::after` herausziehen.
+4. `Entity.tsx` umstellen: `relative`-Container, Surface hinter Orb.
+5. `orbPresets.ts` um `surface`-Block + `useOrbPresets()` erweitern, localStorage-Code raus.
+6. `OrbLab.tsx`: zweiter Block „Surface", Snippet-Box durch Saved-Indikator ersetzen, Persistenz über `useSetting`.
+
+---
+
+## Antwort zur Punktraster-Frage (kurz, falls nicht oben gelesen)
+
+Das Punktraster kommt aktuell aus `SiriOrb`s `::after`: ein einzelner radialer Gradient (`var(--bg)` als Punkt, transparent außenrum) wird in einem `dot-size * 2`-Quadrat gekachelt — das ergibt das gleichmäßige Halbton-Punktraster. Eine zusätzliche `mask-image` blendet die Mitte aus, damit das Raster nur im Außenbereich des Orbs sichtbar wird. `mix-blend-mode: overlay` mischt es in die Farbschlieren des `::before`-Gradients. Genau diese Mechanik ziehen wir in `EntitySurface` und drehen die Maske um, sodass das Raster **um** den Orb sitzt statt **in** ihm.

@@ -65,6 +65,39 @@ export type Database = {
         }
         Relationships: []
       }
+      app_settings: {
+        Row: {
+          created_at: string
+          key: string
+          namespace: string
+          scope: string
+          updated_at: string
+          updated_by: string | null
+          user_id: string | null
+          value: Json
+        }
+        Insert: {
+          created_at?: string
+          key: string
+          namespace: string
+          scope?: string
+          updated_at?: string
+          updated_by?: string | null
+          user_id?: string | null
+          value: Json
+        }
+        Update: {
+          created_at?: string
+          key?: string
+          namespace?: string
+          scope?: string
+          updated_at?: string
+          updated_by?: string | null
+          user_id?: string | null
+          value?: Json
+        }
+        Relationships: []
+      }
       assets: {
         Row: {
           created_at: string
