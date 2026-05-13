@@ -517,16 +517,8 @@ async function mirrorToGraphiti(
       : { kind: "unknown", message: err instanceof Error ? err.message : String(err) };
     console.warn("mirrorToGraphiti fehlgeschlagen:", errInfo);
 
-    // Fehler in provenance festhalten, ohne den Commit zu kippen.
-    await admin
-      .from("canonical_facts")
-      .update({
-        provenance: admin.rpc as never, // fallback: lese-modify-write
-      })
-      .eq("id", args.canonical_fact_id)
-      .then(() => {/* noop */}, () => {/* noop */});
-
-    // Sauberer Read-Modify-Write, weil Supabase kein JSON-merge nativ kann
+    // Fehler in provenance festhalten — Read-Modify-Write, weil Supabase
+    // kein JSON-merge nativ unterstützt. Best-Effort: niemals werfen.
     const { data: cur } = await admin
       .from("canonical_facts")
       .select("provenance")
