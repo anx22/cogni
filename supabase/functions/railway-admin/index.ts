@@ -10,17 +10,25 @@ const cors = {
 async function gql(query: string, variables: Record<string, unknown> = {}) {
   const token = Deno.env.get("RAILWAY_API_TOKEN");
   if (!token) throw new Error("RAILWAY_API_TOKEN missing");
-  const res = await fetch(RAILWAY_API, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ query, variables }),
-  });
-  const json = await res.json();
-  if (json.errors) throw new Error(JSON.stringify(json.errors));
-  return json.data;
+  // Try both header styles: Bearer (account/team token) and Project-Access-Token.
+  for (const headers of [
+    { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    { "Content-Type": "application/json", "Project-Access-Token": token },
+  ]) {
+    const res = await fetch(RAILWAY_API, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ query, variables }),
+    });
+    const json = await res.json();
+    if (!json.errors) return json.data;
+    // If unauthorized-style error, try next header style; else surface
+    const msg = JSON.stringify(json.errors);
+    if (!/Not Authorized|Project Token not found|Unauthorized/i.test(msg)) {
+      throw new Error(msg);
+    }
+  }
+  throw new Error("Both auth header styles failed for Railway API");
 }
 
 Deno.serve(async (req) => {
