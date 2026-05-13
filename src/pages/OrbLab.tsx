@@ -408,7 +408,7 @@ const OrbLab = () => {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <RangeRow
-                    label="Inner hole %"
+                    label="Inner clearance %"
                     value={surface.innerHole}
                     min={0}
                     max={60}
@@ -416,7 +416,7 @@ const OrbLab = () => {
                     onChange={(innerHole) => updateSurface({ innerHole })}
                   />
                   <RangeRow
-                    label="Outer fade %"
+                    label="Outer reach %"
                     value={surface.outerFade}
                     min={50}
                     max={100}
