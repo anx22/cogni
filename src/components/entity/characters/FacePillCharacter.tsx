@@ -232,15 +232,13 @@ const Eye = ({
 }) => (
   <span
     className="rounded-full bg-white motion-reduce:animate-none"
-    style={
-      {
-        width: w,
-        height: h * openness,
-        transition: "height 300ms ease",
-        animation: `face-pill-blink 6s ${delay}s infinite`,
-        "--eye-h": `${h * openness}px`,
-      } as CSSProperties & Record<string, string>
-    }
+    style={{
+      width: w,
+      height: h * openness,
+      transition: "height 300ms ease",
+      animation: `face-pill-blink 6s ${delay}s infinite`,
+      ["--eye-h" as string]: `${h * openness}px`,
+    } as CSSProperties}
   >
     <style>{`
       @keyframes face-pill-blink {

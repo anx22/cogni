@@ -1,12 +1,9 @@
 // =============================================================================
-//  Entity — visuelle Entität. Wrapper um EntitySurface (Punktraster dahinter)
-//  und SiriOrb (der Orb selbst). Sample-basiert: jeder State-Wechsel rollt
-//  neue Werte aus dem aktuellen Range-Profil.
+//  Entity — visuelle Entität. Sample-basiert (Re-Roll bei State-Wechsel) und
+//  delegiert das eigentliche Visual an einen austauschbaren Character.
 // =============================================================================
 
 import { useCallback, useEffect, useState } from "react";
-import SiriOrb from "./SiriOrb";
-import EntitySurface from "./EntitySurface";
 import {
   useOrbPresets,
   samplePreset,
@@ -14,6 +11,9 @@ import {
   type EntityState,
   type SampledPreset,
 } from "./orbPresets";
+import { CHARACTERS, DEFAULT_CHARACTER_ID } from "./characters/registry";
+import type { CharacterId } from "./characters/types";
+import type { InputMode } from "./InputPills";
 
 interface EntityProps {
   state?: EntityState;
@@ -24,6 +24,10 @@ interface EntityProps {
   size?: string;
   /** Optional: erzwinge ein gesampletes Preset (z.B. für OrbLab). */
   presetOverride?: SampledPreset;
+  /** Welcher Charakter gerendert wird. Default: "siri". */
+  character?: CharacterId;
+  /** Wird aufgerufen, wenn ein Charakter einen Input-Mode-Picker hat (face-pill). */
+  onPickInputMode?: (mode: InputMode) => void;
 }
 
 const Entity = ({
@@ -34,6 +38,8 @@ const Entity = ({
   busy,
   size = "320px",
   presetOverride,
+  character = DEFAULT_CHARACTER_ID,
+  onPickInputMode,
 }: EntityProps) => {
   const { presets } = useOrbPresets();
   const [internal, setInternal] = useState<EntityState>(state);
@@ -45,7 +51,6 @@ const Entity = ({
     setInternal(state);
   }, [state]);
 
-  // Re-sample on state change OR when the preset definition for the active state changes.
   useEffect(() => {
     setSample(samplePreset(presets[internal]));
   }, [internal, presets]);
@@ -93,33 +98,26 @@ const Entity = ({
 
   const active = presetOverride ?? sample;
   const orbPx = Number.parseInt(size.replace("px", ""), 10) || 320;
+  const Char = CHARACTERS[character] ?? CHARACTERS[DEFAULT_CHARACTER_ID];
 
   return (
     <div
       className="relative inline-flex items-center justify-center"
       style={{ width: size, height: size }}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      onClick={handleClick}
+      role="button"
+      aria-label="Entität öffnen"
     >
-      {/* Surface sits behind the orb, scaled larger than it.
-          EntitySurface positions itself absolutely (translate-centered). */}
-      <EntitySurface orbSize={orbPx} surface={active.surface} />
-
-      <button
-        type="button"
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        onClick={handleClick}
-        aria-label="Entität öffnen"
-        className="relative rounded-full outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-transform duration-300 hover:scale-[1.02] active:scale-[0.99]"
-        style={{ width: size, height: size }}
-      >
-        <SiriOrb
-          size={size}
-          colors={active.colors}
-          animationDuration={active.duration}
-          className="pointer-events-none"
-        />
-      </button>
+      {Char.render({
+        state: internal,
+        size: orbPx,
+        sample: active,
+        onClick: handleClick,
+        onPickInputMode,
+      })}
     </div>
   );
 };
