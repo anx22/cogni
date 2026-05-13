@@ -9,17 +9,19 @@ das Lovable AI Gateway als Tools an.
 
 ## Architektur (DB-Zugriff)
 
-Railway bekommt **keinen** Datenbank-Key. Stattdessen ruft der AOL-Service
-nach jedem Schritt eine geschützte Edge Function in Lovable Cloud zurück
-(`aol-callback`), die mit dem intern verfügbaren Service-Key in `aol_runs`
-(später `proposed_facts`, `dialog_sessions`, `review_cases`) schreibt.
+Railway bekommt **keinen** Datenbank-Key und ruft keine Cloud-Funktion mit
+Admin-Rechten. Der AOL-Service lädt in Welle A nur Graphiti-Kontext und gibt ihn
+an `intake-trigger` zurück. Danach ruft `intake-trigger` Cloud-intern
+`intake-understand` mit `graph_hint` auf; alle Datenbank-Schreibzugriffe bleiben
+in Lovable Cloud.
 
 ```
 intake-trigger (Lovable Cloud)
    -> POST /aol/run (Bearer AOL_SERVICE_TOKEN) -> Railway
-        -> LangGraph läuft
-        -> POST {AOL_CALLBACK_URL} (Bearer AOL_CALLBACK_TOKEN) -> Lovable Cloud
-             -> Update aol_runs / Inserts
+        -> LangGraph: context_loader liest Graphiti
+        -> returns graph_context
+   -> intake-understand(graph_hint) läuft Cloud-intern
+   -> proposed_facts / dialog_sessions / review_cases werden Cloud-intern geschrieben
 ```
 
 ## Endpoints
@@ -48,9 +50,9 @@ Alle `/aol/*`-Routen erwarten `Authorization: Bearer ${AOL_SERVICE_TOKEN}`.
 | `LANGSMITH_API_KEY` | Optional. Aktiviert Tracing. |
 | `LANGCHAIN_PROJECT` | Optional. z.B. `produktintelligenz-aol` |
 
-> **Nicht mehr nötig:** `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
-> `DATABASE_URL`. Datenbank-Schreibzugriffe laufen ausschließlich über den
-> Callback in Lovable Cloud.
+> **Nicht nötig und nicht setzen:** `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
+> `DATABASE_URL`. Datenbank-Schreibzugriffe laufen ausschließlich in Lovable
+> Cloud; Railway darf nur Graphiti und den Callback-Token kennen.
 
 ### `AOL_CALLBACK_URL` herausfinden
 
