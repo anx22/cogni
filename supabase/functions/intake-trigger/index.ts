@@ -68,7 +68,11 @@ Deno.serve(async (req) => {
       .single();
     runId = run?.id ?? null;
 
-    // 2. Wenn AOL konfiguriert ist → dorthin abgeben -------------------------
+    // 2. Wenn AOL konfiguriert ist → Graph-Kontext holen ---------------------
+    //    Wichtig: Railway bekommt keinen Service-Role-Key und schreibt keine DB.
+    //    Der AOL-Service liefert nur graph_context; intake-understand läuft
+    //    danach weiterhin Cloud-intern mit den hier vorhandenen Secrets.
+    let graphHint: string | null = null;
     if (aolUrl && aolToken) {
       try {
         const res = await fetch(`${aolUrl}/aol/run`, {
@@ -89,30 +93,34 @@ Deno.serve(async (req) => {
         if (!res.ok) {
           throw new Error(`AOL ${res.status}: ${txt.slice(0, 300)}`);
         }
-        await admin
-          .from("aol_runs")
-          .update({ status: "running", current_node: "router" })
-          .eq("id", runId);
-        return ok({ run_id: runId, mode: "aol", aol_response: safeJson(txt) });
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        console.error("intake-trigger: AOL call failed, falling back:", msg);
+        const aolResponse = safeJson(txt) as { graph_context?: unknown };
+        graphHint = typeof aolResponse.graph_context === "string" ? aolResponse.graph_context : null;
         await admin
           .from("aol_runs")
           .update({
-            status: "failed",
-            error: { message: msg, where: "aol_call" },
-            ended_at: new Date().toISOString(),
+            status: "running",
+            current_node: "context_loaded",
+            metadata: { graph_context_chars: graphHint?.length ?? 0 },
           })
           .eq("id", runId);
-        // Fallthrough auf Legacy-Pfad
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error("intake-trigger: AOL context failed, continuing without graph hint:", msg);
+        await admin
+          .from("aol_runs")
+          .update({
+            status: "running",
+            current_node: "context_failed",
+            error: { message: msg, where: "aol_call" },
+          })
+          .eq("id", runId);
+        // Weiter mit normalem Cloud-internen Verstehen ohne Graph-Hint.
       }
     }
 
-    // 3. Fallback: bestehenden intake-understand triggern --------------------
-    //    Solange der AOL-Service noch nicht steht, läuft die alte Pipeline.
+    // 3. Cloud-internes Verstehen triggern -----------------------------------
     const { error: invErr } = await admin.functions.invoke("intake-understand", {
-      body: { asset_id, retry: !!body.retry },
+      body: { asset_id, retry: !!body.retry, graph_hint: graphHint },
     });
     if (invErr) throw new Error(`intake-understand: ${invErr.message}`);
 
@@ -121,12 +129,12 @@ Deno.serve(async (req) => {
         .from("aol_runs")
         .update({
           status: "completed",
-          current_node: "legacy_fallback",
+          current_node: graphHint ? "aol_enriched" : "cloud_understand",
           ended_at: new Date().toISOString(),
         })
         .eq("id", runId);
     }
-    return ok({ run_id: runId, mode: "legacy" });
+    return ok({ run_id: runId, mode: graphHint ? "aol_enriched" : "cloud_understand" });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("intake-trigger error:", msg);
