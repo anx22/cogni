@@ -115,25 +115,23 @@ def run(req: RunRequest) -> dict[str, Any]:
             })
         raise HTTPException(status_code=500, detail=str(e))
 
-    facts_written = result.get("facts_written", 0)
-    session_id = result.get("session_id")
     last_node = result.get("last_node")
+    graph_context = result.get("graph_context") or ""
 
     if req.run_id:
         _post_callback({
             "run_id": req.run_id,
-            "status": "completed",
+            "status": "running",
             "current_node": last_node,
-            "facts_written": facts_written,
-            "session_id": session_id,
+            "metadata": {"graph_context_chars": len(graph_context)},
         })
 
     return {
         "ok": True,
         "thread_id": thread_id,
         "last_node": last_node,
-        "facts_written": facts_written,
-        "session_id": session_id,
+        "graph_context": graph_context,
+        "graph_context_chars": len(graph_context),
     }
 
 
