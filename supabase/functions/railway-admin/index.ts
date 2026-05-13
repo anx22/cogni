@@ -40,6 +40,11 @@ const NEO4J_VARS: Record<string, string> = {
   NEO4J_server_memory_pagecache_size: "256m",
 };
 
+function prefix(s: string | undefined | null): string | null {
+  if (!s) return null;
+  return `${s.slice(0, 8)}…(${s.length})`;
+}
+
 async function listAll() {
   const ws = await gql(`{ apiToken { workspaces { id name } } }`) as any;
   const workspaces = ws?.apiToken?.workspaces ?? [];
@@ -199,6 +204,52 @@ Deno.serve(async (req) => {
       if (!query) throw new Error("query required");
       return new Response(
         JSON.stringify(await gql(query, variables ?? {}), null, 2),
+        { headers: { ...cors, "Content-Type": "application/json" } },
+      );
+    }
+
+    if (action === "diagnose") {
+      // Vergleicht Token-Prefixes Supabase ↔ Railway und pingt AOL/Graphiti
+      // mit dem Supabase-Token. Zeigt sofort, ob ein Sync nötig ist.
+      const sb = {
+        AOL_SERVICE_TOKEN: prefix(Deno.env.get("AOL_SERVICE_TOKEN")),
+        GRAPHITI_SERVICE_TOKEN: prefix(Deno.env.get("GRAPHITI_SERVICE_TOKEN")),
+        AOL_SERVICE_URL: Deno.env.get("AOL_SERVICE_URL") ?? null,
+        GRAPHITI_SERVICE_URL: Deno.env.get("GRAPHITI_SERVICE_URL") ?? null,
+        LANGSMITH_API_KEY: prefix(Deno.env.get("LANGSMITH_API_KEY")),
+      };
+      // Railway-Werte für Vergleich (aus aol-service Vars)
+      const aolVars = await gql(
+        `query($p:String!,$e:String!,$s:String!){variables(projectId:$p,environmentId:$e,serviceId:$s)}`,
+        { p: body.projectId, e: body.environmentId, s: body.aolServiceId },
+      ) as any;
+      const rwAol = aolVars?.variables ?? {};
+      const compare = {
+        aol_token: {
+          supabase: sb.AOL_SERVICE_TOKEN,
+          railway: prefix(rwAol.AOL_SERVICE_TOKEN),
+          match: prefix(Deno.env.get("AOL_SERVICE_TOKEN")) === prefix(rwAol.AOL_SERVICE_TOKEN),
+        },
+        langsmith: {
+          supabase: sb.LANGSMITH_API_KEY,
+          railway: prefix(rwAol.LANGSMITH_API_KEY),
+          match: prefix(Deno.env.get("LANGSMITH_API_KEY")) === prefix(rwAol.LANGSMITH_API_KEY),
+        },
+      };
+      // Live-Ping AOL mit Supabase-Token
+      let aolPing: unknown = null;
+      const aolUrl = (sb.AOL_SERVICE_URL ?? "").replace(/\/+$/, "");
+      const aolHttps = aolUrl && !/^https?:\/\//i.test(aolUrl) ? `https://${aolUrl}` : aolUrl;
+      if (aolHttps) {
+        try {
+          const r = await fetch(`${aolHttps}/health`);
+          aolPing = { health_status: r.status, health_body: (await r.text()).slice(0, 200) };
+        } catch (e) {
+          aolPing = { error: String(e) };
+        }
+      }
+      return new Response(
+        JSON.stringify({ supabase: sb, compare, aolPing }, null, 2),
         { headers: { ...cors, "Content-Type": "application/json" } },
       );
     }
