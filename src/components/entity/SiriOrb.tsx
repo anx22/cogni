@@ -128,16 +128,13 @@ const SiriOrb: FC<SiriOrbProps> = ({
           position: relative;
           transition: --c1 600ms ease, --c2 600ms ease, --c3 600ms ease, --bg 600ms ease;
         }
-        .siri-orb::before,
-        .siri-orb::after {
+        .siri-orb::before {
           content: "";
           display: block;
           grid-area: stack;
           width: 100%;
           height: 100%;
           border-radius: 50%;
-        }
-        .siri-orb::before {
           background:
             conic-gradient(from calc(var(--angle) * 2) at 25% 70%, var(--c3), transparent 20% 80%, var(--c3)),
             conic-gradient(from calc(var(--angle) * 2) at 45% 75%, var(--c2), transparent 30% 60%, var(--c2)),
@@ -148,16 +145,6 @@ const SiriOrb: FC<SiriOrbProps> = ({
           box-shadow: inset var(--bg) 0 0 var(--shadow-spread) calc(var(--shadow-spread) * 0.2);
           filter: blur(var(--blur-amount)) contrast(var(--contrast-amount));
           animation: siri-orb-rotate var(--animation-duration) linear infinite;
-        }
-        .siri-orb::after {
-          background-image: radial-gradient(circle at center, var(--bg) var(--dot-size), transparent var(--dot-size));
-          background-size: calc(var(--dot-size) * 2) calc(var(--dot-size) * 2);
-          backdrop-filter: blur(calc(var(--blur-amount) * 2)) contrast(calc(var(--contrast-amount) * 2));
-          mix-blend-mode: overlay;
-        }
-        .siri-orb[style*="--mask-radius: 0%"]::after { mask-image: none; }
-        .siri-orb:not([style*="--mask-radius: 0%"])::after {
-          mask-image: radial-gradient(black var(--mask-radius), transparent 75%);
         }
         @keyframes siri-orb-rotate { to { --angle: 360deg; } }
         @media (prefers-reduced-motion: reduce) {
