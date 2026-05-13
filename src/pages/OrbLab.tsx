@@ -25,12 +25,6 @@ const OrbLab = () => {
   const [state, setState] = useState<EntityState>("idle");
   const [tone, setTone] = useState<Tone>("calm");
   const [size, setSize] = useState(320);
-  const [autoCycle, setAutoCycle] = useState(false);
-
-  // Optionaler Auto-Cycle durch alle States
-  useState(() => {
-    if (!autoCycle) return;
-  });
 
   const preset = ORB_PRESETS[state];
   const duration = modulateDuration(preset.duration, tone);
@@ -113,12 +107,6 @@ const OrbLab = () => {
             value={[size]}
             onValueChange={([v]) => setSize(v)}
           />
-          <button
-            onClick={() => setAutoCycle((v) => !v)}
-            className="text-xs text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
-          >
-            {autoCycle ? "Auto-Cycle: an" : "Auto-Cycle: aus"}
-          </button>
         </div>
       </section>
 
