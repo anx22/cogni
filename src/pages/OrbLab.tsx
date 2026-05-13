@@ -1,12 +1,20 @@
 // =============================================================================
-//  OrbLab — Demo-Panel: alle 6 Entity-States + Voice-Tones live durchschalten.
-//  Erreichbar unter /orb-lab. Reines Frontend, keine Backend-Calls.
+//  OrbLab — Visuelles Test-Panel für die Entity.
+//  Granularer Editor: Range-Sliders (L/C/H + Duration) pro State,
+//  Re-Roll, Live-Matrix, kopierbarer Preset-JSON-Snippet.
 // =============================================================================
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Entity from "@/components/entity/Entity";
 import SiriOrb from "@/components/entity/SiriOrb";
-import { ORB_PRESETS, modulateDuration, type EntityState } from "@/components/entity/orbPresets";
+import {
+  ORB_PRESETS,
+  samplePreset,
+  type EntityState,
+  type OrbPresetRange,
+  type Range,
+  type SampledPreset,
+} from "@/components/entity/orbPresets";
 import { Slider } from "@/components/ui/slider";
 
 const STATES: EntityState[] = [
@@ -18,88 +26,169 @@ const STATES: EntityState[] = [
   "busy-blocked",
 ];
 
-const TONES = ["calm", "working", "ready", "alert"] as const;
-type Tone = (typeof TONES)[number];
+type ColorKey = "bg" | "c1" | "c2" | "c3";
+const COLOR_KEYS: ColorKey[] = ["bg", "c1", "c2", "c3"];
+
+// ---- kleine UI-Bausteine -----------------------------------------------------
+
+interface RangeRowProps {
+  label: string;
+  value: Range;
+  min: number;
+  max: number;
+  step: number;
+  onChange: (r: Range) => void;
+}
+const RangeRow = ({ label, value, min, max, step, onChange }: RangeRowProps) => (
+  <div className="space-y-1.5">
+    <div className="flex items-center justify-between text-[11px]">
+      <span className="text-muted-foreground tracking-wide">{label}</span>
+      <span className="text-foreground/70 tabular-nums">
+        {value.min.toFixed(step < 1 ? 3 : 1)} – {value.max.toFixed(step < 1 ? 3 : 1)}
+      </span>
+    </div>
+    <Slider
+      min={min}
+      max={max}
+      step={step}
+      value={[value.min, value.max]}
+      onValueChange={([mn, mx]) => onChange({ min: mn, max: mx })}
+    />
+  </div>
+);
+
+interface ColorBlockProps {
+  title: string;
+  range: { l: Range; c: Range; h: Range };
+  onChange: (next: { l: Range; c: Range; h: Range }) => void;
+}
+const ColorBlock = ({ title, range, onChange }: ColorBlockProps) => (
+  <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3 space-y-3">
+    <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{title}</div>
+    <RangeRow
+      label="Lightness %"
+      value={range.l}
+      min={0}
+      max={100}
+      step={1}
+      onChange={(l) => onChange({ ...range, l })}
+    />
+    <RangeRow
+      label="Chroma"
+      value={range.c}
+      min={0}
+      max={0.4}
+      step={0.005}
+      onChange={(c) => onChange({ ...range, c })}
+    />
+    <RangeRow
+      label="Hue °"
+      value={range.h}
+      min={0}
+      max={360}
+      step={1}
+      onChange={(h) => onChange({ ...range, h })}
+    />
+  </div>
+);
+
+// ---- Page --------------------------------------------------------------------
 
 const OrbLab = () => {
+  const [presets, setPresets] = useState<Record<EntityState, OrbPresetRange>>(ORB_PRESETS);
   const [state, setState] = useState<EntityState>("idle");
-  const [tone, setTone] = useState<Tone>("calm");
   const [size, setSize] = useState(320);
+  const [seed, setSeed] = useState(0);
+  const [autoRoll, setAutoRoll] = useState(false);
 
-  const preset = ORB_PRESETS[state];
-  const duration = modulateDuration(preset.duration, tone);
+  // Sampling: re-roll bei seed/state/preset-Änderung
+  const sample: SampledPreset = useMemo(
+    () => samplePreset(presets[state]),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [presets, state, seed],
+  );
+
+  // Auto-Re-Roll alle 4s
+  useEffect(() => {
+    if (!autoRoll) return;
+    const i = window.setInterval(() => setSeed((s) => s + 1), 4000);
+    return () => window.clearInterval(i);
+  }, [autoRoll]);
+
+  const updateColor = (k: ColorKey, next: { l: Range; c: Range; h: Range }) => {
+    setPresets((p) => ({ ...p, [state]: { ...p[state], [k]: next } }));
+    setSeed((s) => s + 1);
+  };
+  const updateDuration = (d: Range) => {
+    setPresets((p) => ({ ...p, [state]: { ...p[state], duration: d } }));
+    setSeed((s) => s + 1);
+  };
+  const reset = () => {
+    setPresets((p) => ({ ...p, [state]: ORB_PRESETS[state] }));
+    setSeed((s) => s + 1);
+  };
+
+  const current = presets[state];
 
   return (
-    <div className="min-h-screen bg-background text-foreground p-8 flex flex-col gap-8">
-      <header className="flex items-baseline justify-between">
+    <div className="min-h-screen bg-background text-foreground p-6 lg:p-8 flex flex-col gap-8">
+      <header className="flex items-baseline justify-between gap-4">
         <h1 className="text-2xl tracking-tight font-light">Orb Lab</h1>
         <p className="text-xs uppercase tracking-widest text-muted-foreground">
-          Visuelles Test-Panel — alle States · alle Tones
+          Range-basierte States · jeder Roll ist leicht anders
         </p>
       </header>
 
-      {/* Großer Live-Orb */}
-      <section className="flex flex-col items-center justify-center gap-6 py-8 rounded-2xl bg-white/[0.02] border border-white/5">
+      {/* Live-Orb */}
+      <section className="flex flex-col items-center gap-5 py-10 rounded-2xl bg-white/[0.02] border border-white/5">
         <Entity
           state={state}
-          voiceTone={tone}
           size={`${size}px`}
-          onClick={() => console.log("orb click", state, tone)}
-          onReviewClick={() => console.log("review click")}
-          onDrop={(f) => console.log("drop", f)}
+          presetOverride={sample}
+          onClick={() => setSeed((s) => s + 1)}
         />
-        <div className="text-xs text-muted-foreground tabular-nums">
-          state: <span className="text-foreground">{state}</span> · tone:{" "}
-          <span className="text-foreground">{tone}</span> · duration:{" "}
-          <span className="text-foreground">{duration.toFixed(2)}s</span> · size:{" "}
-          <span className="text-foreground">{size}px</span>
+        <div className="flex items-center gap-3 text-xs">
+          <button
+            onClick={() => setSeed((s) => s + 1)}
+            className="px-3 py-1.5 rounded-full border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] transition-colors"
+          >
+            Re-Roll
+          </button>
+          <button
+            onClick={() => setAutoRoll((v) => !v)}
+            className={`px-3 py-1.5 rounded-full border transition-colors ${
+              autoRoll
+                ? "border-primary/40 bg-primary/20 text-foreground"
+                : "border-white/10 bg-white/[0.04] text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Auto-Roll {autoRoll ? "an" : "aus"}
+          </button>
+          <span className="text-muted-foreground tabular-nums">
+            duration: <span className="text-foreground">{sample.duration.toFixed(2)}s</span>
+          </span>
         </div>
       </section>
 
-      {/* Controls */}
-      <section className="grid gap-6 md:grid-cols-3">
-        <div className="space-y-3">
-          <h2 className="text-xs uppercase tracking-widest text-muted-foreground">State</h2>
-          <div className="flex flex-wrap gap-2">
-            {STATES.map((s) => (
-              <button
-                key={s}
-                onClick={() => setState(s)}
-                className={`px-3 py-1.5 rounded-full text-xs border transition-colors ${
-                  state === s
-                    ? "bg-primary/20 border-primary/40 text-foreground"
-                    : "bg-white/[0.02] border-white/10 text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {s}
-              </button>
-            ))}
-          </div>
+      {/* State + Size Picker */}
+      <section className="grid gap-6 lg:grid-cols-[1fr_auto] items-center">
+        <div className="flex flex-wrap gap-2">
+          {STATES.map((s) => (
+            <button
+              key={s}
+              onClick={() => setState(s)}
+              className={`px-3 py-1.5 rounded-full text-xs border transition-colors ${
+                state === s
+                  ? "bg-primary/20 border-primary/40 text-foreground"
+                  : "bg-white/[0.02] border-white/10 text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {s}
+            </button>
+          ))}
         </div>
-
-        <div className="space-y-3">
-          <h2 className="text-xs uppercase tracking-widest text-muted-foreground">Voice Tone</h2>
-          <div className="flex flex-wrap gap-2">
-            {TONES.map((t) => (
-              <button
-                key={t}
-                onClick={() => setTone(t)}
-                className={`px-3 py-1.5 rounded-full text-xs border transition-colors ${
-                  tone === t
-                    ? "bg-primary/20 border-primary/40 text-foreground"
-                    : "bg-white/[0.02] border-white/10 text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="space-y-3">
-          <h2 className="text-xs uppercase tracking-widest text-muted-foreground">
-            Size — {size}px
-          </h2>
+        <div className="w-64">
+          <div className="text-[11px] text-muted-foreground mb-2">Size — {size}px</div>
           <Slider
             min={80}
             max={520}
@@ -110,17 +199,57 @@ const OrbLab = () => {
         </div>
       </section>
 
-      {/* Matrix: alle States nebeneinander */}
+      {/* Editor */}
+      <section className="space-y-4">
+        <div className="flex items-baseline justify-between">
+          <h2 className="text-sm tracking-wide">
+            Editor — <span className="text-muted-foreground">{state}</span>
+          </h2>
+          <button
+            onClick={reset}
+            className="text-[11px] text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
+          >
+            Auf Default zurücksetzen
+          </button>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {COLOR_KEYS.map((k) => (
+            <ColorBlock
+              key={k}
+              title={k}
+              range={current[k]}
+              onChange={(next) => updateColor(k, next)}
+            />
+          ))}
+        </div>
+
+        <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3 max-w-md">
+          <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3">
+            Animation
+          </div>
+          <RangeRow
+            label="Duration s"
+            value={current.duration}
+            min={1}
+            max={60}
+            step={0.5}
+            onChange={updateDuration}
+          />
+        </div>
+      </section>
+
+      {/* Matrix */}
       <section className="space-y-3">
         <h2 className="text-xs uppercase tracking-widest text-muted-foreground">
-          Alle States (mit aktuellem Tone: {tone})
+          Alle States — frischer Sample pro Re-Roll
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
           {STATES.map((s) => {
-            const p = ORB_PRESETS[s];
+            const sm = samplePreset(presets[s]);
             return (
               <button
-                key={s}
+                key={`${s}-${seed}`}
                 onClick={() => setState(s)}
                 className={`flex flex-col items-center gap-3 p-4 rounded-xl border transition-colors ${
                   state === s
@@ -128,14 +257,10 @@ const OrbLab = () => {
                     : "border-white/5 bg-white/[0.02] hover:border-white/10"
                 }`}
               >
-                <SiriOrb
-                  size="120px"
-                  colors={p.colors}
-                  animationDuration={modulateDuration(p.duration, tone)}
-                />
+                <SiriOrb size="120px" colors={sm.colors} animationDuration={sm.duration} />
                 <div className="text-xs text-foreground">{s}</div>
                 <div className="text-[10px] text-muted-foreground tabular-nums">
-                  {modulateDuration(p.duration, tone).toFixed(1)}s
+                  {sm.duration.toFixed(1)}s
                 </div>
               </button>
             );
@@ -143,34 +268,14 @@ const OrbLab = () => {
         </div>
       </section>
 
-      {/* Matrix: alle Tones für aktuellen State */}
+      {/* JSON-Snippet */}
       <section className="space-y-3">
         <h2 className="text-xs uppercase tracking-widest text-muted-foreground">
-          Alle Tones (mit aktuellem State: {state})
+          Snippet — kopiere in <code>orbPresets.ts</code>
         </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {TONES.map((t) => (
-            <button
-              key={t}
-              onClick={() => setTone(t)}
-              className={`flex flex-col items-center gap-3 p-4 rounded-xl border transition-colors ${
-                tone === t
-                  ? "border-primary/40 bg-white/[0.04]"
-                  : "border-white/5 bg-white/[0.02] hover:border-white/10"
-              }`}
-            >
-              <SiriOrb
-                size="120px"
-                colors={preset.colors}
-                animationDuration={modulateDuration(preset.duration, t)}
-              />
-              <div className="text-xs text-foreground">{t}</div>
-              <div className="text-[10px] text-muted-foreground tabular-nums">
-                {modulateDuration(preset.duration, t).toFixed(1)}s
-              </div>
-            </button>
-          ))}
-        </div>
+        <pre className="text-[11px] leading-relaxed p-4 rounded-lg border border-white/5 bg-black/40 overflow-x-auto text-foreground/80">
+{JSON.stringify({ [state]: current }, null, 2)}
+        </pre>
       </section>
     </div>
   );
