@@ -536,6 +536,8 @@ async function mirrorToGraphiti(
       .eq("id", args.canonical_fact_id);
   }
 }
+
+function ok(payload: unknown) {
   return new Response(JSON.stringify({ ok: true, ...(payload as object) }), {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
