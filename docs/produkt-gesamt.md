@@ -67,10 +67,10 @@ Ein einziges Eingangs-Modul nimmt heterogene Inputs entgegen:
 
 1. **Intake** — Universeller Input
 2. **Preparation** — Typ erkennen, Text extrahieren, bereinigen, Metadaten erfassen
-3. **Extraction** — Personen, Orgs, Themen, Entscheidungen, Termine, Aufgaben, Gaps, Dependencies
-4. **Linking** — Gegen bestehendes Wissen prüfen, Konflikte und Lücken berechnen
+3. **Extraction** — Personen, Orgs, Themen, Entscheidungen, Termine, Aufgaben, Gaps, Dependencies. Vorab lädt der AOL-Service projektspezifischen Graph-Kontext aus Graphiti und gibt ihn als `graph_hint` an die Extraction (Welle A).
+4. **Linking** — Gegen bestehendes Wissen prüfen, Konflikte und Lücken berechnen (Welle B: Linking direkt gegen den Graph statt Title-Match — geplant)
 5. **Review Assembly** — Review Cases und Gesprächsboxen bauen
-6. **Commit** — Nach Nutzerentscheidung in kanonischen Zustand übernehmen
+6. **Commit** — Nach Nutzerentscheidung in kanonischen Zustand übernehmen. Jeder Commit spiegelt das Faktum asynchron nach Graphiti (`/messages`, Client-UUID, Idempotenz); die zurückgelieferte `graphiti_uuid` landet in `canonical_facts`.
 7. **Project State Build** — Lage, Handlungsbedarf, Verlauf, Substanz aktualisieren
 
 ## Dialogsystem
@@ -81,10 +81,11 @@ Ein einziges Eingangs-Modul nimmt heterogene Inputs entgegen:
 
 ## Techstack
 
-- **Lovable** — Experience Layer / UI
-- **Supabase** — Kanonischer Kernzustand, Auth, Storage, Realtime
+- **Lovable** — Experience Layer / UI, Edge Functions, kanonische Schreibpfade
+- **Supabase (Lovable Cloud)** — Kanonischer Kernzustand, Auth, Storage, Realtime
 - **Unstructured** — Document Intelligence / Parsing
-- **Knowledge Graph** — Graphiti vs. Cognee, Entscheidung in v2 wieder offen
+- **Graphiti** — Knowledge Graph, gesetzt (Cognee verworfen)
+- **AOL-Service (Railway, LangGraph)** — Kontext-Provider. Lädt Graph-Kontext für Extraction. Hat bewusst keinen DB- oder Service-Role-Zugriff: Railway liest nur, alle Schreibpfade bleiben in Lovable Cloud.
 
 ## Manuelle Eingriffe
 
