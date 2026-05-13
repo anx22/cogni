@@ -34,7 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useRelativeTime } from "@/lib/format/relativeTime";
+import { formatRelative } from "@/lib/format/relativeTime";
 
 const STATES: EntityState[] = [
   "idle",
