@@ -14,14 +14,14 @@
 - Macht aus Antwort eine kompakte `- bullet`-Liste (max 240 Zeichen je Eintrag).
 - Bei Fehler / fehlendem Secret → leerer Kontext + `state.error`, niemals werfen.
 
-**S3 — `interpreter`-Knoten**
-- Calls `${SUPABASE_URL}/functions/v1/intake-understand` mit Service-Role-Auth,
-  übergibt `asset_id`, `retry`, `graph_hint`. Antwort (`facts`, `session_id`)
-  fließt in `state["facts_written"] / state["session_id"]`.
-- Timeout 120 s (LLM + DB).
+**S3 — Besitzschnitt korrigiert**
+- Railway ruft `intake-understand` nicht auf und braucht keinen Service-Role-Key.
+- `/aol/run` liefert nur `graph_context` zurück. Danach ruft `intake-trigger`
+  Cloud-intern `intake-understand` mit `graph_hint` auf.
+- Damit bleiben alle DB-Schreibpfade und Admin-Secrets ausschließlich in Lovable Cloud.
 
 **S4 — `condenser` no-op**
-- Reicht nur `last_node` + `facts_written` + `session_id` weiter.
+- Reicht `last_node` + `graph_context` weiter.
 - Schreiben passiert komplett in der Edge Function — eine Codebasis, kein Drift.
 - Kommentar im Code zeigt, wo Welle B (conflict/gap/dependency) später ansetzt.
 
@@ -35,23 +35,16 @@
 
 ## Was du JETZT tun musst (Railway-Seite)
 
-Der AOL-Container in Railway braucht zwei Env-Vars zusätzlich, damit
-`interpreter` die Edge Function callen kann:
-
-```
-SUPABASE_URL=https://zeazrfidtpdtgcrbnhbo.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=<Service-Role-Key aus Lovable Cloud>
-```
-
-(`GRAPHITI_SERVICE_URL`, `GRAPHITI_SERVICE_TOKEN`, `AOL_CALLBACK_URL`,
-`AOL_CALLBACK_TOKEN`, `LANGSMITH_API_KEY`, `AOL_SERVICE_TOKEN` sind schon da.)
+Keinen Service-Role-Key setzen. Railway braucht nur:
+`GRAPHITI_SERVICE_URL`, optional `GRAPHITI_SERVICE_TOKEN`, `AOL_SERVICE_TOKEN`,
+optional `AOL_CALLBACK_URL`/`AOL_CALLBACK_TOKEN`, `LANGSMITH_API_KEY`.
 
 Nach dem Setzen: Railway-Service neu deployen (push reicht).
 
 ## Verifikation (nachdem Railway redeployed hat)
 
 1. Asset hochladen → DevLog: `aol_runs` mit `status: completed`,
-   `current_node: condenser`.
+   `current_node: aol_enriched` oder `cloud_understand`.
 2. F1-Inspector „Pipeline-Trace" zeigt die Edge-Function-Calls + LangSmith
    verlinkt den Run.
 3. Confirm drücken → `canonical_facts.graphiti_uuid` gesetzt
