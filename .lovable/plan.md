@@ -1,67 +1,66 @@
+## Korrektur
 
+Du hast recht: In der Lovable-Cloud-UI gibt es für dich keinen verlässlichen sichtbaren Zugang, um den `SUPABASE_SERVICE_ROLE_KEY` zu kopieren. Meine vorherigen Schritte waren falsch.
 
-## Block D — Folgeschritte nach Secret-Check
+## Neuer Plan ohne Service-Role-Key in Railway
 
-### Befund
-- ✅ Graphiti-Service läuft (offizieller `graphiti-server` auf Railway, `/healthcheck` healthy)
-- ✅ Neo4j, OpenAI, LangSmith, Lovable AI Secrets vorhanden
-- ❌ `AOL_SERVICE_URL` zeigt auf fremde App → muss geleert werden
-- ❌ `AOL_SERVICE_TOKEN` fehlt → wird generiert
-- 🔄 Eigener `graphiti-service/`-Wrapper entfällt → wir sprechen direkt mit dem offiziellen Server
+Statt Railway direkten Datenbankzugriff zu geben, bleibt der private Datenbank-Key komplett in Lovable Cloud. Railway ruft nur noch eine geschützte Backend-Funktion in Lovable Cloud zurück.
 
-### Plan-Anpassungen
+```text
+App / Edge Function
+  -> AOL-Service auf Railway
+      -> Graphiti / LangGraph arbeitet
+      -> ruft Lovable-Cloud Callback auf
+          -> Lovable Cloud schreibt proposed_facts / review_cases / aol_runs
+```
 
-**1. Secrets bereinigen (sofort, vor Code)**
-- `AOL_SERVICE_URL` leeren (UI: Cloud → Secrets)
-- `AOL_SERVICE_TOKEN` neu anlegen mit kryptografisch sicherem Wert (32 Byte hex, ich generiere und du fügst ihn in Cloud → Secrets ein; denselben Wert später auch in der AOL-Service-Konfig auf Railway)
+## Was du dann auf Railway brauchst
 
-**2. Architektur-Korrektur — Graphiti**
+Nur noch diese Variablen:
 
-Eigene `graphiti-service/`-Komponente wird **gestrichen**. Stattdessen:
+- `AOL_SERVICE_TOKEN`
+- `GRAPHITI_SERVICE_URL`
+- `GRAPHITI_SERVICE_TOKEN`
+- `NEO4J_URI`
+- `NEO4J_USER`
+- `NEO4J_PASSWORD`
+- `OPENAI_API_KEY`
+- `LANGSMITH_API_KEY`
+- `LOVABLE_API_KEY`
+- neu: `AOL_CALLBACK_URL`
+- neu: `AOL_CALLBACK_TOKEN`
 
-- `supabase/functions/_shared/graphiti.ts` als dünner TS-Client direkt gegen die offiziellen Endpoints des deployten `graphiti-server`:
-  - `POST /messages` → Episoden hinzufügen (Text/JSON-Inhalte)
-  - `POST /search` → Fakten/Entities/Relations finden
-  - `GET /episodes/{group_id}` → Projekt-Kontext laden
-  - `POST /get-memory` → kompakter Memory-Dump für LLM-Prompts
-  - `POST /entity-node` → explizite Entity-Anlage (Personen, Organisationen, Themen)
-  - `DELETE /episode/{uuid}` → Invalidation alter Fakten
-  - `DELETE /group/{group_id}` → Projekt-Reset (Dev/Test)
-  - `GET /healthcheck` → Health-Probe
+Nicht mehr nötig:
 
-- Mapping unserer Konzepte:
-  - `group_id` = unsere `project_id` (Postgres-UUID) → saubere Mandantentrennung im Graph
-  - Unsere `canonical_facts.graphiti_uuid` = die UUID, die der Server zurückgibt
-  - Unsere `proposed_facts.graphiti_episode_uuid` = Episode-UUID aus `POST /messages`
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- optional erstmal auch `DATABASE_URL`
 
-**3. AOL-Service neu bauen (Phase D2)**
+## Umsetzung
 
-Da die hinterlegte URL falsch war: AOL existiert real noch nicht. Wir bauen jetzt den `aol-service/` von Grund auf wie geplant (Python/FastAPI + LangGraph), du deployst ihn auf Railway, trägst die echte URL nach.
+1. Neue Lovable-Cloud Backend-Funktion `aol-callback` anlegen.
+   - Sie nimmt Ergebnisse vom Railway-AOL-Service entgegen.
+   - Sie prüft `Authorization: Bearer AOL_CALLBACK_TOKEN`.
+   - Sie schreibt mit intern verfügbarem Datenbankzugriff in `aol_runs`, später `proposed_facts`, `dialog_sessions`, `review_cases`.
 
-Reihenfolge:
-1. Code für `aol-service/` schreiben (Skelett mit Health, leerer StateGraph, FastAPI-Endpoints, Bearer-Auth über `AOL_SERVICE_TOKEN`)
-2. Dockerfile + README mit klarer Railway-Anleitung (welche ENV-Vars: `NEO4J_*`, `GRAPHITI_SERVICE_URL`, `OPENAI_API_KEY`, `LANGSMITH_API_KEY`, `AOL_SERVICE_TOKEN`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `LOVABLE_API_KEY`)
-3. Du deployst, kopierst die Railway-URL in `AOL_SERVICE_URL`
-4. Edge-Function-Smoketest
+2. `AOL_CALLBACK_TOKEN` als Lovable-Cloud Secret anlegen.
+   - Gleicher Wert kommt als Railway Variable rein.
+   - Das ist nur ein gemeinsames Secret zwischen Railway und Lovable Cloud, kein Datenbank-Key.
 
-**4. Edge Functions aktualisieren**
-- `_shared/graphiti.ts` neu (siehe oben)
-- `intake-trigger` (ersetzt `intake-understand`): leitet POST an `${AOL_SERVICE_URL}/aol/run` mit Bearer
-- `commit-fact`: zusätzlich `POST ${AOL_SERVICE_URL}/aol/confirm`
-- `intake-understand` und `_shared/agentClient.ts`/`agentConfig.ts` werden entfernt (Logik wandert in AOL-Knoten)
+3. AOL-Service auf Railway umbauen.
+   - Entfernt Pflicht auf `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY`.
+   - Nach `/aol/run` ruft der Service `AOL_CALLBACK_URL` auf.
+   - Payload enthält `run_id`, `asset_id`, `status`, `last_node`, `facts_written`, später extrahierte Facts/Cases.
 
-**5. Validierung**
-- Edge-Function ruft Graphiti direkt → `/healthcheck` + Test-Search → ok
-- Edge-Function ruft AOL `/health` mit Bearer → 200
-- Realer Intake-Test (Notiz) durchläuft AOL-Minimalpfad: router → context_loader (ruft Graphiti) → interpreter (Lovable AI) → condenser (schreibt `proposed_facts` + `dialog_session`)
+4. `aol-service/README.md` korrigieren.
+   - Keine falsche Anleitung mehr mit Service-Role-Key.
+   - Railway-Setup wird auf die echte Lovable-Cloud-Variante reduziert.
 
-### Reihenfolge der nächsten Coding-Schritte
-1. `AOL_SERVICE_URL` leeren + `AOL_SERVICE_TOKEN` setzen (du, in Cloud-UI)
-2. `aol-service/` Skelett erstellen + `_shared/graphiti.ts` schreiben + alte `intake-understand` durch `intake-trigger` ersetzen
-3. Du deployst AOL auf Railway, trägst URL in `AOL_SERVICE_URL` nach
-4. AOL-Knoten ausbauen (D3), Commit-Pfad anbinden (D4), End-to-End-Validierung (D5)
+5. Danach testen.
+   - Health von Railway prüfen.
+   - `intake-trigger` aus Lovable Cloud aufrufen.
+   - Verifizieren, dass `aol_runs` von `pending/running` auf `completed` oder `failed` aktualisiert wird.
 
-### Was ich gleich von dir brauche
-- Bestätigung, dass du nach Secret-Anpassung das AOL-Skelett gebaut sehen möchtest, **bevor** du auf Railway deployst (Empfehlung: ja — sonst hast du nichts zu deployen)
-- Den `AOL_SERVICE_TOKEN`-Wert generiere ich dir direkt im nächsten Schritt nach Approve
+## Ergebnis
 
+Du musst keinen versteckten Backend-Key suchen. Railway bekommt nur normale API-/Service-Secrets und spricht für Datenbank-Schreibvorgänge zurück zu Lovable Cloud.
