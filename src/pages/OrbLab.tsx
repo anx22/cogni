@@ -48,85 +48,121 @@ const STATES: EntityState[] = [
 type ColorKey = "bg" | "c1" | "c2" | "c3";
 const COLOR_KEYS: ColorKey[] = ["bg", "c1", "c2", "c3"];
 
+// ---- Helpers ---------------------------------------------------------------
+
+const centerOf = (r: Range): number => (r.min + r.max) / 2;
+const rangeAround = (v: number, jitter: number, lo: number, hi: number): Range => ({
+  min: Math.max(lo, v - jitter),
+  max: Math.min(hi, v + jitter),
+});
+const oklchStr = (l: number, c: number, h: number) =>
+  `oklch(${l.toFixed(2)}% ${c.toFixed(3)} ${h.toFixed(1)})`;
+
 // ---- UI-Bausteine ------------------------------------------------------------
 
-interface RangeRowProps {
+interface ValueRowProps {
   label: string;
-  value: Range;
+  value: number;
   min: number;
   max: number;
   step: number;
   precision?: number;
-  onChange: (r: Range) => void;
+  jitter: number; // ± Bandbreite, die im Hintergrund als Range gespeichert wird
+  onChange: (v: number, range: Range) => void;
 }
-const RangeRow = ({ label, value, min, max, step, precision = 1, onChange }: RangeRowProps) => (
-  <div className="space-y-2">
-    <div className="flex items-center justify-between">
-      <Label className="text-[11px] text-muted-foreground font-normal tracking-wide">
-        {label}
-      </Label>
-      <span className="text-[11px] text-foreground/70 tabular-nums">
-        {value.min.toFixed(precision)} – {value.max.toFixed(precision)}
-      </span>
+const ValueRow = ({
+  label,
+  value,
+  min,
+  max,
+  step,
+  precision = 1,
+  jitter,
+  onChange,
+}: ValueRowProps) => {
+  // Lokaler State, damit der Slider während des Drags nicht durch Realtime-Echos springt.
+  const [local, setLocal] = useState(value);
+  useEffect(() => setLocal(value), [value]);
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between">
+        <Label className="text-[11px] text-muted-foreground font-normal tracking-wide">
+          {label}
+        </Label>
+        <span className="text-[11px] text-foreground/80 tabular-nums">
+          {local.toFixed(precision)}
+        </span>
+      </div>
+      <Slider
+        min={min}
+        max={max}
+        step={step}
+        value={[local]}
+        onValueChange={([v]) => {
+          setLocal(v);
+          onChange(v, rangeAround(v, jitter, min, max));
+        }}
+      />
     </div>
-    <Slider
-      min={min}
-      max={max}
-      step={step}
-      value={[value.min, value.max]}
-      onValueChange={([mn, mx]) => onChange({ min: mn, max: mx })}
-      minStepsBetweenThumbs={0}
-    />
-  </div>
-);
+  );
+};
 
 interface ColorBlockProps {
   title: string;
   range: { l: Range; c: Range; h: Range };
-  swatch: string;
   onChange: (next: { l: Range; c: Range; h: Range }) => void;
 }
-const ColorBlock = ({ title, range, swatch, onChange }: ColorBlockProps) => (
-  <Card className="bg-card/40 border-border/50">
-    <CardHeader className="pb-3 flex-row items-center justify-between space-y-0">
-      <CardTitle className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
-        {title}
-      </CardTitle>
-      <span
-        className="h-4 w-4 rounded-full border border-white/10 shadow-inner"
-        style={{ background: swatch }}
-        aria-hidden
-      />
-    </CardHeader>
-    <CardContent className="space-y-4">
-      <RangeRow
-        label="Lightness %"
-        value={range.l}
-        min={0}
-        max={100}
-        step={1}
-        onChange={(l) => onChange({ ...range, l })}
-      />
-      <RangeRow
-        label="Chroma"
-        value={range.c}
-        min={0}
-        max={0.4}
-        step={0.005}
-        precision={3}
-        onChange={(c) => onChange({ ...range, c })}
-      />
-      <RangeRow
-        label="Hue °"
-        value={range.h}
-        min={0}
-        max={360}
-        step={1}
-        onChange={(h) => onChange({ ...range, h })}
-      />
-    </CardContent>
-  </Card>
-);
+const ColorBlock = ({ title, range, onChange }: ColorBlockProps) => {
+  const lv = centerOf(range.l);
+  const cv = centerOf(range.c);
+  const hv = centerOf(range.h);
+  const swatch = oklchStr(lv, cv, hv);
+  return (
+    <Card className="bg-card/40 border-border/50">
+      <CardHeader className="pb-3 flex-row items-center justify-between space-y-0">
+        <CardTitle className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
+          {title}
+        </CardTitle>
+        <span
+          className="h-5 w-5 rounded-full border border-white/10 shadow-inner"
+          style={{ background: swatch }}
+          aria-hidden
+        />
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <ValueRow
+          label="Lightness %"
+          value={lv}
+          min={0}
+          max={100}
+          step={1}
+          jitter={3}
+          onChange={(_, l) => onChange({ ...range, l })}
+        />
+        <ValueRow
+          label="Chroma"
+          value={cv}
+          min={0}
+          max={0.4}
+          step={0.005}
+          precision={3}
+          jitter={0.01}
+          onChange={(_, c) => onChange({ ...range, c })}
+        />
+        <ValueRow
+          label="Hue °"
+          value={hv}
+          min={0}
+          max={360}
+          step={1}
+          jitter={6}
+          onChange={(_, h) => onChange({ ...range, h })}
+        />
+      </CardContent>
+    </Card>
+  );
+};
+
 
 // ---- Saved indicator -------------------------------------------------------
 
@@ -285,7 +321,6 @@ const OrbLab = () => {
                   key={k}
                   title={k}
                   range={current[k]}
-                  swatch={sample.colors[k]}
                   onChange={(next) => updateColor(k, next)}
                 />
               ))}
@@ -299,13 +334,14 @@ const OrbLab = () => {
             </div>
             <Card className="bg-card/40 border-border/50 max-w-md">
               <CardContent className="pt-4">
-                <RangeRow
+                <ValueRow
                   label="Duration s"
-                  value={current.duration}
+                  value={centerOf(current.duration)}
                   min={1}
                   max={60}
                   step={0.5}
-                  onChange={updateDuration}
+                  jitter={1.5}
+                  onChange={(_, d) => updateDuration(d)}
                 />
               </CardContent>
             </Card>
@@ -323,35 +359,39 @@ const OrbLab = () => {
                     Geometrie
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <RangeRow
-                    label="Scale (× Orb)"
-                    value={surface.scale}
+                <CardContent className="space-y-3">
+                  <ValueRow
+                    label="Scale"
+                    value={centerOf(surface.scale)}
                     min={1}
                     max={3}
                     step={0.05}
                     precision={2}
-                    onChange={(scale) => updateSurface({ scale })}
+                    jitter={0.05}
+                    onChange={(_, scale) => updateSurface({ scale })}
                   />
-                  <RangeRow
+                  <ValueRow
                     label="Dot size px"
-                    value={surface.dotSize}
+                    value={centerOf(surface.dotSize)}
                     min={0.3}
                     max={6}
                     step={0.1}
                     precision={2}
-                    onChange={(dotSize) => updateSurface({ dotSize })}
+                    jitter={0.15}
+                    onChange={(_, dotSize) => updateSurface({ dotSize })}
                   />
-                  <RangeRow
-                    label="Spacing × dot"
-                    value={surface.dotSpacing}
+                  <ValueRow
+                    label="Spacing"
+                    value={centerOf(surface.dotSpacing)}
                     min={2}
                     max={12}
                     step={0.1}
                     precision={1}
-                    onChange={(dotSpacing) => updateSurface({ dotSpacing })}
+                    jitter={0.4}
+                    onChange={(_, dotSpacing) => updateSurface({ dotSpacing })}
                   />
                 </CardContent>
+
               </Card>
 
               <Card className="bg-card/40 border-border/50">
@@ -360,40 +400,49 @@ const OrbLab = () => {
                     Punktfarbe
                   </CardTitle>
                   <span
-                    className="h-4 w-4 rounded-full border border-white/10 shadow-inner"
-                    style={{ background: sample.surface.dotColor }}
+                    className="h-5 w-5 rounded-full border border-white/10 shadow-inner"
+                    style={{
+                      background: oklchStr(
+                        centerOf(surface.dotColor.l),
+                        centerOf(surface.dotColor.c),
+                        centerOf(surface.dotColor.h),
+                      ),
+                    }}
                     aria-hidden
                   />
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <RangeRow
+                <CardContent className="space-y-3">
+                  <ValueRow
                     label="Lightness %"
-                    value={surface.dotColor.l}
+                    value={centerOf(surface.dotColor.l)}
                     min={0}
                     max={100}
                     step={1}
-                    onChange={(l) =>
+                    jitter={3}
+                    onChange={(_, l) =>
                       updateSurface({ dotColor: { ...surface.dotColor, l } })
                     }
                   />
-                  <RangeRow
+                  <ValueRow
                     label="Chroma"
-                    value={surface.dotColor.c}
+                    value={centerOf(surface.dotColor.c)}
                     min={0}
                     max={0.4}
                     step={0.005}
                     precision={3}
-                    onChange={(c) =>
+                    jitter={0.01}
+                    onChange={(_, c) =>
                       updateSurface({ dotColor: { ...surface.dotColor, c } })
                     }
                   />
-                  <RangeRow
-                    label="Hue °"
-                    value={surface.dotColor.h}
+                  <ValueRow
+                    label="Hue"
+                    value={centerOf(surface.dotColor.h)}
                     min={0}
                     max={360}
                     step={1}
-                    onChange={(h) =>
+                    jitter={6}
+                    onChange={(_, h) =>
                       updateSurface({ dotColor: { ...surface.dotColor, h } })
                     }
                   />
@@ -406,39 +455,43 @@ const OrbLab = () => {
                     Maske · Mischung
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <RangeRow
+                <CardContent className="space-y-3">
+                  <ValueRow
                     label="Inner clearance %"
-                    value={surface.innerHole}
+                    value={centerOf(surface.innerHole)}
                     min={0}
                     max={60}
                     step={1}
-                    onChange={(innerHole) => updateSurface({ innerHole })}
+                    jitter={2}
+                    onChange={(_, innerHole) => updateSurface({ innerHole })}
                   />
-                  <RangeRow
+                  <ValueRow
                     label="Outer reach %"
-                    value={surface.outerFade}
-                    min={50}
+                    value={centerOf(surface.outerFade)}
+                    min={5}
                     max={100}
                     step={1}
-                    onChange={(outerFade) => updateSurface({ outerFade })}
+                    jitter={3}
+                    onChange={(_, outerFade) => updateSurface({ outerFade })}
                   />
-                  <RangeRow
+                  <ValueRow
                     label="Opacity"
-                    value={surface.opacity}
+                    value={centerOf(surface.opacity)}
                     min={0}
                     max={1}
                     step={0.02}
                     precision={2}
-                    onChange={(opacity) => updateSurface({ opacity })}
+                    jitter={0.05}
+                    onChange={(_, opacity) => updateSurface({ opacity })}
                   />
-                  <RangeRow
+                  <ValueRow
                     label="Rotation s (0 = aus)"
-                    value={surface.rotationDuration}
+                    value={centerOf(surface.rotationDuration)}
                     min={0}
                     max={120}
                     step={1}
-                    onChange={(rotationDuration) =>
+                    jitter={0}
+                    onChange={(_, rotationDuration) =>
                       updateSurface({ rotationDuration })
                     }
                   />

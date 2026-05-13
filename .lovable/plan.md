@@ -1,48 +1,69 @@
-## Befund (visuell verifiziert)
+## Ziel
 
-Im Screenshot von `/orb-lab` sieht man zwei klare Defekte am Punktraster:
+Orb Lab schneller bedienbar machen: alle Doppel-Range-Slider (Min/Max-Thumbs) durch normale Single-Sliders ersetzen. Die Sampling-Range wird im Hintergrund automatisch um den gewählten Wert herum gebildet, sodass der „lebendige" Re-Roll-Charakter erhalten bleibt — aber der User stellt nur noch **einen Wert pro Feld** ein.
 
-1. **Form ist oval** — das Punktfeld ist sichtbar höher als breit.
-   Ursache: `EntitySurface` wird in `<div class="absolute inset-0 flex items-center justify-center">` gerendert und hat eine Pixel-Breite (z. B. 480 px), aber der Flex-Container ist nur 320 px breit. Mit Default `flex-shrink: 1` wird die Breite auf 320 px geschrumpft, während die Höhe (Cross-Axis) auf 480 px bleibt → Rechteck/Oval.
+## Was sich ändert
 
-2. **Dots liegen auf dem Orb** — am oberen Rand sieht man die Punktstruktur über der türkisen Orb-Fläche.
-   Ursache: Die Maske `radial-gradient(circle, transparent 0%, transparent 30%, black …)` benutzt Default-Endform `farthest-corner`. 30 % davon ergeben für ein 480 px Surface ca. 102 px Radius — der Orb hat aber 160 px Radius. Der Punktring (Radien 102–264) überlappt also einen Großteil des Orbs. Da der Orb intern `transparent`-Stops in seinen conic-gradients hat, scheinen die Dots durch.
+### 1. Neuer `ValueRow` ersetzt `RangeRow`
 
-## Fix-Plan
+Single-Slider mit großem Thumb, Klick aufs Label/Wert öffnet kein Modal — direkt ziehen. Anzeige: aktueller Wert in tabular-nums rechts.
 
-### 1. `EntitySurface.tsx` — echte quadratische Form, mathematisch korrekte Maske
+```
+Lightness %                                72
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━○━━━━━━━━━━━
+```
 
-- Eigene absolute Positionierung statt im Flex-Wrapper hängen lassen:
-  `position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);`
-  Damit gibt es keine Flex-Shrink-Klemme mehr, das Element bleibt quadratisch.
-- Maske auf `radial-gradient(circle closest-side, …)` umstellen, damit `100%` exakt der Surface-Radius ist (intuitiv).
-- Inner-Hole automatisch so groß rechnen, dass er den Orb mindestens abdeckt:
-  `holeRatio = (orbRadius / surfaceRadius) + clearance`
-  also `100 / scale + clearance` in Prozent. So sitzt der Orb immer sauber im Loch, egal welche Scale gerollt wurde.
-- Outer-Fade analog automatisch ans Surface-Ende relativ zum Orb hängen.
+Pro Feld definiert die Komponente eine **Jitter-Konstante** (in Slider-Step-Einheiten, z. B. 4 % der Spannweite). Beim Speichern wird die Range geschrieben:
+`{ min: clamp(value − jitter), max: clamp(value + jitter) }`. So bleibt das bestehende Sampling und alle gespeicherten DB-Werte kompatibel.
 
-### 2. Semantik der Surface-Slider angleichen
+Beim Lesen aus der DB wird der Mittelwert `(min+max)/2` als angezeigter Wert berechnet — alte Daten funktionieren weiter.
 
-Die Range-Felder `innerHole` und `outerFade` werden umgedeutet von „% des Surfaces" zu **„extra Clearance jenseits des Orb-Rands, in % des Surface-Radius"**:
+### 2. Jitter-Defaults pro Feld
 
-- `innerHole`: 0 = Punktring beginnt direkt am Orb-Rand. 5–15 = etwas Luft.
-- `outerFade`: wie weit über den Orb hinaus die Punkte ausfaden (z. B. 35–55 %).
+Pro Feld passend gewählt, sodass „Re-Roll" sichtbar variiert, aber der User die Farbe/Größe klar steuert:
 
-Defaults entsprechend anpassen, sodass beim ersten Render eine ruhige, deutliche Punktscheibe **um** den Orb sitzt (kein Überlappen, kleiner heller Ring).
+- Lightness %: ±3
+- Chroma: ±0.01
+- Hue °: ±6
+- Duration s: ±1.5
+- Scale × Orb: ±0.05
+- Dot size px: ±0.15
+- Spacing × dot: ±0.4
+- Inner clearance %: ±2
+- Outer reach %: ±3
+- Opacity: ±0.05
+- Rotation s: 0 (kein Jitter, exakter Wert)
 
-OrbLab-Labels: „Inner clearance %" und „Outer fade %".
+Optional: globaler „Variation"-Toggle pro State (später) — jetzt erst mal fixe Konstanten.
 
-### 3. `Entity.tsx` aufräumen
+### 3. Colors editierbar
 
-- Inneren Flex-Wrapper um `<EntitySurface/>` entfernen, da Surface sich jetzt selbst zentriert.
-- Reihenfolge bleibt: Surface zuerst (hinten), Orb-Button danach (vorn).
+Aktuell sind die Color-Slider zwar da, aber der Doppel-Thumb mit minStepsBetweenThumbs=0 ist auf engen Ranges schwer greifbar. Mit Single-Slider + Live-Swatch reagiert die Vorschau auf jede Bewegung sofort. Zusätzlich: in jedem `ColorBlock` wird der Swatch direkt mit dem aktuell **gespeicherten Mittelwert** gerendert (statt nur dem zufällig gesampleten Wert), damit man beim Schieben den Effekt deutlich sieht — dazu eine kleine Helper-Funktion `oklchFromValues(l,c,h)`.
 
-### 4. Visuelle Verifikation
+### 4. Speicher-Performance
 
-Nach den Edits per Browser-Screenshot in `/orb-lab` prüfen:
-- Bei Default-Idle: Punktring exakt um den Orb, kein Dot auf der Orb-Fläche.
-- Form quadratisch / kreisrund, nicht oval (gleiche Breite wie Höhe messen).
-- Re-Roll mehrfach + State-Wechsel (idle → processing → failed): Loch bleibt immer korrekt am Orb-Rand.
-- Auch bei kleiner Size (z. B. 160 px) und großer Size (z. B. 460 px) prüfen.
+Setzen bleibt debounced über `useNamespace`. Beim Slider-Drag werden viele Werte schnell hintereinander gefeuert — der bestehende 300 ms-Debounce schreibt nur die letzte Position in die DB.
 
-Falls noch Artefakte sichtbar sind, iterativ nachjustieren bis sauber.
+Zusätzlich: lokaler State im Editor cached den letzten Wert, damit der Slider während des Drags nicht „springt", falls Realtime einen Echo-Update sendet.
+
+### 5. Layout/UX-Feinheiten
+
+- Editor-Karten kompakter: `pt-3 space-y-3`, kleinere Zeilenhöhe.
+- Wert rechts klickbar → Reset auf Default-Mittelwert (kleine RotateCcw-Icon).
+- "Default"-Button pro State bleibt.
+- Kein Scope-Wechsel, keine neuen DB-Migrationen.
+
+## Betroffene Dateien
+
+- `src/pages/OrbLab.tsx` — `RangeRow` → `ValueRow`, Helper für Mittelwert-Lesen / Range-Schreiben, Color-Swatch aus Mittelwerten.
+- (optional) kleine Util in `src/components/entity/orbPresets.ts`: `centerOf(r: Range)` und `rangeAround(v, jitter)` zur Wiederverwendung.
+
+Keine Änderungen an Sampling, EntitySurface, SiriOrb oder DB-Schema.
+
+## Verifikation
+
+- Jeder Slider ist mit einem Klick + Drag in <1 s auf einen Wert bringbar.
+- Live-Swatch jeder Farbkarte spiegelt sofort die Slider-Position wider.
+- Re-Roll erzeugt sichtbare, kleine Variation um den eingestellten Wert.
+- Reload: gespeicherter Wert bleibt erhalten, Slider stehen exakt dort.
+- Alte DB-Einträge mit eigener Range werden als Mittelwert angezeigt und beim ersten Speichern auf das neue Jitter-Schema normalisiert.
