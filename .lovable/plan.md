@@ -1,93 +1,95 @@
-# F2 — Stand + ehrliche Architekturfrage vor AOL-Welle A
 
-## Was bisher gebaut (heute)
+# Plan — Welle A sauber, ohne Doppelpipeline
 
-**1. Graphiti-URL-Härtung** (`supabase/functions/_shared/graphiti.ts`)
-- `normalizeBase()` ergänzt fehlendes `https://` automatisch + Warn-Log.
-- `addMessage()` neu typisiert: gibt `{ uuid, queued: true }` zurück, weil der
-  Server nur HTTP 202 + Worker-Queue liefert (keine Server-UUID im Response).
-  Doku-Block dokumentiert die Async-Semantik direkt im Code.
+## Klarstellung vorab (wo wir wirklich stehen)
 
-**2. Graphiti-Schreibpfad scharf** (`supabase/functions/commit-fact/index.ts`)
-- Nach erfolgreichem `canonical_facts`-Insert: `mirrorToGraphiti()` ruft
-  `addMessage` mit client-generierter UUID, schreibt diese in
-  `canonical_facts.graphiti_uuid`.
-- Fehler werden in `canonical_facts.provenance.graphiti_error` festgehalten
-  (Read-Modify-Write), niemals geworfen — Supabase bleibt Master.
-- Episode-Body als lesbare Zeile (`title — key: val · key: val`) damit Graphiti
-  Entitäten/Edges sauber extrahieren kann.
+Du hast Schritt 1 deiner Liste schon — heute gebaut:
+- `_shared/graphiti.ts`: URL-Härtung (`https://` auto-ergänzt), `addMessage` async-korrekt (Client-UUID, HTTP 202 → queued).
+- `commit-fact/index.ts`: spiegelt nach erfolgreichem Insert nach Graphiti, schreibt `canonical_facts.graphiti_uuid`, Fehler landen in `provenance.graphiti_error`, niemals geworfen.
 
-**3. UI-Statusrückmeldung** (`src/components/entity/RecentAssets.tsx`)
-- Klick auf ein Asset lädt jetzt zusätzlich den letzten `aol_runs`-Eintrag und
-  zeigt `status · current_node` und ggf. `error.message` in der Toast-Beschreibung.
+Also: **Schritt 1 ist live.** Wir starten direkt mit Welle A.
 
-**4. Memory:** `mem://features/graphiti-semantik` dokumentiert den Vertrag.
+## Was du eigentlich willst — in einem Satz
 
----
+Bevor `intake-understand` extrahiert, soll der AOL erst im **Projekt-Graphen nachsehen**, was zu diesem Asset schon bekannt ist (Stakeholder, Entitäten, frühere Fakten), und das als Kontext in den Extraktions-Prompt mitgeben. Resultat: weniger Duplikate, sauberere Verknüpfungen, weniger Konflikte downstream — ohne dass wir die getunte 482-Zeilen-Logik von `intake-understand` doppelt nachbauen.
 
-## Offene ehrliche Architekturfrage (vor AOL-Welle A)
+## Architektur (gemäß Spec & Standards)
 
-Als ich `intake-understand` (482 Zeilen) und `aol-service/app/graph.py` genau
-gelesen habe, ist klar geworden: **eine 1:1-Portierung der bestehenden Logik
-nach Python wäre Code-Duplikation ohne Mehrwert** — und genau das, wovor du mich
-gewarnt hast.
+```text
+intake-trigger
+    │
+    ├── AOL_SERVICE_URL gesetzt? ──► POST /aol/run (Railway)
+    │                                    │
+    │                                    ▼
+    │                              router → context_loader (Graphiti.search/getMemory)
+    │                                    │            │
+    │                                    │            ▼
+    │                                    │      graph_context
+    │                                    ▼            │
+    │                              interpreter ◄──────┘  (ruft intake-understand mit hint=graph_context)
+    │                                    │
+    │                                    ▼
+    │                              condenser (no-op in Welle A — intake-understand schreibt selbst)
+    │                                    │
+    │                                    ▼
+    │                              aol-callback (status: completed)
+    │
+    └── sonst Fallback: direkt intake-understand (heute)
+```
 
-`intake-understand` enthält sorgfältig getunte Logik, die nirgends besser
-aufgehoben ist:
-- deterministische `extraction_run_id` (SHA-256-Hash für Idempotenz)
-- Projekt-Scoring (lexikalisch + Agent-Tie-Breaker, zwei Schwellen)
-- Assignment-Box als Sonderfall mit Fallback-Kaskade für Projektnamen
-- Stakeholder/Topic-Linking gegen `canonical_facts`
+**Warum das spec-konform ist:**
+- Supabase bleibt Master, Graphiti bleibt Spiegel (mem://features/graphiti-semantik).
+- Review-First bleibt unberührt — `intake-understand` schreibt weiter `proposed_facts` + `review_cases`.
+- LangGraph macht nur das, wofür es da ist: Orchestrierung + Tracing (LangSmith).
+- Kein Eigenbau-LLM-Pfad in Python — wir nutzen weiter Lovable AI Gateway via die existierende `agentClient.ts`.
 
-**Drei mögliche Architekturen für AOL — du musst entscheiden:**
+## Konkrete Schritte (klein, prüfbar)
 
-### Option A — AOL als Enrichment-Schicht ÜBER intake-understand (mein Favorit)
-LangGraph macht das, wofür es gebaut wurde: Orchestrierung, Tracing, Retries.
-Knoten:
-1. `context_loader` → Graphiti.search holt vorhandenes Wissen aus dem Projekt-Graph
-2. `interpreter` → ruft die bestehende Extraction-Logik aus `agentClient.ts`,
-   reicht aber den Graph-Kontext mit (besseres Linking gegen bekannte Entitäten)
-3. `condenser` → ruft `intake-understand` mit den Kandidaten auf statt erneut
-   zu extrahieren — minimaler Refactor in `intake-understand`, der die Extraction
-   überspringt wenn Kandidaten mitgegeben werden.
+### S1 — `intake-understand` minimal-invasiv erweitern
+Neuen optionalen Body-Parameter `graph_hint` (string, max ~4 KB) annehmen. Wenn gesetzt: in den System-Prompt der Extraction als „Bekanntes aus dem Projektgraph" einfügen. **Keine** Änderung an Scoring, Assignment, Stakeholder-Linking, dem Idempotenz-Hash. Reine Prompt-Erweiterung.
+*Risiko: niedrig. Test: ohne `graph_hint` muss Output bit-identisch sein.*
 
-**Vorteil:** ein Pfad, eine Logik, LangGraph nur als Wrapper für Beobachtbarkeit.
-**Aufwand:** klein. Risiko: niedrig.
+### S2 — AOL-Knoten `context_loader` füllen
+In `aol-service/app/graph.py`:
+- `context_loader`: HTTP-Call gegen Graphiti (`/get-memory` oder `/search` mit `group_id = project_id`, `max_facts: 20`). Resultat als kompakter String in `state["graph_context"]`.
+- Robust: bei Graphiti-Fehler → leerer Kontext + `state["error"]` setzen, **niemals werfen**. Run läuft weiter.
 
-### Option B — AOL übernimmt vollständig, intake-understand wird abgeschaltet
-Komplette Portierung der 482 Zeilen nach Python. Zwei Pipelines werden zu einer.
+### S3 — AOL-Knoten `interpreter` füllen
+Ruft via `httpx` die Edge Function `intake-understand` mit Service-Role-Auth, übergibt `asset_id`, `user_id`, `project_id`, `graph_hint=state["graph_context"]`. Antwort (proposed_facts-Anzahl, session_id) in State.
 
-**Vorteil:** sauberer, eine Codebasis.
-**Aufwand:** hoch (1-2 Sessions). Risiko: getestete Logik wandert in neuen
-Code, Drift gegen aktuelle App-Verträge wahrscheinlich.
+### S4 — `condenser` als No-op markieren (Welle A)
+Nur `last_node` setzen. Schreiben übernimmt `intake-understand`. Kommentar `# Welle B: hier conflict/gap/dependency-Detection`.
 
-### Option C — AOL bleibt parallel als Schatten-Pipeline
-Beide Pfade laufen gleichzeitig, Ergebnisse werden verglichen, später wird
-abgeschaltet. **Aufwand:** mittel. Risiko: doppelte Kosten, doppelte Wartung,
-Inkonsistenz-Bugs.
+### S5 — `aol-callback` schon vorhanden, nur prüfen
+`status: completed` mit `current_node`, `facts_written`, `session_id` zurück nach Supabase (in `aol_runs`). Kein Neubau.
 
----
+### S6 — Switch in `intake-trigger`
+Wenn `AOL_SERVICE_URL` gesetzt → `POST {url}/aol/run` mit `AOL_SERVICE_TOKEN`. Sonst Fallback heute. **Ein** Pfad pro Asset, nie beide. Kein Schatten-Modus.
 
-## Empfehlung
+### S7 — Verifikation (manuell, du)
+1. Asset hochladen → in DevLog `aol_runs` taucht auf, Status `completed`.
+2. F1-Inspector „Pipeline-Trace" zeigt `graph_context` (kurzer Auszug) → `proposed_facts > 0`.
+3. Confirm drücken → `canonical_facts.graphiti_uuid` gesetzt (inspect-pipeline).
+4. Zweites Asset im selben Projekt → `graph_context` enthält jetzt das erste Faktum.
 
-**Option A.** Sie respektiert das Prinzip „nicht doppelt bauen", nutzt LangGraph
-für seinen eigentlichen Zweck (Orchestrierung + Observability), und erlaubt es
-uns, den Knowledge-Graph-Kontext genau dort einzuspeisen, wo er Wirkung hat
-(im Extraktions-Prompt). Die Welle B (linker, conflict, gap, dependency) wird
-später deutlich kleiner, weil viel davon schon im AOL-Kontext entsteht.
+## Was wir bewusst NICHT tun (Schutz vor Eigenbau)
 
-Sag mir A, B oder C, dann baue ich. Bis dahin Stop — ohne deine Entscheidung
-würde ich raten, und das war ja ausdrücklich nicht erwünscht.
+- Keine Portierung von Scoring/Assignment/Hashing nach Python.
+- Keine Schreibzugriffe aus Python auf `proposed_facts` / `review_cases` (nur über Edge Functions).
+- Kein Bypass von Review (kein Auto-Commit aus AOL).
+- Kein Parallel-Run (keine doppelten Kosten, keine Drift).
+- Keine Änderung an `commit-fact` (gerade fertig, läuft).
 
----
+## Welle B (später, nicht jetzt)
 
-## Verifikation der heutigen Änderungen
+`linker` (Graph-basiertes Matching statt Title), `conflict_detector`, `gap_detector`, `dependency_detector` — erst wenn Welle A produktiv stabil ist und wir echte Daten im Graph haben, gegen die Welle B arbeiten kann. Vorher hätten diese Knoten nichts, womit sie arbeiten könnten.
 
-Sobald du das nächste Faktum bestätigst (irgendeinen Confirm-Button drückst):
-- `inspect-pipeline` → das committed `canonical_facts` sollte `graphiti_uuid` haben
-- `inspect-graphiti` → search mit Projekt-ID liefert die Episode (kann ein paar
-  Sekunden dauern wegen Worker-Queue)
-- Bei Fehlern: `canonical_facts.provenance.graphiti_error` zeigt Klartext
+## Erwartete Datei-Änderungen
 
-Falls `GRAPHITI_SERVICE_URL` ohne `https://` gespeichert ist, fängt die Härtung
-das ab — du musst nichts tun.
+- `supabase/functions/intake-understand/index.ts` — `graph_hint` annehmen + in Prompt einbauen (~10 Zeilen).
+- `supabase/functions/intake-trigger/index.ts` — Switch auf AOL bei vorhandenem Secret (~15 Zeilen).
+- `aol-service/app/graph.py` — `context_loader` + `interpreter` mit echtem Code, `condenser` als No-op-Stub belassen.
+- `aol-service/app/main.py` — keine Änderung erwartet, evtl. ENV `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` lesen für `interpreter`.
+- `.lovable/plan.md` — auf Welle A aktualisieren.
+
+## Sag „Go", dann S1 → S2 → S3 → S4 → S6, jeder Schritt einzeln verifizierbar.
