@@ -1,117 +1,69 @@
-# Face Pill — 1:1 Port der Quelle, voll lebendig
+# Face Pill — Polish & Persistenz
 
-Ziel: **kein** abgespeckter Nachbau. Jede Animation, jedes Mikrodetail aus `Cobp/serious-mule-50` wird übernommen. Kein `prefers-reduced-motion`-Bremsen, keine vereinfachte Geometrie. Der Charakter soll atmen, blinzeln, lächeln, kippen.
+## 1. Charakter persistieren (App-weit)
 
-## Original-Inventar (alles, was wir replizieren)
+Aktuell lebt `characterId` nur lokal in `OrbLab`. Wir hängen ihn an die existierende `useNamespace("orb")`-Schiene (gleicher Mechanismus wie Presets, läuft schon mit Realtime).
 
-### Geometrie
-- Card: **12rem × 12rem**, `border-radius: 3rem` (Squircle).
-- Padding-Trick: `.container-wrap` hat `padding: 4px`, beim `:hover` `padding: 0` → Card "atmet" 4 px breiter beim Hover.
-- `:active` → `scale(0.95)`.
-- `:after`-Pad: graue Backdrop 12 × 11 rem, `border-radius: 3.2rem`, beim Hover wird er auf 12 × 12 rem.
-- Open-State (Checkbox checked): Card-Innenfläche `260 × 160 px`, Bälle-Container bekommt `border-radius: 20px`.
+- **Neuer Hook** `src/components/entity/useSelectedCharacter.ts`:
+  ```ts
+  const { values, setValue } = useNamespace<CharacterId>("orb");
+  const id = (values.character as CharacterId) ?? "siri";
+  return { characterId: id, setCharacterId: (c) => setValue("character", c), loaded };
+  ```
+- **OrbLab**: `useState` → `useSelectedCharacter()`. Schreibt sofort in DB beim Tab-Wechsel, `SavedIndicator` aktualisieren.
+- **Index.tsx**: liest denselben Hook und übergibt `character={characterId}` an `<Entity>`. Damit ist die Auswahl global aktiv. `onPickInputMode` in Index ruft den bestehenden Overlay-Open auf — minimal: `(m) => setOverlayOpen(true)` (Mode-Routing lassen wir bewusst aus, kommt später).
 
-### Bälle
-- 4 Stück (rosa #ec4899, violet #9147ff, green #34d399, cyan #05e0f5).
-- Je 6rem × 6rem, `filter: blur(30px)`, kreisförmig angeordnet (top, right, bottom, left).
-- Container rotiert per `@keyframes rotate-background-balls 10s linear infinite` von 360° → 0° (rückwärts).
-- **Hover** auf der Pill → `animation-play-state: paused`.
-- Bälle-Layer hat `background-color: rgba(255,255,255,0.8)` als Milchglas-Schicht und `overflow: hidden`.
+## 2. State-Vorschauen passen zum Charakter
 
-### Augen (idle)
-- 26 × 52 px, `background: #fff`, `border-radius: 16px`, gap `2rem`.
-- Animation `animate-eyes 10s infinite linear`:
-  - 0–46 % höhe 52 px
-  - 48 % höhe 20 px (blinzeln 1)
-  - 50 % höhe 52 px
-  - 96 % höhe 52 px
-  - 98 % höhe 20 px (blinzeln 2)
-  - 100 % höhe 52 px
-  → zwei Doppel-Blinzler pro Zyklus.
+In der Matrix unten in OrbLab wird heute hart `<SiriOrb /> + <EntitySurface />` gerendert — egal welcher Charakter aktiv ist. Wir ersetzen das durch denselben Render-Pfad wie der Live-Orb:
 
-### Augen (hover → happy)
-- Augen verschwinden, **zwei SVG-Smileys** (`width: 60px`, color `#fff`) erscheinen.
-- SVG-Pfad genau aus der Quelle (curved closed-eye smile).
+- Jede Karte rendert `<Entity character={characterId} state={s} size="110px" presetOverride={sm} />` in einem `pointer-events-none`-Wrapper, damit der Klick weiterhin auf die `Card` geht (state-Wechsel). Kein zweiter Renderpfad, keine Sonderfälle.
 
-### Maus-Tracking (3D Kipp-Effekt)
-Original: 15 unsichtbare `:hover`-Zonen über dem ganzen Container (5 Spalten × 3 Reihen). Je nach Zone wird die Card per `perspective(1000px) rotateX rotateY translateZ(45px)` gekippt.
+## 3. Hot Area deutlich vergrößern (Pointer-Tracking)
 
-Tabelle aus dem Quellcode (Spalte/Zeile → rotateX/rotateY):
-```text
-Zeile oben    : rotateX = +15°
-Zeile mitte   : rotateX =   0°
-Zeile unten   : rotateX = -15°
-Spalte 1 links: rotateY = -15°
-Spalte 2      : rotateY =  -7°
-Spalte 3 mitte: rotateY =   0°
-Spalte 4      : rotateY =  +7°
-Spalte 5 rechts: rotateY = +15°
-```
-+ `translateZ(45px)` immer.
+Heute ist der Tilt-Bereich = sichtbare Card. User will ~2× Größe.
 
-**Unsere Umsetzung:** kein 15-Div-Hack. Wir hören `onPointerMove` auf dem Container ab und mappen Position → Rotation **stetig** (nicht in 5×3 Buckets), das fühlt sich besser an als das Original und verbraucht weniger Knoten:
+- In `FacePillCharacter` einen unsichtbaren **Hit-Layer** über der Card platzieren, der `2 × size` breit/hoch ist und absolut zentriert sitzt:
+  ```tsx
+  <div className="absolute" style={{
+    width: size * 2, height: size * 2,
+    left: -size/2, top: -size/2,
+    pointerEvents: "auto",
+  }} onPointerMove={...} onPointerLeave={resetTilt} />
+  ```
+- Pointer-Events wandern komplett auf diesen Layer. Card selbst bekommt `pointer-events-none` für den Tilt-Pfad, behält aber `onClick` (oder Click läuft via Hit-Layer; sauberer: Klick auf Hit-Layer toggelt nur, wenn der Cursor sich tatsächlich über der Card-Bounding-Box befindet).
+- Die Berechnung `rx/ry` referenziert weiterhin **die Card-Box** (nicht den Hit-Layer), damit Bewegung außerhalb der Card stärker kippt — genau das gewünschte Gefühl.
+- Smiley/Hover-State wird ebenfalls vom Hit-Layer getriggert.
 
-```ts
-const rx = clamp(-(y - 0.5) * 30, -15, 15);
-const ry = clamp( (x - 0.5) * 30, -15, 15);
-card.style.transform = `perspective(1000px) rotateX(${rx}deg) rotateY(${ry}deg) translateZ(45px) scale(${active ? 0.95 : 1})`;
-```
-- Beim Verlassen → zurück auf 0/0/0 mit `transition: transform 600ms ease` (Original-Wert für `.card`).
-- Während des Movens setzen wir die Transform direkt (keine Transition für sofortige Reaktion).
-- Open-State (Checkbox-Pendant): identische Tilt-Transforms gelten auch für die inneren Buttons (im Original: jede Button-Zelle bekommt eigenen Transform). Wir wenden den Tilt einfach auf den Inhalts-Container mit an.
+## 4. Organische Ball-Bewegung
 
-### Smiley-SVG (1:1 aus Quelle)
-```svg
-<svg fill="none" viewBox="0 0 24 24">
-  <path fill="currentColor" d="M8.28386 16.2843C8.9917 15.7665 9.8765 14.731 12 14.731C14.1235 14.731 15.0083 15.7665 15.7161 16.2843C17.8397 17.8376 18.7542 16.4845 18.9014 15.7665C19.4323 13.1777 17.6627 11.1066 17.3088 10.5888C16.3844 9.23666 14.1235 8 12 8C9.87648 8 7.61556 9.23666 6.69122 10.5888C6.33728 11.1066 4.56771 13.1777 5.09858 15.7665C5.24582 16.4845 6.16034 17.8376 8.28386 16.2843Z"/>
-</svg>
-```
+Original-Look (Container rotiert starr) → wir gehen darüber hinaus. Jeder Ball bekommt eine eigene Trajektorie (Lissajous-artig), keine gemeinsame Rotation mehr.
 
-### State → Emotionsvariation (zusätzlich zur Quelle)
-Quelle hat nur idle/hover/checked. Wir mappen unsere Entity-States darauf:
-- `idle` → Default-Animation, 10 s Eyes-Cycle, 10 s Bälle.
-- `hover` (Drag-over) → Smiley dauerhaft + Bälle pausiert + Glow stärker.
-- `processing` → Augen halb-geschlossen (höhe `28px` permanent), Bälle schneller (4 s), Card pulsiert leicht (`scale 0.98 ↔ 1.0`, 1.2 s).
-- `review-ready` → Smiley + 1× kurzer „Glow-Burst" beim State-Wechsel (CSS-Animation, 800 ms).
-- `failed` → Augen verkleinert auf 14 px Höhe konstant (traurig), Bälle stark entsättigt (`filter: saturate(0.4) brightness(0.7)`), 26 s langsam.
-- `busy-blocked` → Augen geschlossen-Strich (`height: 4px`), Card entsättigt, Bälle 22 s.
+- 4 individuelle CSS-Keyframes (`face-pill-orbit-a/b/c/d`), je 14–22 s, `ease-in-out`, mit 4–5 Stops, die Position **und** leicht die Skala variieren:
+  ```css
+  @keyframes face-pill-orbit-a {
+    0%   { transform: translate(-30%, -50%) scale(1); }
+    25%  { transform: translate(20%, -40%)  scale(1.08); }
+    50%  { transform: translate(40%, 10%)   scale(0.95); }
+    75%  { transform: translate(-10%, 30%)  scale(1.05); }
+    100% { transform: translate(-30%, -50%) scale(1); }
+  }
+  ```
+- Verschiedene Phasen pro Ball (`animation-delay: -3s/-7s/-11s`), unterschiedliche Dauern → wirkt nie repetitiv.
+- Bei `processing` werden alle Dauern halbiert (über CSS-Variable `--orbit-speed`); bei `failed`/`busy-blocked` verdoppelt.
+- Hover pausiert weiterhin (`animation-play-state: paused`).
+- Bälle nutzen `sample.colors.{c1,c2,c3,bg}` direkt (heute werden 3 Hex-Defaults vermischt — wir mappen alle 4 auf die Sample-Palette).
 
-Diese Variationen ändern **nicht** den Original-Look von idle/hover — sie addieren sich nur in den anderen States.
+## Dateien
 
-### Open-State (Toggle → Input-Mode-Buttons)
-Genau wie Original: Augen werden ausgeblendet (`opacity: 0`), Card-Innenfläche wächst von 12×12 rem auf 260×160 px (proportional zur `size`-Prop), Inhalt fadet ein.
-**Unser Inhalt** sind die 4 Pill-Buttons (Notiz/Link/Datei/Sprache), kein Textarea. Sie werden im Tilt-Container mitgekippt, exakt wie im Original die Chat-Elemente.
+- **neu**: `src/components/entity/useSelectedCharacter.ts`
+- **edit**: `src/pages/OrbLab.tsx` — Hook statt useState, Matrix-Rendering vereinheitlichen
+- **edit**: `src/pages/Index.tsx` — Hook lesen, `character` + `onPickInputMode` an `<Entity>` durchreichen
+- **edit**: `src/components/entity/characters/FacePillCharacter.tsx` — Hit-Layer (2× size), neue Orbit-Keyframes statt gemeinsamer Container-Rotation, State-getriebene Speed-Variable
 
-## Skalierung an `size`-Prop
-Original ist auf 192 px (12 rem) ausgelegt. Alles wird mit Faktor `k = size / 192` skaliert:
-- Card: `12rem * k`, Border-radius `3rem * k`.
-- Augen: `26px * k` × `52px * k`, gap `2rem * k`.
-- Smiley: `60px * k`.
-- Bälle: `6rem * k`, blur `30px * k`.
-- TranslateZ: `45px * k`.
+## Was bewusst NICHT passiert
 
-So bleibt die Komposition identisch, egal welche Größe der Lab-Slider gibt.
-
-## **KEIN** `prefers-reduced-motion`
-Bewusst rausgelassen. Der Charakter lebt von Bewegung; das ist Produktentscheidung, nicht Bug.
-
-## Theming-Adapter
-Bälle-Farben werden pro State aus `sample.colors` gemappt, aber wir behalten die **Original-Sättigung**: kein Multiplizieren mit niedriger Opacity, sondern volle Hex-Farben aus dem Sample. Falls Preset zu blass ist, sieht man das Problem — gut, dann kann man es im Editor anpassen.
-
-Hintergrund-Pad (`:after` der Quelle) wird im Dark-Theme zu einem subtilen `bg-card/30` Glow hinter der Card (statt Original-Grau `#dedfe0`), damit es im dunklen Layout nicht hart wirkt.
-
-## Datei
-- **edit** `src/components/entity/characters/FacePillCharacter.tsx` — vollständiger Rewrite (~280 Zeilen, mit allen Original-Animationen, Pointer-Tilt, Smiley-Hover, State-Variationen).
-
-Keine anderen Dateien.
-
-## Verifikation nach Implementation
-Browser auf `/orb-lab`, Charakter „Face Pill" wählen:
-1. Maus über die Card → kippt sanft in 3D (Squircle wandert mit dem Cursor mit).
-2. Maus drauf halten → Augen werden Smileys, Bälle pausieren.
-3. Maus weg → Augen blinzeln (zwei kurze Doppelblinzler im 10-s-Zyklus).
-4. Klick → expandiert auf Pill-Form, 4 Input-Buttons sichtbar, Augen weg.
-5. State auf `processing` wechseln → Augen halb-zu, Bälle deutlich schneller.
-6. State auf `failed` → traurige kleine Augen, entsättigte Bälle.
-
-Erst wenn alle 6 Punkte stimmen, melde ich „fertig".
+- Keine neue DB-Spalte/Migration (wir nutzen `app_settings.namespace='orb'` mit `key='character'`).
+- Kein Mode-Routing in Index (PickInputMode öffnet nur Overlay, semantisches Mapping kommt separat).
+- Kein Refactor von SiriCharacter / EntitySurface / SiriOrb.
+- Kein Reduced-Motion-Bremsen (bewusst, wie zuletzt vereinbart).

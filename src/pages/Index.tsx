@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import Entity from "@/components/entity/Entity";
+import { useSelectedCharacter } from "@/components/entity/useSelectedCharacter";
 import EntityVoice from "@/components/entity/EntityVoice";
 import SideGrid from "@/components/entity/SideGrid";
 import IntakeSessionsPanel from "@/components/entity/IntakeSessionsPanel";
@@ -30,6 +31,7 @@ const Index = () => {
   const dragCounter = useRef(0);
 
   const { intake } = useIntake({ setEntityState });
+  const { characterId } = useSelectedCharacter();
   const voice = useEntityVoice(session?.user?.id);
   const { projects: liveProjects } = useProjects();
 
@@ -306,6 +308,8 @@ const Index = () => {
           onReviewClick={handleReviewClick}
           onClick={handleCoreClick}
           busy={busy}
+          character={characterId}
+          onPickInputMode={() => setOverlayOpen(true)}
         />
 
         <div className="absolute bottom-[22%] z-20 pointer-events-auto">

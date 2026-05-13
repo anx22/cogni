@@ -8,10 +8,9 @@ import { useEffect, useMemo, useState } from "react";
 import { Dices, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import Entity from "@/components/entity/Entity";
-import SiriOrb from "@/components/entity/SiriOrb";
-import { CHARACTER_LIST, DEFAULT_CHARACTER_ID } from "@/components/entity/characters/registry";
+import { CHARACTER_LIST } from "@/components/entity/characters/registry";
 import type { CharacterId } from "@/components/entity/characters/types";
-import EntitySurface from "@/components/entity/EntitySurface";
+import { useSelectedCharacter } from "@/components/entity/useSelectedCharacter";
 import {
   useOrbPresets,
   samplePreset,
@@ -193,7 +192,7 @@ const OrbLab = () => {
   const [seed, setSeed] = useState(0);
   const [autoRoll, setAutoRoll] = useState(false);
   const [savedAt, setSavedAt] = useState<number | null>(null);
-  const [characterId, setCharacterId] = useState<CharacterId>(DEFAULT_CHARACTER_ID);
+  const { characterId, setCharacterId } = useSelectedCharacter();
 
   const current = presets[state];
 
@@ -244,7 +243,10 @@ const OrbLab = () => {
         {/* Charakter-Auswahl */}
         <Tabs
           value={characterId}
-          onValueChange={(v) => setCharacterId(v as CharacterId)}
+          onValueChange={(v) => {
+            setCharacterId(v as CharacterId);
+            setSavedAt(Date.now());
+          }}
         >
           <TabsList className="bg-card/40 p-1">
             {CHARACTER_LIST.map((c) => (
@@ -565,14 +567,14 @@ const OrbLab = () => {
                   }`}
                 >
                   <CardContent className="flex flex-col items-center gap-3 p-4">
-                    <div className="relative h-[130px] w-[130px] flex items-center justify-center">
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <EntitySurface orbSize={110} surface={sm.surface} />
-                      </div>
-                      <SiriOrb
+                    <div
+                      className="relative h-[130px] w-[130px] flex items-center justify-center pointer-events-none"
+                    >
+                      <Entity
+                        state={s}
                         size="110px"
-                        colors={sm.colors}
-                        animationDuration={sm.duration}
+                        presetOverride={sm}
+                        character={characterId}
                       />
                     </div>
                     <div className="text-xs text-foreground">{s}</div>
