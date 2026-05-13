@@ -34,7 +34,8 @@ Deno.serve(async (req) => {
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const admin = createClient(supabaseUrl, serviceKey);
 
-  const aolUrl = (Deno.env.get("AOL_SERVICE_URL") ?? "").replace(/\/+$/, "");
+  const rawAolUrl = (Deno.env.get("AOL_SERVICE_URL") ?? "").trim().replace(/\/+$/, "");
+  const aolUrl = rawAolUrl && !/^https?:\/\//i.test(rawAolUrl) ? `https://${rawAolUrl}` : rawAolUrl;
   const aolToken = Deno.env.get("AOL_SERVICE_TOKEN") ?? "";
 
   let asset_id = "";
