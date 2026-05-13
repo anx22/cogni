@@ -2,6 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useDevLog } from "@/lib/devlog/useDevLog";
 import { CATEGORY_COLOR, type DevLogCategory, type DevLogEntry } from "@/lib/devlog/devlog";
 import { cn } from "@/lib/utils";
+import InspectorPanel from "./InspectorPanel";
+
+type Tab = "log" | "inspector";
 
 const CATEGORIES: (DevLogCategory | "all")[] = [
   "all", "intake", "db", "edge", "realtime", "auth", "ui", "error",
