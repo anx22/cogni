@@ -14,6 +14,12 @@
 // =============================================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import {
+  addMessage as graphitiAddMessage,
+  isGraphitiConfigured,
+  GraphitiUnavailableError,
+  GraphitiHttpError,
+} from "../_shared/graphiti.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -167,6 +173,17 @@ Deno.serve(async (req) => {
         .select("id")
         .single();
       if (cfErr) throw new Error(`canonical_facts: ${cfErr.message}`);
+
+      // Graphiti-Spiegelung: Supabase bleibt Master, Graphiti bekommt das
+      // Faktum als Episode (group_id=project_id). Async, daher generieren wir
+      // die UUID selbst und schreiben sie direkt in canonical_facts.graphiti_uuid.
+      // Fehler dürfen den Commit NIEMALS killen — Graphiti ist Spiegel, nicht Wahrheit.
+      await mirrorToGraphiti(admin, {
+        canonical_fact_id: cf!.id,
+        project_id,
+        fact_type: pf.fact_type,
+        content: finalContent,
+      });
 
       if (wasCorrected) {
         await admin.from("corrections").insert({
@@ -441,6 +458,82 @@ async function notifyAol(payload: {
   if (!res.ok) {
     const txt = await res.text();
     throw new Error(`AOL confirm ${res.status}: ${txt.slice(0, 200)}`);
+  }
+}
+
+// ----------------------------------------------------------------------------
+// Graphiti-Spiegelung
+// ----------------------------------------------------------------------------
+// Schreibt das frisch committed canonical_fact als Episode in den Wissens-
+// graphen (group_id = project_id). Das ist die einzige Stelle in der App,
+// die Graphiti aktiv beschreibt — damit bleibt der Vertrag „Supabase = Master,
+// Graphiti = Spiegel" sauber. Best-Effort: Fehler werden in
+// canonical_facts.provenance.graphiti_error festgehalten, nie geworfen.
+async function mirrorToGraphiti(
+  admin: any,
+  args: {
+    canonical_fact_id: string;
+    project_id: string;
+    fact_type: string;
+    content: Record<string, unknown>;
+  },
+): Promise<void> {
+  if (!isGraphitiConfigured()) {
+    console.log("mirrorToGraphiti: GRAPHITI_SERVICE_URL nicht gesetzt — übersprungen.");
+    return;
+  }
+
+  // Episode-Body als lesbare Zeile bauen — Graphiti extrahiert daraus
+  // Entitäten + Edges. Title voran, dann key:value Paare.
+  const c = args.content ?? {};
+  const title = (c as any).title?.toString().trim() || args.fact_type;
+  const rest = Object.entries(c)
+    .filter(([k, v]) => k !== "title" && v != null && v !== "")
+    .map(([k, v]) => `${k}: ${typeof v === "string" ? v : JSON.stringify(v)}`)
+    .join(" · ");
+  const episodeContent = rest ? `${title} — ${rest}` : title;
+
+  try {
+    const { uuid } = await graphitiAddMessage({
+      project_id: args.project_id,
+      content: episodeContent,
+      role_type: "system",
+      role: "produktintelligenz",
+      name: `${args.fact_type}:${args.canonical_fact_id.slice(0, 8)}`,
+      source_description: `canonical_fact:${args.canonical_fact_id}`,
+    });
+
+    const { error: uErr } = await admin
+      .from("canonical_facts")
+      .update({ graphiti_uuid: uuid })
+      .eq("id", args.canonical_fact_id);
+    if (uErr) {
+      console.warn("mirrorToGraphiti: graphiti_uuid-Update fehlgeschlagen:", uErr.message);
+    }
+  } catch (err) {
+    const errInfo =
+      err instanceof GraphitiUnavailableError ? { kind: "unavailable", message: err.message }
+      : err instanceof GraphitiHttpError ? { kind: "http", status: err.status, body: err.body.slice(0, 240) }
+      : { kind: "unknown", message: err instanceof Error ? err.message : String(err) };
+    console.warn("mirrorToGraphiti fehlgeschlagen:", errInfo);
+
+    // Fehler in provenance festhalten — Read-Modify-Write, weil Supabase
+    // kein JSON-merge nativ unterstützt. Best-Effort: niemals werfen.
+    const { data: cur } = await admin
+      .from("canonical_facts")
+      .select("provenance")
+      .eq("id", args.canonical_fact_id)
+      .single();
+    const prov = (cur?.provenance ?? {}) as Record<string, unknown>;
+    await admin
+      .from("canonical_facts")
+      .update({
+        provenance: {
+          ...prov,
+          graphiti_error: { ...errInfo, at: new Date().toISOString() },
+        },
+      })
+      .eq("id", args.canonical_fact_id);
   }
 }
 
