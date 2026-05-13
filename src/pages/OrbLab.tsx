@@ -4,7 +4,7 @@
 //  die Punktraster-Surface. Persistiert direkt in die DB (app_settings).
 // =============================================================================
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Dices, RotateCcw } from "lucide-react";
 import Entity from "@/components/entity/Entity";
 import SiriOrb from "@/components/entity/SiriOrb";
