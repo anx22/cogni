@@ -400,8 +400,14 @@ const OrbLab = () => {
                     Punktfarbe
                   </CardTitle>
                   <span
-                    className="h-4 w-4 rounded-full border border-white/10 shadow-inner"
-                    style={{ background: sample.surface.dotColor }}
+                    className="h-5 w-5 rounded-full border border-white/10 shadow-inner"
+                    style={{
+                      background: oklchStr(
+                        centerOf(surface.dotColor.l),
+                        centerOf(surface.dotColor.c),
+                        centerOf(surface.dotColor.h),
+                      ),
+                    }}
                     aria-hidden
                   />
                 </CardHeader>
