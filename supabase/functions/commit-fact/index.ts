@@ -241,6 +241,16 @@ Deno.serve(async (req) => {
     }
 
     await updateSessionProgress(admin, rc.session_id);
+
+    // Best-effort: AOL informieren, damit confirm_to_graph-Knoten den Wissens-
+    // graphen aktualisiert (Episode/Invalidation). Fehler dürfen den User-Flow
+    // niemals blockieren — wir loggen nur.
+    notifyAol({
+      review_case_id,
+      decision,
+      user_id: user.id,
+    }).catch((e) => console.warn("aol-confirm notify failed:", e?.message ?? e));
+
     return ok({});
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
