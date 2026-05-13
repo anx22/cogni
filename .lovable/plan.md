@@ -1,69 +1,84 @@
-# Face Pill — Polish & Persistenz
+# Orb Lab — Finalisierung & Wiring
 
-## 1. Charakter persistieren (App-weit)
+## Diagnose: Persistenz funktioniert "auf Papier"
 
-Aktuell lebt `characterId` nur lokal in `OrbLab`. Wir hängen ihn an die existierende `useNamespace("orb")`-Schiene (gleicher Mechanismus wie Presets, läuft schon mit Realtime).
+Die Wiring ist korrekt: `useSelectedCharacter` → `useNamespace("orb")` → `app_settings`, Index liest dasselbe und gibt `character` an `<Entity>`. **Aber** in der DB stehen 0 Zeilen für `namespace='orb'` — Writes haben es entweder nie geschafft, oder die globale Scope-RLS (`(scope='global' AND user_id IS NULL)`) hat nicht gegriffen.
 
-- **Neuer Hook** `src/components/entity/useSelectedCharacter.ts`:
-  ```ts
-  const { values, setValue } = useNamespace<CharacterId>("orb");
-  const id = (values.character as CharacterId) ?? "siri";
-  return { characterId: id, setCharacterId: (c) => setValue("character", c), loaded };
-  ```
-- **OrbLab**: `useState` → `useSelectedCharacter()`. Schreibt sofort in DB beim Tab-Wechsel, `SavedIndicator` aktualisieren.
-- **Index.tsx**: liest denselben Hook und übergibt `character={characterId}` an `<Entity>`. Damit ist die Auswahl global aktiv. `onPickInputMode` in Index ruft den bestehenden Overlay-Open auf — minimal: `(m) => setOverlayOpen(true)` (Mode-Routing lassen wir bewusst aus, kommt später).
+**Fix:** Charakter-Auswahl auf `scope="user"` umstellen (semantisch korrekt — jeder User wählt seinen Orb), und `useNamespace`-Optionen entsprechend übergeben. Damit greift die saubere `auth.uid() = user_id`-Policy, und die Auswahl reist mit dem User. Color-Presets bleiben global.
 
-## 2. State-Vorschauen passen zum Charakter
+## Was geändert wird
 
-In der Matrix unten in OrbLab wird heute hart `<SiriOrb /> + <EntitySurface />` gerendert — egal welcher Charakter aktiv ist. Wir ersetzen das durch denselben Render-Pfad wie der Live-Orb:
+### 1. `useSelectedCharacter` → user-scope + Verifizierung
+- `useNamespace<CharacterId>("orb", { scope: "user" })`.
+- Schreibt mit `user_id = auth.uid()`, liest dasselbe zurück. RLS sauber.
+- Index nutzt denselben Hook → Charakterauswahl wirkt sofort beim nächsten Render.
 
-- Jede Karte rendert `<Entity character={characterId} state={s} size="110px" presetOverride={sm} />` in einem `pointer-events-none`-Wrapper, damit der Klick weiterhin auf die `Card` geht (state-Wechsel). Kein zweiter Renderpfad, keine Sonderfälle.
+### 2. Close-Button im Orb Lab
+- Header rechts: dezenter `X`-Button (`Link to="/"` mit `lucide-react X`-Icon, `variant="ghost" size="icon"`).
+- Zusätzlich `Esc`-Tastendruck schließt zurück nach `/` (kleines `useEffect` mit keydown-Listener).
 
-## 3. Hot Area deutlich vergrößern (Pointer-Tracking)
+### 3. Preview-Tiles werden statisch
+- Aktuell rendert die Matrix `<Entity>` pro Tile → echtes Pointer-Tracking, Hover-Smiley, alles aktiv. Verwirrt und kostet Performance.
+- Neu: jede Charakter-Tile zeigt **nur eine kleine Glas-Karte** mit dem Charakter-Label und einem statischen Mini-Vorschaubild des Orbs (kein Tilt, kein Hover-Effekt).
+  - Render in Tile: ein 100×100-CSS-Snapshot — für `siri` ein gedämpfter `SiriOrb` mit fixer Farbsamplung, für `face-pill` ein statisches Squircle-Div mit 4 Blur-Bällen, **ohne Animation, ohne Pointer-Events** (`pointer-events-none`).
+  - Tile selbst ist klickbar → `setCharacterId(...)`, aktiver Tile bekommt Border-Highlight `border-primary/60 ring-2 ring-primary/30`.
+- Implementiert als kleine Komponente `<CharacterTile id="…" active={…} onSelect={…} />`, ein Eintrag pro `CHARACTER_LIST`-Item.
+- Die heutige State-Matrix unten bleibt (zeigt wie der **aktive Charakter** in jedem State aussieht) — aber ebenfalls als Standbild ohne Pointer-Events (`pointer-events-none` Wrapper, `state="idle"`).
 
-Heute ist der Tilt-Bereich = sichtbare Card. User will ~2× Größe.
+### 4. Auto-Roll / Re-Roll — Erklärung & Aktion
 
-- In `FacePillCharacter` einen unsichtbaren **Hit-Layer** über der Card platzieren, der `2 × size` breit/hoch ist und absolut zentriert sitzt:
-  ```tsx
-  <div className="absolute" style={{
-    width: size * 2, height: size * 2,
-    left: -size/2, top: -size/2,
-    pointerEvents: "auto",
-  }} onPointerMove={...} onPointerLeave={resetTilt} />
-  ```
-- Pointer-Events wandern komplett auf diesen Layer. Card selbst bekommt `pointer-events-none` für den Tilt-Pfad, behält aber `onClick` (oder Click läuft via Hit-Layer; sauberer: Klick auf Hit-Layer toggelt nur, wenn der Cursor sich tatsächlich über der Card-Bounding-Box befindet).
-- Die Berechnung `rx/ry` referenziert weiterhin **die Card-Box** (nicht den Hit-Layer), damit Bewegung außerhalb der Card stärker kippt — genau das gewünschte Gefühl.
-- Smiley/Hover-State wird ebenfalls vom Hit-Layer getriggert.
+**Re-Roll**: Presets definieren keine festen Farben, sondern *Ranges* (z. B. Hue 220–240°). Bei jedem Render würfelt `samplePreset` aus diesen Ranges einen konkreten Wert. „Re-Roll" zwingt einen neuen Würfelwurf, damit du siehst, wie stark die Variation wirkt.
 
-## 4. Organische Ball-Bewegung
+**Auto-Roll**: Tut dasselbe alle 4 s automatisch — reine Schau-Funktion zum Beobachten der Bandbreite.
 
-Original-Look (Container rotiert starr) → wir gehen darüber hinaus. Jeder Ball bekommt eine eigene Trajektorie (Lissajous-artig), keine gemeinsame Rotation mehr.
+**Verdict:** Re-Roll bleibt (nützlich, um die Range zu spüren); **Auto-Roll wird entfernt** (visuelles Rauschen, kein produktiver Nutzen). Re-Roll wird zu einem dezenten Icon-Button neben dem State-Badge — keine grellen Buttons mehr.
 
-- 4 individuelle CSS-Keyframes (`face-pill-orbit-a/b/c/d`), je 14–22 s, `ease-in-out`, mit 4–5 Stops, die Position **und** leicht die Skala variieren:
-  ```css
-  @keyframes face-pill-orbit-a {
-    0%   { transform: translate(-30%, -50%) scale(1); }
-    25%  { transform: translate(20%, -40%)  scale(1.08); }
-    50%  { transform: translate(40%, 10%)   scale(0.95); }
-    75%  { transform: translate(-10%, 30%)  scale(1.05); }
-    100% { transform: translate(-30%, -50%) scale(1); }
-  }
-  ```
-- Verschiedene Phasen pro Ball (`animation-delay: -3s/-7s/-11s`), unterschiedliche Dauern → wirkt nie repetitiv.
-- Bei `processing` werden alle Dauern halbiert (über CSS-Variable `--orbit-speed`); bei `failed`/`busy-blocked` verdoppelt.
-- Hover pausiert weiterhin (`animation-play-state: paused`).
-- Bälle nutzen `sample.colors.{c1,c2,c3,bg}` direkt (heute werden 3 Hex-Defaults vermischt — wir mappen alle 4 auf die Sample-Palette).
+### 5. Layout-Refactor — weniger Scrollen, klarere Struktur
+
+Statt einer langen vertikalen Liste:
+
+```text
+┌──────────────────────────────────────────────────────────┐
+│  Orb Lab                              [DB] [gespeichert] [×] │
+├──────────────────────────────────────────────────────────┤
+│  Charaktere:  [ Siri ]  [ Face Pill ]                       │
+├──────────────────────────────────────────────────────────┤
+│                          │                                 │
+│   ◉ Live-Vorschau         │   States                       │
+│   (sticky, zentriert)     │   ┌──┐ ┌──┐ ┌──┐               │
+│   [Re-Roll]  size: 320px  │   │id│ │ho│ │pr│ ...           │
+│                           │   └──┘ └──┘ └──┘               │
+│                           │                                 │
+│                           │   Editor — {state}              │
+│                           │   ▸ Farben    ▸ Animation       │
+│                           │   ▸ Surface                     │
+│                           │   (Accordion / Tabs)            │
+└──────────────────────────────────────────────────────────┘
+```
+
+Konkret:
+- `lg:grid-cols-[420px_1fr]` — links Live-Vorschau (sticky `top-6`), rechts alles andere.
+- Editor-Sektionen werden in **3 Tabs** gepackt: `Farben | Animation | Surface`. Statt drei riesigen Blöcken untereinander.
+- Size-Slider wandert in die Live-Vorschau-Karte (kompakter).
+- State-Auswahl als kleine Pill-Reihe direkt über dem Editor (nicht doppelt: Tabs + große Matrix-Tiles ist redundant). Die untere große State-Matrix entfällt — die kleinen State-Pills oben reichen, plus ein kompakter Standbild-Streifen mit allen 6 States (statisch, klickbar).
+
+### 6. Wiring zur Hauptapp — final
+
+- Index nutzt bereits `useSelectedCharacter` und `character={characterId}`.
+- `onPickInputMode` in Index öffnet Overlay (Mode-Routing kommt separat).
+- Nach Scope-Umstellung auf `user` ist die Auswahl sofort persistent + reist mit dem Account.
+- Verifikation am Ende: Charakter in OrbLab umstellen → zurück nach `/` → der neue Charakter ist sichtbar (ohne Reload).
 
 ## Dateien
 
-- **neu**: `src/components/entity/useSelectedCharacter.ts`
-- **edit**: `src/pages/OrbLab.tsx` — Hook statt useState, Matrix-Rendering vereinheitlichen
-- **edit**: `src/pages/Index.tsx` — Hook lesen, `character` + `onPickInputMode` an `<Entity>` durchreichen
-- **edit**: `src/components/entity/characters/FacePillCharacter.tsx` — Hit-Layer (2× size), neue Orbit-Keyframes statt gemeinsamer Container-Rotation, State-getriebene Speed-Variable
+- **edit** `src/components/entity/useSelectedCharacter.ts` — `scope: "user"` setzen.
+- **edit** `src/pages/OrbLab.tsx` — neues Grid-Layout, Close-Button, Esc-Handler, Editor in Tabs, Auto-Roll raus, Re-Roll als Icon-Button, neue `<CharacterTile>` + statische State-Vorschauen.
+- **neu** `src/pages/OrbLab/CharacterTile.tsx` — kleine, statische Auswahl-Karte pro Charakter.
+- **neu** `src/pages/OrbLab/StaticStatePreview.tsx` — gerenderte Standbild-Tile pro State (kein Pointer-Tracking).
 
-## Was bewusst NICHT passiert
+## Bewusst NICHT
 
-- Keine neue DB-Spalte/Migration (wir nutzen `app_settings.namespace='orb'` mit `key='character'`).
-- Kein Mode-Routing in Index (PickInputMode öffnet nur Overlay, semantisches Mapping kommt separat).
-- Kein Refactor von SiriCharacter / EntitySurface / SiriOrb.
-- Kein Reduced-Motion-Bremsen (bewusst, wie zuletzt vereinbart).
+- Kein Touch der Color-Presets-Architektur (`useOrbPresets` bleibt global).
+- Keine neue Migration (RLS für `scope='user'` existiert bereits).
+- Kein Mode-Routing in Index (separater Schritt).
+- Keine Refactors an SiriCharacter / FacePillCharacter (nur Wrapper-Komponenten oben drüber).
