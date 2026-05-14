@@ -1,109 +1,152 @@
-## Ziel
+# UI-Overhaul — Audit & Screen-für-Screen Plan
 
-Drei Schritte in dieser Reihenfolge:
-1. **Doku-Konsolidierung** — `agent-execution-plan.md` + `audit-2026-05-14.md` in das bestehende 5-Datei-System auflösen, File-Anzahl in `docs/` reduzieren.
-2. **Live-Smoke** — Agent submittet selbst neue Fakten in Sandbox-Projekte und verifiziert, dass Welle-B-Detektoren (Conflict / Gap / Dependency) und Spiegel-Pfad korrekt feuern.
-3. **UI-Trennung vorbereiten** — Frontend/Interface scharf von Backend/Core trennen, damit das kommende UI-Redesign nur eine Schicht anfasst.
+## Audit (Stand jetzt)
 
----
+**Bereits sauber getrennt** (laut Plan v2 §"Was Lovable bereits erledigt hat"):
 
-## Schritt 1 — Doku-Konsolidierung
+- `src/lib/project/mappers/*`, `projectViewModel.ts`, `useProjectData.ts`, `useProject.ts`
+- `src/lib/realtime/useRealtimeTables.ts`, `dialogContext.ts`, `useDialog.ts`
+- `src/components/project/shared/*` (CardSurface, SectionLabel, …)
+- Edge Functions, kernel, detectors
 
-**Problem.** Wir haben aktuell in `docs/`:
-`AGENTS.md` (Wurzel), `PRODUCT.md`, `ARCHITECTURE.md`, `NOW.md`, `DECISIONS.md`, `agent-execution-plan.md` (476 LOC, historischer Strategie-Plan), `audit-2026-05-14.md` (5 KB, mehrere Audit-Schichten), `qa-seam-inventar.md`, `agent_review.md`, `design-implementation-plan.md`, plus `docs/input/*` (Quellmaterial).
+**Aktueller UI-Stand vs. Zielbild:**
 
-`agent-execution-plan.md` und `audit-2026-05-14.md` sind seit Welle B vollständig durchgearbeitet — sie sind faktisch History, nicht Steuerung.
 
-**Vorgehen.**
-1. **`agent-execution-plan.md` auflösen.**
-   - Tier-Status-Tabelle (Z. 10–26) → in `NOW.md` als kompakter Block „Agent Execution Plan — Endstand" (4 Zeilen).
-   - Leitprinzipien (Z. 31–37) → bereits in `ARCHITECTURE.md` Golden Principles enthalten; nicht duplizieren.
-   - Tier A/B-Detail (Z. 41–417) → archivierter Inhalt; nicht erneut speichern. Alle relevanten Outcomes stehen bereits in `DECISIONS.md`.
-   - Verification Master-Checklist (Z. 463–476) → in `audit`-Konsolidat (s. u.) übernehmen.
-   - Datei löschen.
-2. **`audit-2026-05-14.md` auflösen.**
-   - Endstand-Master-Checklist + Findings → in `NOW.md` als ein knapper Abschnitt „Master-Checklist (Stand)".
-   - Re-Audit-Abschnitt (Welle B) → in `NOW.md` Sprint-Block; Detail-Tabellen entfallen.
-   - Claude-Review-Abgleich → einmalig in `DECISIONS.md` als ein Eintrag (Datum + „Claude-Review 9 Punkte: 7 erledigt / 1 zurückgestellt / 1 gestartet").
-   - Datei löschen.
-3. **`agent_review.md` und `design-implementation-plan.md`** prüfen: wenn ebenfalls historisch → in `DECISIONS.md` zusammenfassen und löschen. (Wenn `design-implementation-plan.md` für den UI-Milestone gebraucht wird, **bleibt** sie und wird in Schritt 3 referenziert.)
-4. **`NOW.md` straffen.** Vorheriger-Sprint-Blöcke (B2, B3, Tier A3, Sandbox-Seed etc.) auf max. 3 Zeilen je Eintrag in „Recently completed" zusammenziehen — Workspace-Regel ist „letzte 2 Sprints, 3 Zeilen each".
-5. **`AGENTS.md`** Routing-Block aktualisieren: Verweis auf `agent-execution-plan.md` raus.
+| Bereich                       | Ist                                                                                    | Soll (v2)                                                                 | Risiko                   |
+| ----------------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------ |
+| Theme                         | shadcn `:root` HSL + `.dark`                                                           | `[data-theme="day"|"night"]` Hex-Tokens *zusätzlich*                      | mittel — beides parallel |
+| Schrift                       | Inter-ähnlich                                                                          | Geist + Geist Mono                                                        | niedrig                  |
+| Home (`Index.tsx`)            | Entity zentriert + `SideGrid` links + `IntakeSessionsPanel` rechts                     | 240px AppSidebar + Entity-Center + 280px ImpactPipelinePanel              | mittel                   |
+| Projekt (`ProjectScreen.tsx`) | Vollbreite, "← Entität" links, **VerlaufFeed links / Handlungsbedarf rechts** (falsch) | AppSidebar + Mini-Entity oben, **Handlungsbedarf links / Verlauf rechts** | mittel                   |
+| LageZone                      | klein, ohne Atmosphären-Streifen                                                       | 44px Title, 24px Lage, animierter Atmosphären-Stripe + Glow               | niedrig                  |
+| Dialog                        | 8 BoxKomponenten + BoxRenderer                                                         | BatchReviewOverlay (multi-box) + FaktDrillOverlay (single-box)            | **hoch**                 |
+| AssetOrbit                    | nicht vorhanden                                                                        | optional Phase 6                                                          | niedrig                  |
 
-**Endzustand `docs/` (Soll).**
-```
-AGENTS.md (Wurzel)
-docs/PRODUCT.md
-docs/ARCHITECTURE.md
-docs/NOW.md
-docs/DECISIONS.md
-docs/qa-seam-inventar.md         (lebende QA-Karte, bleibt)
-docs/design-implementation-plan.md  (nur falls für UI-Milestone aktiv)
-docs/input/                      (Quellmaterial, unangetastet)
-```
 
-Reduktion: 7 Markdown-Dateien in `docs/` → 4–5.
+**Stopp-Bedingungen aus v2 (werden eingehalten):**
+
+- Keine Änderungen in `src/lib/**` (außer Format-Dateien)
+- `ProjectViewModel`-Interface unberührt
+- Keine Schema-/Edge-Function-Änderungen
+- Alte Box-Komponenten erst löschen, wenn neue Dialoge produktiv
 
 ---
 
-## Schritt 2 — Live-Smoke mit echten Fakten
+## Vorbereitung (vor Phase 1)
 
-**Ziel.** Beweisen, dass nach Welle B der Vollpfad `commit-fact` → `mirrorToGraphiti` → Detektoren parallel sauber arbeitet, und dass die Detektor-Footprints, die heute leer sind (5/6 Sandbox-Projekte = 0/0/0), nicht an Code, sondern an Datenmangel liegen.
-
-**Vorgehen.**
-1. Sandbox-Projekt **„Hase & Söhne Couture"** wählen (kleinster Footprint, gut isoliert).
-2. Per `supabase--insert` und `supabase--curl_edge_functions` drei Fakten setzen, die jeweils einen Detektor zünden:
-   - **Conflict-Hit:** zwei `deadline`-Facts mit identischem Title („Final Lookbook"), unterschiedlichem `due_date`.
-   - **Gap-Hit:** ein `decision`-Fact ohne korrespondierende deadline → `decision_without_deadline`.
-   - **Dependency-Hit:** ein `task` mit `title: "Schnitt freigeben — blockiert durch Final Lookbook"` → `blockiert_durch` Trigger + Title-Substring-Match auf den deadline-Title.
-3. Pro Commit: über `commit-fact` echten Pfad nehmen, **nicht** direkt in `canonical_facts` schreiben.
-4. Per `supabase--read_query` verifizieren:
-   - `change_events` → 3 neue Einträge, `event_type=add`.
-   - `contradictions` → 1 neuer Eintrag (`contradiction_type` für deadline).
-   - `gap_signals` → 1 neuer Eintrag mit `metadata.kind=decision_without_deadline`.
-   - `dependencies` → 1 neuer Eintrag (`dependency_type=blockiert_durch`, `metadata.source=commit-fact/dependencyDetector`).
-   - `graphiti_sync_log` → 3 Einträge, Endstatus `ok` (sync läuft async, ggf. ein Reconcile-Tick warten).
-5. Im Frontend (Project-Screen Hase & Söhne) prüfen: Konfliktbanner, Gap-Karte, Dependency-Karte erscheinen ohne Reload-Hack.
-6. `pipeline_events` per Korrelation kontrollieren — alle Stages durchgängig.
-7. Ergebnis (Counts + Auffälligkeiten) als Eintrag „Welle-B-Use-Case-Smoke" in `DECISIONS.md` ablegen, „Use-Case-Smoke offen"-Backlog-Item in `NOW.md` schließen.
-
-**Abbruch / Auffälligkeit.** Findet sich ein Detektor-Pfad als nicht feuernd, wird das in `NOW.md` als neuer Loop dokumentiert, nicht ad hoc gepatcht. Smoke ist Diagnostik, nicht Refactor.
+1. **Prototyp-Code als Referenz im Repo ablegen** (nicht gebundlet, reine Lese-Quelle):
+  `docs/input/prototype/` ← `cogni/src/{tokens.css, dialog-overlay.jsx, project-detail.jsx, home.jsx, entity.jsx, app.jsx, common.jsx, project-card.jsx, data.js}` und Screenshots.
+   → Erlaubt 1:1 Übernahme von Markup/Klassen.  
+    
+  ja richtig, aber NICHT CODEBASIS verschmutzen, lege die referenzen im DOCS ordner in einem eigenen redesign unterordner an und sammel dort.
+2. **Backup-Branch** entfällt (Lovable History übernimmt). Trotzdem nach jeder Phase: vitest + tsc grün, smoke per Browser.
+3. **Doku-Setup:** in `docs/NOW.md` neuen Sprint-Block "UI-Overhaul v2" anlegen mit Phasen-Checkliste; in `AGENTS.md` Routing auf `design-implementation-plan.md` ergänzen (Phase-Status-Zeile).
 
 ---
 
-## Schritt 3 — Vorbereitung UI-Redesign-Milestone
+## Phasen (strikt sequentiell — keine zwei parallel)
 
-**Ziel.** Wenn die neuen Interface-Entwürfe kommen, soll **nur** die UI-Schicht angefasst werden müssen. Logik, Pipelines, Daten-Mapping bleiben unberührt.
+### Phase 1 — Tokens + Geist + Utility-Klassen
 
-**Bestandsaufnahme (heute).**
-- `src/components/` enthält UI (`ui/`, `entity/`, `project/`, `dialog/`, `devlog/`, `shared/`, `ErrorBoundary`, `NavLink`).
-- `src/lib/<domain>/` enthält Hooks + ViewModel-Mapper (z. B. `lib/project/useProject.ts` + `projectViewModel.ts` + `mappers/*`).
-- `src/pages/` mischt Layout + Daten-Anbindung (z. B. `Project.tsx`).
-- Schichtgrenze ist gesetzt, aber an einigen Stellen unscharf: Komponenten kennen DB-Felder über VM-Typen; Hooks sind sauber.
+**Files:** `index.html`, `src/index.css`, `tailwind.config.ts`, `src/App.tsx` (data-theme-Wrapper)
 
-**Vorbereitende Trennung (ohne Verhaltensänderung).**
-1. **ViewModel-Vertrag einfrieren.** `src/lib/project/types.ts` (KonfliktVM, GapVM, DependencyVM, HandlungsbedarfVM, …) ist die Schnittstelle UI ↔ Core. Aktuell schon der Fall — formal als „UI-Contract" markieren (Header-Kommentar + kurzer Eintrag in `ARCHITECTURE.md` als [HARD]-Regel: „UI darf nur ViewModel-Typen aus `lib/<domain>/types.ts` importieren, niemals Supabase-Row-Typen, niemals `integrations/supabase/types`").
-2. **Linter-Regel ergänzen.** ESLint `no-restricted-imports`: in `src/components/**` ist `@/integrations/supabase/*` und `@/lib/**/use*Data*` verboten. Komponenten sehen nur den Composition-Hook (`useProject`, `useProjects`) und die VM-Typen.
-3. **Page-Komponenten ausdünnen.** `src/pages/Project.tsx` und `src/pages/Index.tsx` prüfen, ob noch direkte Daten-Logik drin ist; wenn ja, in einen Page-Hook (`usePageProject`) verschieben. Sichtbares Verhalten 1:1.
-4. **Komponenten-Ordner strukturieren** (Vorbereitung, kein Move-Sturm):
-   - `src/components/ui/` = primitives (shadcn)
-   - `src/components/<domain>/` = domain-Composites (project, dialog, entity)
-   - `src/components/shared/` = übergreifende Composites (Card, Section, etc.)
-   - Keine Moves jetzt — Ordnung dokumentieren in `ARCHITECTURE.md`. Move kommt mit dem Redesign.
-5. **Design-Token-Audit.** `index.css` + `tailwind.config.ts` durchgehen: alle in Komponenten verwendeten Farben/Radii/Schatten als semantische Tokens vorhanden? Findings als Liste in `NOW.md`-Sprint „UI-Redesign Vorbereitung". Keine Token-Änderungen jetzt — Inventur, damit das Redesign eine klare Greenfield-Basis hat.
-6. **Doku.** Neue Doku-Datei nicht nötig; Block in `ARCHITECTURE.md` „Schichtgrenze UI ↔ Core" + Sprint-Block in `NOW.md` „UI-Redesign Milestone — Vorbereitung".
+- Geist/Geist Mono via Google Fonts.
+- `[data-theme="day|night"]`-Tokens 1:1 aus `prototype/tokens.css` + Zusatzblöcke aus v2 §1.2.
+- Utility-Klassen (`.t-*`, `.dot--*`, `.chip--*`, `.btn*`, `.kbd`, `.card`, `.hairline`, `.atmosphere-stripe`, `entity-breathe`, `cogni-pulse`).
+- Tailwind: hex-CSS-Vars als `colors`-Aliase (kein `hsl()` Wrapper).
+- **shadcn-Tokens (`:root`, `.dark`) bleiben** — nur additiv.
+- App-Root: `<div data-theme="day"> ... </div>` (festwert, Theme-Switch kommt später).
 
-**Bewusst nicht in dieser Phase.**
-- Keine UI-Komponente neu zeichnen — wir warten auf die Redesign-Doku.
-- Kein Komponenten-Rename / Move (würde Diff-Lärm im Redesign-PR erzeugen).
-- Keine neue State-Lib (React Query bleibt Wave-3-Backlog).
+**Verify:** App startet, Geist sichtbar, `data-theme` im DOM, Konsole sauber, vitest grün.
+**Doku:** `docs/DECISIONS.md` Eintrag "Dual-Token-Layer (shadcn + cogni)".
 
 ---
 
-## Reihenfolge & Verify
+### Phase 2 — LageZone Hero
 
-1. Doku-Konsolidierung → `ls docs/` zeigt 4–5 .md, Inhalt in NOW/DECISIONS verlustfrei.
-2. Live-Smoke → DB-Counts steigen wie geplant, Frontend rendert die drei neuen Karten.
-3. UI-Trennung → ESLint-Regel scharf, `bun run lint` grün, `bunx vitest run` 60/60, `tsc --noEmit` grün.
+**Files:** `src/components/project/LageZone.tsx`, `src/index.css` (atmosphere-Klassen)
 
-Nach Approval starte ich mit Schritt 1 und melde nach jedem Schritt zurück.
+- Atmosphären-Streifen 3px + 60px Glow am Top.
+- Title 44px / Lage 24px light / Metadata-Block (nächster Termin + letzte Änderung).
+- `is-active` an Pipeline-State koppeln (best effort: `useIntake`-Status, falls vorhanden, sonst statisch off).
+
+**Verify:** Tag/Nacht visuell auf `/projekt/<echte-id>`. Snapshot-Test bleibt grün.
+
+---
+
+### Phase 3 — AppSidebar + ProjectScreen-Layout
+
+**Files:** `src/components/sidebar/AppSidebar.tsx` (NEU), `src/components/project/ProjectScreen.tsx`
+
+- AppSidebar 240px wie v2 §3.1. Mini-Entity als Button (`onEntityClick=onBack`), Pipeline-Label optional.
+- Signal-State pro Projekt aus `useProjects()`-Daten ableiten (vorhandene Felder); Logik in eine kleine UI-Helper-Funktion in der Komponente — kein lib/-Eingriff.
+- ProjectScreen: Outer flex-row → Sidebar + Content. **Grid umdrehen:** `HandlungsbedarfList` links (3fr), `VerlaufFeed` rechts (2fr). Alten "← Entität"-Button entfernen.
+
+**Verify:** Sidebar persistiert, Mini-Orb pulsiert, Klick → Home, aktive Projekt-Row hervorgehoben, Smoke `/projekt/<id>`.
+
+---
+
+### Phase 4 — Home-Screen
+
+**Files:** `src/pages/Index.tsx`, `src/components/home/HomePrompt.tsx` (NEU), `src/components/home/ImpactPipelinePanel.tsx` (NEU)
+
+- Index Layout: Sidebar | Center (Entity + HomePrompt) | ImpactPipelinePanel.
+- HomePrompt = "Was gibt es neues?" 48px light + 4 Kreis-Buttons (Datei/Einfügen/Link/Sprache) → bestehende `intake`/`overlayOpen`-Handler wiederverwenden.
+- ImpactPipelinePanel: Daten aus `useProjects()` + `change_events` (vorhandener Hook bzw. neuer minimaler Read-Hook in `src/lib/home/`) + `useIntake`-Pipeline-Snapshot.
+- `SideGrid` und `IntakeSessionsPanel` werden auf Home **nicht mehr gerendert** (Code bleibt erstmal, Löschung erst nach Phase 5-Verify).
+
+**Verify:** Drei-Spalten-Layout, Drop noch funktional (Window-Drag-Handler bleibt), Realtime-Auto-Open intakt.
+
+---
+
+### Phase 5 — Dialog-System (BatchReview + FaktDrill) — **größtes Risiko**
+
+**Files (NEU):** `src/components/dialog/BatchReviewOverlay.tsx`, `src/components/dialog/FaktDrillOverlay.tsx`, ggf. `src/components/dialog/parts/*` (Row, SourcePair, DecisionTiles).
+**Files (geändert):** `src/components/dialog/DialogOverlay.tsx` (Router), `src/index.css` (`[data-dialog]`-Tokens, `.dialog-backdrop`).
+**Strategie:**
+
+1. Beide Overlays **parallel** zur bestehenden Box-UI bauen, hinter Feature-Flag (`?dialogV2=1` URL-Param oder `localStorage.cogniDialogV2`).
+2. `DialogOverlay`: bei aktivem Flag → Router (`session.boxes.length > 1` → Batch, sonst Drill); ohne Flag → alter `BoxRenderer`.
+3. `useDialog`/`commitBox`/`gateReason`/`session`-Vertrag bleibt **unberührt**.
+4. Markup/Klassen weitgehend aus `prototype/dialog-overlay.jsx` übernehmen, mit Token-Mapping `--d-* → var(--accent|sig-*)` (v2 §5.1, `**--d-blue = --accent**`).
+5. Konflikt-Row Inline-Optionen + Details-Toggle; Gap-Row Suggestion-Chips aus `box.payload.suggestions`/`box.suggestions`.
+6. Smoke mit `smoke-welle-b` + Hase&Söhne-Sandbox: Conflict, Gap, Dependency triggern → BatchReview prüft sich; Single-Drill-Pfad über HandlungsbedarfList-Klick.
+7. **Erst nach grünem Smoke** Flag entfernen → alte Boxen + `BoxRenderer` löschen.
+
+**Verify-Matrix (Tag+Nacht je):**
+
+- BatchReview öffnet bei Multi-Box-Session, Type-Chips korrekt, Konflikt-Expand zeigt Quellen-Cards, Suggestion-Chips dynamisch, Commit-Glow bei `open===0`, Commit speichert (vergleich `change_events`-Count vor/nach).
+- FaktDrill: Konflikt-Variante mit 38px-Datum, 3 Tiles; Gap-Variante mit Suggestion-Chips; ESC schließt; "Speichern" disabled ohne Auswahl.
+
+---
+
+### Phase 6 — AssetOrbit (optional)
+
+Nur wenn Phase 1–5 ruhig laufen. Files: `src/components/entity/AssetOrbit.tsx`. Daten aus `assets`-Tabelle (uncommitted). Keine Backend-Änderung.
+
+---
+
+## Querschnitt: Verify nach jeder Phase
+
+1. `bun run lint` + `tsc --noEmit` (vom Harness ausgelöst).
+2. `bunx vitest run` — alle 60+ Tests grün.
+3. Browser-Smoke: Home + `/projekt/<echte HafenSöhne-id>` + Dialog-Pfade per `smoke-welle-b`.
+4. `code--read_console_logs` & `code--read_network_requests` durchsehen — keine neuen 4xx/5xx.
+5. Devlog-Einträge sichten (Pipeline + Realtime).
+
+## Doku-Updates (durchgängig)
+
+- `**docs/NOW.md**`: Sprint-Block "UI-Overhaul v2" mit Phasen-Checkboxen; nach jeder Phase Häkchen + 1-Zeiler.
+- `**docs/DECISIONS.md**`: Pro Phase ein Eintrag (Token-Layer, Layout-Drehung Handlungsbedarf↔Verlauf, Dialog-Router/Flag, Box-Komponenten-Löschung).
+- `**docs/ARCHITECTURE.md**`: [HARD]-Regel "UI darf nur `ProjectViewModel`-Typen lesen, nie Supabase-Rows" + neue Ordner `src/components/sidebar`, `src/components/home`, `src/components/dialog/parts`.
+- `**docs/design-implementation-plan.md**`: bleibt Master-Quelle; nach Abschluss aller Phasen archivieren (Hinweisblock oben + in `DECISIONS.md` referenzieren), nicht löschen.
+- `**AGENTS.md**`: Phase-Status-Zeile aktualisieren.
+
+## Rückrollbarkeit
+
+- Phase 1–4: kleine, isolierte Edits → Lovable-History reicht.
+- Phase 5: Feature-Flag = harter Schalter; alte Boxen bleiben bis Verify.
+
+## Was ich am Ende abliefere
+
+Nach jeder Phase: kurze Statusnachricht (was gebaut, was verifiziert, Tag/Nacht-Smoke-Resultat) + Doku-Updates committet. Nach Phase 5 zusätzlich: explizite Bestätigung dass alte Box-UI entfernt ist und keine Referenzen mehr existieren (`rg`-Check).
