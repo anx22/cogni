@@ -121,7 +121,7 @@ describe("E2E Smoke: Note → Verstehen", () => {
   it("legt Asset an und triggert intake-trigger", async () => {
     const { result } = renderHook(() => useIntake());
     await act(async () => {
-      await result.current.intake({ type: "text", text: "kurze Notiz für QA" });
+      await result.current.intake({ type: "text", text: "kurze Notiz für QA", label: "Notiz" });
     });
     await waitFor(() =>
       expect(rec.invokes.find((i) => i.name === "intake-trigger")).toBeTruthy(),
