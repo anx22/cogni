@@ -8,6 +8,7 @@ import IntakeSessionsPanel from "@/components/entity/IntakeSessionsPanel";
 import HomeDropOverlay from "@/components/entity/HomeDropOverlay";
 import InputOverlay from "@/components/entity/InputOverlay";
 import AccountDrawer from "@/components/entity/AccountDrawer";
+import CreateProjectDialog from "@/components/entity/CreateProjectDialog";
 import { useProjects } from "@/lib/project/useProjects";
 import { useIntake } from "@/lib/intake/useIntake";
 import { detectFromDrop } from "@/lib/intake/detectInputType";
@@ -24,6 +25,7 @@ const Index = () => {
   const { session, loading, signOut } = useAuth();
   const [entityState, setEntityState] = useState<EntityState>("idle");
   const [overlayOpen, setOverlayOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const { openSessionFromDB, session: dialogSession } = useDialog();
   const pendingSessionId = useRef<string | null>(null);
   const autoOpenedRef = useRef<Set<string>>(new Set());
@@ -236,19 +238,10 @@ const Index = () => {
     navigate(`/projekt/${id}`);
   }, [navigate]);
 
-  const handleCreateProject = useCallback(async () => {
+  const handleCreateProject = useCallback(() => {
     if (!session?.user) return;
-    const { data, error } = await supabase
-      .from("projects")
-      .insert({ user_id: session.user.id, name: "Neues Projekt" })
-      .select("id")
-      .single();
-    if (error || !data) {
-      toast.error("Projekt konnte nicht angelegt werden");
-      return;
-    }
-    navigate(`/projekt/${data.id}`);
-  }, [session?.user, navigate]);
+    setCreateOpen(true);
+  }, [session?.user]);
 
   const handleReviewClick = useCallback(async () => {
     if (pendingSessionId.current) {
@@ -334,6 +327,15 @@ const Index = () => {
       </div>
 
       <HomeDropOverlay active={dragActive} busy={busy} />
+
+      {session?.user && (
+        <CreateProjectDialog
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+          userId={session.user.id}
+          onCreated={(id) => navigate(`/projekt/${id}`)}
+        />
+      )}
     </div>
   );
 };
