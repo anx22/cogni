@@ -23,7 +23,6 @@ interface ProjectTileProps {
   onKeyDown?: (e: React.KeyboardEvent) => void;
   tabIndex?: number;
   archived?: boolean;
-  onChanged?: () => void;
 }
 
 const SIGNAL_PRIORITY: ProjectSignal[] = ["conflict", "review", "action", "calm"];
