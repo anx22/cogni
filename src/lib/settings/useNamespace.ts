@@ -3,8 +3,9 @@
 //  in sync via Supabase Realtime. Also returns a setter for upserts.
 // =============================================================================
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useRealtimeTables, type RealtimeListener } from "@/lib/realtime/useRealtimeTables";
 import type { SettingScope } from "./types";
 
 interface Options {
@@ -20,18 +21,15 @@ export function useNamespace<T = unknown>(
   const [loaded, setLoaded] = useState(false);
   const debouncers = useRef<Record<string, number>>({});
 
-  // Initial load + realtime
+  // Initial load
   useEffect(() => {
     let mounted = true;
-
     (async () => {
-      const query = supabase
+      const { data, error } = await supabase
         .from("app_settings")
         .select("key,value")
         .eq("namespace", namespace)
         .eq("scope", scope);
-
-      const { data, error } = await query;
       if (!mounted) return;
       if (!error && data) {
         const next: Record<string, T> = {};
@@ -40,23 +38,26 @@ export function useNamespace<T = unknown>(
       }
       setLoaded(true);
     })();
+    return () => {
+      mounted = false;
+    };
+  }, [namespace, scope]);
 
-    const channel = supabase
-      .channel(`app_settings:${namespace}:${scope}:${Math.random().toString(36).slice(2)}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "app_settings",
-          filter: `namespace=eq.${namespace}`,
-        },
-        (payload) => {
+  const channelName = useMemo(
+    () => `app_settings:${namespace}:${scope}`,
+    [namespace, scope],
+  );
+
+  const listeners = useMemo<RealtimeListener[]>(
+    () => [
+      {
+        table: "app_settings",
+        filter: `namespace=eq.${namespace}`,
+        handler: (payload) => {
           const row = (payload.new ?? payload.old) as
             | { key: string; value: T; scope: SettingScope }
             | undefined;
           if (!row || row.scope !== scope) return;
-
           if (payload.eventType === "DELETE") {
             setValues((prev) => {
               const next = { ...prev };
@@ -68,14 +69,12 @@ export function useNamespace<T = unknown>(
             setValues((prev) => ({ ...prev, [newRow.key]: newRow.value }));
           }
         },
-      )
-      .subscribe();
+      },
+    ],
+    [namespace, scope],
+  );
 
-    return () => {
-      mounted = false;
-      supabase.removeChannel(channel);
-    };
-  }, [namespace, scope]);
+  useRealtimeTables(channelName, listeners);
 
   const setValue = useCallback(
     async (key: string, value: T) => {
