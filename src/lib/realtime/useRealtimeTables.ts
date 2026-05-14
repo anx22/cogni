@@ -14,7 +14,7 @@
 //     (sonst würde jeder Render neu subscriben). Stattdessen Ref-Pattern.
 // =============================================================================
 
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
 import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -40,6 +40,12 @@ export function useRealtimeTables(
   options: UseRealtimeTablesOptions = {},
 ): void {
   const { onTrigger, debounceMs = 0, enabled = true } = options;
+  // React-stabile, instanz-eindeutige Suffix verhindert Channel-Kollisionen,
+  // wenn mehrere Komponenten denselben logischen Channel-Namen nutzen
+  // (z. B. zwei Hooks mit `projects-list-${userId}`). Supabase Realtime erlaubt
+  // pro `channel(name)` nur einen `.subscribe()`-Lebenszyklus.
+  const instanceId = useId();
+  const fullChannelName = channelName ? `${channelName}::${instanceId}` : null;
 
   // Refs damit wir nicht bei jedem Render neu subscriben.
   const listenersRef = useRef(listeners);
@@ -48,7 +54,7 @@ export function useRealtimeTables(
   onTriggerRef.current = onTrigger;
 
   useEffect(() => {
-    if (!enabled || !channelName || listenersRef.current.length === 0) return;
+    if (!enabled || !fullChannelName || listenersRef.current.length === 0) return;
 
     let timer: ReturnType<typeof setTimeout> | null = null;
     const fireTrigger = () => {
@@ -62,7 +68,7 @@ export function useRealtimeTables(
       }
     };
 
-    const channel = supabase.channel(channelName);
+    const channel = supabase.channel(fullChannelName);
     listenersRef.current.forEach((l) => {
       channel.on(
         "postgres_changes",
@@ -85,5 +91,5 @@ export function useRealtimeTables(
       supabase.removeChannel(channel);
     };
     // channelName + enabled + debounceMs sind die Re-Subscribe-Trigger.
-  }, [channelName, enabled, debounceMs]);
+  }, [fullChannelName, enabled, debounceMs]);
 }
