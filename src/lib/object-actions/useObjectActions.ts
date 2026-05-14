@@ -29,18 +29,6 @@ export function useProjectActions() {
     return true;
   }, []);
 
-  const archive = useCallback(async (id: string) => {
-    setPending(true);
-    const { error } = await supabase.from("projects").update({ status: "archived" }).eq("id", id);
-    setPending(false);
-    if (error) {
-      toast.error("Archivieren fehlgeschlagen", { description: error.message });
-      return false;
-    }
-    toast.success("Projekt archiviert");
-    return true;
-  }, []);
-
   const unarchive = useCallback(async (id: string) => {
     const { error } = await supabase.from("projects").update({ status: "active" }).eq("id", id);
     if (error) {
@@ -50,6 +38,23 @@ export function useProjectActions() {
     toast.success("Projekt wiederhergestellt");
     return true;
   }, []);
+
+  const archive = useCallback(async (id: string) => {
+    setPending(true);
+    const { error } = await supabase.from("projects").update({ status: "archived" }).eq("id", id);
+    setPending(false);
+    if (error) {
+      toast.error("Archivieren fehlgeschlagen", { description: error.message });
+      return false;
+    }
+    toast.success("Projekt archiviert", {
+      action: {
+        label: "Rückgängig",
+        onClick: () => { void unarchive(id); },
+      },
+    });
+    return true;
+  }, [unarchive]);
 
   const remove = useCallback(async (id: string) => {
     setPending(true);
