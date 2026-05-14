@@ -1,7 +1,8 @@
 name: QA Nightly
 
-# Täglicher Smoke-Run gegen test-data-sweep, damit die Sweeper-Funktion nicht
-# stillschweigend brockelt. Ergebnisse als Workflow-Run sichtbar.
+# Täglicher voller QA-Lauf: Lint, Typecheck, Vitest, Deno-Tests gegen Edge
+# Functions, Build, plus test-data-sweep gegen die Cloud. Ergebnisse als
+# Workflow-Run sichtbar — bei Rot: NOW.md aktualisieren.
 
 on:
   schedule:
@@ -9,6 +10,31 @@ on:
   workflow_dispatch:
 
 jobs:
+  lint-typecheck-test-build:
+    name: Lint + Typecheck + Vitest + Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bun run lint
+      - run: bunx tsc --noEmit
+      - run: bun run test
+      - run: bunx prettier --check .
+      - run: bun run build
+
+  deno-tests:
+    name: Deno Edge-Function Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v1
+        with:
+          deno-version: v1.x
+      - run: deno test --allow-net --allow-env supabase/functions/
+
   sweep:
     name: test-data-sweep
     runs-on: ubuntu-latest
