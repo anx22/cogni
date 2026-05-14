@@ -167,6 +167,23 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (action === "langsmith-write-probe") {
+      const key = Deno.env.get("LANGSMITH_API_KEY") ?? "";
+      const r = await fetch("https://api.smith.langchain.com/api/v1/repos/", {
+        method: "POST",
+        headers: { "x-api-key": key, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          repo_handle: "produktintelligenz-test-write",
+          description: "write capability probe",
+          is_public: false,
+        }),
+      });
+      const t = await r.text();
+      return new Response(JSON.stringify({ ok: true, status: r.status, body: t.slice(0, 600) }, null, 2), {
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
+    }
+
     if (action === "langsmith-probe") {
       const key = Deno.env.get("LANGSMITH_API_KEY") ?? "";
       if (!key) {
