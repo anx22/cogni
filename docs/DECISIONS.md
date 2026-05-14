@@ -31,3 +31,22 @@ Format: `[YYYY-MM-DD] Problem → Choice → Reason`
 - `2026-05-14` QA-Begleitung → **Drei fiktionale Sandbox-Projekte** (Hase & Söhne Couture / Tübingen Tower / Spätzbohrer 4.0) unter `account@animatex.de`. Agent submittet Facts selbstständig via `supabase--insert` (Bulk-Seed) + `supabase--curl_edge_functions` → `commit-fact` (echter Pfad inkl. Graphiti-Spiegel). Diese Projekte sind never-ending-stories: bei jedem neuen Feature/Fact-Typ würfelt der Agent neue Mails/Konflikte hinein. Kein neuer Code, keine Migration — reine Daten + Tool-Aufrufe. Vorteil: realistische, wiederkehrende Test-Daten ohne Persona-Setup. Nachteil: nur unter einem User, kein Multi-User-Test.
 - `2026-05-14` JSONB-Validierung → **Trigger statt CHECK-Constraint** auf `canonical_facts.content` + `proposed_facts.content`. Begründung: CHECK muss IMMUTABLE sein, was bei künftigen Erweiterungen (z.B. NOW()-Vergleich für Deadlines) bricht. Trigger ist flexibel und liefert klare `RAISE EXCEPTION`-Messages.
 - `2026-05-14` God-Hook-Pattern → **3-Schichten-Aufteilung** als Vorlage: `useXData.ts` (Queries + Realtime, dünn) + `xViewModel.ts` (pure Mapper, testbar) + `useX.ts` (Composition, ~40 LOC). Erstmals angewandt auf `useProject` — Vorbild für künftige große Hooks.
+
+## 2026-05-14 — Shared `_shared/http.ts` + `_shared/auth.ts` als Edge-Pattern
+
+**Problem:** Pro Edge Function eigene `corsHeaders`/`ok`/`fail`-Definitionen +
+inline Bearer-Token-Auth. Drift bei CORS-Headern und Fehler-Response-Format.
+
+**Choice:** Zwei kanonische Module:
+- `_shared/http.ts` → `corsHeaders`, `ok(payload, init?)`, `fail(message, status?, extra?)`,
+  `handleOptions(req)`.
+- `_shared/auth.ts` → `getAuthenticatedUser(req)` mit Discriminated Union
+  (`{ok:true, userId, user, client, token} | {ok:false, error, status}`).
+
+`withErrorBoundary` und `inspect-auth` re-exportieren `corsHeaders` aus
+`_shared/http.ts` — eine Quelle der Wahrheit, keine Duplikate.
+
+**Reason:** Sicherheitskritischer Pfad (Auth) bekommt eine getestete Quelle.
+Functions, die spezifische Response-Shapes brauchen (z. B. `{ok:true, ...}`
+in `commit-fact`/`intake-trigger`), behalten lokale `ok`/`fail`-Wrapper, nutzen
+aber die geteilten `corsHeaders` — Verhalten unverändert.
