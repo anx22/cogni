@@ -19,6 +19,7 @@
 // =============================================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { createLogger } from "../_shared/logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -53,10 +54,18 @@ Deno.serve(async (req) => {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const admin = createClient(supabaseUrl, serviceKey);
+  const log = createLogger({ fn: "aol-callback", client: admin });
+  log.stage("start", "callback received");
 
   try {
     const body = (await req.json()) as CallbackPayload;
     if (!body.run_id) throw new Error("run_id fehlt");
+    log.bind({ runId: body.run_id });
+    log.stage("input", "payload parsed", {
+      status: body.status,
+      current_node: body.current_node,
+      facts_written: body.facts_written,
+    });
 
     const update: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
@@ -86,10 +95,21 @@ Deno.serve(async (req) => {
       .eq("id", body.run_id);
     if (error) throw new Error(`aol_runs update: ${error.message}`);
 
-    return ok({ run_id: body.run_id });
+    // user_id für RLS-konformen Pipeline-Event-Eintrag nachladen
+    const { data: runRow } = await admin
+      .from("aol_runs")
+      .select("user_id, asset_id, project_id")
+      .eq("id", body.run_id)
+      .maybeSingle();
+    if (runRow) log.bind({ userId: runRow.user_id, assetId: runRow.asset_id, projectId: runRow.project_id });
+
+    log.stage("done", "aol_run updated", { status: body.status });
+    await log.flush();
+    return ok({ run_id: body.run_id, correlation_id: log.correlationId });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error("aol-callback error:", msg);
+    log.error("error", msg, err);
+    await log.flush();
     return fail(msg, 400);
   }
 });
