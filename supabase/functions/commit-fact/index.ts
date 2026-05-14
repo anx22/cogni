@@ -470,6 +470,7 @@ function humanizeTriggerEvent(event: string, counts: Record<string, number>): st
   const v = verbMap[verb] ?? actionMap[action] ?? "aktualisiert";
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
   return `${subj} ${v} — Projekt enthält jetzt ${total} bestätigte Erkenntnisse.`;
+}
 
 // ----------------------------------------------------------------------------
 // AOL-Bridge: bei jeder bestätigten/abgelehnten Box informieren wir den
