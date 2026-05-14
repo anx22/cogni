@@ -1,5 +1,6 @@
 import { withErrorBoundary } from "../_shared/withErrorBoundary.ts";
 import { createLogger, type Logger } from "../_shared/logger.ts";
+import { createRailwayClient } from "../_shared/clients/railway.ts";
 // Universeller Railway-Admin-Proxy. Nutzt RAILWAY_API_TOKEN (Team-Token).
 // Actions:
 //   { action: "list" }                                — alle Teams + Projekte + Services
@@ -10,31 +11,20 @@ import { createLogger, type Logger } from "../_shared/logger.ts";
 //                                                      — Auto-Discovery wenn IDs fehlen
 //   { action: "raw", query, variables? }              — beliebige GraphQL-Query
 
-const RAILWAY_API = "https://backboard.railway.com/graphql/v2";
-
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+// Dünne Adapter-Shim auf den geteilten Client, damit alle bestehenden
+// `await gql(query, vars)`-Call-Sites unverändert bleiben.
 async function gql(query: string, variables: Record<string, unknown> = {}) {
-  const token = Deno.env.get("RAILWAY_API_TOKEN");
-  if (!token) throw new Error("RAILWAY_API_TOKEN missing");
-  const res = await fetch(RAILWAY_API, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ query, variables }),
-  });
-  const json = await res.json().catch(() => ({}));
-  if (json.errors) {
-    throw new Error("Railway GraphQL error: " + JSON.stringify(json.errors));
-  }
-  return json.data;
+  const client = createRailwayClient();
+  if (!client) throw new Error("RAILWAY_API_TOKEN missing");
+  return await client.gql<Record<string, unknown>>(query, variables);
 }
+
 
 const NEO4J_VARS: Record<string, string> = {
   NEO4J_server_memory_heap_initial__size: "512m",

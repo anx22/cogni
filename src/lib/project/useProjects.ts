@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { countBy } from "@/lib/utils";
 import { toTimestamp } from "@/lib/format/dateFormatters";
+import { useRealtimeTables } from "@/lib/realtime/useRealtimeTables";
 import type { DemoProject, ProjectSignal } from "@/data/demoProjects";
 
 const initialOf = (name: string) =>
@@ -154,36 +155,21 @@ export function useProjects(options?: UseProjectsOptions): UseProjectsResult {
   }, [load]);
 
   // Realtime: projects + signaltragende Tabellen → debounced Reload
-  useEffect(() => {
-    if (!userId) return;
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    const trigger = () => {
-      if (timer) clearTimeout(timer);
-      timer = setTimeout(() => load(), 250);
-    };
-    const filter = `user_id=eq.${userId}`;
-    const tables = [
-      "projects",
-      "tasks",
-      "decisions",
-      "deadlines",
-      "gap_signals",
-      "contradictions",
-    ] as const;
-    const channel = supabase.channel(`projects-list-${userId}`);
-    tables.forEach((t) => {
-      channel.on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: t, filter },
-        trigger,
-      );
-    });
-    channel.subscribe();
-    return () => {
-      if (timer) clearTimeout(timer);
-      supabase.removeChannel(channel);
-    };
-  }, [userId, load]);
+  useRealtimeTables(
+    userId ? `projects-list-${userId}` : null,
+    userId
+      ? [
+          { table: "projects", filter: `user_id=eq.${userId}` },
+          { table: "tasks", filter: `user_id=eq.${userId}` },
+          { table: "decisions", filter: `user_id=eq.${userId}` },
+          { table: "deadlines", filter: `user_id=eq.${userId}` },
+          { table: "gap_signals", filter: `user_id=eq.${userId}` },
+          { table: "contradictions", filter: `user_id=eq.${userId}` },
+        ]
+      : [],
+    { onTrigger: load, debounceMs: 250 },
+  );
 
   return { projects, loading, error, reload: load };
 }
+

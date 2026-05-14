@@ -20,6 +20,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
+import { useRealtimeTables } from "@/lib/realtime/useRealtimeTables";
 import { useDialog } from "@/components/dialog/DialogProvider";
 import { formatRelative } from "@/lib/format/relativeTime";
 import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
@@ -117,39 +118,36 @@ const IntakeSessionsPanel = (_props: Props) => {
   const [assets, setAssets] = useState<Asset[]>([]);
   const { openSessionFromDB } = useDialog();
 
-  useEffect(() => {
-    let mounted = true;
-    const load = async () => {
-      const [sRes, aRes] = await Promise.all([
-        supabase
-          .from("dialog_sessions")
-          .select("*")
-          .eq("trigger_type", "intake")
-          .order("created_at", { ascending: false })
-          .limit(LIMIT),
-        supabase
-          .from("assets")
-          .select("*")
-          .order("created_at", { ascending: false })
-          .limit(LIMIT * 2),
-      ]);
-      if (!mounted) return;
-      if (sRes.data) setSessions(sRes.data);
-      if (aRes.data) setAssets(aRes.data);
-    };
-    load();
-
-    const channel = supabase
-      .channel("intake-sessions-panel")
-      .on("postgres_changes", { event: "*", schema: "public", table: "dialog_sessions" }, () => load())
-      .on("postgres_changes", { event: "*", schema: "public", table: "assets" }, () => load())
-      .subscribe();
-
-    return () => {
-      mounted = false;
-      supabase.removeChannel(channel);
-    };
+  const load = useCallback(async () => {
+    const [sRes, aRes] = await Promise.all([
+      supabase
+        .from("dialog_sessions")
+        .select("*")
+        .eq("trigger_type", "intake")
+        .order("created_at", { ascending: false })
+        .limit(LIMIT),
+      supabase
+        .from("assets")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(LIMIT * 2),
+    ]);
+    if (sRes.data) setSessions(sRes.data);
+    if (aRes.data) setAssets(aRes.data);
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  useRealtimeTables(
+    "intake-sessions-panel",
+    [
+      { table: "dialog_sessions" },
+      { table: "assets" },
+    ],
+    { onTrigger: load },
+  );
 
   const handleRetry = useCallback(async (assetId: string) => {
     toast("Wird nochmal versucht", { description: "Verstehens-Loop startet erneut" });

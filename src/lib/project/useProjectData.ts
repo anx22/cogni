@@ -6,9 +6,10 @@
 //  projectViewModel.ts).
 // =============================================================================
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useRealtimeTables, type RealtimeListener } from "@/lib/realtime/useRealtimeTables";
 import type { RawProjectData } from "./projectViewModel";
 
 export type DataStatus = "loading" | "ready" | "error";
@@ -150,10 +151,10 @@ export function useProjectData(projectId: string | null | undefined): UseProject
     load();
   }, [load]);
 
-  // Realtime: invalidiert auf jede relevante Änderung → Reload
-  useEffect(() => {
-    if (!projectId || !userId) return;
-    const tables = [
+  // Realtime: invalidiert auf jede relevante Änderung → Reload (debounced).
+  const realtimeListeners = useMemo<RealtimeListener[]>(() => {
+    if (!projectId) return [];
+    const projectTables = [
       "canonical_facts",
       "change_events",
       "tasks",
@@ -169,35 +170,20 @@ export function useProjectData(projectId: string | null | undefined): UseProject
       "open_points",
       "feedback",
       "project_state_snapshots",
-    ] as const;
+    ];
+    return [
+      ...projectTables.map((table) => ({ table, filter: `project_id=eq.${projectId}` })),
+      // Projekt selbst (Rename, Status-Wechsel, Delete) live verfolgen.
+      { table: "projects", filter: `id=eq.${projectId}` },
+    ];
+  }, [projectId]);
 
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    const trigger = () => {
-      if (timer) clearTimeout(timer);
-      timer = setTimeout(() => load(), 250);
-    };
-
-    const channel = supabase.channel(`project-${projectId}`);
-    tables.forEach((t) => {
-      channel.on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: t, filter: `project_id=eq.${projectId}` },
-        trigger,
-      );
-    });
-    // Auch das Projekt selbst (Rename, Status-Wechsel, Delete) live verfolgen.
-    channel.on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "projects", filter: `id=eq.${projectId}` },
-      trigger,
-    );
-    channel.subscribe();
-
-    return () => {
-      if (timer) clearTimeout(timer);
-      supabase.removeChannel(channel);
-    };
-  }, [projectId, userId, load]);
+  useRealtimeTables(
+    projectId && userId ? `project-${projectId}` : null,
+    realtimeListeners,
+    { onTrigger: load, debounceMs: 250 },
+  );
 
   return { status, raw, error, vanished, reload: load };
 }
+
