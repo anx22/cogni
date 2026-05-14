@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
 
     if (!response.ok) {
       const errText = await response.text();
-      console.error("AI Gateway error:", errText);
+      console.warn("[voice-transcribe] AI Gateway error", { detail: errText.slice(0, 240) });
       return new Response(JSON.stringify({ error: "Transkription fehlgeschlagen", detail: errText }), {
         status: 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -102,7 +102,7 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    console.error("voice-transcribe error:", err);
+    console.warn("[voice-transcribe] threw", { error: err instanceof Error ? err.message : String(err) });
     return new Response(JSON.stringify({ error: String(err) }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
