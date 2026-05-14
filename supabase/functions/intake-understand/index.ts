@@ -85,7 +85,7 @@ Deno.serve(async (req) => {
       !isRetry &&
       ["running", "review_ready", "empty"].includes(asset.understanding_status)
     ) {
-      console.log(`intake-understand: asset ${asset_id} bereits ${asset.understanding_status}, skip`);
+      log.stage("idempotent.skip", "asset already in terminal/running state", { status: asset.understanding_status });
       return ok({ skipped: true, status: asset.understanding_status });
     }
 
@@ -230,7 +230,7 @@ Deno.serve(async (req) => {
           });
         } catch (err) {
           // Assignment-Fehler dürfen den Fakten-Pfad nicht killen — wir loggen nur
-          console.warn("suggest_project_assignment failed:", err);
+          log.warn("suggest_assignment.failed", "suggest_project_assignment failed", { error: err instanceof Error ? err.message : String(err) });
         }
       }
 
