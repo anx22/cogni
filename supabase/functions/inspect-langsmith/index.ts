@@ -9,7 +9,7 @@
 import { corsHeaders, fail, ok, requireUser } from "../_shared/inspect-auth.ts";
 import { withErrorBoundary } from "../_shared/withErrorBoundary.ts";
 import { createLogger } from "../_shared/logger.ts";
-import { createLangSmithClient, LangSmithError } from "../_shared/clients/langsmith.ts";
+import { createLangSmithClient } from "../_shared/clients/langsmith.ts";
 
 interface Body {
   action: "list" | "get";
