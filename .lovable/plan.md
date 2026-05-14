@@ -1,79 +1,81 @@
-## Re-Verifikation Master-Checklist (Stand 2026-05-14, 11:00 UTC)
+# Milestone Review — Abgleich Claude vs. Code-Stand 2026-05-14
 
-| # | Check | Soll | Ist | Status |
-|---|---|---|---|---|
-| 1 | Graphiti-Sync ≥95%/24h | ≥95% | 24/24 = 100% **post-fix** (seit 09:02). 24h-Fenster zeigt 60% wegen 10 Altlasten (08:40–08:45, vor A1.1-Deploy). | grün* |
-| 2 | `deno test` grün | grün | 14/14 grün, 4 Test-Files | ✅ |
-| 3 | Vitest ≥50 Tests | ≥50 | 60/60 grün, 10 Files | ✅ |
-| 4 | 3 E2E-Smokes in CI | 3 | `src/test/e2e-smokes.test.ts` (Note / Asset-Delete / Fakt-Retract) | ✅ |
-| 5 | Logger-Coverage 15/15 | 15/15 | 16/16 Edge Functions | ✅ |
-| 6 | `tsc --noEmit` strict | grün | strictNullChecks aktiv, grün | ✅ |
-| 7 | FE LOC <14.000 | <14k | **17.873** (inkl. 1.769 generated `types.ts` → netto ~16.1k) | ❌ dokumentiert |
-| 8 | BE LOC <2.300 | <2.3k | **5.451** (inkl. `_shared/` 1.5k + Tests 0.6k → aktive Funcs ~3.3k) | ❌ dokumentiert |
-| 9 | UI-Verhalten identisch | ja | NOW.md bestätigt 1:1 | ✅ |
-| 10 | Wave-B-Anbindung sauber | ja | `useProjectData` + `projectViewModel` getrennt, Mapper isoliert | ✅ |
+## Was Claude richtig sieht (aktuell)
 
-*Punkt 1: A1.1 ist verifiziert wirksam — 0 Failures seit 09:02, alle 24 nachfolgenden Mirrors `queued`-Status (= 2xx-OK, Server queued intern). 24h-Fenster wird sich morgen automatisch normalisieren.
+- **Vision-Architektur trägt** — Datenmodell, Vier-Rollen, Universal Input, Review-First UI: alles live, kein Drift.
+- **React Query fehlt** — stimmt. Direkte Supabase-Subscriptions mit Debounce. Wird bei 500+ Facts spürbar.
+- **Graph-Intelligence ist der wertvollste, aber labilste Teil** — stimmt strategisch.
+- **Wave B blockiert ohne stabile Wave A** — Reihenfolge bleibt richtig.
 
-**Fazit:** 8/10 grün, 2 LOC-Budgets verfehlt — beide bereits in `docs/audit-2026-05-14.md` als "akzeptiert, kein Refactor-Backlog" dokumentiert. Welle C hat die echten Godfiles eliminiert; verbleibendes Volumen ist Tests + `_shared/` (Wert, kein Schaden).
+## Was Claude veraltet sieht (bereits erledigt in Welle A+C)
 
-**Nichts elementares offen.** → Übergang in Welle B (Wave 2).
+
+| Claudes Punkt                    | Realität                                                                                                                                |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Graphiti 422 (`role` fehlt)      | **Fixed** in `_shared/graphiti.ts:120` (`role: input.role ?? role_type`). Letzte 24h: 15 ok, 10 failed (Altlasten vor Fix), 24 queued.  |
+| `commit-fact` 643 LOC, untestbar | **Refactored**: `index.ts` 70 LOC, `kernel.ts` 245 LOC, `commitFact_test.ts` + `projectScoring_test.ts` mit 14/14 grün.                 |
+| `useProject.ts` 515 LOC God-Hook | **Split**: `useProject.ts` 42 LOC, `useProjectData.ts` 189 LOC, `projectViewModel.ts` 160 LOC + Tests.                                  |
+| `strictNullChecks: false`        | **Auf `true**` in `tsconfig.app.json:26`.                                                                                               |
+| Keine E2E-Smokes                 | `src/test/e2e-smokes.test.ts` existiert (3 Pfade).                                                                                      |
+| JSONB-Validation fehlt           | **Trigger live**: `validate_fact_content` als IMMUTABLE pro fact_type.                                                                  |
+| Logger-Coverage 33% (5/15)       | **13/16 Edge Functions instrumentiert.** Nur 3 Inspector-Funktionen ohne Logger (inspect-graphiti, inspect-langsmith, inspect-railway). |
+
+
+## Was wirklich offen ist (echte Lücken)
+
+### Kritisch
+
+1. **Graphiti-Sync-Queue staut** — 24 Einträge "queued", nur 15 "ok" in 24h. Backfill-Job läuft nicht durch. Erfolgsmetrik (≥95%) wird verfehlt obwohl der Fix deployed ist.
+2. **10 alte "failed"-Einträge** verzerren die Quote — müssen explizit retried oder als terminal markiert werden.
+
+### Mittel
+
+3. **3 Inspector-Funktionen ohne Logger** — kosmetisch, aber blockiert "100% Coverage" auf der Master-Checklist.
+4. **React Query nicht eingeführt** — Claude hat Recht, ist aber Wave-3-Thema, nicht Blocker für Wave B.
+
+### Wave B (jetzt freigegeben sobald Queue grün)
+
+5. Linker auf Graph-Match (B-W1) — Schnittstelle in `intake-understand/linker.ts` als Drop-in vorbereitet.
+6. Conflict-Detector (B-W2), Gap-Detector (B-W3), Dependency-Detector (B-W4).
 
 ---
 
-## Welle B — Wave-2-Vorbereitung
+## Plan für heute
 
-Welle B = Knowledge-Graph-Linking im AOL-Service. Vier Detektoren zwischen `interpreter` und `condenser`:
+### Stufe 1 — Wave-A-Stabilität schließen (ca. 2 Loops)
 
-```text
-interpreter → linker → conflict_detector → gap_detector → dependency_detector → condenser
-```
+1. **Sync-Queue diagnostizieren**: `graphiti_sync_log` queued-Einträge inspizieren, Ursache klären (Cron läuft nicht? `graphiti-backfill` wirft Fehler?).
+2. **Queue drainen**: `graphiti-backfill` direkt aufrufen, Erfolgsrate prüfen.
+3. **Failed-Altlasten retryen oder als terminal markieren**, damit 24h-Fenster ≥95% zeigt.
+4. **Inspector-Logger nachziehen** (3 Funktionen, je ~5 Zeilen `withErrorBoundary` + `createLogger`).
 
-### Voraussetzung-Check (vor Implementierung)
+### Stufe 2 — Wave B starten (B-W1 Linker, ca. 2 Loops)
 
-- **V1 — Reuse-Beweis:** Zweites Asset im selben Projekt → `getMemory()` liefert nicht-leeren Kontext. Smoke gegen ein Sandbox-Projekt (Hase / Tübingen / Spätzbohrer).
-- **V2 — Graph-Konsistenz:** `inspect-graphiti` für die 3 Sandbox-Projekte → Episoden + Entities + Edges vorhanden, `group_id` matcht `project_id`.
-- **V3 — Spiegel-SLA:** 24h-Sync-Rate ≥95% nach Ablauf der Altlasten.
-- **V4 — Linker-Schnittstelle:** aktueller `linker.ts` (Title-Match) als Drop-in-Ersatz-Punkt verifizieren.
+5. `_shared/clients/graphitiSearch.ts` neu: `searchEntities(project_id, query, k=5)` gegen `/search`.
+6. `intake-understand/linker.ts` von Title-Match auf Graph-Match umstellen, Fallback auf Title.
+7. Deno-Test `linker_test.ts` mit Mock-Search.
+8. Smoke: 1 Asset in Sandbox → prüfen, dass Linker Graph-Hits nutzt.
 
-### B-W1 — Linker auf Graph-Match
+### Stufe 3 — Dokumentation
 
-- **WAS:** `intake-understand/linker.ts` ersetzt Title-Match durch Graphiti-Search-API (`/search` mit `group_id` + Query).
-- **WIE:** Neuer Helper `_shared/clients/graphitiSearch.ts` → `searchEntities(project_id, query, k=5)`. Linker-Output bleibt typgleich (`{ matched_canonical_fact_id?: string }`).
-- **VERIFY:** Neuer Deno-Test `linker_test.ts` mit Mock-Search. Smoke: Asset-Upload in Hase-Sandbox, neue ProposedFacts referenzieren bestehende `canonical_facts`.
+9. `docs/NOW.md`: Welle A geschlossen, Welle B B-W1 live.
+10. `docs/DECISIONS.md`: Eintrag "Linker via Graphiti-Search statt Title-Match".
+11. `docs/audit-2026-05-14.md`: Abgleich-Tabelle Claude-Review vs. Realität anhängen.
 
-### B-W2 — Conflict-Detector
+### Nicht heute (bewusst zurückgestellt)
 
-- **WAS:** Neuer AOL-Stage zwischen Interpreter & Condenser. Erkennt widersprüchliche `decision`/`deadline`-Facts (gleiche Entität, andere Werte).
-- **WO:** `aol-service` (Railway). In Lovable-Repo nur Edge-seitige Schnittstelle (`pipeline_events` + Review-Box-Typ `conflict`).
-- **VERIFY:** Tübingen-Sandbox (72m vs 87m) → Conflict-Box wird angeboten, Snapshot-Test im Frontend.
+- React Query Migration → Wave 3, eigener Sprint.
+- Wave B-W2/B-W3/B-W4 → erst nach B-W1 stabil.
+- Volle Browser-E2E (Playwright) → Backlog.
 
-### B-W3 — Gap-Detector
+---
 
-- **WAS:** Erkennt fehlende Pflicht-Slots (z. B. `decision` ohne `rationale`, `deadline` ohne `owner`).
-- **VERIFY:** Sandbox-Asset mit unvollständigem Fact → Gap-Box im Review.
+## Stop-Bedingungen
 
-### B-W4 — Dependency-Detector
+- Wenn Sync-Queue nach Backfill weiter wächst: stoppen, Root-Cause statt Wave B.
+- Wenn Linker-Smoke in Sandbox keinen Graph-Hit produziert: B-W1 als Spike beenden, nicht durchziehen.
+- Wenn `pipeline_events`-Schema bricht: rollback.
 
-- **WAS:** Erkennt zeitliche/kausale Abhängigkeiten zwischen Facts (z. B. Task A blockt Deadline B).
-- **VERIFY:** Spätzbohrer-ISO-Audit-Pfad → DependencyVM zeigt verkettete Tasks.
-
-### Reihenfolge & Stopp
-
-1. Voraussetzungs-Check V1–V4 (1 Loop, read-only)
-2. B-W1 Linker (1 Loop)
-3. B-W2 Conflict (2 Loops, Railway + UI)
-4. B-W3 Gap (1 Loop)
-5. B-W4 Dependency (1 Loop)
-6. Welle-B-Audit + NOW.md/DECISIONS.md Update
-
-Stopp wenn: V3 nicht erreicht (Sync <95% nach 24h), oder ein Detektor das `pipeline_events`-Schema bricht, oder UI-Verhalten driftet.
-
-### Dieser Loop liefert nur
-
-- Diese Verifikations-Tabelle als Eintrag in `docs/audit-2026-05-14.md` (Anhang).
-- Voraussetzungs-Check V1–V4 ausführen (read-only via railway-admin / inspect-graphiti / supabase--read_query).
-- `docs/NOW.md` Sprint-Block: "Welle B vorbereitet, V-Checks Status".
-- Kein Code-Change.
-
-Implementierung der Detektoren erst nach V-Check-Freigabe in Folge-Loops.
+Bei Freigabe lege ich direkt mit Stufe 1 los.  
+  
+Docs genaustens mit neusten Plänen aktualsieiren und loslegen mit Stufe 1
