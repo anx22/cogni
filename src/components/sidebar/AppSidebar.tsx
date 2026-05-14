@@ -99,6 +99,7 @@ const AppSidebar = ({
         {projects.map((p) => {
           const isActive = p.id === activeProjectId;
           const signalClass = SIGNAL_TO_DOT[p.signal] ?? "dot--calm";
+          const signal2Class = p.signal2 ? SIGNAL_TO_DOT[p.signal2] : null;
           return (
             <button
               key={p.id}
@@ -135,8 +136,8 @@ const AppSidebar = ({
                 <span className="t-micro mono ink-4 shrink-0">{p.openCount}</span>
               ) : null}
               <span className={`dot ${signalClass} shrink-0`} aria-hidden />
-              {p.signal2 ? (
-                <span className={`dot ${SIGNAL_TO_DOT[p.signal2]} shrink-0`} aria-hidden />
+              {signal2Class ? (
+                <span className={`dot ${signal2Class} shrink-0`} aria-hidden />
               ) : null}
             </button>
           );
