@@ -7,21 +7,14 @@ import { useDialog } from "../DialogProvider";
 
 const GapBox = ({ box }: { box: DialogBox }) => {
   const { readonly } = useDialog();
-  const { submit } = useBoxSubmit(box, { markManualOnSubmit: false });
+  // GapBox: keine Manual-Override-Markierung (Lücke schließen ≠ manuelle Korrektur).
+  const { submit, reject } = useBoxSubmit(box, { markManualOnSubmit: false });
   const [answer, setAnswer] = useState(box.payload?.antwort ?? "");
 
   const onSubmit = () => {
     if (!answer.trim()) return;
     submit({ antwort: answer });
   };
-
-  const onLater = () => {
-    // GapBox erlaubt explizit "Später" auch unter Gate (kein reject-Block).
-    submit; // explizit nichts tun, reject geht über useBoxSubmit:
-    void 0;
-  };
-  // Nutzen reject() aus dem Hook für „Später":
-  const { reject } = useBoxSubmit(box, { markManualOnSubmit: false });
 
   return (
     <BoxFrame
