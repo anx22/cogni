@@ -16,7 +16,8 @@ Verbleibende Arbeit = Loops + UI-Milestone-Vorbereitung.
 ### Aufgaben
 
 1. **Live-Smoke Welle B** in Sandbox (Conflict + Gap + Dependency in „Hase & Söhne Couture") — verifiziert echten Vollpfad.
-2. **UI ↔ Core sauber trennen** — ViewModel als formaler Vertrag, ESLint-Restriktion in `src/components/**`, Page-Hooks ausdünnen, Design-Token-Inventur (Vorbereitung, kein Redesign).
+2. **UI ↔ Core sauber trennen** — ViewModel als formaler Vertrag, ESLint-Restriktion in `src/components/**`, Page-Hooks ausdünnen, Design-Token-Inventur (Vorbereitung, kein Redesign). [offen]
+   - **2026-05-14:** Welle-B-Use-Case-Smoke ✅ in Sandbox „Hase & Söhne Couture": 1 Conflict + 4 Gap + 2 Dependency wie spezifiziert. Detail in `DECISIONS.md`.
 3. **Loops abarbeiten:** Graphiti-Sync-Diagnose · Vier-Rollen-Screen User-Smoke · `_shared/` console.warn → Logger.
 
 ### Master-Checklist (Stand)
