@@ -29,6 +29,7 @@ export function attachPipelineSink() {
 
       const payload = isPlainObject(entry.payload) ? entry.payload : { value: entry.payload };
       const { error: errorPayload, ...rest } = payload;
+      const errorJson = isPlainObject(errorPayload) ? (errorPayload as Record<string, unknown>) : null;
 
       await supabase.from("pipeline_events").insert({
         user_id: userId,
@@ -36,9 +37,9 @@ export function attachPipelineSink() {
         stage: entry.category,
         level: entry.level,
         correlation_id: newCorrelationId(),
-        message: entry.message,
-        payload: rest,
-        error: errorPayload && typeof errorPayload === "object" ? errorPayload : null,
+        message: entry.message ?? null,
+        payload: rest as Record<string, unknown>,
+        error: errorJson,
       });
     } catch {
       /* swallow */
