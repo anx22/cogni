@@ -13,8 +13,8 @@ Status der vier QA-Phasen (Stand 2026-05-14):
 |---|---|---|---|
 | 1 Bestand | Seam-Inventar | `docs/qa-seam-inventar.md` vorhanden | ✅ |
 | 2 Instrumentierung | Logger, `pipeline_events`, ErrorBoundary, Health-Panel | alles deployed | ✅ |
-| 3 Tests | Fixtures, Sweeper, Unit-Tests, Edge-Tests | 33 Vitest + 10 Deno grün; commit-fact-Integration offen | ⚠ teilweise |
-| 4 Automatisierung | ESLint scharf, Prettier, Husky, CI | ESLint 0 Errors (52 bewusste Warnings), Prettier+Husky+lint-staged installiert, Nightly-Cron aktiv | ✅ |
+| 3 Tests | Fixtures, Sweeper, Unit-Tests, Edge-Tests | 37 Vitest + 13 Deno grün (inkl. commitFact-Integration + pollAolRun) | ✅ |
+| 4 Automatisierung | ESLint scharf, Prettier, Husky, CI, withErrorBoundary | ESLint 0 Errors, Prettier+Husky+lint-staged, Nightly-Cron, alle 16 Edge Functions in `withErrorBoundary` gewrappt | ✅ |
 
 ---
 
