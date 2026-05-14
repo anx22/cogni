@@ -167,6 +167,30 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (action === "langsmith-raw") {
+      const k = Deno.env.get("LANGSMITH_API_KEY") ?? "";
+      const base = body.base ?? Deno.env.get("LANGSMITH_BASE_URL") ?? "https://eu.api.smith.langchain.com";
+      const path: string = body.path;
+      const method: string = (body.method ?? "GET").toUpperCase();
+      const extraHeaders: Record<string, string> = body.headers ?? {};
+      const reqBody = body.body;
+      const headers: Record<string, string> = { "x-api-key": k, ...extraHeaders };
+      if (reqBody !== undefined && reqBody !== null && !headers["Content-Type"]) {
+        headers["Content-Type"] = "application/json";
+      }
+      const r = await fetch(`${base}${path}`, {
+        method,
+        headers,
+        body: reqBody !== undefined && reqBody !== null
+          ? (typeof reqBody === "string" ? reqBody : JSON.stringify(reqBody))
+          : undefined,
+      });
+      const text = await r.text();
+      return new Response(JSON.stringify({ ok: true, status: r.status, body: text.slice(0, 1500) }, null, 2), {
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
+    }
+
     if (action === "langsmith-key-info") {
       const k = Deno.env.get("LANGSMITH_API_KEY") ?? "";
       return new Response(JSON.stringify({
