@@ -23,6 +23,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { getEpisodes, isGraphitiConfigured } from "../_shared/graphiti.ts";
 import { createLogger } from "../_shared/logger.ts";
+import { withErrorBoundary } from "../_shared/withErrorBoundary.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -35,7 +36,7 @@ interface Payload {
   max_facts?: number;
 }
 
-Deno.serve(async (req) => {
+Deno.serve(withErrorBoundary("graphiti-reconcile", async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -196,7 +197,7 @@ Deno.serve(async (req) => {
     await log.flush();
     return fail(msg, 500);
   }
-});
+}));
 
 async function logSync(
   admin: any,

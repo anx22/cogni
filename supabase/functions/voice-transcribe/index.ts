@@ -3,8 +3,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { withErrorBoundary } from "../_shared/withErrorBoundary.ts";
 
-Deno.serve(async (req) => {
+Deno.serve(withErrorBoundary("voice-transcribe", async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -108,4 +109,4 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
-});
+}));

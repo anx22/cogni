@@ -20,6 +20,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { createLogger } from "../_shared/logger.ts";
+import { withErrorBoundary } from "../_shared/withErrorBoundary.ts";
 
 declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void } | undefined;
 
@@ -34,7 +35,7 @@ interface Payload {
   retry?: boolean;
 }
 
-Deno.serve(async (req) => {
+Deno.serve(withErrorBoundary("intake-trigger", async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -225,7 +226,7 @@ Deno.serve(async (req) => {
     await log.flush();
     return fail(msg, 500);
   }
-});
+}));
 
 function safeJson(s: string): unknown {
   try { return JSON.parse(s); } catch { return s; }

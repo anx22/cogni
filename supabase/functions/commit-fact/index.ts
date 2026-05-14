@@ -21,6 +21,7 @@ import {
   GraphitiHttpError,
 } from "../_shared/graphiti.ts";
 import { createLogger, type Logger } from "../_shared/logger.ts";
+import { withErrorBoundary } from "../_shared/withErrorBoundary.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -37,7 +38,7 @@ interface Payload {
 // ----------------------------------------------------------------------------
 // HTTP-Adapter (Deno.serve) — dünn. Kernlogik in commitFact() unten.
 // ----------------------------------------------------------------------------
-Deno.serve(async (req) => {
+Deno.serve(withErrorBoundary("commit-fact", async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -71,7 +72,7 @@ Deno.serve(async (req) => {
     await log.flush();
     return fail(msg, 500);
   }
-});
+}));
 
 // ----------------------------------------------------------------------------
 // Pure Kernlogik — testbar ohne HTTP/Auth.

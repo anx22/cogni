@@ -7,6 +7,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders, fail, ok, requireUser } from "../_shared/inspect-auth.ts";
+import { withErrorBoundary } from "../_shared/withErrorBoundary.ts";
 
 interface Body {
   asset_id?: string;
@@ -37,7 +38,7 @@ interface PipelineEvent {
   error: Record<string, unknown> | null;
 }
 
-Deno.serve(async (req) => {
+Deno.serve(withErrorBoundary("inspect-pipeline", async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return fail(405, "POST only");
 
@@ -174,7 +175,7 @@ Deno.serve(async (req) => {
   } catch (e) {
     return fail(500, "pipeline trace failed", { detail: String((e as Error).message ?? e) });
   }
-});
+}));
 
 // Verdichtet eine Stage-Kette zu einer kompakten Zusammenfassung. Wichtig für
 // die Health-Übersicht: pro Korrelation eine Karte, ohne 20 Roh-Events laden zu

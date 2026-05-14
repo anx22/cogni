@@ -36,6 +36,7 @@ import {
 } from "../_shared/agentClient.ts";
 import { loadProjectContexts, scoreProjects } from "../_shared/projectScoring.ts";
 import { createLogger } from "../_shared/logger.ts";
+import { withErrorBoundary } from "../_shared/withErrorBoundary.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -51,7 +52,7 @@ interface Payload {
   graph_hint?: string | null;
 }
 
-Deno.serve(async (req) => {
+Deno.serve(withErrorBoundary("intake-understand", async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -191,7 +192,7 @@ Deno.serve(async (req) => {
     }
 
     // 4. Projektzuordnung ----------------------------------------------------
-    //   a) Wenn asset.project_id gesetzt (expliziter Drop) → fertig
+    //   a)) Wenn asset.project_id gesetzt (expliziter Drop) → fertig
     //   b) sonst: Lexikalisches Scoring + ggf. Agent-Tie-Breaker
     let assigned_project_id: string | null = asset.project_id ?? null;
     let assignment: {
@@ -464,7 +465,7 @@ Deno.serve(async (req) => {
     await log.flush();
     return fail(msg, 500);
   }
-});
+}));
 
 // ----------------------------------------------------------------------------
 

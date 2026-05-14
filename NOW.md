@@ -13,8 +13,8 @@ Status der vier QA-Phasen (Stand 2026-05-14):
 |---|---|---|---|
 | 1 Bestand | Seam-Inventar | `docs/qa-seam-inventar.md` vorhanden | ✅ |
 | 2 Instrumentierung | Logger, `pipeline_events`, ErrorBoundary, Health-Panel | alles deployed | ✅ |
-| 3 Tests | Fixtures, Sweeper, Unit-Tests, Edge-Tests | 33 Vitest + 10 Deno grün; commit-fact-Integration offen | ⚠ teilweise |
-| 4 Automatisierung | ESLint scharf, Prettier, Husky, CI | ESLint 0 Errors (52 bewusste Warnings), Prettier+Husky+lint-staged installiert, Nightly-Cron aktiv | ✅ |
+| 3 Tests | Fixtures, Sweeper, Unit-Tests, Edge-Tests | 37 Vitest + 13 Deno grün (inkl. commitFact-Integration + pollAolRun) | ✅ |
+| 4 Automatisierung | ESLint scharf, Prettier, Husky, CI, withErrorBoundary | ESLint 0 Errors, Prettier+Husky+lint-staged, Nightly-Cron, alle 16 Edge Functions in `withErrorBoundary` gewrappt | ✅ |
 
 ---
 
@@ -58,6 +58,8 @@ Status der vier QA-Phasen (Stand 2026-05-14):
 ---
 
 ## Recently completed
+
+- **2026-05-14 (Stage 6)** `pollAolRun` getestet (4 Pfade: completed/failed/timeout/abort, MSW-frei via `vi.mock` + Fake-Timers) → Vitest 37/37 grün. `_shared/withErrorBoundary.ts` als Pflicht-Wrapper für jede Edge Function eingeführt (Last-Resort-Catch → strukturierter Logger + 500-Hülle mit `correlation_id` + automatischer CORS-Preflight). Alle 16 Edge Functions gewrappt und deployed.
 
 - **2026-05-14 (Stage 4)** `commit-fact` testbar: pure `commitFact({admin,user,payload,log})` aus `Deno.serve`-Closure extrahiert (HTTP-Wrapper bleibt dünn). `mockAdmin()` in `_shared/testFixtures.ts` (chainable thenable mit Stub-Queue + Call-Recorder). 3 Deno-Tests (`commitFact_test.ts`): Happy / NEEDS_ASSIGNMENT / Reject. Suite jetzt 13/13 grün.
 - **2026-05-14 (Stage 5)** Phase-4-Gate scharf gestellt: ESLint-Regeln `no-unused-vars`, `prefer-const`, `eqeqeq`, `no-console` (Browser) → **error**. Alle echten Verstöße bereinigt (unused imports/vars, hook-deps, stale eslint-disable). Verbleibende 52 Warnings (`no-explicit-any` + `react-refresh` HMR-Hint) bewusst belassen, dokumentiert in `eslint.config.js`. Prettier (3.8) + `eslint-config-prettier` als letztes Extends. Husky 9 + lint-staged 17 mit `.husky/pre-commit`. Nightly-Cron `qa-nightly.yml` triggert `test-data-sweep` täglich 03:17 UTC.
