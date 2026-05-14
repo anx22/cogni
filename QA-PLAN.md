@@ -149,6 +149,19 @@ Gesamtaufwand realistisch: **24–33 h**, sinnvoll in 4 Sprints à 1 Woche.
 
 ---
 
-## Status
+## Status (Stand 2026-05-14)
 
-Plan erstellt. **Keine Code-Änderung.** Stopp und warten auf Freigabe für Phase 1.
+| Phase | Status | Bemerkung |
+|---|---|---|
+| 1 Bestand | ✅ vollständig | `docs/qa-seam-inventar.md` |
+| 2 Instrumentierung | ✅ vollständig | Logger + Tabelle + Health-Panel deployed |
+| 3 Tests | ⚠ teilweise | Unit + reine Helfer grün; **commit-fact-Integration → Backlog** (siehe `NOW.md`) |
+| 4 Automatisierung | ⚠ teilweise | ESLint+CI da; **Prettier / Husky / lint-staged / Nightly-Cron offen** (siehe `NOW.md`) |
+
+Detail-Lücken (transparent dokumentiert in `NOW.md`):
+- `console.log` noch in 6 Edge Functions → Phase 4 Smoke-Regel kann erst danach scharf gestellt werden.
+- 9 Edge Functions noch ohne `createLogger` → Backlog Punkt 3.
+- E2E-Smokes (3 Pfade) noch nicht geschrieben → Backlog Punkt 4.
+- `no-console` / `no-floating-promises` / `no-unused-vars` aktuell `warn`, soll später `error` werden.
+
+Nächster Sprint-Vorschlag: **Backlog-Reihenfolge in `NOW.md`** abarbeiten (1 → 2 → 3).
