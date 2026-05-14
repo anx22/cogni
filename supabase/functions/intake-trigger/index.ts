@@ -118,23 +118,55 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 3. Cloud-internes Verstehen triggern -----------------------------------
-    const { error: invErr } = await admin.functions.invoke("intake-understand", {
-      body: { asset_id, retry: !!body.retry, graph_hint: graphHint },
-    });
-    if (invErr) throw new Error(`intake-understand: ${invErr.message}`);
+    // 3. Cloud-internes Verstehen triggern (fire-and-forget) ----------------
+    //    intake-understand kann 25-50s laufen (LLM-Calls). Wir dürfen NICHT
+    //    awaiten, sonst läuft intake-trigger in seinen eigenen Timeout und
+    //    der Client sieht ein 500. Statt dessen sofort antworten und den
+    //    Verstehens-Lauf via EdgeRuntime.waitUntil im Hintergrund laufen lassen.
+    const understandPromise = admin.functions
+      .invoke("intake-understand", {
+        body: { asset_id, retry: !!body.retry, graph_hint: graphHint },
+      })
+      .then(async ({ error: invErr }) => {
+        if (invErr) {
+          console.error("intake-understand bg invoke failed:", invErr.message);
+          if (runId) {
+            await admin
+              .from("aol_runs")
+              .update({
+                status: "failed",
+                error: { message: invErr.message, where: "intake-understand" },
+                ended_at: new Date().toISOString(),
+              })
+              .eq("id", runId);
+          }
+          return;
+        }
+        if (runId) {
+          await admin
+            .from("aol_runs")
+            .update({
+              status: "completed",
+              current_node: graphHint ? "aol_enriched" : "cloud_understand",
+              ended_at: new Date().toISOString(),
+            })
+            .eq("id", runId);
+        }
+      })
+      .catch((err) => {
+        console.error("intake-understand bg unexpected error:", err);
+      });
 
-    if (runId) {
-      await admin
-        .from("aol_runs")
-        .update({
-          status: "completed",
-          current_node: graphHint ? "aol_enriched" : "cloud_understand",
-          ended_at: new Date().toISOString(),
-        })
-        .eq("id", runId);
+    // EdgeRuntime.waitUntil hält den Worker am Leben, bis das Promise fertig ist,
+    // ohne die Response zu blockieren.
+    try {
+      // @ts-ignore — EdgeRuntime ist global im Supabase Edge Runtime
+      EdgeRuntime.waitUntil(understandPromise);
+    } catch {
+      // Fallback: wenn waitUntil nicht verfügbar ist, einfach nicht awaiten.
     }
-    return ok({ run_id: runId, mode: graphHint ? "aol_enriched" : "cloud_understand" });
+
+    return ok({ run_id: runId, mode: graphHint ? "aol_enriched_async" : "cloud_understand_async" });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("intake-trigger error:", msg);
