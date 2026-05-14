@@ -269,8 +269,27 @@ export async function runUnderstand(args: {
     .select("id, fact_type, content")
     .eq("user_id", asset.user_id);
 
-  const proposedRows = extracted.map((f) => {
-    const { delta_type, against_fact_id } = linkAgainstExisting(f, existing ?? []);
+  // Graph-Hits pro Fakt vorab holen (B-W1, fail-soft).
+  const linkableHits = new Map<number, Awaited<ReturnType<typeof searchEntities>>>();
+  if (assigned_project_id) {
+    await Promise.all(
+      extracted.map(async (f, idx) => {
+        const q = (f.title ?? "").trim();
+        if (!q) return;
+        try {
+          const hits = await searchEntities({ project_id: assigned_project_id!, query: q, k: 5 });
+          linkableHits.set(idx, hits);
+        } catch {
+          linkableHits.set(idx, null);
+        }
+      }),
+    );
+  }
+
+  const proposedRows = extracted.map((f, idx) => {
+    const { delta_type, against_fact_id } = linkAgainstExisting(f, existing ?? [], {
+      searchHits: linkableHits.get(idx) ?? null,
+    });
     return {
       user_id: asset.user_id,
       project_id: assigned_project_id,
