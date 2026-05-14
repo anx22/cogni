@@ -13,52 +13,32 @@ Status der vier QA-Phasen (Stand 2026-05-14):
 |---|---|---|---|
 | 1 Bestand | Seam-Inventar | `docs/qa-seam-inventar.md` vorhanden | ✅ |
 | 2 Instrumentierung | Logger, `pipeline_events`, ErrorBoundary, Health-Panel | alles deployed | ✅ |
-| 3 Tests | Fixtures, Sweeper, Unit-Tests, Edge-Tests | 37 Vitest + 13 Deno grün (inkl. commitFact-Integration + pollAolRun) | ✅ |
-| 4 Automatisierung | ESLint scharf, Prettier, Husky, CI, withErrorBoundary | ESLint 0 Errors, Prettier+Husky+lint-staged, Nightly-Cron, alle 16 Edge Functions in `withErrorBoundary` gewrappt | ✅ |
+| 3 Tests | Fixtures, Sweeper, Unit-Tests, Edge-Tests, E2E-Smokes | 40 Vitest (inkl. 3 E2E-Smokes) + 18 Deno (commitFact + handleCallback + helpers) grün | ✅ |
+| 4 Automatisierung | ESLint scharf, Prettier, Husky, CI, withErrorBoundary, console.log-Smoke | ESLint 0 Errors, Prettier+Husky+lint-staged, Nightly-Cron, alle 16 Edge Functions in `withErrorBoundary` gewrappt, CI-Smoke `console.log`-Verbot aktiv | ✅ |
 
 ---
 
 ## Backlog (geordnet nach Priorität)
 
-1. **commit-fact Integrationstests** *(aus Phase 3 vertagt)*
-   - Refactor: Kernlogik aus `Deno.serve` in pure `commitFact({ admin, user, payload, log })` ziehen.
-   - Mock-Helfer für Supabase-Client.
-   - 3 Pfade: Happy / Konflikt / Re-Commit (Supersede).
-   - Geschätzt: ~2 h.
+> Alle Items des QA-Audit-Reports vom 2026-05-14 sind abgearbeitet (Stages 1–7).
+> Nächster offener Punkt aus dem QA-Plan ist die echte Browser-E2E-Lane (Playwright/Cypress)
+> — derzeit noch zurückgestellt, da die hookbasierten Smokes die kritischen Pfade
+> abdecken und die Server-Seite per Deno-Tests grün ist.
 
-2. **Phase 4 vollenden**
-   - `.prettierrc` + `eslint-config-prettier` als Letztes im Extends.
-   - Husky installieren, `.husky/pre-commit` → `lint-staged` für `*.{ts,tsx}` (ESLint + `tsc --noEmit`).
-   - ESLint-Regeln von `warn` auf `error` hochziehen, sobald die Bestandsverstöße beseitigt sind:
-     - `@typescript-eslint/no-unused-vars`
-     - `@typescript-eslint/no-floating-promises`
-     - `no-console` (mit `allow: ["warn","error"]`)
-     - `eslint-plugin-import` (`import/order`, `no-unresolved`)
-   - CI-Smoke: `rg "console.log" supabase/functions/` muss leer sein (aktuell 6 Treffer).
-   - Nightly-Cron-Workflow, der `test-data-sweep` triggert.
+1. **Echte Browser-E2E-Lane** *(neu, optional)*
+   - Playwright-Setup, ein Smoke pro Persona-Pfad (Upload, Notiz, Asset-Delete).
+   - Erst sinnvoll, sobald wir Persona-/Auth-Fixtures als Browser-Cookie spiegeln.
+   - Geschätzt: ~4 h.
 
-3. **Restliche Edge Functions instrumentieren**
-   - Logger einziehen in: `inspect-graphiti`, `inspect-langsmith`, `inspect-railway`, `railway-admin`, `voice-transcribe`, `asset-delete`, `project-delete`.
-   - Bisher instrumentiert: `commit-fact`, `intake-understand`, `intake-trigger`, `intake-process`, `aol-callback`, `graphiti-reconcile`, `graphiti-backfill`, `inspect-pipeline`, `test-data-sweep`.
-
-4. **E2E-Smokes (aus Phase 3 noch offen)**
-   - Upload EML → Review → Commit → Fact im Project sichtbar.
-   - Note erfassen → Review → Commit.
-   - Asset löschen → Cascade `aol_runs`.
-
-5. **`commit-fact` testbar machen**
-   - Pure `commitFact()`-Funktion aus `Deno.serve`-Closure ziehen, Mock-Admin-Helper, drei Deno-Tests (Happy/Konflikt/Supersede). Siehe `QA-AUDIT-REPORT.md` Fix 4.
-
-6. **Phase-4-Gate scharf stellen**
-   - `.prettierrc`, Husky, lint-staged, ESLint-Regeln von `warn` → `error`, Nightly-Cron für `test-data-sweep`. Siehe `QA-AUDIT-REPORT.md` Fix 5.
-
-7. **`pollAolRun` testen**
-   - `src/lib/pipeline/pollAolRun.test.ts` mit `vi.mock`-Strategie für Supabase-Client.
+2. **Logger in restliche Inspector-/Admin-Funktionen einziehen** *(low priority)*
+   - `inspect-graphiti`, `inspect-langsmith`, `inspect-railway`, `inspect-pipeline`, `railway-admin`.
+   - Diese laufen read-only & sind durch `withErrorBoundary` abgesichert; ein Logger-Eintrag bringt nur Diagnose-Schärfe.
 
 ---
 
 ## Recently completed
 
+- **2026-05-14 (Stage 7)** QA-Audit-Plan abgeschlossen. (a) Logger in `voice-transcribe`, `asset-delete`, `project-delete` eingezogen — Logger-Abdeckung 11/16 (alle hot-path & user-facing Funktionen, Inspector/Admin bewusst ausgespart). (b) `agentClient.ts`: 2 verbleibende `console.log` → `console.warn`. (c) CI-Smoke-Job `smoke` in `qa.yml`: blockt Build, sobald `console.log` (außer in `_shared/logger.ts`) im Edge-Tree auftaucht. (d) `aol-callback` refaktoriert: pure `handleCallback({admin,payload,log})` extrahiert, 5 Deno-Tests (running / completed / failed / leere run_id / db-error) → Deno 18/18 grün. (e) Drei E2E-Smokes als Hook-Integration in `src/test/e2e-smokes.test.ts` (Note→intake-trigger, Asset-Delete, Fakt-Retract) → Vitest 40/40 grün.
 - **2026-05-14 (Stage 6)** `pollAolRun` getestet (4 Pfade: completed/failed/timeout/abort, MSW-frei via `vi.mock` + Fake-Timers) → Vitest 37/37 grün. `_shared/withErrorBoundary.ts` als Pflicht-Wrapper für jede Edge Function eingeführt (Last-Resort-Catch → strukturierter Logger + 500-Hülle mit `correlation_id` + automatischer CORS-Preflight). Alle 16 Edge Functions gewrappt und deployed.
 
 - **2026-05-14 (Stage 4)** `commit-fact` testbar: pure `commitFact({admin,user,payload,log})` aus `Deno.serve`-Closure extrahiert (HTTP-Wrapper bleibt dünn). `mockAdmin()` in `_shared/testFixtures.ts` (chainable thenable mit Stub-Queue + Call-Recorder). 3 Deno-Tests (`commitFact_test.ts`): Happy / NEEDS_ASSIGNMENT / Reject. Suite jetzt 13/13 grün.
