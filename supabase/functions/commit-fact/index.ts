@@ -434,6 +434,43 @@ async function writeProjectSnapshot(
   }
 }
 
+// Übersetzt interne Trigger-Events (z. B. "commit:stakeholder:add") in einen
+// kurzen, menschlich lesbaren Satz. Niemals Maschinen-Codes in die UI lassen.
+function humanizeTriggerEvent(event: string, counts: Record<string, number>): string {
+  const parts = event.split(":"); // ["commit","stakeholder","add"]
+  const action = parts[0] ?? "update";
+  const subject = parts[1] ?? "fakt";
+  const verb = parts[2] ?? "";
+
+  const subjectMap: Record<string, string> = {
+    stakeholder: "Stakeholder",
+    deadline: "Termin",
+    decision: "Entscheidung",
+    task: "Aufgabe",
+    open_point: "offener Punkt",
+    gap_signal: "Lücke",
+    contradiction: "Widerspruch",
+    dependency: "Abhängigkeit",
+    fact: "Fakt",
+  };
+  const verbMap: Record<string, string> = {
+    add: "ergänzt",
+    update: "aktualisiert",
+    remove: "entfernt",
+    resolve: "geschlossen",
+    confirm: "bestätigt",
+    reject: "verworfen",
+  };
+  const actionMap: Record<string, string> = {
+    commit: "übernommen",
+    revise: "angepasst",
+  };
+
+  const subj = subjectMap[subject] ?? subject;
+  const v = verbMap[verb] ?? actionMap[action] ?? "aktualisiert";
+  const total = Object.values(counts).reduce((a, b) => a + b, 0);
+  return `${subj} ${v} — Projekt enthält jetzt ${total} bestätigte Erkenntnisse.`;
+
 // ----------------------------------------------------------------------------
 // AOL-Bridge: bei jeder bestätigten/abgelehnten Box informieren wir den
 // LangGraph-Service, damit der confirm_to_graph-Knoten den Wissensgraphen
