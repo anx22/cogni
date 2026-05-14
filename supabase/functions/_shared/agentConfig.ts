@@ -54,8 +54,9 @@ Sprache: Antworte in derselben Sprache wie der Eingangs-Text (vermutlich Deutsch
 
 Du gibst KEINEN Fließtext zurück. Du rufst ausschließlich das Tool "extract_facts" auf.`;
 
-// ---------- System-Prompt Assignment ----------
-export const ASSIGNMENT_SYSTEM_PROMPT = `Du bist der Zuordnungs-Agent einer Projektintelligenz-App.
+// ---------- System-Prompt Assignment (Fallback — Live-Quelle: LangSmith Hub) ----------
+//  Im Hub als Repo "suggest-assignment" gepflegt, hier nur als Fallback.
+export const ASSIGNMENT_SYSTEM_PROMPT_FALLBACK = `Du bist der Zuordnungs-Agent einer Projektintelligenz-App.
 
 Aufgabe: Entscheide, zu welchem bestehenden Projekt der gegebene Text am besten gehört — oder ob es vermutlich ein neues Projekt ist.
 
