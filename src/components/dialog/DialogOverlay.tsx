@@ -1,15 +1,29 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { X, FolderOpen } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useDialog } from "./DialogProvider";
 import BoxRenderer from "./BoxRenderer";
+import BatchReviewOverlay from "./BatchReviewOverlay";
+import FaktDrillOverlay from "./FaktDrillOverlay";
 import { END_STATES } from "@/lib/dialog/types";
 import { fmtDateTimeLong } from "@/lib/format/dateFormatters";
+
+const useDialogV2Flag = (): boolean =>
+  useMemo(() => {
+    if (typeof window === "undefined") return false;
+    if (window.location.search.includes("dialogV2=1")) return true;
+    try {
+      return window.localStorage.getItem("cogniDialogV2") === "1";
+    } catch {
+      return false;
+    }
+  }, []);
 
 const DialogOverlay = () => {
   const { session, closeDialog, readonly } = useDialog();
   const navigate = useNavigate();
+  const v2 = useDialogV2Flag();
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -21,6 +35,15 @@ const DialogOverlay = () => {
   }, [session]);
 
   if (!session) return null;
+
+  if (v2) {
+    const decisionBoxes = session.boxes.filter((b) => b.type !== "kontext");
+    const open = decisionBoxes.filter((b) => !END_STATES.includes(b.state));
+    if (open.length === 1) {
+      return createPortal(<FaktDrillOverlay onClose={closeDialog} />, document.body);
+    }
+    return createPortal(<BatchReviewOverlay onClose={closeDialog} />, document.body);
+  }
 
   const decisionBoxes = session.boxes.filter((b) => b.type !== "kontext");
   const decided = decisionBoxes.filter((b) => END_STATES.includes(b.state)).length;
