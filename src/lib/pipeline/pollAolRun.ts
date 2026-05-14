@@ -70,7 +70,7 @@ export async function pollAolRun(
 
     if (error) {
       // RLS-/Netzfehler: nicht abbrechen, weiter pollen, aber loggen
-      devlog.warn("pollAolRun query error", error.message);
+      devlog.warn("edge", "pollAolRun query error", error.message);
     } else if (data) {
       const snap = data as AolRunSnapshot;
       const serialized = JSON.stringify([snap.status, snap.current_node, snap.ended_at]);
