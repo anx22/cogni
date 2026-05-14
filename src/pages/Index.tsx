@@ -288,6 +288,8 @@ const Index = () => {
             onProjectClick={handleProjectClick}
             onCreateProject={handleCreateProject}
             isDragActive={isDragActive}
+            error={projectsError}
+            onRetry={reloadProjects}
           />
         </div>
 
