@@ -236,6 +236,35 @@
   --entity-rim:      rgba(255,255,255,.08);
 
   --noise: 0.04;
+
+  /* shadcn-Token-Bridge — Night */
+  --background: 225 17% 5%;
+  --foreground: 225 13% 93%;
+  --card: 225 22% 9%;
+  --card-foreground: 225 13% 93%;
+  --popover: 225 22% 9%;
+  --popover-foreground: 225 13% 93%;
+  --muted: 224 19% 11%;
+  --muted-foreground: 225 6% 53%;
+  --secondary: 224 19% 11%;
+  --secondary-foreground: 225 7% 73%;
+  --accent: 224 19% 14%;
+  --accent-foreground: 225 13% 93%;
+  --primary: 222 100% 71%;
+  --primary-foreground: 225 17% 5%;
+  --destructive: 6 100% 67%;
+  --destructive-foreground: 225 17% 5%;
+  --border: 225 17% 18%;
+  --input: 225 17% 18%;
+  --ring: 222 100% 71%;
+  --sidebar-background: 225 22% 9%;
+  --sidebar-foreground: 225 7% 73%;
+  --sidebar-primary: 222 100% 71%;
+  --sidebar-primary-foreground: 225 17% 5%;
+  --sidebar-accent: 224 19% 14%;
+  --sidebar-accent-foreground: 225 13% 93%;
+  --sidebar-border: 225 17% 18%;
+  --sidebar-ring: 222 100% 71%;
 }
 
 /* Cogni-Typografie */
