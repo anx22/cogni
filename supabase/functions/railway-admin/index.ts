@@ -144,6 +144,29 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const action = body.action ?? "list";
 
+    if (action === "prompt-cache-bust" || action === "prompt-state") {
+      const { bustPromptCache, promptCacheState, getPrompt } = await import("../_shared/promptHub.ts");
+      if (action === "prompt-cache-bust") {
+        const cleared = bustPromptCache();
+        return new Response(JSON.stringify({ ok: true, ...cleared }), {
+          headers: { ...cors, "Content-Type": "application/json" },
+        });
+      }
+      // prompt-state: optional Live-Pull, um zu sehen welche Version aktuell wäre
+      const state = promptCacheState();
+      const probes: Record<string, unknown> = {};
+      if (body.probe) {
+        const names: string[] = Array.isArray(body.probe) ? body.probe : ["extract-facts", "suggest-assignment"];
+        for (const n of names) {
+          const r = await getPrompt(n, { fallback: "(fallback)" });
+          probes[n] = { version: r.version, source: r.source, length: r.system.length };
+        }
+      }
+      return new Response(JSON.stringify({ ok: true, state, probes }, null, 2), {
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
+    }
+
     if (action === "list") {
       return new Response(JSON.stringify(await listAll(), null, 2), {
         headers: { ...cors, "Content-Type": "application/json" },
