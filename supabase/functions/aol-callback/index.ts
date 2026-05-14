@@ -28,7 +28,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-interface CallbackPayload {
+export interface CallbackPayload {
   run_id: string;
   status?: "running" | "completed" | "failed";
   current_node?: string;
@@ -38,12 +38,96 @@ interface CallbackPayload {
   metadata?: Record<string, unknown>;
 }
 
+export type AolAdmin = {
+  // deno-lint-ignore no-explicit-any
+  from: (t: string) => any;
+};
+
+export interface HandleCallbackResult {
+  ok: boolean;
+  status: number;
+  body: Record<string, unknown>;
+}
+
+/**
+ * Pure Logik des aol-callback Endpoints — testbar ohne HTTP.
+ * Auth-Check + Payload-Validation + aol_runs-Update.
+ */
+export async function handleCallback(opts: {
+  admin: AolAdmin;
+  payload: CallbackPayload;
+  // deno-lint-ignore no-explicit-any
+  log: any;
+}): Promise<HandleCallbackResult> {
+  const { admin, payload, log } = opts;
+  if (!payload.run_id) {
+    log.warn("input", "run_id missing");
+    return { ok: false, status: 400, body: { error: "run_id fehlt" } };
+  }
+  log.bind({ runId: payload.run_id });
+  log.stage("input", "payload parsed", {
+    status: payload.status,
+    current_node: payload.current_node,
+    facts_written: payload.facts_written,
+  });
+
+  const update: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+  };
+  if (payload.status) update.status = payload.status;
+  if (payload.current_node) update.current_node = payload.current_node;
+  if (payload.error !== undefined) {
+    update.error =
+      typeof payload.error === "string" ? { message: payload.error } : payload.error;
+  }
+  if (payload.status === "completed" || payload.status === "failed") {
+    update.ended_at = new Date().toISOString();
+  }
+  if (payload.metadata || payload.facts_written !== undefined || payload.session_id) {
+    update.metadata = {
+      ...(payload.metadata ?? {}),
+      ...(payload.facts_written !== undefined
+        ? { facts_written: payload.facts_written }
+        : {}),
+      ...(payload.session_id ? { session_id: payload.session_id } : {}),
+    };
+  }
+
+  const { error } = await admin
+    .from("aol_runs")
+    .update(update)
+    .eq("id", payload.run_id);
+  if (error) {
+    log.error("update", "aol_runs update failed", error);
+    return { ok: false, status: 500, body: { error: `aol_runs update: ${error.message}` } };
+  }
+
+  const { data: runRow } = await admin
+    .from("aol_runs")
+    .select("user_id, asset_id, project_id")
+    .eq("id", payload.run_id)
+    .maybeSingle();
+  if (runRow) {
+    log.bind({
+      userId: runRow.user_id,
+      assetId: runRow.asset_id,
+      projectId: runRow.project_id,
+    });
+  }
+
+  log.stage("done", "aol_run updated", { status: payload.status });
+  return {
+    ok: true,
+    status: 200,
+    body: { run_id: payload.run_id, correlation_id: log.correlationId },
+  };
+}
+
 Deno.serve(withErrorBoundary("aol-callback", async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // --- Auth: shared secret zwischen Railway und Lovable Cloud ---------------
   const expected = Deno.env.get("AOL_CALLBACK_TOKEN") ?? "";
   if (!expected) return fail("AOL_CALLBACK_TOKEN nicht konfiguriert", 500);
 
@@ -59,54 +143,13 @@ Deno.serve(withErrorBoundary("aol-callback", async (req) => {
   log.stage("start", "callback received");
 
   try {
-    const body = (await req.json()) as CallbackPayload;
-    if (!body.run_id) throw new Error("run_id fehlt");
-    log.bind({ runId: body.run_id });
-    log.stage("input", "payload parsed", {
-      status: body.status,
-      current_node: body.current_node,
-      facts_written: body.facts_written,
-    });
-
-    const update: Record<string, unknown> = {
-      updated_at: new Date().toISOString(),
-    };
-    if (body.status) update.status = body.status;
-    if (body.current_node) update.current_node = body.current_node;
-    if (body.error !== undefined) {
-      update.error =
-        typeof body.error === "string" ? { message: body.error } : body.error;
-    }
-    if (body.status === "completed" || body.status === "failed") {
-      update.ended_at = new Date().toISOString();
-    }
-    if (body.metadata || body.facts_written !== undefined || body.session_id) {
-      update.metadata = {
-        ...(body.metadata ?? {}),
-        ...(body.facts_written !== undefined
-          ? { facts_written: body.facts_written }
-          : {}),
-        ...(body.session_id ? { session_id: body.session_id } : {}),
-      };
-    }
-
-    const { error } = await admin
-      .from("aol_runs")
-      .update(update)
-      .eq("id", body.run_id);
-    if (error) throw new Error(`aol_runs update: ${error.message}`);
-
-    // user_id für RLS-konformen Pipeline-Event-Eintrag nachladen
-    const { data: runRow } = await admin
-      .from("aol_runs")
-      .select("user_id, asset_id, project_id")
-      .eq("id", body.run_id)
-      .maybeSingle();
-    if (runRow) log.bind({ userId: runRow.user_id, assetId: runRow.asset_id, projectId: runRow.project_id });
-
-    log.stage("done", "aol_run updated", { status: body.status });
+    const payload = (await req.json()) as CallbackPayload;
+    const res = await handleCallback({ admin, payload, log });
     await log.flush();
-    return ok({ run_id: body.run_id, correlation_id: log.correlationId });
+    return new Response(JSON.stringify(res.ok ? { ok: true, ...res.body } : { ok: false, ...res.body }), {
+      status: res.status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     log.error("error", msg, err);
@@ -115,11 +158,6 @@ Deno.serve(withErrorBoundary("aol-callback", async (req) => {
   }
 }));
 
-function ok(payload: unknown) {
-  return new Response(JSON.stringify({ ok: true, ...(payload as object) }), {
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
 function fail(msg: string, status = 500) {
   return new Response(JSON.stringify({ ok: false, error: msg }), {
     status,
