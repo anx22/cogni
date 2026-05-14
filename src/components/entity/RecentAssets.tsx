@@ -122,26 +122,7 @@ const RecentAssets = ({ isDragActive }: Props) => {
         >
           {assets.map((a) => {
             const Icon = isUrl(a) ? LinkIcon : ICONS[a.file_type] ?? File;
-            return (
-              <button
-                key={a.id}
-                onClick={() => handleClick(a)}
-                title={a.file_name}
-                className={cn(
-                  "relative w-14 h-14 rounded-2xl flex items-center justify-center",
-                  "bg-[hsl(var(--surface-2))] hover:bg-[hsl(var(--surface-3))]",
-                  "transition-all duration-300 hover:scale-105 text-muted-foreground hover:text-foreground",
-                )}
-              >
-                <Icon size={18} strokeWidth={1.5} />
-                <span
-                  className={cn(
-                    "absolute bottom-1.5 right-1.5 w-1.5 h-1.5 rounded-full",
-                    STATUS_COLORS[a.processing_status] ?? "bg-muted-foreground/40",
-                  )}
-                />
-              </button>
-            );
+            return <AssetTile key={a.id} asset={a} Icon={Icon} onClick={() => handleClick(a)} />;
           })}
         </div>
       </div>
