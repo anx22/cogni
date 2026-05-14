@@ -130,7 +130,7 @@ export async function callExtractFacts(
     tools: [EXTRACT_FACTS_TOOL],
     tool_choice: { type: "function", function: { name: "extract_facts" } },
   });
-  console.log(`agent.extract_facts prompt_version=${prompt.version} source=${prompt.source}`);
+  console.warn(`agent.extract_facts prompt_version=${prompt.version} source=${prompt.source}`);
 
   const parsed = parseToolArgs(data, "extract_facts") as { facts?: unknown } | null;
   if (!parsed) return [];
@@ -211,7 +211,7 @@ ${hintsBlock}`;
     tools: [SUGGEST_ASSIGNMENT_TOOL],
     tool_choice: { type: "function", function: { name: "suggest_project_assignment" } },
   });
-  console.log(`agent.suggest_assignment prompt_version=${prompt.version} source=${prompt.source}`);
+  console.warn(`agent.suggest_assignment prompt_version=${prompt.version} source=${prompt.source}`);
 
   const parsed = parseToolArgs(data, "suggest_project_assignment") as
     | AssignmentSuggestion
