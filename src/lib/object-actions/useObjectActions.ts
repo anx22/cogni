@@ -2,15 +2,15 @@ import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
-type Result<T = unknown> = { ok: true; data?: T } | { ok: false; error: string };
+type Result = { ok: true; data?: unknown } | { ok: false; error: string };
 
-async function callFn<T = unknown>(name: string, body: Record<string, unknown>): Promise<Result<T>> {
+async function callFn(name: string, body: Record<string, unknown>): Promise<Result> {
   const { data, error } = await supabase.functions.invoke(name, { body });
   if (error) return { ok: false, error: error.message };
-  if (data && typeof data === "object" && "error" in data && data.error) {
+  if (data && typeof data === "object" && "error" in data && (data as { error?: unknown }).error) {
     return { ok: false, error: String((data as { error: unknown }).error) };
   }
-  return { ok: true, data: data as T };
+  return { ok: true, data };
 }
 
 export function useProjectActions() {
