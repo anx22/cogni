@@ -55,7 +55,7 @@ export function useProjectActions() {
     setPending(true);
     const r = await callFn("project-delete", { project_id: id });
     setPending(false);
-    if (!r.ok) {
+    if (r.ok === false) {
       toast.error("Löschen fehlgeschlagen", { description: r.error });
       return false;
     }
@@ -73,7 +73,7 @@ export function useAssetActions() {
     setPending(true);
     const r = await callFn("asset-delete", { asset_id: id });
     setPending(false);
-    if (!r.ok) {
+    if (r.ok === false) {
       toast.error("Löschen fehlgeschlagen", { description: r.error });
       return false;
     }
@@ -85,7 +85,7 @@ export function useAssetActions() {
     setPending(true);
     const r = await callFn("intake-trigger", { asset_id: id, retry: true });
     setPending(false);
-    if (!r.ok) {
+    if (r.ok === false) {
       toast.error("Erneute Verarbeitung fehlgeschlagen", { description: r.error });
       return false;
     }
