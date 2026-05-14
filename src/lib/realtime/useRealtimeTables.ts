@@ -65,7 +65,6 @@ export function useRealtimeTables(
     const channel = supabase.channel(channelName);
     listenersRef.current.forEach((l) => {
       channel.on(
-        // @ts-expect-error — supabase-js typing for postgres_changes is loose
         "postgres_changes",
         {
           event: l.event ?? "*",
