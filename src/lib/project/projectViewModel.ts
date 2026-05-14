@@ -128,7 +128,7 @@ export const numberFromJson = (v: unknown, key: string): number | null => {
 // ---------------------------------------------------------------------------
 // deno-lint-ignore no-explicit-any
 export function toKonflikte(contradictions: any[], canonical: any[]): KonfliktVM[] {
-  const factById = new Map(canonical.map((f) => [f.id, f]));
+  const factById = mapById(canonical);
   return contradictions.map((c) => {
     const a = c.fact_a_id ? factById.get(c.fact_a_id) : null;
     const b = c.fact_b_id ? factById.get(c.fact_b_id) : null;
