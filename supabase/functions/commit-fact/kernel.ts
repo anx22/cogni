@@ -11,6 +11,7 @@ import { notifyAol } from "./notifications.ts";
 import { mirrorToGraphiti } from "./mirror.ts";
 import { detectAndPersistConflicts } from "./conflictDetector.ts";
 import { detectAndPersistGaps } from "./gapDetector.ts";
+import { detectAndPersistDependencies } from "./dependencyDetector.ts";
 
 interface Payload {
   review_case_id: string;
@@ -163,7 +164,7 @@ export async function commitFact(deps: CommitFactDeps): Promise<CommitFactResult
       content: finalContent,
     }, log);
 
-    // B-W2/B-W3: Konflikte + Gaps deterministisch erkennen (fail-soft, parallel).
+    // B-W2/B-W3/B-W4: Konflikte + Gaps + Dependencies deterministisch (fail-soft, parallel).
     await Promise.all([
       detectAndPersistConflicts(admin, {
         user_id: user.id,
@@ -174,6 +175,14 @@ export async function commitFact(deps: CommitFactDeps): Promise<CommitFactResult
         log,
       }),
       detectAndPersistGaps(admin, {
+        user_id: user.id,
+        project_id,
+        canonical_fact_id: cf!.id,
+        fact_type: pf.fact_type,
+        content: finalContent,
+        log,
+      }),
+      detectAndPersistDependencies(admin, {
         user_id: user.id,
         project_id,
         canonical_fact_id: cf!.id,

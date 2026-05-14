@@ -4,6 +4,7 @@ Format: `[YYYY-MM-DD] Problem → Choice → Reason`
 
 ## 2026-05-14 — Welle B Detektoren
 
+- `2026-05-14` Dependency-Erkennung könnte LLM-basiert im AOL-Service laufen → **deterministisch in `commit-fact/dependencyDetector.ts`** → Trigger-Phrase + Title-Substring (Token-Länge ≥ 4), kinds `blockiert_durch` (task) und `wartet_auf` (deadline → decision); `haengt_ab_von` bleibt im Kernel für `reference`. Idempotent über `(source_id, target_id, type)`, fail-soft, 8 Pure-Tests. Welle B damit komplett.
 - `2026-05-14` Gap-Erkennung könnte LLM-basiert im AOL-Service laufen → **deterministisch in `commit-fact/gapDetector.ts`** (analog B-W2) → drei Kinds (deadline_without_owner, decision_without_deadline, task_without_due_date), idempotent über `(canonical_fact_id, metadata.gap_kind)`, fail-soft, 8 Pure-Tests. LLM-Heuristik bleibt Wave 3.
 
 
