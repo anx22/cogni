@@ -130,6 +130,7 @@ export async function callExtractFacts(
     tools: [EXTRACT_FACTS_TOOL],
     tool_choice: { type: "function", function: { name: "extract_facts" } },
   });
+  console.log(`agent.extract_facts prompt_version=${prompt.version} source=${prompt.source}`);
 
   const parsed = parseToolArgs(data, "extract_facts") as { facts?: unknown } | null;
   if (!parsed) return [];
