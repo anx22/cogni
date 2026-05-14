@@ -69,24 +69,39 @@ async function getTenantHandle(): Promise<string | null> {
     return explicit;
   }
   const headers = authHeaders();
-  if (!headers["X-API-Key"]) return null;
-  try {
-    const res = await fetch(`${HUB_BASE}/api/v1/workspaces/current`, { headers });
-    if (!res.ok) {
-      console.warn("promptHub: workspaces/current", res.status);
-      return null;
+  if (!headers["x-api-key"]) return null;
+  // LangSmith stellt mehrere Endpoints zur Verfügung; wir probieren in Reihenfolge.
+  const candidates = [
+    "/api/v1/workspaces/current",
+    "/workspaces/current",
+    "/api/v1/info",
+    "/info",
+    "/api/v1/orgs/current",
+  ];
+  for (const path of candidates) {
+    try {
+      const res = await fetch(`${HUB_BASE}${path}`, { headers });
+      if (!res.ok) continue;
+      const data = await res.json().catch(() => ({}));
+      const handle =
+        data?.tenant_handle ??
+        data?.handle ??
+        data?.workspace?.tenant_handle ??
+        data?.organization?.handle ??
+        data?.tenantHandle ??
+        null;
+      if (typeof handle === "string" && handle.length > 0) {
+        console.log(`promptHub: tenant via ${path} → ${handle}`);
+        cachedTenant = handle;
+        return handle;
+      }
+      // Manche Antworten enthalten direkt die ID — wir loggen sie, aber das ist kein Handle.
+      console.warn(`promptHub: ${path} ok aber kein handle:`, JSON.stringify(data).slice(0, 200));
+    } catch (e) {
+      console.warn(`promptHub: ${path} threw:`, e);
     }
-    const data = await res.json();
-    const handle = data?.tenant_handle ?? data?.handle ?? null;
-    if (typeof handle === "string" && handle.length > 0) {
-      cachedTenant = handle;
-      return handle;
-    }
-    return null;
-  } catch (e) {
-    console.warn("promptHub: tenant lookup failed:", e);
-    return null;
   }
+  return null;
 }
 
 // LangSmith ChatPromptTemplate-Manifest mit einer einzigen System-Message bauen.
