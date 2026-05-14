@@ -167,6 +167,18 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (action === "langsmith-key-info") {
+      const k = Deno.env.get("LANGSMITH_API_KEY") ?? "";
+      return new Response(JSON.stringify({
+        ok: true,
+        present: !!k,
+        length: k.length,
+        prefix: k.slice(0, 8),
+        suffix: k.slice(-4),
+        owner_env: Deno.env.get("LANGSMITH_PROMPT_OWNER") ?? null,
+      }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
     if (action === "langsmith-write-probe") {
       const key = Deno.env.get("LANGSMITH_API_KEY") ?? "";
       const r = await fetch("https://api.smith.langchain.com/api/v1/repos/", {
