@@ -155,10 +155,17 @@ Deno.serve(async (req) => {
       // prompt-state: optional Live-Pull, um zu sehen welche Version aktuell wäre
       const state = promptCacheState();
       const probes: Record<string, unknown> = {};
-      if (body.probe) {
-        const names: string[] = Array.isArray(body.probe) ? body.probe : ["extract-facts", "suggest-assignment"];
+      if (body.probe || body.ensure) {
+        const { AGENT_SYSTEM_PROMPT_FALLBACK, ASSIGNMENT_SYSTEM_PROMPT_FALLBACK } = await import("../_shared/agentConfig.ts");
+        const fallbacks: Record<string, string> = {
+          "extract-facts": AGENT_SYSTEM_PROMPT_FALLBACK,
+          "suggest-assignment": ASSIGNMENT_SYSTEM_PROMPT_FALLBACK,
+        };
+        const names: string[] = Array.isArray(body.probe)
+          ? body.probe
+          : (Array.isArray(body.ensure) ? body.ensure : ["extract-facts", "suggest-assignment"]);
         for (const n of names) {
-          const r = await getPrompt(n, { fallback: "(fallback)" });
+          const r = await getPrompt(n, { fallback: fallbacks[n] ?? "(fallback)", autoCreate: !!body.ensure });
           probes[n] = { version: r.version, source: r.source, length: r.system.length };
         }
       }
