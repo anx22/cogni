@@ -40,6 +40,12 @@ const SideGrid = ({
   }, [projects]);
 
   const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+
+  // Wenn die aktuelle Seite nach Löschungen leer wäre, springen wir zurück.
+  useEffect(() => {
+    if (page > totalPages - 1) setPage(Math.max(0, totalPages - 1));
+  }, [page, totalPages]);
+
   const pageItems = useMemo(
     () => items.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE),
     [items, page],
