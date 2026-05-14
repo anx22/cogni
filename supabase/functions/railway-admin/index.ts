@@ -169,12 +169,16 @@ Deno.serve(async (req) => {
 
     if (action === "langsmith-raw") {
       const k = Deno.env.get("LANGSMITH_API_KEY") ?? "";
-      const base = body.base ?? Deno.env.get("LANGSMITH_BASE_URL") ?? "https://eu.api.smith.langchain.com";
+      const base = body.base ?? Deno.env.get("LANGSMITH_ENDPOINT") ?? Deno.env.get("LANGSMITH_BASE_URL") ?? "https://eu.api.smith.langchain.com";
       const path: string = body.path;
       const method: string = (body.method ?? "GET").toUpperCase();
       const extraHeaders: Record<string, string> = body.headers ?? {};
       const reqBody = body.body;
       const headers: Record<string, string> = { "x-api-key": k, ...extraHeaders };
+      const workspaceId = Deno.env.get("LANGSMITH_WORKSPACE_ID");
+      if (workspaceId && !Object.keys(headers).some((h) => h.toLowerCase() === "x-tenant-id")) {
+        headers["x-tenant-id"] = workspaceId;
+      }
       if (reqBody !== undefined && reqBody !== null && !headers["Content-Type"]) {
         headers["Content-Type"] = "application/json";
       }
@@ -199,14 +203,17 @@ Deno.serve(async (req) => {
         length: k.length,
         prefix: k.slice(0, 8),
         suffix: k.slice(-4),
-        owner_env: Deno.env.get("LANGSMITH_PROMPT_OWNER") ?? null,
+        endpoint: Deno.env.get("LANGSMITH_ENDPOINT") ?? Deno.env.get("LANGSMITH_BASE_URL") ?? "https://eu.api.smith.langchain.com",
+        workspace_id_present: !!Deno.env.get("LANGSMITH_WORKSPACE_ID"),
+        owner_env_legacy: Deno.env.get("LANGSMITH_PROMPT_OWNER") ?? null,
       }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
     if (action === "langsmith-auth-matrix") {
       const k = Deno.env.get("LANGSMITH_API_KEY") ?? "";
-      const tenantHint = Deno.env.get("LANGSMITH_PROMPT_OWNER") ?? "";
-      const url = "https://api.smith.langchain.com/api/v1/sessions?limit=1";
+      const tenantHint = Deno.env.get("LANGSMITH_WORKSPACE_ID") ?? Deno.env.get("LANGSMITH_PROMPT_OWNER") ?? "";
+      const base = Deno.env.get("LANGSMITH_ENDPOINT") ?? Deno.env.get("LANGSMITH_BASE_URL") ?? "https://eu.api.smith.langchain.com";
+      const url = `${base}/api/v1/sessions?limit=1`;
       const variants: Record<string, Record<string, string>> = {
         "x-api-key": { "x-api-key": k },
         "X-API-Key": { "X-API-Key": k },
@@ -230,13 +237,13 @@ Deno.serve(async (req) => {
 
     if (action === "langsmith-create-test-repo") {
       const k = Deno.env.get("LANGSMITH_API_KEY") ?? "";
-      const base = body.base ?? Deno.env.get("LANGSMITH_BASE_URL") ?? "https://eu.api.smith.langchain.com";
-      const tid: string = body.tenant ?? Deno.env.get("LANGSMITH_PROMPT_OWNER") ?? "";
+      const base = body.base ?? Deno.env.get("LANGSMITH_ENDPOINT") ?? Deno.env.get("LANGSMITH_BASE_URL") ?? "https://eu.api.smith.langchain.com";
+      const tid: string = body.tenant ?? Deno.env.get("LANGSMITH_WORKSPACE_ID") ?? Deno.env.get("LANGSMITH_PROMPT_OWNER") ?? "";
       const headers: Record<string, string> = {
         "x-api-key": k,
         "Content-Type": "application/json",
       };
-      if (/^[0-9a-f-]{36}$/i.test(tid)) headers["X-Tenant-Id"] = tid;
+      if (/^[0-9a-f-]{36}$/i.test(tid)) headers["x-tenant-id"] = tid;
       const r = await fetch(`${base}/api/v1/repos/`, {
         method: "POST",
         headers,
@@ -254,8 +261,9 @@ Deno.serve(async (req) => {
 
     if (action === "langsmith-tenant-resolve") {
       const k = Deno.env.get("LANGSMITH_API_KEY") ?? "";
-      const tid = Deno.env.get("LANGSMITH_PROMPT_OWNER") ?? "";
-      const headers = { "x-api-key": k, "X-Tenant-Id": tid };
+      const tid = Deno.env.get("LANGSMITH_WORKSPACE_ID") ?? Deno.env.get("LANGSMITH_PROMPT_OWNER") ?? "";
+      const base = Deno.env.get("LANGSMITH_ENDPOINT") ?? Deno.env.get("LANGSMITH_BASE_URL") ?? "https://eu.api.smith.langchain.com";
+      const headers = { "x-api-key": k, "x-tenant-id": tid };
       const paths = [
         "/api/v1/workspaces/current",
         "/api/v1/orgs/current",
@@ -265,7 +273,7 @@ Deno.serve(async (req) => {
       const out: Record<string, unknown> = {};
       for (const p of paths) {
         try {
-          const r = await fetch(`https://api.smith.langchain.com${p}`, { headers });
+          const r = await fetch(`${base}${p}`, { headers });
           out[p] = { status: r.status, body: (await r.text()).slice(0, 400) };
         } catch (e) {
           out[p] = { error: String(e) };
@@ -279,7 +287,8 @@ Deno.serve(async (req) => {
     if (action === "langsmith-list-workspaces") {
       const k = Deno.env.get("LANGSMITH_API_KEY") ?? "";
       const orgId = Deno.env.get("LANGSMITH_PROMPT_OWNER") ?? "";
-      const r = await fetch("https://api.smith.langchain.com/api/v1/workspaces?include_deleted=false", {
+      const base = Deno.env.get("LANGSMITH_ENDPOINT") ?? Deno.env.get("LANGSMITH_BASE_URL") ?? "https://eu.api.smith.langchain.com";
+      const r = await fetch(`${base}/api/v1/workspaces?include_deleted=false`, {
         headers: {
           "X-API-Key": k,
           "X-Organization-Id": orgId,
@@ -293,9 +302,13 @@ Deno.serve(async (req) => {
 
     if (action === "langsmith-write-probe") {
       const key = Deno.env.get("LANGSMITH_API_KEY") ?? "";
-      const r = await fetch("https://api.smith.langchain.com/api/v1/repos/", {
+      const base = Deno.env.get("LANGSMITH_ENDPOINT") ?? Deno.env.get("LANGSMITH_BASE_URL") ?? "https://eu.api.smith.langchain.com";
+      const workspaceId = Deno.env.get("LANGSMITH_WORKSPACE_ID") ?? "";
+      const headers: Record<string, string> = { "x-api-key": key, "Content-Type": "application/json" };
+      if (workspaceId) headers["x-tenant-id"] = workspaceId;
+      const r = await fetch(`${base}/api/v1/repos/`, {
         method: "POST",
-        headers: { "x-api-key": key, "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           repo_handle: "produktintelligenz-test-write",
           description: "write capability probe",
@@ -315,7 +328,7 @@ Deno.serve(async (req) => {
           headers: { ...cors, "Content-Type": "application/json" },
         });
       }
-      const base: string = body.base ?? "https://api.smith.langchain.com";
+      const base: string = body.base ?? Deno.env.get("LANGSMITH_ENDPOINT") ?? Deno.env.get("LANGSMITH_BASE_URL") ?? "https://eu.api.smith.langchain.com";
       const sendTenant: boolean = body.sendTenant !== false; // default true
       const tenantOverride: string | undefined = body.tenant;
       const paths: string[] = body.paths ?? [
@@ -327,9 +340,9 @@ Deno.serve(async (req) => {
       const out: Record<string, unknown> = {};
       for (const p of paths) {
         try {
-          const tid = tenantOverride ?? Deno.env.get("LANGSMITH_PROMPT_OWNER") ?? "";
+          const tid = tenantOverride ?? Deno.env.get("LANGSMITH_WORKSPACE_ID") ?? Deno.env.get("LANGSMITH_PROMPT_OWNER") ?? "";
           const h: Record<string, string> = { "x-api-key": key };
-          if (sendTenant && /^[0-9a-f-]{36}$/i.test(tid)) h["X-Tenant-Id"] = tid;
+          if (sendTenant && /^[0-9a-f-]{36}$/i.test(tid)) h["x-tenant-id"] = tid;
           const r = await fetch(`${base}${p}`, { headers: h });
           const t = await r.text();
           out[p] = { status: r.status, body: t.slice(0, 500) };
