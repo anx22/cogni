@@ -97,3 +97,42 @@ export async function pollAolRun(
     await new Promise((r) => setTimeout(r, intervalMs));
   }
 }
+
+/**
+ * Wartet auf den jüngsten `aol_runs`-Eintrag eines Assets und pollt dann
+ * dessen Status. Robust gegen Race Conditions: solange noch kein Run existiert
+ * (z.B. weil intake-process gerade erst intake-trigger geschossen hat), wird
+ * weiter gewartet, bis er auftaucht oder das Timeout zuschlägt.
+ */
+export async function pollAolRunByAsset(
+  assetId: string,
+  opts: PollOptions = {},
+): Promise<PollResult> {
+  const intervalMs = opts.intervalMs ?? 1500;
+  const timeoutMs = opts.timeoutMs ?? 120_000;
+  const start = Date.now();
+
+  while (true) {
+    if (opts.signal?.aborted) return { status: "aborted", snapshot: null };
+
+    const { data } = await supabase
+      .from("aol_runs")
+      .select("id")
+      .eq("asset_id", assetId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (data?.id) {
+      const remaining = Math.max(2_000, timeoutMs - (Date.now() - start));
+      return pollAolRun(data.id, { ...opts, timeoutMs: remaining });
+    }
+
+    if (Date.now() - start >= timeoutMs) {
+      devlog.warn("edge", "pollAolRunByAsset timeout (no run row)", assetId);
+      return { status: "timeout", snapshot: null };
+    }
+
+    await new Promise((r) => setTimeout(r, intervalMs));
+  }
+}
