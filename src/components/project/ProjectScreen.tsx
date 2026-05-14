@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+
 import { toast } from "sonner";
 import LageZone from "./LageZone";
 import HandlungsbedarfList from "./HandlungsbedarfList";
@@ -25,7 +25,6 @@ const isUuid = (v: unknown): v is string =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 
 const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
-  const navigate = useNavigate();
   const [dragActive, setDragActive] = useState(false);
   const realProjectId = isUuid(projectId) ? projectId : null;
   const { intake } = useIntake({ projectId: realProjectId });
