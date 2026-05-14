@@ -1,5 +1,5 @@
 import { useMemo, useState, useRef, useCallback, useEffect, KeyboardEvent } from "react";
-import { Plus } from "lucide-react";
+import { Plus, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ProjectTile from "./ProjectTile";
 import type { DemoProject } from "@/data/demoProjects";
@@ -12,6 +12,8 @@ interface SideGridProps {
   onProjectClick?: (id: string) => void;
   onCreateProject?: () => void;
   isDragActive?: boolean;
+  error?: string | null;
+  onRetry?: () => void;
 }
 
 const COLS = 2;
@@ -26,6 +28,8 @@ const SideGrid = ({
   onProjectClick,
   onCreateProject,
   isDragActive,
+  error,
+  onRetry,
 }: SideGridProps) => {
   const [page, setPage] = useState(0);
   const tileRefs = useRef<Array<HTMLButtonElement | null>>([]);
@@ -53,6 +57,26 @@ const SideGrid = ({
 
   const handleKeyDown = useCallback(
     (idx: number) => (e: KeyboardEvent) => {
+      if (e.key === "PageDown") {
+        e.preventDefault();
+        setPage((p) => Math.min(totalPages - 1, p + 1));
+        return;
+      }
+      if (e.key === "PageUp") {
+        e.preventDefault();
+        setPage((p) => Math.max(0, p - 1));
+        return;
+      }
+      if (e.key === "Home") {
+        e.preventDefault();
+        setPage(0);
+        return;
+      }
+      if (e.key === "End") {
+        e.preventDefault();
+        setPage(Math.max(0, totalPages - 1));
+        return;
+      }
       let next = idx;
       if (e.key === "ArrowRight") next = idx + 1;
       else if (e.key === "ArrowLeft") next = idx - 1;
@@ -63,7 +87,7 @@ const SideGrid = ({
       const target = tileRefs.current[next];
       if (target) target.focus();
     },
-    [],
+    [totalPages],
   );
 
   const isEmpty = side === "left" && items.length === 0;
@@ -91,7 +115,26 @@ const SideGrid = ({
           backgroundSize: "16px 16px",
         }}
       >
-        {isPlaceholder ? (
+        {error && side === "left" ? (
+          <div
+            className="flex flex-col items-center justify-center gap-3 text-center"
+            style={{ width: `${COLS * 140 + (COLS - 1) * 10}px`, height: `${ROWS * 72 + (ROWS - 1) * 12}px` }}
+            role="alert"
+          >
+            <AlertCircle size={18} className="text-destructive/70" strokeWidth={1.5} />
+            <p className="text-[11px] text-muted-foreground/70 max-w-[180px] leading-relaxed">
+              Projekte konnten nicht geladen werden.
+            </p>
+            {onRetry && (
+              <button
+                onClick={onRetry}
+                className="text-[10px] tracking-wide text-primary/80 hover:text-primary transition-colors"
+              >
+                Erneut versuchen
+              </button>
+            )}
+          </div>
+        ) : isPlaceholder ? (
           <div
             className="grid"
             style={{

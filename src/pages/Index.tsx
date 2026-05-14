@@ -5,6 +5,7 @@ import { useSelectedCharacter } from "@/components/entity/useSelectedCharacter";
 import EntityVoice from "@/components/entity/EntityVoice";
 import SideGrid from "@/components/entity/SideGrid";
 import IntakeSessionsPanel from "@/components/entity/IntakeSessionsPanel";
+import MobileNavSheet from "@/components/entity/MobileNavSheet";
 import HomeDropOverlay from "@/components/entity/HomeDropOverlay";
 import InputOverlay from "@/components/entity/InputOverlay";
 import AccountDrawer from "@/components/entity/AccountDrawer";
@@ -35,7 +36,7 @@ const Index = () => {
   const { intake } = useIntake({ setEntityState });
   const { characterId } = useSelectedCharacter();
   const voice = useEntityVoice(session?.user?.id);
-  const { projects: liveProjects } = useProjects();
+  const { projects: liveProjects, error: projectsError, reload: reloadProjects } = useProjects();
 
   const busy = entityState === "processing" || entityState === "review-ready";
   const isDragActive = dragActive || entityState === "hover";
@@ -288,6 +289,8 @@ const Index = () => {
             onProjectClick={handleProjectClick}
             onCreateProject={handleCreateProject}
             isDragActive={isDragActive}
+            error={projectsError}
+            onRetry={reloadProjects}
           />
         </div>
 
@@ -330,6 +333,14 @@ const Index = () => {
       <div className="absolute top-6 right-6 flex items-center gap-4">
         <AccountDrawer />
       </div>
+
+      <MobileNavSheet
+        projects={liveProjects}
+        projectsError={projectsError}
+        onReloadProjects={reloadProjects}
+        onProjectClick={handleProjectClick}
+        onCreateProject={handleCreateProject}
+      />
 
       <HomeDropOverlay active={dragActive} busy={busy} />
 

@@ -36,24 +36,29 @@ export interface UseProjectsResult {
   reload: () => Promise<void>;
 }
 
-export function useProjects(): UseProjectsResult {
+export interface UseProjectsOptions {
+  includeArchived?: boolean;
+}
+
+export function useProjects(options?: UseProjectsOptions): UseProjectsResult {
   const { session } = useAuth();
   const [projects, setProjects] = useState<DemoProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const userId = session?.user?.id;
+  const includeArchived = options?.includeArchived ?? false;
 
   const load = useCallback(async () => {
     if (!userId) return;
     setLoading(true);
     setError(null);
 
-    const { data: rows, error: pErr } = await supabase
+    let q = supabase
       .from("projects")
       .select("id, name, updated_at, status")
-      .eq("user_id", userId)
-      .neq("status", "archived")
-      .order("updated_at", { ascending: false });
+      .eq("user_id", userId);
+    if (!includeArchived) q = q.neq("status", "archived");
+    const { data: rows, error: pErr } = await q.order("updated_at", { ascending: false });
 
     if (pErr) {
       setError(pErr.message);
@@ -139,12 +144,13 @@ export function useProjects(): UseProjectsResult {
         openCount: openCount > 0 ? openCount : undefined,
         signal,
         signal2,
+        archived: r.status === "archived",
       };
     });
 
     setProjects(mapped);
     setLoading(false);
-  }, [userId]);
+  }, [userId, includeArchived]);
 
   useEffect(() => {
     load();

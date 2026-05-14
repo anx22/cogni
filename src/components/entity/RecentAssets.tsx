@@ -8,6 +8,7 @@ import HoverActionsMenu from "@/components/shared/HoverActionsMenu";
 import ConfirmDestructive from "@/components/shared/ConfirmDestructive";
 import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { useAssetActions } from "@/lib/object-actions/useObjectActions";
+import { useAuth } from "@/hooks/useAuth";
 
 type Asset = Database["public"]["Tables"]["assets"]["Row"];
 
@@ -38,14 +39,18 @@ const LIMIT = COLS * ROWS;
 
 const RecentAssets = ({ isDragActive }: Props) => {
   const [assets, setAssets] = useState<Asset[]>([]);
+  const { session } = useAuth();
+  const userId = session?.user?.id;
 
   useEffect(() => {
+    if (!userId) return;
     let mounted = true;
 
     const load = async () => {
       const { data } = await supabase
         .from("assets")
         .select("*")
+        .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .limit(LIMIT);
       if (mounted && data) setAssets(data);
@@ -53,15 +58,19 @@ const RecentAssets = ({ isDragActive }: Props) => {
     load();
 
     const channel = supabase
-      .channel("assets-recent")
-      .on("postgres_changes", { event: "*", schema: "public", table: "assets" }, () => load())
+      .channel(`assets-recent-${userId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "assets", filter: `user_id=eq.${userId}` },
+        () => load(),
+      )
       .subscribe();
 
     return () => {
       mounted = false;
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [userId]);
 
   const handleClick = async (a: Asset) => {
     const meta = (a.metadata as Record<string, unknown>) ?? {};
