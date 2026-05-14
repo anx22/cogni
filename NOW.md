@@ -38,8 +38,8 @@ Status der vier QA-Phasen (Stand 2026-05-14):
    - Nightly-Cron-Workflow, der `test-data-sweep` triggert.
 
 3. **Restliche Edge Functions instrumentieren**
-   - Logger einziehen in: `intake-process`, `inspect-graphiti`, `inspect-langsmith`, `inspect-railway`, `railway-admin`, `voice-transcribe`, `asset-delete`, `project-delete`.
-   - Bisher instrumentiert: `commit-fact`, `intake-understand`, `intake-trigger`, `aol-callback`, `graphiti-reconcile`, `graphiti-backfill`, `inspect-pipeline`, `test-data-sweep`.
+   - Logger einziehen in: `inspect-graphiti`, `inspect-langsmith`, `inspect-railway`, `railway-admin`, `voice-transcribe`, `asset-delete`, `project-delete`.
+   - Bisher instrumentiert: `commit-fact`, `intake-understand`, `intake-trigger`, `intake-process`, `aol-callback`, `graphiti-reconcile`, `graphiti-backfill`, `inspect-pipeline`, `test-data-sweep`.
 
 4. **E2E-Smokes (aus Phase 3 noch offen)**
    - Upload EML → Review → Commit → Fact im Project sichtbar.
@@ -59,6 +59,7 @@ Status der vier QA-Phasen (Stand 2026-05-14):
 
 ## Recently completed
 
+- **2026-05-14 (Stage 3)** `console.*` aus Edge-Function-Hauptpfaden entfernt: `intake-process` voll instrumentiert (`enter | exit | intake_trigger.chain[.ok] | intake-process.error`), `intake-understand` Skip-/Assignment-Pfade auf `log.stage`/`log.warn`, `commit-fact` Snapshot/Provenance/Notify/Top-Catch auf Logger umgestellt. Vitest 33/33 grün, ESLint weiterhin 0 Errors.
 - **2026-05-14 (Sprint Sofort)** Graphiti-422-Fix: `addMessage()` setzt `role` als Pflichtfeld-Default. `graphiti-backfill` Edge Function gebaut → 20 ungemirrorte canonical_facts nachgezogen, 0 Fehler. Knowledge-Graph wieder aktiv.
 - **2026-05-14 (Sprint Sofort)** `intake-trigger` voll instrumentiert (Stages `enter | asset_loaded | run_created | aol_call | aol_failed | invoke_understand_bg | bg_completed | bg_failed | exit | error`), `@ts-ignore` → typsicheres `declare const EdgeRuntime`. ESLint-Error gefixt (0 Errors auf der Datei).
 - **2026-05-14** QA-Audit-Report: `QA-AUDIT-REPORT.md` mit Soll-Ist-Abgleich, drei Datenfluss-Befunde, Top-5-Fixes.
