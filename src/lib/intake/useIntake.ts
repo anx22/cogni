@@ -169,8 +169,13 @@ export function useIntake(options: UseIntakeOptions = {}) {
           supabase.functions
             .invoke("intake-trigger", { body: { asset_id: data.id } })
             .then((res) => {
-              if (res.error) devlog.error("intake-trigger error", res.error);
-              else devlog.edge("intake-trigger responded", res.data);
+              if (res.error) {
+                devlog.error("intake-trigger error", res.error);
+                return;
+              }
+              devlog.edge("intake-trigger responded", res.data);
+              const runId = (res.data as { run_id?: string } | null)?.run_id ?? null;
+              trackPipeline({ runId, assetId: data.id }, setEntityState);
             });
         } else if (payload.type === "text" && payload.text) {
           const preview = payload.text.slice(0, 60);
