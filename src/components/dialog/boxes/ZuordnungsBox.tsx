@@ -16,8 +16,8 @@ type Selection = { kind: "existing"; projectId: string } | { kind: "new" };
 const ZuordnungsBox = ({ box }: { box: DialogBox }) => {
   const { commitBox, readonly } = useDialog();
 
-  const candidates: ProjectLite[] = box.payload?.candidates ?? [];
-  const allProjects: ProjectLite[] = box.payload?.all_projects ?? [];
+  const candidates: ProjectLite[] = useMemo(() => box.payload?.candidates ?? [], [box.payload]);
+  const allProjects: ProjectLite[] = useMemo(() => box.payload?.all_projects ?? [], [box.payload]);
   const recommendedId: string | null = box.payload?.recommended_project_id ?? null;
   const suggestedNewName: string = box.payload?.suggested_new_name ?? "";
   const agentReason: string | undefined = box.payload?.agent_reason ?? undefined;

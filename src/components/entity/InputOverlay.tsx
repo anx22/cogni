@@ -45,6 +45,7 @@ const InputOverlay = ({ open, onClose, onSubmit, className, contextHint }: Input
     } else {
       window.setTimeout(() => noteRef.current?.focus(), 50);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   useEffect(() => {
@@ -88,6 +89,7 @@ const InputOverlay = ({ open, onClose, onSubmit, className, contextHint }: Input
     onSubmit(detectFromText(voice.transcript));
     voice.reset();
     onClose();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [voice.transcript, onSubmit, onClose, voice.reset]);
 
   const handleNoteKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
