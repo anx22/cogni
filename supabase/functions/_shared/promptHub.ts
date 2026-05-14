@@ -11,14 +11,17 @@
 //  LangSmith-Trace als Tag mitgeschickt werden, damit man pro Run nachvollzieht
 //  welcher Prompt lief.
 //
-//  ENV:
+//  ENV (offizielle LangSmith-SDK-Namen):
 //    LANGSMITH_API_KEY       (Pflicht für Hub-Pulls; ohne → immer Fallback)
-//    LANGSMITH_PROMPT_OWNER  (optional; sonst wird Tenant per /workspaces/current geholt)
+//    LANGSMITH_ENDPOINT      (EU: https://eu.api.smith.langchain.com)
+//    LANGSMITH_WORKSPACE_ID  (Pflicht bei workspace/org-scoped Keys; wird als x-tenant-id gesendet)
 // =============================================================================
 
-// EU-Region (Account ist auf eu.api.smith.langchain.com gehostet — Free Plan, Workspace 1).
-// Override per ENV LANGSMITH_BASE_URL möglich.
-const HUB_BASE = Deno.env.get("LANGSMITH_BASE_URL") ?? "https://eu.api.smith.langchain.com";
+// Offizieller SDK-Default ist US; dieser Account liegt EU, daher EU als Projekt-Default.
+// LANGSMITH_BASE_URL bleibt nur als Legacy-Fallback für bereits gesetzte Secrets erhalten.
+const HUB_BASE = (Deno.env.get("LANGSMITH_ENDPOINT") ??
+  Deno.env.get("LANGSMITH_BASE_URL") ??
+  "https://eu.api.smith.langchain.com").replace(/\/$/, "");
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const FETCH_TIMEOUT_MS = 2_000;
 
@@ -29,7 +32,6 @@ interface CachedPrompt {
 }
 
 const cache = new Map<string, CachedPrompt>();
-let cachedTenant: string | null = null;
 const ensuredRepos = new Set<string>();
 
 export interface PromptResult {
@@ -50,7 +52,10 @@ export interface GetPromptOptions {
 function authHeaders(): Record<string, string> {
   const key = Deno.env.get("LANGSMITH_API_KEY");
   if (!key) return {};
-  return { "x-api-key": key };
+  const headers: Record<string, string> = { "x-api-key": key };
+  const workspaceId = Deno.env.get("LANGSMITH_WORKSPACE_ID");
+  if (workspaceId) headers["x-tenant-id"] = workspaceId;
+  return headers;
 }
 
 async function withTimeout(p: Promise<Response>, ms: number): Promise<Response> {
@@ -63,48 +68,9 @@ async function withTimeout(p: Promise<Response>, ms: number): Promise<Response> 
   }
 }
 
-async function getTenantHandle(): Promise<string | null> {
-  if (cachedTenant) return cachedTenant;
-  const explicit = Deno.env.get("LANGSMITH_PROMPT_OWNER");
-  if (explicit) {
-    cachedTenant = explicit;
-    return explicit;
-  }
-  const headers = authHeaders();
-  if (!headers["x-api-key"]) return null;
-  // LangSmith stellt mehrere Endpoints zur Verfügung; wir probieren in Reihenfolge.
-  const candidates = [
-    "/api/v1/workspaces/current",
-    "/workspaces/current",
-    "/api/v1/info",
-    "/info",
-    "/api/v1/orgs/current",
-  ];
-  for (const path of candidates) {
-    try {
-      const res = await fetch(`${HUB_BASE}${path}`, { headers });
-      if (!res.ok) continue;
-      const data = await res.json().catch(() => ({}));
-      const handle =
-        data?.tenant_handle ??
-        data?.handle ??
-        data?.workspace?.tenant_handle ??
-        data?.organization?.handle ??
-        data?.tenantHandle ??
-        null;
-      if (typeof handle === "string" && handle.length > 0) {
-        console.log(`promptHub: tenant via ${path} → ${handle}`);
-        cachedTenant = handle;
-        return handle;
-      }
-      // Manche Antworten enthalten direkt die ID — wir loggen sie, aber das ist kein Handle.
-      console.warn(`promptHub: ${path} ok aber kein handle:`, JSON.stringify(data).slice(0, 200));
-    } catch (e) {
-      console.warn(`promptHub: ${path} threw:`, e);
-    }
-  }
-  return null;
-}
+// Offizielle SDK-Regel: private Prompts werden ohne Owner angegeben; intern wird Owner "-" verwendet.
+// Siehe parseHubIdentifier(): "name" → ["-", "name", "latest"]. Kein Tenant-Handle erraten.
+const PRIVATE_OWNER = "-";
 
 // LangSmith ChatPromptTemplate-Manifest mit einer einzigen System-Message bauen.
 function buildChatManifest(template: string): unknown {
