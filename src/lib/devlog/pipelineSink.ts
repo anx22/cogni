@@ -31,16 +31,18 @@ export function attachPipelineSink() {
       const { error: errorPayload, ...rest } = payload;
       const errorJson = isPlainObject(errorPayload) ? (errorPayload as Record<string, unknown>) : null;
 
-      await supabase.from("pipeline_events").insert({
+      const row: Record<string, unknown> = {
         user_id: userId,
         fn: "frontend",
         stage: entry.category,
         level: entry.level,
         correlation_id: newCorrelationId(),
-        message: entry.message ?? null,
         payload: rest as Record<string, unknown>,
-        error: errorJson,
-      });
+      };
+      if (entry.message) row.message = entry.message;
+      if (errorJson) row.error = errorJson;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await supabase.from("pipeline_events").insert(row as any);
     } catch {
       /* swallow */
     }
