@@ -183,7 +183,7 @@ const AssetTile = ({ asset, Icon, onClick }: AssetTileProps) => {
         onOpenChange={setConfirmDelete}
         title={`„${asset.file_name}" löschen?`}
         description="Die Datei und alle daraus extrahierten Vorschläge werden entfernt. Bereits übernommene Fakten bleiben bestehen — sie verlieren nur ihre Quelle."
-        onConfirm={() => actions.remove(asset.id)}
+        onConfirm={async () => { await actions.remove(asset.id); }}
       />
     </div>
   );
