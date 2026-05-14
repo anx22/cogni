@@ -1,21 +1,19 @@
 import { useState } from "react";
 import { Check } from "lucide-react";
-import { useDialog } from "../DialogProvider";
 import BoxFrame, { ActionBtn } from "../BoxFrame";
 import type { DialogBox } from "@/lib/dialog/types";
-import { useManualOverrides } from "@/lib/dialog/manualOverrides";
+import { useBoxSubmit } from "@/lib/dialog/useBoxSubmit";
+import { useDialog } from "../DialogProvider";
 
 const KonfliktBox = ({ box }: { box: DialogBox }) => {
-  const { session, updateBoxPayload, commitBox, readonly } = useDialog();
-  const { markManual } = useManualOverrides();
+  const { readonly } = useDialog();
+  const { submit } = useBoxSubmit(box);
   const [choice, setChoice] = useState<"A" | "B" | null>(box.payload?.auswahl ?? null);
   const [reason, setReason] = useState<string>(box.payload?.begruendung ?? "");
 
   const confirm = () => {
     if (!choice) return;
-    updateBoxPayload(box.id, { auswahl: choice, begruendung: reason });
-    commitBox(box.id, "confirm", { auswahl: choice, begruendung: reason });
-    if (session?.context) markManual(session.context);
+    submit({ auswahl: choice, begruendung: reason });
   };
 
   return (
