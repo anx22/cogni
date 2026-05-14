@@ -368,11 +368,11 @@ Deno.serve(async (req) => {
           metadata: { superseded_by_session_id: session!.id, superseded_at: new Date().toISOString() },
         })
         .in("id", priorIds);
-      // Offene review_cases der alten Sessions ebenfalls dismissen, damit das
-      // UI nicht doppelte Boxen zeigt.
+      // Offene review_cases der alten Sessions auf 'rejected' setzen, damit
+      // das UI nicht doppelte Boxen zeigt. (Kein 'dismissed' im Enum.)
       await admin
         .from("review_cases")
-        .update({ box_state: "dismissed" })
+        .update({ box_state: "rejected" })
         .in("session_id", priorIds)
         .eq("box_state", "proposed");
     }
