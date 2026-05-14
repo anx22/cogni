@@ -5,6 +5,11 @@ export interface DialogContextValue {
   session: DialogSession | null;
   /** True wenn die aktuelle Session nur lesend angezeigt wird. */
   readonly: boolean;
+  /**
+   * Sperrgrund für Folge-Boxen, solange noch keine Projektzuordnung existiert.
+   * null = keine Sperre.
+   */
+  gateReason: string | null;
   openDialog: (session: DialogSession) => void;
   closeDialog: () => void;
   updateBoxState: (boxId: string, state: BoxState) => void;
