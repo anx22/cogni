@@ -7,7 +7,14 @@
 import { fail } from "../_shared/inspect-auth.ts";
 import { inspector } from "../_shared/inspector.ts";
 
-const BASE = (Deno.env.get("GRAPHITI_SERVICE_URL") ?? "").replace(/\/+$/, "");
+// URL-Härtung analog _shared/graphiti.ts: fehlendes Schema → https:// ergänzen.
+function normalizeBase(raw: string): string {
+  const t = raw.trim().replace(/\/+$/, "");
+  if (!t) return "";
+  if (/^https?:\/\//i.test(t)) return t;
+  return `https://${t}`;
+}
+const BASE = normalizeBase(Deno.env.get("GRAPHITI_SERVICE_URL") ?? "");
 const TOKEN = Deno.env.get("GRAPHITI_SERVICE_TOKEN") ?? "";
 
 async function gFetch(path: string, init: RequestInit = {}): Promise<Response> {

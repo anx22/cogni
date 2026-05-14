@@ -5,7 +5,23 @@
 
 ---
 
-## Aktueller Sprint — Tier B4 + Abschluss-Audit abgeschlossen
+## Aktueller Sprint — Welle B vorbereitet (V1–V4 grün)
+
+Stand 2026-05-14, 12:30 UTC:
+
+- **Re-Verifikation Master-Checklist:** 8/10 grün, 2 LOC-Budgets bleiben
+  überschritten (akzeptiert, dokumentiert in `audit-2026-05-14.md`).
+  Graphiti-Sync post-A1.1-Deploy: 24/24 erfolgreich seit 09:02.
+- **V1 Reuse:** `inspect-graphiti search` Sandbox-Projekt liefert 5 Facts
+  mit semantischen Edges. ✅
+- **V2 Graph-Konsistenz:** Episoden vorhanden, `group_id == project_id`.
+  Nebenfix: `inspect-graphiti` URL-Härtung (https://-Default) ergänzt + deployed.
+- **V3 Spiegel-SLA:** post-fix 100 %, 24h-Fenster normalisiert sich.
+- **V4 Linker-Schnittstelle:** `intake-understand/linker.ts` Drop-in-fähig.
+- **Welle B freigegeben.** Reihenfolge: B-W1 Linker → B-W2 Conflict
+  (Railway+UI) → B-W3 Gap → B-W4 Dependency.
+
+### Vorheriger Sprint — Tier B4 + Abschluss-Audit abgeschlossen
 
 Stand 2026-05-14:
 
