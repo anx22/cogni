@@ -1,84 +1,90 @@
-## Befund aus dem hochgeladenen Stundenlog
+# Plan: LangSmith Prompt Hub als Tuning-Ebene
 
-Die frühere Aussage „verbuggte Graphiti-Version“ war nicht validiert und ist nach Log-Abgleich sehr wahrscheinlich falsch.
+## Ziel
 
-Validierter Root-Cause:
+Prompts (heute hardcoded in `agentConfig.ts`) leben künftig in **LangSmith Prompt Hub**. Du editierst sie online, versionierst sie dort, und die App zieht die jeweils aktive Version — ohne Deploy. Bei Ausfall fällt der Code auf die eingebaute Default-Version zurück (kein Single Point of Failure).
 
-- Graphiti `add_episode` behandelt eine mitgesendete `uuid` **nicht** als neue Episode-ID.
-- In `graphiti_core/graphiti.py` steht:
+## Was bleibt wie es ist
 
-```text
-episode = await EpisodicNode.get_by_uuid(self.driver, uuid) if uuid is not None else EpisodicNode(...)
-```
+- AOL-Service auf Railway, Lovable AI Gateway, Graphiti, Unstructured: **unverändert**.
+- Bestehende Modell-Calls in `agentClient.ts` (Extract / Assignment): Logik bleibt, nur die System-Prompt-Quelle ändert sich.
+- LangSmith-Tracing (Free-Tier): bleibt unverändert.
 
-- Bedeutet: Wenn wir bei `/messages` eine UUID mitsenden, versucht Graphiti eine bereits existierende Episode mit genau dieser UUID zu laden.
-- Weil diese Episode in Neo4j noch nicht existiert, wirft Graphiti:
+## Was sich ändert
 
-```text
-graphiti_core.errors.NodeNotFoundError: node 4d6b2d5a-4ba8-4bf6-9fe9-e1ad7692f084 not found
-```
+### 1. Zwei Prompts in LangSmith Prompt Hub anlegen
 
-- Das steht im hochgeladenen Log um `2026-05-13T23:23:52Z` im Deployment `964c597b...`.
-- Unser Code sendet aktuell genau diese UUID mit:
-  - `supabase/functions/_shared/graphiti.ts` erzeugt `const uuid = input.uuid ?? crypto.randomUUID()`
-  - sendet sie in `messages[0].uuid`
-  - schreibt dieselbe UUID als `canonical_facts.graphiti_uuid`
-- Das ist das falsche Wiring.
+Manuell einmalig im LangSmith UI (oder automatisiert per API beim ersten Run):  
+AUtomatisiert!
 
-## Korrekturplan
+- `produktintelligenz/extract-facts` — Inhalt = aktueller `AGENT_SYSTEM_PROMPT`
+- `produktintelligenz/suggest-assignment` — Inhalt = aktueller `ASSIGNMENT_SYSTEM_PROMPT`
 
-### 1. Graphiti-Client korrigieren
+Beide als **Chat-Prompts** mit optionalen Variablen (`{graph_hint}` etc.), damit das Verschmelzen mit Kontext im Hub gepflegt werden kann.
 
-In `supabase/functions/_shared/graphiti.ts`:
+### 2. Neuer Shared-Loader: `_shared/promptHub.ts`
 
-- `addMessage` darf bei neuen Episoden **keine** `uuid` an `/messages` senden.
-- Die Funktion soll künftig nur noch `queued: true` zurückgeben.
-- Kommentare anpassen: Der alte Kommentar „Aufrufer muss UUID selbst generieren“ ist falsch für die aktuelle Graphiti-Version.
-
-### 2. Mirror-Logik korrigieren
-
-In `supabase/functions/commit-fact/index.ts`:
-
-- `mirrorToGraphiti` soll nach erfolgreichem Queueing **nicht mehr blind `graphiti_uuid` setzen**.
-- Stattdessen:
-  - `graphiti_sync_status = queued` bzw. im vorhandenen Provenance-Feld notieren, falls keine Statusspalte existiert.
-  - `graphiti_uuid` bleibt `null`, solange Graphiti asynchron keine echte Episode-ID zurückliefert.
-- Wenn die bestehende Tabelle keine passende Statusspalte hat, verwenden wir vorerst `provenance.graphiti = { queued: true, queued_at, mode: 'async_no_episode_uuid' }`.
-
-### 3. Test-/Diagnose-Action korrigieren
-
-In `supabase/functions/railway-admin/index.ts`:
-
-- `test-mirror` darf ebenfalls keine UUID mehr in `/messages` senden.
-- Der Test darf nicht mehr behaupten, dass `graphiti_uuid` korrekt zurückgeschrieben wurde.
-- Der Test soll stattdessen prüfen:
-  - `/messages` returned 202
-  - nach Wartezeit erscheinen Episodic Nodes in Neo4j
-  - `episodes/{group_id}` liefert Einträge
-
-### 4. Validierung nach Änderung
-
-Nach Implementierung:
-
-1. Edge Functions deployen.
-2. Einen isolierten `/messages`-Test ohne UUID senden.
-3. Neo4j direkt prüfen:
+Eine zentrale Funktion:
 
 ```text
-MATCH (n) RETURN labels(n), count(*)
-MATCH (e:Episodic) RETURN e.uuid, e.name, e.group_id ORDER BY e.created_at DESC LIMIT 10
+getPrompt(name, { variables, fallback }) → { system: string, version: string }
 ```
 
-4. Graphiti `/episodes/{project_id}` prüfen.
-5. Wenn Episoden erscheinen, Wave B Reuse-Check erneut starten.
+Verhalten:
 
-## Wichtige Konsequenz
+- 1. Lookup im **In-Memory-Cache** (TTL 5 Min). Wenn Treffer → zurück.
+- 2. GET `https://api.smith.langchain.com/commits/{owner}/{name}/latest` mit `LANGSMITH_API_KEY`.
+- 3. Variablen (`{graph_hint}`, …) per simplem `String.replace` substituieren.
+- 4. Bei HTTP-Fehler / Timeout (>2s) → `fallback`-String zurückgeben, Warning loggen, **niemals werfen**.
+- 5. `version` (Commit-Hash) zurückgeben → in LangSmith-Trace als Tag mitschicken, damit man im Trace sieht, welche Prompt-Version lief.
 
-`graphiti_uuid` kann nicht mehr deterministisch vorab gesetzt werden, weil der Graphiti-Server beim asynchronen `/messages`-Endpoint keine Episode-ID zurückgibt und selbst generiert.
+### 3. `agentClient.ts` umstellen
 
-Für echte Rückverknüpfung brauchen wir danach eine von zwei sauberen Optionen:
+- `AGENT_SYSTEM_PROMPT` und `ASSIGNMENT_SYSTEM_PROMPT` bleiben in `agentConfig.ts` als **Fallback-Defaults**.
+- `callExtractFacts` / `callSuggestAssignment` ziehen die System-Message via `getPrompt(...)` und setzen den `version`-Hash als `metadata.prompt_version` im LangSmith-Trace-Header.
 
-1. **Correlation über Inhalt/Source Description**: Canonical-Fact-ID in `source_description` oder Body schreiben und Episode später per Neo4j query matchen.
-2. **Eigener synchroner Write-Pfad**: AOL-Service/Sidecar ruft `graphiti.add_episode(uuid=None)` direkt auf und gibt die erzeugte Episode-ID zurück.
+### 4. Auch im AOL-Service (Python) nutzbar machen
 
-Für Wave B reicht zunächst Option 1: Graphiti muss überhaupt Episoden/Entities erzeugen; die exakte Rückverknüpfung kann danach gehärtet werden.
+Der Hub ist für Python (`langchain.hub.pull`) sogar leichter. Damit Welle B später dieselbe Tuning-Ebene hat:
+
+- `aol-service/app/prompts.py` — analoger Loader mit Cache + Fallback
+- Verwendung optional, erst wenn Welle B Prompts schreibt.
+
+### 5. Secret-Check
+
+`LANGSMITH_API_KEY` ist bereits gesetzt (railway-admin nutzt ihn). Kein neuer Secret-Eintrag nötig.
+
+## Was du danach kannst
+
+- Im LangSmith UI Prompts editieren → sofort live (max. 5 Min Cache).
+- Versionsverlauf, Diff, Rollback per Klick.
+- A/B-Tests pro Prompt-Version (LangSmith Native).
+- Im Trace siehst du: welche Prompt-Version + welcher Input + welche Latency + welche Kosten.
+
+## Was es **nicht** kann (Erwartungsmanagement)
+
+- **Tool/Function-Schemas** (z. B. die JSON-Schemas für `extract_facts`) bleiben im Code. Hub managt nur Text. Das ist okay — Schemas ändern sich selten, Prompts ständig.
+- LangSmith Free = 5k Traces/Monat. Prompt-Hub-Pulls zählen **nicht** als Traces. Kein Kostenrisiko.
+
+## Risiken & Mitigation
+
+
+| Risiko                                          | Mitigation                                                                   |
+| ----------------------------------------------- | ---------------------------------------------------------------------------- |
+| LangSmith down → App down                       | Fallback auf Code-Default, nie werfen                                        |
+| Cache zu lang → Edits sichtbar verzögert        | TTL 5 Min; manueller `/cache-bust`-Endpoint im railway-admin                 |
+| Falsche Variable im Hub-Prompt → Runtime-Fehler | `getPrompt` validiert: alle `{var}` müssen substituiert sein, sonst Fallback |
+
+
+## Schritte
+
+1. `_shared/promptHub.ts` schreiben (Loader + Cache + Fallback + Version-Tag).
+2. `agentClient.ts`: System-Prompts via Loader holen, Version in Trace-Metadata.
+3. `agentConfig.ts`: Bestehende Konstanten als `_FALLBACK` umbenennen, exportieren.
+4. Manuell in LangSmith UI: zwei Prompts mit identischem Inhalt anlegen.
+5. Smoke-Test: ein Asset durchschicken, Trace prüfen → `prompt_version` muss auftauchen.
+6. (Optional, Welle B) `aol-service/app/prompts.py` analog.
+
+## Aufwand
+
+~30–60 Min Code + 5 Min UI-Setup. Kein neues Secret. Keine Schema-Migration. Keine neuen Kosten.
