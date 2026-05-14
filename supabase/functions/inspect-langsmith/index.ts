@@ -1,14 +1,16 @@
 // =============================================================================
 //  inspect-langsmith
 // -----------------------------------------------------------------------------
-//  REST gegen api.smith.langchain.com mit LANGSMITH_API_KEY.
+//  REST gegen LangSmith mit LANGSMITH_API_KEY.
 //  Liefert Runs für eine session_name (typisch der LangGraph-thread_id =
 //  aol_runs.id) — siehe https://api.smith.langchain.com/redoc.
 // =============================================================================
 
 import { corsHeaders, fail, ok, requireUser } from "../_shared/inspect-auth.ts";
 
-const BASE = Deno.env.get("LANGSMITH_BASE_URL") ?? "https://eu.api.smith.langchain.com";
+const BASE = (Deno.env.get("LANGSMITH_ENDPOINT") ??
+  Deno.env.get("LANGSMITH_BASE_URL") ??
+  "https://eu.api.smith.langchain.com").replace(/\/$/, "");
 const PROJECT = Deno.env.get("LANGCHAIN_PROJECT") ?? "produktintelligenz-aol";
 
 interface Body {
@@ -19,9 +21,12 @@ interface Body {
 }
 
 async function lsFetch(path: string, init: RequestInit = {}, key: string): Promise<Response> {
+  const workspaceId = Deno.env.get("LANGSMITH_WORKSPACE_ID");
+  const headers: Record<string, string> = { "x-api-key": key, "Content-Type": "application/json", ...(init.headers as Record<string, string> ?? {}) };
+  if (workspaceId) headers["x-tenant-id"] = workspaceId;
   return fetch(`${BASE}${path}`, {
     ...init,
-    headers: { "x-api-key": key, "Content-Type": "application/json", ...(init.headers ?? {}) },
+    headers,
   });
 }
 
