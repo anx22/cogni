@@ -608,6 +608,17 @@ async function mirrorToGraphiti(
         },
       })
       .eq("id", args.canonical_fact_id);
+
+    // Sync-Log: Fehler ebenfalls protokollieren — Observability über Mirror-Health.
+    await admin.from("graphiti_sync_log").insert({
+      user_id: (cur as any)?.user_id ?? null,
+      entity_id: args.canonical_fact_id,
+      entity_type: args.fact_type ?? "canonical_fact",
+      operation: "mirror",
+      status: "failed",
+      error: typeof (errInfo as any).body === "string" ? (errInfo as any).body : (errInfo as any).message,
+      payload: errInfo,
+    });
   }
 }
 
