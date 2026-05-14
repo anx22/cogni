@@ -290,21 +290,21 @@ Deno.serve(async (req) => {
           headers: { ...cors, "Content-Type": "application/json" },
         });
       }
-      const base = "https://api.smith.langchain.com";
+      const base: string = body.base ?? "https://api.smith.langchain.com";
+      const sendTenant: boolean = body.sendTenant !== false; // default true
+      const tenantOverride: string | undefined = body.tenant;
       const paths: string[] = body.paths ?? [
         "/api/v1/workspaces/current",
-        "/workspaces/current",
         "/api/v1/info",
-        "/info",
         "/api/v1/orgs/current",
         "/api/v1/sessions?limit=1",
       ];
       const out: Record<string, unknown> = {};
       for (const p of paths) {
         try {
-          const tid = Deno.env.get("LANGSMITH_PROMPT_OWNER") ?? "";
+          const tid = tenantOverride ?? Deno.env.get("LANGSMITH_PROMPT_OWNER") ?? "";
           const h: Record<string, string> = { "x-api-key": key };
-          if (/^[0-9a-f-]{36}$/i.test(tid)) h["X-Tenant-Id"] = tid;
+          if (sendTenant && /^[0-9a-f-]{36}$/i.test(tid)) h["X-Tenant-Id"] = tid;
           const r = await fetch(`${base}${p}`, { headers: h });
           const t = await r.text();
           out[p] = { status: r.status, body: t.slice(0, 500) };
@@ -312,7 +312,7 @@ Deno.serve(async (req) => {
           out[p] = { error: String(e) };
         }
       }
-      return new Response(JSON.stringify({ ok: true, results: out }, null, 2), {
+      return new Response(JSON.stringify({ ok: true, base, sendTenant, results: out }, null, 2), {
         headers: { ...cors, "Content-Type": "application/json" },
       });
     }
