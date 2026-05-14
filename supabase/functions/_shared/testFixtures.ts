@@ -145,3 +145,68 @@ export async function sweepTestRun(admin: any, test_run_id: string) {
   }
   return results;
 }
+
+// =============================================================================
+//  Mock-Admin — In-Memory-Stub für Supabase-Client (Unit-Tests)
+// -----------------------------------------------------------------------------
+//  Konvention: Stub-Antworten werden pro `${table}.${op}` als Queue hinterlegt
+//  und in Aufrufreihenfolge zurückgegeben. Default `{ data: null, error: null }`.
+//  Erfasst alle Calls in `_calls` für Assertions.
+// =============================================================================
+
+// deno-lint-ignore no-explicit-any
+export type MockResponse = { data?: any; error?: any; count?: number };
+
+export interface MockAdmin {
+  // deno-lint-ignore no-explicit-any
+  from: (t: string) => any;
+  // deno-lint-ignore no-explicit-any
+  _calls: Array<{ table: string; op: string; payload?: any }>;
+}
+
+export function mockAdmin(stubs: Record<string, MockResponse[]> = {}): MockAdmin {
+  // deno-lint-ignore no-explicit-any
+  const calls: Array<{ table: string; op: string; payload?: any }> = [];
+
+  function builder(table: string) {
+    let op = "select";
+    // deno-lint-ignore no-explicit-any
+    let payload: any = undefined;
+    // deno-lint-ignore no-explicit-any
+    const b: any = {};
+    // deno-lint-ignore no-explicit-any
+    b.select = (..._a: any[]) => { return b; };
+    // deno-lint-ignore no-explicit-any
+    b.insert = (p: any) => { op = "insert"; payload = p; return b; };
+    // deno-lint-ignore no-explicit-any
+    b.update = (p: any) => { op = "update"; payload = p; return b; };
+    b.delete = () => { op = "delete"; return b; };
+    // deno-lint-ignore no-explicit-any
+    b.eq = (..._a: any[]) => b;
+    // deno-lint-ignore no-explicit-any
+    b.in = (..._a: any[]) => b;
+    // deno-lint-ignore no-explicit-any
+    b.neq = (..._a: any[]) => b;
+    // deno-lint-ignore no-explicit-any
+    b.filter = (..._a: any[]) => b;
+    // deno-lint-ignore no-explicit-any
+    b.order = (..._a: any[]) => b;
+    // deno-lint-ignore no-explicit-any
+    b.limit = (..._a: any[]) => b;
+
+    const finalize = async (): Promise<MockResponse> => {
+      calls.push({ table, op, payload });
+      const key = `${table}.${op}`;
+      const list = stubs[key];
+      if (list && list.length > 0) return list.shift()!;
+      return { data: null, error: null, count: 0 };
+    };
+    b.single = () => finalize();
+    b.maybeSingle = () => finalize();
+    // deno-lint-ignore no-explicit-any
+    b.then = (res: any, rej: any) => finalize().then(res, rej);
+    return b;
+  }
+
+  return { from: builder, _calls: calls };
+}
