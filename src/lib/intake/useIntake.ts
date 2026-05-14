@@ -129,7 +129,9 @@ export function useIntake(options: UseIntakeOptions = {}) {
             }
             devlog.db("assets insert ok", { assetId, file_name: file.name });
 
-            // Async parsing — kein await blockiert UI
+            // Async parsing — kein await blockiert UI. Polling auf den
+            // späteren aol_runs-Eintrag (intake-process triggert intake-trigger
+            // intern, das den Run anlegt).
             devlog.edge("invoke intake-process", { assetId });
             supabase.functions
               .invoke("intake-process", { body: { asset_id: assetId } })
@@ -137,6 +139,7 @@ export function useIntake(options: UseIntakeOptions = {}) {
                 if (res.error) devlog.error("intake-process invoke error", res.error);
                 else devlog.edge("intake-process responded", res.data);
               });
+            trackPipeline({ assetId }, setEntityState);
           }
           const label = `${payload.files.length} ${payload.files.length === 1 ? "Datei" : "Dateien"}`;
           toast(`${label} aufgenommen`, { description: "wird verarbeitet" });
