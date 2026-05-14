@@ -37,6 +37,7 @@ import {
 import { loadProjectContexts, scoreProjects } from "../_shared/projectScoring.ts";
 import { createLogger } from "../_shared/logger.ts";
 import { withErrorBoundary } from "../_shared/withErrorBoundary.ts";
+import { LINKABLE_FACT_TYPES, summarizeFact } from "./factRules.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
