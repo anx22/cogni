@@ -48,7 +48,7 @@ export interface GetPromptOptions {
 function authHeaders(): Record<string, string> {
   const key = Deno.env.get("LANGSMITH_API_KEY");
   if (!key) return {};
-  return { "X-API-Key": key };
+  return { "x-api-key": key };
 }
 
 async function withTimeout(p: Promise<Response>, ms: number): Promise<Response> {
