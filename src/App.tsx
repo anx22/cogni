@@ -9,6 +9,7 @@ import Project from "./pages/Project.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import Auth from "./pages/Auth.tsx";
 import OrbLab from "./pages/OrbLab.tsx";
+import PipelineHealth from "./pages/PipelineHealth.tsx";
 import { DialogProvider } from "./components/dialog/DialogProvider";
 import { ManualOverridesProvider } from "./lib/dialog/manualOverrides";
 import DevLogPanel from "./components/devlog/DevLogPanel";
@@ -39,6 +40,7 @@ const App = () => {
                   <Route path="/projekt/:id" element={<Project />} />
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/orb-lab" element={<OrbLab />} />
+                  <Route path="/pipeline-health" element={<PipelineHealth />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
