@@ -188,7 +188,7 @@ const FacePill = ({ state, size, sample, onPickInputMode }: FacePillProps) => {
           <Orbit name="b" size={ballSize} blur={ballBlur} color={c2 || "#9147ff"} duration={22} delay={-7}   paused={hovering} filter={tune.ballFilter} />
           <Orbit name="c" size={ballSize} blur={ballBlur} color={c3 || "#34d399"} duration={16} delay={-3}   paused={hovering} filter={tune.ballFilter} />
           <Orbit name="d" size={ballSize} blur={ballBlur} color={bg || "#05e0f5"} duration={20} delay={-11}  paused={hovering} filter={tune.ballFilter} />
-          <div className="absolute inset-0 bg-white/5" />
+          <div className="absolute inset-0 bg-[hsl(var(--foreground)/0.05)]" />
         </div>
 
         {/* Augen / Smiley */}

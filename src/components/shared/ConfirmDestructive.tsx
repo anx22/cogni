@@ -54,7 +54,7 @@ const ConfirmDestructive = ({
                 setBusy(false);
               }
             }}
-            className="bg-rose-500/80 hover:bg-rose-500 text-white"
+            className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
           >
             {busy ? "…" : confirmLabel}
           </AlertDialogAction>
