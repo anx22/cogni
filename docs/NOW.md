@@ -21,6 +21,7 @@ Stand 2026-05-14. Vorbereitung + Phase 1 abgeschlossen. Master-Quelle: `docs/des
 | 6 | AssetOrbit (oberer Bogen 225°, Realtime auf assets+dialog_sessions, Klick auf review-ready öffnet Session) | ✅ |
 | 7a | Tag/Nacht-Toggle im AccountDrawer (`localStorage.cogniTheme`, Hydrate in App.tsx) | ✅ |
 | 7b | Mobile-Audit Projekt-Screen: `100dvh` + Body-Scroll-Lock + `overscroll-contain` auf inneren Container | ✅ |
+| 7c | Theme-Bridge: shadcn-HSL-Tokens (--background, --card, --primary, --border, --sidebar-*, ...) in `[data-theme="day"]` und `[data-theme="night"]` neu zugewiesen → alle ui/* Komponenten erben Day/Night automatisch. Overlay-Tints (`bg-black/80`) in dialog/sheet/drawer/alert-dialog auf `bg-[hsl(var(--background)/0.78)] backdrop-blur-xl`. Restharte Farben (ConfirmDestructive, FacePillCharacter) auf Tokens. | ✅ Vitest 60/60 |
 | — | Realtime-Channel-Kollision behoben: `useRealtimeTables` h\u00e4ngt automatisch `useId`-Suffix an | ✅ |
 
 **Stopp-Bedingungen:** keine `src/lib/**`-Edits außer Format-Dateien; `ProjectViewModel`-Vertrag unberührt; Schema/Edge Functions tabu; alte Boxen erst nach Phase-5-Verify löschen; `data-theme` darf nicht durch `.dark` ersetzt werden.
