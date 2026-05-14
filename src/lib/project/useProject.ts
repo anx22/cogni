@@ -383,8 +383,10 @@ export function useProject(projectId: string | null | undefined): UseProjectResu
         return v && (v.kind === "budget" || (typeof v.label === "string" && v.label.toLowerCase().includes("budget")));
       });
 
-      // Lagetext
-      const snapshotSummary = snapshotRes.data?.[0]?.summary;
+      // Lagetext — Maschinen-Codes ("Snapshot nach commit:stakeholder:add")
+      // werden hier in lesbare Sprache übersetzt, damit Altdaten auch funktionieren.
+      const rawSummary = snapshotRes.data?.[0]?.summary as string | undefined;
+      const snapshotSummary = humanizeSnapshotSummary(rawSummary);
       const fallbackLage =
         konflikte.length || gapVMs.length || handlungsbedarf.length
           ? `${handlungsbedarf.length} offen, ${konflikte.length} Konflikt${
