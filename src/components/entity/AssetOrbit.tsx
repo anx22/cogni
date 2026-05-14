@@ -152,7 +152,7 @@ const AssetOrbit = () => {
                 <Icon size={12} strokeWidth={1.5} />
               )}
               <span className="max-w-[14ch] truncate">{c.label}</span>
-              <span className="opacity-50">· {fmtRelative(c.createdAt)}</span>
+              <span className="opacity-50">· {formatRelative(c.createdAt)}</span>
             </button>
           );
         })}
