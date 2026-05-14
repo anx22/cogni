@@ -1,4 +1,5 @@
 import { withErrorBoundary } from "../_shared/withErrorBoundary.ts";
+import { createLogger, type Logger } from "../_shared/logger.ts";
 // Universeller Railway-Admin-Proxy. Nutzt RAILWAY_API_TOKEN (Team-Token).
 // Actions:
 //   { action: "list" }                                — alle Teams + Projekte + Services
@@ -141,9 +142,12 @@ async function autoDiscover(targetServiceName: string) {
 
 Deno.serve(withErrorBoundary("railway-admin", async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
+  const log: Logger = createLogger({ fn: "railway-admin" });
+  let action: string = "list";
   try {
     const body = await req.json().catch(() => ({}));
-    const action = body.action ?? "list";
+    action = body.action ?? "list";
+    log.stage("start", "request", { action });
 
     if (action === "prompt-cache-bust" || action === "prompt-state") {
       const { bustPromptCache, promptCacheState, getPrompt } = await import("../_shared/promptHub.ts");
@@ -588,14 +592,18 @@ Deno.serve(withErrorBoundary("railway-admin", async (req) => {
       return new Response(JSON.stringify({ ok: true, services: out }, null, 2), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
+    log.stage("done", "ok", { action });
     return new Response(JSON.stringify({ error: "unknown action" }), {
       status: 400,
       headers: { ...cors, "Content-Type": "application/json" },
     });
   } catch (e) {
+    log.error("dispatch", "railway-admin failed", e, { action });
     return new Response(
       JSON.stringify({ error: e instanceof Error ? e.message : String(e) }),
       { status: 500, headers: { ...cors, "Content-Type": "application/json" } },
     );
+  } finally {
+    await log.flush();
   }
 }));

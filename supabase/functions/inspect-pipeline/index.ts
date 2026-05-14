@@ -8,6 +8,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders, fail, ok, requireUser } from "../_shared/inspect-auth.ts";
 import { withErrorBoundary } from "../_shared/withErrorBoundary.ts";
+import { createLogger } from "../_shared/logger.ts";
 
 interface Body {
   asset_id?: string;
@@ -50,8 +51,18 @@ Deno.serve(withErrorBoundary("inspect-pipeline", async (req) => {
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const sb = createClient(url, serviceKey);
 
+  const log = createLogger({ fn: "inspect-pipeline", userId, client: sb });
+
   let body: Body;
-  try { body = await req.json() as Body; } catch { return fail(400, "invalid JSON"); }
+  try { body = await req.json() as Body; } catch {
+    log.warn("input", "invalid JSON");
+    await log.flush();
+    return fail(400, "invalid JSON");
+  }
+  log.stage("start", "request", {
+    has_asset: !!body.asset_id, has_project: !!body.project_id,
+    has_correlation: !!body.correlation_id, recent: body.recent ?? null,
+  });
 
   const trace: Record<string, unknown> = { user_id: userId };
 
@@ -168,11 +179,17 @@ Deno.serve(withErrorBoundary("inspect-pipeline", async (req) => {
       !body.correlation_id &&
       !body.recent
     ) {
+      log.warn("input", "no selector provided");
+      await log.flush();
       return fail(400, "asset_id, run_id, project_id, correlation_id or recent required");
     }
 
+    log.stage("done", "trace built");
+    await log.flush();
     return ok({ trace });
   } catch (e) {
+    log.error("query", "pipeline trace failed", e);
+    await log.flush();
     return fail(500, "pipeline trace failed", { detail: String((e as Error).message ?? e) });
   }
 }));

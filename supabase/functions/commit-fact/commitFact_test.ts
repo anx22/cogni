@@ -161,3 +161,57 @@ Deno.test("commitFact: reject → proposed_facts + review_cases on rejected, no 
   const cfInsert = admin._calls.find((c) => c.table === "canonical_facts" && c.op === "insert");
   assertEquals(cfInsert, undefined, "must not insert canonical_facts on reject");
 });
+
+Deno.test("commitFact: confirm with corrected content → event_type=replace + corrections row", async () => {
+  const admin = mockAdmin({
+    "review_cases.select": [{
+      data: {
+        id: "rc4",
+        user_id: "u1",
+        session_id: "s4",
+        box_type: "fact",
+        proposed_fact: {
+          id: "pf4",
+          fact_type: "stakeholder",
+          content: { name: "Alice", role: "PM" },
+          delta_type: "add",
+          against_fact_id: null,
+          source_id: "src1",
+          parsed_document_id: null,
+          confidence: 0.8,
+          extraction_run_id: "run4",
+          project_id: null,
+        },
+        session: { project_id: "p4", metadata: {} },
+      },
+      error: null,
+    }],
+    "canonical_facts.insert": [{ data: { id: "cf4" }, error: null }],
+  });
+
+  const result = await commitFact({
+    admin,
+    user: { id: "u1" },
+    payload: {
+      review_case_id: "rc4",
+      decision: "confirm",
+      user_decision: { content: { name: "Alice Müller", role: "PM" }, reason: "Nachname ergänzt" },
+    },
+    log: silentLog(),
+    mirrorFn: noopMirror,
+    notifyAolFn: noopNotify,
+  });
+
+  assertEquals(result.ok, true);
+
+  const cfInsert = admin._calls.find((c) => c.table === "canonical_facts" && c.op === "insert");
+  assertEquals(cfInsert!.payload.content.name, "Alice Müller");
+  assertEquals(cfInsert!.payload.provenance.corrected, true);
+
+  const ceInsert = admin._calls.find((c) => c.table === "change_events" && c.op === "insert");
+  assertEquals(ceInsert!.payload.event_type, "replace");
+
+  const corr = admin._calls.find((c) => c.table === "corrections" && c.op === "insert");
+  assert(corr, "corrections.insert not called");
+  assertEquals(corr!.payload.reason, "Nachname ergänzt");
+});
