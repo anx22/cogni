@@ -4,6 +4,10 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import HoverActionsMenu from "@/components/shared/HoverActionsMenu";
+import ConfirmDestructive from "@/components/shared/ConfirmDestructive";
+import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { useAssetActions } from "@/lib/object-actions/useObjectActions";
 
 type Asset = Database["public"]["Tables"]["assets"]["Row"];
 
