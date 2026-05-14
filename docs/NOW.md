@@ -99,3 +99,7 @@ Service-Clients zentralisiert.
 - **2026-05-14 (Sprint Sofort)** Graphiti-422-Fix: `addMessage()` setzt `role="user"`-Default, `graphiti-backfill` Edge Function zieht 20 ungemirrorte canonical_facts nach. `intake-trigger` voll instrumentiert.
 - **2026-05-14** Doku-Konsolidierung Schritt 2: alle Detail-Docs (`PRODUCT`/`ARCHITECTURE`/`NOW`/`DECISIONS`) nach `docs/` verschoben, in der Wurzel bleiben nur `AGENTS.md` + `README.md`. `docs/qa-historie.md` aufgelöst (Methodik + Stages → `DECISIONS.md`, Endmetriken → hier oben). `docs/qa-seam-inventar.md` bleibt als lebende Referenztabelle.
 - **2026-05-14** Doku-Konsolidierung Schritt 1: Workspace-5-Datei-System eingeführt. Alte `docs/produkt-gesamt.md`/`implementierung-aktuell.md`/`geplant.md` entfernt.
+
+## 2026-05-15 — Welle C
+- Godfiles eliminiert: commit-fact (-603 LOC), intake-understand (-505 LOC), projectViewModel (-307 LOC im Hauptfile)
+- Vitest 60/60 grün, Deno-Tests 14/14 grün, Smokes 400/401 wie erwartet
