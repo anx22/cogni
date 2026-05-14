@@ -162,6 +162,16 @@ export async function commitFact(deps: CommitFactDeps): Promise<CommitFactResult
       content: finalContent,
     }, log);
 
+    // B-W2: Konflikte deterministisch erkennen (fail-soft).
+    await detectAndPersistConflicts(admin, {
+      user_id: user.id,
+      project_id,
+      canonical_fact_id: cf!.id,
+      fact_type: pf.fact_type,
+      content: finalContent,
+      log,
+    });
+
     if (wasCorrected) {
       await admin.from("corrections").insert({
         user_id: user.id,
