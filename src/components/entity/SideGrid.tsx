@@ -1,5 +1,5 @@
 import { useMemo, useState, useRef, useCallback, useEffect, KeyboardEvent } from "react";
-import { Plus } from "lucide-react";
+import { Plus, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ProjectTile from "./ProjectTile";
 import type { DemoProject } from "@/data/demoProjects";
@@ -12,6 +12,8 @@ interface SideGridProps {
   onProjectClick?: (id: string) => void;
   onCreateProject?: () => void;
   isDragActive?: boolean;
+  error?: string | null;
+  onRetry?: () => void;
 }
 
 const COLS = 2;
