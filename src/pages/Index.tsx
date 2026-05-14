@@ -35,7 +35,7 @@ const Index = () => {
   const { intake } = useIntake({ setEntityState });
   const { characterId } = useSelectedCharacter();
   const voice = useEntityVoice(session?.user?.id);
-  const { projects: liveProjects } = useProjects();
+  const { projects: liveProjects, error: projectsError, reload: reloadProjects } = useProjects();
 
   const busy = entityState === "processing" || entityState === "review-ready";
   const isDragActive = dragActive || entityState === "hover";
