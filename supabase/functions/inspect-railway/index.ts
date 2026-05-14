@@ -8,6 +8,7 @@
 
 import { corsHeaders, fail, ok, requireUser } from "../_shared/inspect-auth.ts";
 import { withErrorBoundary } from "../_shared/withErrorBoundary.ts";
+import { createLogger } from "../_shared/logger.ts";
 
 const RAILWAY_GRAPHQL = "https://backboard.railway.com/graphql/v2";
 
