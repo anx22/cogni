@@ -152,6 +152,7 @@ Deno.serve(withErrorBoundary("aol-callback", async (req) => {
   }
 }));
 
+// Lokales fail mit `{ok: false, error}` Envelope. // custom shape, intentional
 function fail(msg: string, status = 500) {
   return new Response(JSON.stringify({ ok: false, error: msg }), {
     status,

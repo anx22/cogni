@@ -228,6 +228,7 @@ function safeJson(s: string): unknown {
   try { return JSON.parse(s); } catch { return s; }
 }
 
+// Lokale ok/fail mit `{ok: true|false, ...}` Envelope. // custom shape, intentional
 function ok(payload: unknown) {
   return new Response(JSON.stringify({ ok: true, ...(payload as object) }), {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
