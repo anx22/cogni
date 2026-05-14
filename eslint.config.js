@@ -12,7 +12,7 @@ import tseslint from "typescript-eslint";
 // shadcn-Komponenten und generierte Supabase-Types sind ausgenommen, weil sie
 // extern gepflegt werden und nicht unsere Stilrichtlinie tragen.
 export default tseslint.config(
-  { ignores: ["dist", "src/components/ui/**", "src/integrations/supabase/types.ts"] },
+  { ignores: ["dist", "src/components/ui/**", "src/integrations/supabase/types.ts", "tailwind.config.ts"] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],
