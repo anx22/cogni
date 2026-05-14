@@ -421,7 +421,7 @@ async function writeProjectSnapshot(
       user_id,
       project_id,
       trigger_event: opts.trigger_event,
-      summary: `Snapshot nach ${opts.trigger_event}`,
+      summary: humanizeTriggerEvent(opts.trigger_event, counts),
       snapshot: {
         counts,
         last_canonical_fact_id: opts.canonical_fact_id ?? null,
