@@ -12,9 +12,16 @@
 //       als Fallback auf, damit die App nicht stehen bleibt
 //
 //  Body: { asset_id: string, retry?: boolean }
+//
+//  Logging: voll instrumentiert via _shared/logger. Stages:
+//    enter | asset_loaded | run_created | aol_call | aol_failed
+//    | invoke_understand_bg | bg_completed | bg_failed | exit | error
 // =============================================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { createLogger } from "../_shared/logger.ts";
+
+declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void } | undefined;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -34,6 +41,8 @@ Deno.serve(async (req) => {
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const admin = createClient(supabaseUrl, serviceKey);
 
+  const log = createLogger({ fn: "intake-trigger", client: admin });
+
   const rawAolUrl = (Deno.env.get("AOL_SERVICE_URL") ?? "").trim().replace(/\/+$/, "");
   const aolUrl = rawAolUrl && !/^https?:\/\//i.test(rawAolUrl) ? `https://${rawAolUrl}` : rawAolUrl;
   const aolToken = Deno.env.get("AOL_SERVICE_TOKEN") ?? "";
@@ -46,12 +55,20 @@ Deno.serve(async (req) => {
     asset_id = body.asset_id;
     if (!asset_id) throw new Error("asset_id fehlt");
 
+    log.bind({ assetId: asset_id });
+    log.stage("enter", "request received", { retry: !!body.retry });
+
     const { data: asset, error: aErr } = await admin
       .from("assets")
       .select("id, user_id, project_id")
       .eq("id", asset_id)
       .single();
     if (aErr || !asset) throw new Error(`Asset nicht gefunden: ${aErr?.message}`);
+
+    log.bind({ userId: asset.user_id, projectId: asset.project_id });
+    log.stage("asset_loaded", "asset resolved", {
+      project_id: asset.project_id,
+    });
 
     // 1. aol_runs anlegen ----------------------------------------------------
     const { data: run } = await admin
@@ -67,14 +84,14 @@ Deno.serve(async (req) => {
       .select("id")
       .single();
     runId = run?.id ?? null;
+    log.bind({ runId });
+    log.stage("run_created", "aol_runs row inserted", { run_id: runId });
 
     // 2. Wenn AOL konfiguriert ist → Graph-Kontext holen ---------------------
-    //    Wichtig: Railway bekommt keinen Service-Role-Key und schreibt keine DB.
-    //    Der AOL-Service liefert nur graph_context; intake-understand läuft
-    //    danach weiterhin Cloud-intern mit den hier vorhandenen Secrets.
     let graphHint: string | null = null;
     if (aolUrl && aolToken) {
       try {
+        log.stage("aol_call", "POST /aol/run", { url: aolUrl });
         const res = await fetch(`${aolUrl}/aol/run`, {
           method: "POST",
           headers: {
@@ -95,6 +112,9 @@ Deno.serve(async (req) => {
         }
         const aolResponse = safeJson(txt) as { graph_context?: unknown };
         graphHint = typeof aolResponse.graph_context === "string" ? aolResponse.graph_context : null;
+        log.stage("aol_call", "graph context received", {
+          chars: graphHint?.length ?? 0,
+        });
         await admin
           .from("aol_runs")
           .update({
@@ -105,7 +125,9 @@ Deno.serve(async (req) => {
           .eq("id", runId);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        console.error("intake-trigger: AOL context failed, continuing without graph hint:", msg);
+        log.warn("aol_failed", "AOL context failed, continuing without graph hint", {
+          message: msg,
+        });
         await admin
           .from("aol_runs")
           .update({
@@ -121,15 +143,23 @@ Deno.serve(async (req) => {
     // 3. Cloud-internes Verstehen triggern (fire-and-forget) ----------------
     //    intake-understand kann 25-50s laufen (LLM-Calls). Wir dürfen NICHT
     //    awaiten, sonst läuft intake-trigger in seinen eigenen Timeout und
-    //    der Client sieht ein 500. Statt dessen sofort antworten und den
-    //    Verstehens-Lauf via EdgeRuntime.waitUntil im Hintergrund laufen lassen.
+    //    der Client sieht ein 500.
+    log.stage("invoke_understand_bg", "background invoke", {
+      with_graph_hint: !!graphHint,
+    });
+
     const understandPromise = admin.functions
       .invoke("intake-understand", {
         body: { asset_id, retry: !!body.retry, graph_hint: graphHint },
       })
       .then(async ({ error: invErr }) => {
         if (invErr) {
-          console.error("intake-understand bg invoke failed:", invErr.message);
+          log.error(
+            "bg_failed",
+            "intake-understand bg invoke failed",
+            invErr,
+            { run_id: runId },
+          );
           if (runId) {
             await admin
               .from("aol_runs")
@@ -140,8 +170,12 @@ Deno.serve(async (req) => {
               })
               .eq("id", runId);
           }
+          await log.flush();
           return;
         }
+        log.stage("bg_completed", "intake-understand bg done", {
+          run_id: runId,
+        });
         if (runId) {
           await admin
             .from("aol_runs")
@@ -152,24 +186,32 @@ Deno.serve(async (req) => {
             })
             .eq("id", runId);
         }
+        await log.flush();
       })
-      .catch((err) => {
-        console.error("intake-understand bg unexpected error:", err);
+      .catch(async (err) => {
+        log.error("bg_failed", "intake-understand bg unexpected error", err, {
+          run_id: runId,
+        });
+        await log.flush();
       });
 
     // EdgeRuntime.waitUntil hält den Worker am Leben, bis das Promise fertig ist,
     // ohne die Response zu blockieren.
     try {
-      // @ts-ignore — EdgeRuntime ist global im Supabase Edge Runtime
-      EdgeRuntime.waitUntil(understandPromise);
+      EdgeRuntime?.waitUntil(understandPromise);
     } catch {
       // Fallback: wenn waitUntil nicht verfügbar ist, einfach nicht awaiten.
     }
 
+    log.stage("exit", "ack returned", {
+      mode: graphHint ? "aol_enriched_async" : "cloud_understand_async",
+    });
+    await log.flush();
+
     return ok({ run_id: runId, mode: graphHint ? "aol_enriched_async" : "cloud_understand_async" });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error("intake-trigger error:", msg);
+    log.error("error", "intake-trigger fatal", err, { asset_id });
     if (runId) {
       await admin
         .from("aol_runs")
@@ -180,6 +222,7 @@ Deno.serve(async (req) => {
         })
         .eq("id", runId);
     }
+    await log.flush();
     return fail(msg, 500);
   }
 });

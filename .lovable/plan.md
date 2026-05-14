@@ -1,95 +1,108 @@
-# QA-Audit-Report — schreiben als `QA-AUDIT-REPORT.md`
+# Fix-Plan zum QA-Audit-Report
 
-Ich habe alle vier Audit-Schritte als Read-Only durchgeführt. Da Plan-Mode keine Datei-Edits zulässt, lege ich den Report nach Approval an. Hier der vollständige Inhalt.
+Reihenfolge nach Impact. Jede Stufe ist eigenständig commit-fähig — bei Abbruch bleibt der Stand grün.
 
-## Audit-Methode (durchgeführt)
+## 1. Graphiti-422 fixen — Knowledge-Graph wieder aktiv (höchste Priorität)
 
-1. **Struktur**: QA-PLAN.md + NOW.md gelesen, Existenz aller Deliverables per `ls` geprüft.
-2. **Funktion**: `bunx vitest run` — 7 Files / 33 Tests grün in 4,9 s. Deno-Edge-Tests separat (nicht via vitest).
-3. **Lint/Toolchain**: `bunx eslint .`, `rg console.log supabase/functions`, `package.json`-Scripts gelesen.
-4. **Datenfluss**: `pipeline_events` und Pipeline-Tabellen der letzten 24 h per SQL gezählt; Logger-Abdeckung per `rg createLogger` ermittelt.
+**Problem:** 0 / 4 erfolgreiche Mirrors in 24 h. Canonical-Facts landen nur in Supabase, nie in Neo4j. RAG ist faktisch tot.
 
-## Inhalt für `QA-AUDIT-REPORT.md`
+**Diagnose zuerst** (5 min, real, nicht raten):
+- `inspect-graphiti` aufrufen mit letzter `commit-fact`-Payload aus `pipeline_events`.
+- 422-Body live reproduzieren via `railway-admin` → `graphiti-probe`.
+- Vergleich gegen Graphiti-OpenAPI: welches Feld fehlt wirklich? (`role`, `name`, `group_id`, `source_description`?)
 
-```markdown
-# QA-Audit-Report — Stand 2026-05-14
+**Fix:**
+- In `supabase/functions/_shared/graphiti.ts` betroffenes Feld ergänzen oder Default setzen.
+- Logger-Stage `mirror_request` + `mirror_response` mit Body-Hash, damit künftige Drifts sofort sichtbar.
+- Backfill: einen `graphiti-reconcile`-Lauf für die 25 ungemirrorten canonical_facts der letzten 24 h.
 
-Auditor: Senior-QA. Methode: Soll-Ist gegen QA-PLAN.md, ausgeführte Tests,
-Lint, Datenbank-Stichproben aus den letzten 24 h.
+**Akzeptanz:** ein frischer commit-fact-Lauf produziert `pipeline_events` mit `mirror_response.status=200` und `graphiti_uuid` ist in `canonical_facts` gesetzt.
 
-## ✅ Korrekt implementiert
+## 2. `intake-trigger` instrumentieren + ESLint-Error fixen
 
-| Deliverable | Beweis |
-|---|---|
-| Phase 1 Seam-Inventar | `docs/qa-seam-inventar.md` |
-| Phase 2 Logger-Modul | `supabase/functions/_shared/logger.ts` |
-| Phase 2 `pipeline_events`-Tabelle | 47 Events in 24 h, RLS aktiv |
-| Phase 2 ErrorBoundary + global handlers | `src/components/ErrorBoundary.tsx`, `src/lib/devlog/devlog.ts` (`attachGlobalErrorHandlers`) |
-| Phase 2 Health-Panel | `src/pages/PipelineHealth.tsx`, `inspect-pipeline` Edge Function |
-| Phase 2 Logger eingezogen in 5 Funktionen | `commit-fact`, `intake-understand`, `aol-callback`, `graphiti-reconcile`, `test-data-sweep` |
-| Phase 3 Fixtures + Sweeper | `supabase/functions/_shared/testFixtures.ts`, `supabase/functions/test-data-sweep/index.ts` |
-| Phase 3 Unit-Tests | 33/33 grün: `boxMapping`, `sessionMode`, `sessionFactories`, `detectInputType`, `relativeTime`, `sanitizeStorageName`, `example` |
-| Phase 4 CI-Workflow | `.github/workflows/qa.yml` mit 4 Jobs (lint/typecheck/test/build) |
-| Datenfluss live | 25 canonical_facts, 51 review_cases, 7 aol_runs in 24 h — Pipeline schreibt, Logger feuert |
+**Problem:** Async-Pipeline-Hänger (siehe 08:41-Vorfall) sind im Health-Panel unsichtbar. Zusätzlich blockt `@ts-ignore` in Zeile 163 jedes spätere ESLint-Error-Gate.
 
-## ⚠️ Teilweise implementiert
+**Fix:**
+- `createLogger({ fn: "intake-trigger" })` einziehen.
+- Stages: `enter | aol_call | invoke_understand_bg | exit | error` plus `bg_completed` / `bg_failed` aus den `.then`/`.catch`-Handlern → schreiben in `pipeline_events` mit `run_id`.
+- Alle `console.error` ersetzen.
+- Zeile 163: `@ts-ignore` → `@ts-expect-error EdgeRuntime ist global im Supabase Edge Runtime`.
 
-| Deliverable | Was fehlt |
-|---|---|
-| Logger-Abdeckung Edge Functions | 10 von 15 Funktionen ohne `createLogger` — namentlich: `intake-trigger`, `intake-process`, `inspect-graphiti`, `inspect-langsmith`, `inspect-railway`, `railway-admin`, `voice-transcribe`, `asset-delete`, `project-delete`, `inspect-pipeline`. Hot-Path-Lücke: `intake-trigger` (kürzlich um async-Polling erweitert) loggt nur via `console.error`. |
-| ESLint-Schärfung | Regeln laufen als `warn`, nicht `error` (`no-unused-vars`, `no-floating-promises`, `no-console`). 66 Warnings noch im Code. |
-| `console.log`-Smoke-Regel | Noch 4 Treffer in `supabase/functions/`: `_shared/logger.ts` (legitim — Spiegel auf stdout), `_shared/agentClient.ts`, `intake-understand`, `intake-process`. CI-Smoke `rg "console.log"` würde aktuell rot. |
-| Edge-Integrationstests | Plan listet `commit-fact` Happy/Konflikt/Supersede + `intake-understand` + `graphiti-reconcile` + `aol-callback`. Vorhanden: nur `commit-fact/projectScoring_test.ts` (reiner Helfer-Test). Service-Logik nicht abgedeckt. |
-| Frontend-Polling | `pollAolRun` + `pollAolRunByAsset` neu gebaut, aber kein Test (`pollAolRun.test.ts` fehlt). |
+**Akzeptanz:** `bunx eslint .` 0 Errors. Ein Asset-Upload zeigt im `/pipeline-health` lückenlose Stage-Kette `intake-trigger.enter → … → intake-understand.exit`.
 
-## ❌ Nicht implementiert oder fehlerhaft
+## 3. Restliche `console.log` raus + Logger in 4 weitere Hot-Funktionen
 
-| Punkt | Befund |
-|---|---|
-| **ESLint-Error in `intake-trigger/index.ts:163`** | `@ts-ignore` statt `@ts-expect-error` → Build fällt mit `--max-warnings 0`. Aktuell tolerieren CI/lint kein Error-Gate, deshalb unbemerkt. |
-| **Pre-commit Hook (Husky + lint-staged)** | Komplett fehlend. `.husky/` existiert nicht, kein `prepare`-Skript in `package.json`. Pre-commit-Test daher nicht durchführbar. |
-| **Prettier** | `.prettierrc` fehlt, `eslint-config-prettier` nicht installiert. |
-| **Nightly-Cron für `test-data-sweep`** | Kein Workflow-File — Sweeper läuft nur manuell. Test-Daten-Leichen-Risiko bei intensiver QA-Nutzung. |
-| **E2E-Smokes (3 Pfade aus Phase 3)** | Keine Datei. MSW nicht installiert. |
-| **`commit-fact`-Refactor (pure `commitFact()`-Funktion)** | Kernlogik weiterhin in `Deno.serve`-Closure → testbar nur per HTTP-Curl, nicht per Unit. |
-| **Globaler `unhandledrejection` im Backend** | Edge Functions fangen Top-Level-Errors per try/catch, aber kein Worker-weites `addEventListener("error")`-Pendant zum Frontend. |
+**Problem:** 4 Treffer in `_shared/agentClient.ts`, `intake-understand`, `intake-process`. CI-Smoke `rg console.log supabase/functions/` wäre rot. `intake-process` ist Teil des Hot-Paths.
 
-## Datenfluss-Check — drei kritischste Übergabepunkte
+**Fix:**
+- `intake-process` und `intake-understand`: alle `console.log` → `log.info/warn/error` mit passender Stage.
+- `_shared/agentClient.ts`: auf `log.debug` mit injiziertem Logger umstellen (Caller übergibt).
+- `_shared/logger.ts` darf weiter auf stdout spiegeln — als einziger erlaubter Treffer markieren.
 
-| Seam | Logging? | Befund aus 24 h |
+**Akzeptanz:** `rg "console\.log" supabase/functions/ | rg -v "_shared/logger.ts"` ist leer.
+
+## 4. `commit-fact` testbar machen
+
+**Problem:** Kernlogik in `Deno.serve`-Closure → keine Unit-Tests möglich. Schwerstes 643-LOC-Modul ist ungetestet.
+
+**Fix:**
+- Pure Funktion `commitFact({ admin, user, payload, log }): Promise<CommitResult>` extrahieren. `Deno.serve`-Wrapper nur noch HTTP-Adapter.
+- `_shared/testFixtures.ts` um `mockAdmin()` erweitern (in-memory Supabase-Stub mit `from().select/insert/update`).
+- Drei Deno-Tests in `commit-fact/index_test.ts`:
+  - Happy: Proposed → Canonical, `change_events` geschrieben.
+  - Konflikt: zweiter widersprüchlicher Fact erzeugt `contradictions`-Eintrag.
+  - Supersede: Re-Commit setzt `superseded_by` + neuen `valid_from`.
+- Über `supabase--test_edge_functions` ausführen.
+
+**Akzeptanz:** `commit-fact` Deno-Tests grün, plus 3 weitere Tests im Suite-Output.
+
+## 5. Phase-4-Gate vollenden — Prettier + Husky + lint-staged + Nightly
+
+**Problem:** Kein Pre-commit-Schutz, keine konsistente Formatierung, Sweeper läuft nur manuell.
+
+**Fix:**
+- `.prettierrc` (2 spaces, single quote, semi true) + `eslint-config-prettier` als letztes `extends`.
+- `husky` + `lint-staged` als devDeps. `prepare`-Skript in `package.json`. `.husky/pre-commit` ruft `lint-staged`.
+- `lint-staged` für `*.{ts,tsx}`: `eslint --max-warnings 0` + `tsc --noEmit -p tsconfig.app.json`.
+- Sobald Schritte 2 + 3 grün: ESLint-Regeln von `warn` → `error` (`no-unused-vars`, `no-floating-promises`, `no-console` mit `allow:["warn","error"]`).
+- `.github/workflows/qa-nightly.yml`: täglich `supabase--curl_edge_functions` auf `test-data-sweep`.
+
+**Akzeptanz:** Ein absichtlicher Lint-Fehler in einem Test-Commit wird vom Hook geblockt. Nightly-Run im Actions-Tab sichtbar.
+
+## 6. Frontend-Polling absichern + ErrorBoundary für Backend-Pendant
+
+**Problem:** Neu gebauter `pollAolRun` ohne Test. Backend hat kein Worker-weites Error-Catch.
+
+**Fix:**
+- `src/lib/pipeline/pollAolRun.test.ts` mit MSW-freier Stub-Strategie: Supabase-Client mocken über `vi.mock`. Pfade: completed / failed / timeout / abort.
+- In jedem Edge-Function-Entry `try { … } catch (err) { log.error("uncaught", err); throw err; }` als Pflicht — neuer Helper `withErrorBoundary(fn, log)` in `_shared/`.
+
+**Akzeptanz:** Vitest 37+/37 grün; jede Edge Function nutzt `withErrorBoundary`.
+
+## 7. E2E-Smokes (3 Pfade) — letzter Block
+
+Nach Stufe 5 sinnvoll, weil Lint stabil sein muss. MSW installieren, drei Pfade:
+- Upload EML → Review → Commit → Fact im Project sichtbar.
+- Note erfassen → Review → Commit.
+- Asset löschen → `aol_runs`-Cascade.
+
+**Akzeptanz:** `bun run test` enthält 3 E2E-Specs grün.
+
+---
+
+## Reihenfolge & Sprint-Schnitt
+
+| Sprint | Stufen | Aufwand |
 |---|---|---|
-| 1. `intake-trigger → intake-understand` (async via `EdgeRuntime.waitUntil`) | ❌ `intake-trigger` ohne `createLogger`. Letzter Fehler von 08:41 (`intake-understand: Edge Function returned a non-2xx`) nur in Edge-Logs, kein `pipeline_events`-Eintrag → unauffindbar via Health-Panel. | Pipeline lief aber 7× durch in 24 h. |
-| 2. `commit-fact → graphiti /messages` | ✅ Logger feuert, **aber Graphiti-Mirror schlägt durchgängig 422 fehl**: `body.messages[0].role missing`. 4 Treffer in Edge-Logs für `task` / `decision` / `stakeholder`. Canonical-Fact wird trotzdem geschrieben, also stiller Drift Supabase ↔ Neo4j. | Datenfluss "halb" — Wahrheit landet in Supabase, nie im Graph. |
-| 3. `aol-callback` Status-Übergänge | ✅ Logger sauber, alle Übergänge `pending → running → completed` in `pipeline_events`. | Funktioniert. |
+| Sofort | 1, 2 | 2–3 h — beendet die zwei akuten Blutungen |
+| Diese Woche | 3, 4 | 4–6 h — schließt Test-Lücken im schwersten Modul |
+| Nächste Woche | 5, 6 | 4 h — macht Phase-4-Gate scharf |
+| Danach | 7 | 4 h — Smoke-Netz |
 
-## 🔧 Top-5 priorisierte Fixes
+## Was nicht im Plan ist (bewusst)
 
-1. **Graphiti-422 fixen (höchster Impact, blockt RAG komplett)**
-   In `supabase/functions/_shared/graphiti.ts` der `/messages`-Body fügt `role`-Feld nicht hinzu. Graphiti erwartet `role: "user"` neben `role_type`. Aktuell laufen alle commit-facts Supabase-only — der gesamte Knowledge-Graph wächst nicht.
+- ESLint `no-explicit-any`-Warnings (66) — kosmetisch, später als eigener Sprint.
+- Logger in `inspect-*`-Funktionen — sind read-only, niedriges Risiko.
+- `voice-transcribe`, `asset-delete`, `project-delete` — geringe Frequenz, nach Stufe 5.
 
-2. **`intake-trigger` instrumentieren**
-   `createLogger` einziehen, mindestens Stages `start | aol_call | invoke_understand | exit | error`. Sonst bleiben async-Pipeline-Hänger unsichtbar (siehe 08:41-Vorfall).
-
-3. **ESLint-Error in `intake-trigger:163` ersetzen**
-   `@ts-ignore` → `@ts-expect-error` mit Begründung. Trivialer Einzeiler, blockiert aber Phase-4-Schärfung.
-
-4. **`commit-fact` refaktorieren in pure `commitFact()`**
-   Kernlogik aus `Deno.serve` ziehen, Mock-Supabase-Helfer schreiben, drei Integrationstests (Happy/Konflikt/Supersede). Deno-Tests landen in `commit-fact/index_test.ts`. Macht den schwierigsten Pfad endlich testbar.
-
-5. **Pre-commit-Gate aktivieren (Husky + lint-staged + Prettier)**
-   `husky install` + `.husky/pre-commit` → `lint-staged`. Gleichzeitig 4 verbleibende `console.log` in Edge Functions auf Logger umstellen, dann ESLint-Regeln von `warn` auf `error` hochziehen. Phase 4 ist sonst nur Kosmetik.
-
-## Metriken
-
-- Vitest: **7 Files / 33 Tests grün, 4,9 s**.
-- ESLint: **1 Error, 66 Warnings**.
-- `console.log` in Edge Functions: **4 Treffer**.
-- Logger-Abdeckung: **5 / 15 Funktionen (33 %)**.
-- Pipeline-Aktivität 24 h: **47 events, 25 canonical_facts, 7 aol_runs**.
-- Graphiti-Mirror Erfolgsquote 24 h: **0 / 4 (alle 422)**.
-```
-
-Auf Approval:
-- Lege `QA-AUDIT-REPORT.md` im Repo-Root mit obigem Inhalt an.
-- Keine Code-Änderungen, keine weiteren Files, kein Logger-Einzug — reiner Report.
-- Stoppe danach und warte auf weitere Anweisung wie gefordert.
+NOW.md wird nach jeder Stufe aktualisiert (Status + Recently completed). DECISIONS.md erhält Eintrag bei Graphiti-Body-Vertragsänderung (Stufe 1).
