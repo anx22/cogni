@@ -57,6 +57,26 @@ const SideGrid = ({
 
   const handleKeyDown = useCallback(
     (idx: number) => (e: KeyboardEvent) => {
+      if (e.key === "PageDown") {
+        e.preventDefault();
+        setPage((p) => Math.min(totalPages - 1, p + 1));
+        return;
+      }
+      if (e.key === "PageUp") {
+        e.preventDefault();
+        setPage((p) => Math.max(0, p - 1));
+        return;
+      }
+      if (e.key === "Home") {
+        e.preventDefault();
+        setPage(0);
+        return;
+      }
+      if (e.key === "End") {
+        e.preventDefault();
+        setPage(Math.max(0, totalPages - 1));
+        return;
+      }
       let next = idx;
       if (e.key === "ArrowRight") next = idx + 1;
       else if (e.key === "ArrowLeft") next = idx - 1;
@@ -67,7 +87,7 @@ const SideGrid = ({
       const target = tileRefs.current[next];
       if (target) target.focus();
     },
-    [],
+    [totalPages],
   );
 
   const isEmpty = side === "left" && items.length === 0;
