@@ -27,8 +27,8 @@ Deno.serve(withErrorBoundary("inspect-langsmith", async (req) => {
 
   const log = createLogger({ fn: "inspect-langsmith", userId: auth.userId });
 
-  const key = Deno.env.get("LANGSMITH_API_KEY");
-  if (!key) {
+  const client = createLangSmithClient();
+  if (!client) {
     log.error("config", "LANGSMITH_API_KEY not configured", new Error("missing-env"));
     await log.flush();
     return fail(500, "LANGSMITH_API_KEY not configured");
@@ -46,37 +46,25 @@ Deno.serve(withErrorBoundary("inspect-langsmith", async (req) => {
   try {
     if (action === "list") {
       const filter: Record<string, unknown> = {
-        session: [PROJECT],
+        session: [client.project],
         limit: body.limit ?? 25,
         is_root: true,
       };
       if (body.thread_id) {
         filter.filter = `eq(extra.metadata.thread_id, "${body.thread_id}")`;
       }
-      const r = await lsFetch("/runs/query", { method: "POST", body: JSON.stringify(filter) }, key);
-      const txt = await r.text();
-      if (!r.ok) {
-        log.error("list", "langsmith error", new Error(`status ${r.status}`), { status: r.status });
-        await log.flush();
-        return fail(502, "langsmith error", { status: r.status, body: txt.slice(0, 600) });
-      }
+      const data = await client.queryRuns(filter) as Record<string, unknown>;
       log.stage("done", "list ok");
       await log.flush();
-      return ok({ action, project: PROJECT, ...JSON.parse(txt) });
+      return ok({ action, project: client.project, ...data });
     }
 
     if (action === "get") {
       if (!body.run_id) { await log.flush(); return fail(400, "run_id required"); }
-      const r = await lsFetch(`/runs/${body.run_id}`, { method: "GET" }, key);
-      const txt = await r.text();
-      if (!r.ok) {
-        log.error("get", "langsmith error", new Error(`status ${r.status}`), { status: r.status });
-        await log.flush();
-        return fail(502, "langsmith error", { status: r.status, body: txt.slice(0, 600) });
-      }
+      const run = await client.getRun(body.run_id);
       log.stage("done", "get ok");
       await log.flush();
-      return ok({ action, run: JSON.parse(txt) });
+      return ok({ action, run });
     }
 
     log.warn("input", "unknown action", { action });
