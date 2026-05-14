@@ -101,109 +101,113 @@ const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
   );
 
   return (
-    <div
-      className="min-h-screen bg-surface-0 animate-[fade-in_0.5s_ease-out] relative"
-      onDragOver={onDragOver}
-      onDragLeave={onDragLeave}
-      onDrop={onDrop}
-    >
-      <button
-        onClick={onBack}
-        className="fixed top-6 left-8 z-50 text-xs text-muted-foreground/60 hover:text-foreground/90 transition-colors tracking-widest uppercase"
+    <div className="flex min-h-screen" style={{ background: "var(--surface-0)" }}>
+      <AppSidebar
+        projects={allProjects}
+        activeProjectId={realProjectId ?? undefined}
+        onProjectSelect={handleProjectSelect}
+        showMiniEntity
+        onEntityClick={onBack}
+      />
+
+      <div
+        className="flex-1 min-w-0 animate-[fade-in_0.5s_ease-out] relative overflow-y-auto"
+        onDragOver={onDragOver}
+        onDragLeave={onDragLeave}
+        onDrop={onDrop}
       >
-        ← Entität
-      </button>
-
-      {(status === "ready" || status === "empty") && project && realProjectId && (
-        <div className="fixed top-5 right-6 z-50 flex items-center gap-2">
-          <ProjectSwitcher
-            currentId={realProjectId}
-            currentName={project.name}
-            globalShortcut
-          />
-          <ProjectHeaderActions
-            projectId={realProjectId}
-            projectName={project.name}
-            onRequestRename={() => setForceRename(true)}
-          />
-        </div>
-      )}
-
-      {status === "loading" && (
-        <section className="px-8 md:px-12 lg:px-16 xl:px-20 pt-16 pb-12 bg-surface-1 border-b border-border-strong">
-          <div className="max-w-7xl mx-auto space-y-6">
-            <Skeleton className="h-4 w-20" />
-            <Skeleton className="h-12 w-2/3" />
-            <Skeleton className="h-4 w-full max-w-2xl" />
-            <Skeleton className="h-32 w-full rounded-2xl" />
+        {(status === "ready" || status === "empty") && project && realProjectId && (
+          <div className="sticky top-0 z-30 flex justify-end items-center gap-2 px-6 py-3"
+               style={{ background: "var(--surface-0)", borderBottom: "1px solid var(--hair)" }}>
+            <ProjectSwitcher
+              currentId={realProjectId}
+              currentName={project.name}
+              globalShortcut
+            />
+            <ProjectHeaderActions
+              projectId={realProjectId}
+              projectName={project.name}
+              onRequestRename={() => setForceRename(true)}
+            />
           </div>
-        </section>
-      )}
+        )}
 
-      {status === "empty" && project && (
-        <>
-          <LageZone
-            project={project}
-            editableName
-            forceEdit={forceRename}
-            onEditDone={() => setForceRename(false)}
-            onNameChange={handleRename}
-          />
-          <section className="px-8 md:px-12 lg:px-16 xl:px-20 py-24 bg-surface-1 border-b border-border-strong">
-            <div className="max-w-3xl mx-auto text-center">
-              <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground/60 mb-3">Noch keine Substanz</p>
-              <p className="text-lg text-foreground/90 font-light leading-relaxed">
-                Lege eine Datei, einen Link oder eine Notiz ab — ich beginne mit dem Verstehen.
+        {status === "loading" && (
+          <section className="px-8 md:px-12 lg:px-16 xl:px-20 pt-16 pb-12 bg-surface-1 border-b border-border-strong">
+            <div className="max-w-7xl mx-auto space-y-6">
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-12 w-2/3" />
+              <Skeleton className="h-4 w-full max-w-2xl" />
+              <Skeleton className="h-32 w-full rounded-2xl" />
+            </div>
+          </section>
+        )}
+
+        {status === "empty" && project && (
+          <>
+            <LageZone
+              project={project}
+              editableName
+              forceEdit={forceRename}
+              onEditDone={() => setForceRename(false)}
+              onNameChange={handleRename}
+            />
+            <section className="px-8 md:px-12 lg:px-16 xl:px-20 py-24 bg-surface-1 border-b border-border-strong">
+              <div className="max-w-3xl mx-auto text-center">
+                <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground/60 mb-3">Noch keine Substanz</p>
+                <p className="text-lg text-foreground/90 font-light leading-relaxed">
+                  Lege eine Datei, einen Link oder eine Notiz ab — ich beginne mit dem Verstehen.
+                </p>
+              </div>
+            </section>
+          </>
+        )}
+
+        {status === "ready" && project && (
+          <>
+            <LageZone
+              project={project}
+              editableName
+              forceEdit={forceRename}
+              onEditDone={() => setForceRename(false)}
+              onNameChange={handleRename}
+            />
+
+            <section className="px-8 md:px-12 lg:px-16 xl:px-20 py-16 bg-surface-1 border-b border-border-strong">
+              <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-5 gap-6">
+                <div className="lg:col-span-3 min-w-0">
+                  <HandlungsbedarfList items={project.handlungsbedarf} />
+                </div>
+                <div className="lg:col-span-2 min-w-0">
+                  <VerlaufFeed verlauf={project.verlauf} />
+                </div>
+              </div>
+            </section>
+
+            <SubstanzSection themen={project.themen} dokumente={project.dokumente} />
+          </>
+        )}
+
+        {dragActive && (
+          <div
+            className="fixed inset-0 z-40 flex items-center justify-center bg-background/60 backdrop-blur-sm pointer-events-none transition-opacity"
+            aria-hidden
+          >
+            <div className="border-2 border-dashed border-primary/60 rounded-2xl px-12 py-10 bg-surface-1/80">
+              <p className="text-2xl font-light tracking-wide text-foreground/90">
+                {realProjectId
+                  ? `Ablegen für „${project?.name ?? "dieses Projekt"}"`
+                  : "Ablegen — Zuordnung im Dialog"}
+              </p>
+              <p className="mt-2 text-sm text-muted-foreground/70 tracking-wide">
+                {realProjectId
+                  ? "Ich hänge es direkt an dieses Projekt."
+                  : "Ich frage dich gleich, wohin es gehört."}
               </p>
             </div>
-          </section>
-        </>
-      )}
-
-      {status === "ready" && project && (
-        <>
-          <LageZone
-            project={project}
-            editableName
-            forceEdit={forceRename}
-            onEditDone={() => setForceRename(false)}
-            onNameChange={handleRename}
-          />
-
-          <section className="px-8 md:px-12 lg:px-16 xl:px-20 py-16 bg-surface-1 border-b border-border-strong">
-            <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-5 gap-6">
-              <div className="lg:col-span-3 min-w-0">
-                <VerlaufFeed verlauf={project.verlauf} />
-              </div>
-              <div className="lg:col-span-2 min-w-0">
-                <HandlungsbedarfList items={project.handlungsbedarf} />
-              </div>
-            </div>
-          </section>
-
-          <SubstanzSection themen={project.themen} dokumente={project.dokumente} />
-        </>
-      )}
-
-      {dragActive && (
-        <div
-          className="fixed inset-0 z-40 flex items-center justify-center bg-background/60 backdrop-blur-sm pointer-events-none transition-opacity"
-          aria-hidden
-        >
-          <div className="border-2 border-dashed border-primary/60 rounded-2xl px-12 py-10 bg-surface-1/80">
-            <p className="text-2xl font-light tracking-wide text-foreground/90">
-              {realProjectId
-                ? `Ablegen für „${project?.name ?? "dieses Projekt"}"`
-                : "Ablegen — Zuordnung im Dialog"}
-            </p>
-            <p className="mt-2 text-sm text-muted-foreground/70 tracking-wide">
-              {realProjectId
-                ? "Ich hänge es direkt an dieses Projekt."
-                : "Ich frage dich gleich, wohin es gehört."}
-            </p>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };
