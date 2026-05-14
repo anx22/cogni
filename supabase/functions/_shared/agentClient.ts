@@ -13,13 +13,14 @@
 
 import {
   AGENT_MODEL,
-  AGENT_SYSTEM_PROMPT,
+  AGENT_SYSTEM_PROMPT_FALLBACK,
   AGENT_TIMEOUT_MS,
-  ASSIGNMENT_SYSTEM_PROMPT,
+  ASSIGNMENT_SYSTEM_PROMPT_FALLBACK,
   EXTRACT_FACTS_TOOL,
   SUGGEST_ASSIGNMENT_TOOL,
   type FactType,
 } from "./agentConfig.ts";
+import { getPrompt } from "./promptHub.ts";
 
 export interface ExtractedFact {
   fact_type: FactType;
@@ -104,8 +105,12 @@ export async function callExtractFacts(
   // graphHint: kompakter Kontext aus dem Projekt-Graphen (Graphiti).
   // Wird – falls vorhanden – als zusätzliche System-Notiz vor den User-Text
   // gestellt. Pures Prompt-Enrichment, keine Schema-/Logikänderung.
+  const prompt = await getPrompt("extract-facts", {
+    fallback: AGENT_SYSTEM_PROMPT_FALLBACK,
+    autoCreate: true,
+  });
   const systemMessages: Array<{ role: "system"; content: string }> = [
-    { role: "system", content: AGENT_SYSTEM_PROMPT },
+    { role: "system", content: prompt.system },
   ];
   const trimmed = (graphHint ?? "").trim();
   if (trimmed) {
@@ -125,6 +130,7 @@ export async function callExtractFacts(
     tools: [EXTRACT_FACTS_TOOL],
     tool_choice: { type: "function", function: { name: "extract_facts" } },
   });
+  console.log(`agent.extract_facts prompt_version=${prompt.version} source=${prompt.source}`);
 
   const parsed = parseToolArgs(data, "extract_facts") as { facts?: unknown } | null;
   if (!parsed) return [];
@@ -192,15 +198,20 @@ ${projectsBlock}
 ## Lexikalische Hinweise
 ${hintsBlock}`;
 
+  const prompt = await getPrompt("suggest-assignment", {
+    fallback: ASSIGNMENT_SYSTEM_PROMPT_FALLBACK,
+    autoCreate: true,
+  });
   const data = await callGateway({
     model: AGENT_MODEL,
     messages: [
-      { role: "system", content: ASSIGNMENT_SYSTEM_PROMPT },
+      { role: "system", content: prompt.system },
       { role: "user", content: userMsg },
     ],
     tools: [SUGGEST_ASSIGNMENT_TOOL],
     tool_choice: { type: "function", function: { name: "suggest_project_assignment" } },
   });
+  console.log(`agent.suggest_assignment prompt_version=${prompt.version} source=${prompt.source}`);
 
   const parsed = parseToolArgs(data, "suggest_project_assignment") as
     | AssignmentSuggestion

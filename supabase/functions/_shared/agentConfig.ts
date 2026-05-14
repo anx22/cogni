@@ -33,8 +33,11 @@ export const AGENT_TIMEOUT_MS = 30_000;
 export const ASSIGNMENT_CONFIDENT_THRESHOLD = 3; // ab hier auto-zuordnen
 export const ASSIGNMENT_UNCERTAIN_THRESHOLD = 1; // 1..2 = unsicher → Auswahlbox
 
-// ---------- System-Prompt Extract ----------
-export const AGENT_SYSTEM_PROMPT = `Du bist der Verstehens-Agent einer Projektintelligenz-App.
+// ---------- System-Prompt Extract (Fallback — Live-Quelle: LangSmith Hub) ----------
+//  Diese Konstante ist die Code-Default-Version. Im laufenden Betrieb zieht
+//  der promptHub-Loader die jeweils aktive Version aus LangSmith Prompt Hub
+//  (Repo: "extract-facts"). Bei Hub-Ausfall fällt der Code hier drauf zurück.
+export const AGENT_SYSTEM_PROMPT_FALLBACK = `Du bist der Verstehens-Agent einer Projektintelligenz-App.
 
 Deine Aufgabe: Aus einem Eingangs-Text (Notiz, Link-Beschreibung oder geparstes Dokument) extrahierst du strukturierte Vorschläge ("Fakten"), die ein Mensch in einem Review-Schritt bestätigen oder ablehnen wird.
 
@@ -51,8 +54,9 @@ Sprache: Antworte in derselben Sprache wie der Eingangs-Text (vermutlich Deutsch
 
 Du gibst KEINEN Fließtext zurück. Du rufst ausschließlich das Tool "extract_facts" auf.`;
 
-// ---------- System-Prompt Assignment ----------
-export const ASSIGNMENT_SYSTEM_PROMPT = `Du bist der Zuordnungs-Agent einer Projektintelligenz-App.
+// ---------- System-Prompt Assignment (Fallback — Live-Quelle: LangSmith Hub) ----------
+//  Im Hub als Repo "suggest-assignment" gepflegt, hier nur als Fallback.
+export const ASSIGNMENT_SYSTEM_PROMPT_FALLBACK = `Du bist der Zuordnungs-Agent einer Projektintelligenz-App.
 
 Aufgabe: Entscheide, zu welchem bestehenden Projekt der gegebene Text am besten gehört — oder ob es vermutlich ein neues Projekt ist.
 

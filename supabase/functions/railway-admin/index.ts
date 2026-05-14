@@ -144,6 +144,77 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const action = body.action ?? "list";
 
+    if (action === "prompt-cache-bust" || action === "prompt-state") {
+      const { bustPromptCache, promptCacheState, getPrompt } = await import("../_shared/promptHub.ts");
+      if (action === "prompt-cache-bust") {
+        const cleared = bustPromptCache();
+        return new Response(JSON.stringify({ ok: true, ...cleared }), {
+          headers: { ...cors, "Content-Type": "application/json" },
+        });
+      }
+      // prompt-state: optional Live-Pull, um zu sehen welche Version aktuell wäre
+      const state = promptCacheState();
+      const probes: Record<string, unknown> = {};
+      if (body.probe) {
+        const names: string[] = Array.isArray(body.probe) ? body.probe : ["extract-facts", "suggest-assignment"];
+        for (const n of names) {
+          const r = await getPrompt(n, { fallback: "(fallback)" });
+          probes[n] = { version: r.version, source: r.source, length: r.system.length };
+        }
+      }
+      return new Response(JSON.stringify({ ok: true, state, probes }, null, 2), {
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "langsmith-write-probe") {
+      const key = Deno.env.get("LANGSMITH_API_KEY") ?? "";
+      const r = await fetch("https://api.smith.langchain.com/api/v1/repos/", {
+        method: "POST",
+        headers: { "x-api-key": key, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          repo_handle: "produktintelligenz-test-write",
+          description: "write capability probe",
+          is_public: false,
+        }),
+      });
+      const t = await r.text();
+      return new Response(JSON.stringify({ ok: true, status: r.status, body: t.slice(0, 600) }, null, 2), {
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "langsmith-probe") {
+      const key = Deno.env.get("LANGSMITH_API_KEY") ?? "";
+      if (!key) {
+        return new Response(JSON.stringify({ ok: false, error: "LANGSMITH_API_KEY missing" }), {
+          headers: { ...cors, "Content-Type": "application/json" },
+        });
+      }
+      const base = "https://api.smith.langchain.com";
+      const paths: string[] = body.paths ?? [
+        "/api/v1/workspaces/current",
+        "/workspaces/current",
+        "/api/v1/info",
+        "/info",
+        "/api/v1/orgs/current",
+        "/api/v1/sessions?limit=1",
+      ];
+      const out: Record<string, unknown> = {};
+      for (const p of paths) {
+        try {
+          const r = await fetch(`${base}${p}`, { headers: { "x-api-key": key } });
+          const t = await r.text();
+          out[p] = { status: r.status, body: t.slice(0, 500) };
+        } catch (e) {
+          out[p] = { error: String(e) };
+        }
+      }
+      return new Response(JSON.stringify({ ok: true, results: out }, null, 2), {
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
+    }
+
     if (action === "list") {
       return new Response(JSON.stringify(await listAll(), null, 2), {
         headers: { ...cors, "Content-Type": "application/json" },
