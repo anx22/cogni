@@ -114,17 +114,18 @@ Service-Clients zentralisiert.
 
 ## Backlog (nach Priorität)
 
-1. **Welle B — Knowledge-Graph-Linking** *(Produkt-Roadmap)*
-   - `linker` (Graph-Match statt Title-Match), `conflict_detector`, `gap_detector`, `dependency_detector` zwischen `interpreter` und `condenser` im AOL-Service.
-   - Erst sinnvoll, sobald Welle A produktiv Daten in den Graph legt und der Reuse-Check (zweites Asset im selben Projekt → Kontext nicht leer) stabil läuft.
+1. **Loops aus Re-Audit** *(operativ)*
+   - Graphiti-Sync-Diagnose (`inspect-graphiti diagnose`, failed-Reasons gruppieren).
+   - Vier-Rollen-Screen User-Smoke nach Welle B.
+   - Welle-B-Use-Case-Smoke in Sandbox (Task „blockiert von …").
+   - `_shared/` console.warn → Logger (12 Stellen, niedrige Priorität).
 
-2. **Echte Browser-E2E-Lane** *(QA, optional)*
-   - Playwright-Setup, ein Smoke pro Persona-Pfad (Upload, Notiz, Asset-Delete).
-   - Erst sinnvoll, sobald Persona-/Auth-Fixtures als Browser-Cookie gespiegelt sind.
+2. **Out of scope heute — Wave 3** *(bewusst zurückgestellt)*
+   - LLM-Heuristiken für Linker/Conflict/Gap/Dep (über deterministische Pfade hinaus).
+   - React Query (Caching/Mutations).
+   - Browser-E2E mit Playwright (Persona-Cookies).
+   - LOC-Budget-Reduktion auf Plan-Targets (FE <14k / BE <2.3k).
 
-3. **Tier B — Vereinfachung / Duplikationsabbau** *(siehe `agent-execution-plan.md`)*
-   - B1 Quick Wins (Date-Formatter, mapById, http-Wrapper, Auth-Helper, SectionHeader).
-   - B2 mittlere Refactors (`useRealtimeTable`, View-Model-Mapper, Inspector-Merge).
 
 ---
 
