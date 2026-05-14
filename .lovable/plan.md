@@ -1,81 +1,54 @@
-# Milestone Review — Abgleich Claude vs. Code-Stand 2026-05-14
+## Nächster Schritt — Welle B-W3 Gap-Detector
 
-## Was Claude richtig sieht (aktuell)
+Nach B-W1 (Linker via Graph-Match) und B-W2 (Conflict-Detector) ist als nächstes laut Roadmap **B-W3 Gap-Detector** dran. Danach optional B-W4 Dependency-Detector.
 
-- **Vision-Architektur trägt** — Datenmodell, Vier-Rollen, Universal Input, Review-First UI: alles live, kein Drift.
-- **React Query fehlt** — stimmt. Direkte Supabase-Subscriptions mit Debounce. Wird bei 500+ Facts spürbar.
-- **Graph-Intelligence ist der wertvollste, aber labilste Teil** — stimmt strategisch.
-- **Wave B blockiert ohne stabile Wave A** — Reihenfolge bleibt richtig.
+### Ziel B-W3
+Nach jedem Canonical-Commit Lücken im Projektzustand erkennen und in `gap_signals` schreiben — deterministisch, fail-soft, idempotent. UI (`GapBox`, `mappers/gaps.ts`) ist bereits da, liest realtime aus `gap_signals`.
 
-## Was Claude veraltet sieht (bereits erledigt in Welle A+C)
+### Erkannte Gap-Typen (Stufe 1, deterministisch)
 
+1. **`deadline_without_owner`**
+   Deadline-Fakt ohne `assignee`/`owner`/`responsible` im content + kein `fact_references` auf Person/Stakeholder.
+   → Title: „Verantwortlicher fehlt für Deadline X"
 
-| Claudes Punkt                    | Realität                                                                                                                                |
-| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| Graphiti 422 (`role` fehlt)      | **Fixed** in `_shared/graphiti.ts:120` (`role: input.role ?? role_type`). Letzte 24h: 15 ok, 10 failed (Altlasten vor Fix), 24 queued.  |
-| `commit-fact` 643 LOC, untestbar | **Refactored**: `index.ts` 70 LOC, `kernel.ts` 245 LOC, `commitFact_test.ts` + `projectScoring_test.ts` mit 14/14 grün.                 |
-| `useProject.ts` 515 LOC God-Hook | **Split**: `useProject.ts` 42 LOC, `useProjectData.ts` 189 LOC, `projectViewModel.ts` 160 LOC + Tests.                                  |
-| `strictNullChecks: false`        | **Auf `true**` in `tsconfig.app.json:26`.                                                                                               |
-| Keine E2E-Smokes                 | `src/test/e2e-smokes.test.ts` existiert (3 Pfade).                                                                                      |
-| JSONB-Validation fehlt           | **Trigger live**: `validate_fact_content` als IMMUTABLE pro fact_type.                                                                  |
-| Logger-Coverage 33% (5/15)       | **13/16 Edge Functions instrumentiert.** Nur 3 Inspector-Funktionen ohne Logger (inspect-graphiti, inspect-langsmith, inspect-railway). |
+2. **`decision_without_deadline`**
+   Decision-Fakt ohne korrespondierende Deadline (gleicher normalisierter Title oder verlinkt via `fact_references`).
+   → Title: „Umsetzungsfrist fehlt für Entscheidung X"
 
+3. **`task_without_due_date`**
+   Task-Fakt ohne `due_date` im content.
+   → Title: „Frist fehlt für Aufgabe X"
 
-## Was wirklich offen ist (echte Lücken)
+Jede Lücke hat: `affects` (was ist betroffen), `impact` (warum kritisch — fixed string pro Typ), `canonical_fact_id`.
 
-### Kritisch
+### Implementation
 
-1. **Graphiti-Sync-Queue staut** — 24 Einträge "queued", nur 15 "ok" in 24h. Backfill-Job läuft nicht durch. Erfolgsmetrik (≥95%) wird verfehlt obwohl der Fix deployed ist.
-2. **10 alte "failed"-Einträge** verzerren die Quote — müssen explizit retried oder als terminal markiert werden.
+**Neu:** `supabase/functions/commit-fact/gapDetector.ts`
+- `detectGapsPure(fresh, projectFacts) → DetectedGap[]` — pure Funktion, testbar.
+- `detectAndPersistGaps(admin, args)` — side-effect-Wrapper, fail-soft, idempotent über `(project_id, title, status='open')`.
 
-### Mittel
+**Edit:** `supabase/functions/commit-fact/kernel.ts`
+- Nach `detectAndPersistConflicts` zusätzlich `detectAndPersistGaps` aufrufen (parallel via `Promise.all`).
 
-3. **3 Inspector-Funktionen ohne Logger** — kosmetisch, aber blockiert "100% Coverage" auf der Master-Checklist.
-4. **React Query nicht eingeführt** — Claude hat Recht, ist aber Wave-3-Thema, nicht Blocker für Wave B.
+**Neu:** `supabase/functions/commit-fact/gapDetector_test.ts`
+- 6+ Pure-Tests: jeder Gap-Typ einmal positiv, einmal negativ (z.B. Deadline mit Owner → kein Gap).
+- Mit bestehender 20er-Suite → Ziel 26+ grün.
 
-### Wave B (jetzt freigegeben sobald Queue grün)
+### Verifikation
+1. `deno test supabase/functions/commit-fact/` → grün.
+2. `commit-fact` deploy.
+3. Smoke in Sandbox: 1 Deadline ohne Owner committen → `gap_signals`-Row erscheint, `GapBox` rendert.
 
-5. Linker auf Graph-Match (B-W1) — Schnittstelle in `intake-understand/linker.ts` als Drop-in vorbereitet.
-6. Conflict-Detector (B-W2), Gap-Detector (B-W3), Dependency-Detector (B-W4).
+### Doku
+- `docs/NOW.md`: B-W3 live, Sprint-Update.
+- `docs/DECISIONS.md`: [2026-05-14] Gap-Detector deterministisch in commit-fact statt im AOL-Service (Konsistenz mit B-W2).
+- `.lovable/plan.md`: B-W3 als done markieren, B-W4 als nächsten Schritt vormerken.
 
----
+### Bewusst nicht heute
+- **B-W4 Dependency-Detector** — kommt nach Sandbox-Validierung von B-W3 (gleiche Architektur, andere Heuristik: blockiert_durch / wartet_auf via `against_fact_id` + Title-Substring-Match).
+- **React Query** — Wave 3.
+- **LLM-basierte Gap-Heuristik** — Wave 3, jetzt nur deterministisch.
 
-## Plan für heute
-
-### Stufe 1 — Wave-A-Stabilität schließen (ca. 2 Loops)
-
-1. **Sync-Queue diagnostizieren**: `graphiti_sync_log` queued-Einträge inspizieren, Ursache klären (Cron läuft nicht? `graphiti-backfill` wirft Fehler?).
-2. **Queue drainen**: `graphiti-backfill` direkt aufrufen, Erfolgsrate prüfen.
-3. **Failed-Altlasten retryen oder als terminal markieren**, damit 24h-Fenster ≥95% zeigt.
-4. **Inspector-Logger nachziehen** (3 Funktionen, je ~5 Zeilen `withErrorBoundary` + `createLogger`).
-
-### Stufe 2 — Wave B starten (B-W1 Linker, ca. 2 Loops)
-
-5. `_shared/clients/graphitiSearch.ts` neu: `searchEntities(project_id, query, k=5)` gegen `/search`.
-6. `intake-understand/linker.ts` von Title-Match auf Graph-Match umstellen, Fallback auf Title.
-7. Deno-Test `linker_test.ts` mit Mock-Search.
-8. Smoke: 1 Asset in Sandbox → prüfen, dass Linker Graph-Hits nutzt.
-
-### Stufe 3 — Dokumentation
-
-9. `docs/NOW.md`: Welle A geschlossen, Welle B B-W1 live.
-10. `docs/DECISIONS.md`: Eintrag "Linker via Graphiti-Search statt Title-Match".
-11. `docs/audit-2026-05-14.md`: Abgleich-Tabelle Claude-Review vs. Realität anhängen.
-
-### Nicht heute (bewusst zurückgestellt)
-
-- React Query Migration → Wave 3, eigener Sprint.
-- Wave B-W2/B-W3/B-W4 → erst nach B-W1 stabil.
-- Volle Browser-E2E (Playwright) → Backlog.
-
----
-
-## Stop-Bedingungen
-
-- Wenn Sync-Queue nach Backfill weiter wächst: stoppen, Root-Cause statt Wave B.
-- Wenn Linker-Smoke in Sandbox keinen Graph-Hit produziert: B-W1 als Spike beenden, nicht durchziehen.
-- Wenn `pipeline_events`-Schema bricht: rollback.
-
-Bei Freigabe lege ich direkt mit Stufe 1 los.  
-  
-Docs genaustens mit neusten Plänen aktualsieiren und loslegen mit Stufe 1
+### Stop-Bedingungen
+- Falls `gap_signals` durch frühere Migrations Pflichtfelder hat, die hier fehlen → erst Schema-Check, dann Mapping anpassen.
+- Falls Tests > 100ms langsam werden (Bestand-Read pro Commit) → mit `fact_type`-Filter eingrenzen wie in B-W2.
