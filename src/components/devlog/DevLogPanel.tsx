@@ -174,7 +174,7 @@ export default function DevLogPanel() {
                         onToggle={() =>
                           setExpanded((prev) => {
                             const n = new Set(prev);
-                            n.has(e.id) ? n.delete(e.id) : n.add(e.id);
+                            if (n.has(e.id)) n.delete(e.id); else n.add(e.id);
                             return n;
                           })
                         }
