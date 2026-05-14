@@ -27,6 +27,27 @@ const fmtShort = (iso: string | null | undefined) =>
 
 const ageInDays = (iso: string) => Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 86400000));
 
+// Übersetzt Snapshot-Summaries in lesbare Sprache. Alte Datensätze enthalten
+// noch Maschinen-Codes wie "Snapshot nach commit:stakeholder:add" — die dürfen
+// nie in der UI auftauchen.
+const SUBJECT_DE: Record<string, string> = {
+  stakeholder: "Stakeholder", deadline: "Termin", decision: "Entscheidung",
+  task: "Aufgabe", open_point: "Offener Punkt", gap_signal: "Lücke",
+  contradiction: "Widerspruch", dependency: "Abhängigkeit", fact: "Fakt",
+};
+const VERB_DE: Record<string, string> = {
+  add: "ergänzt", update: "aktualisiert", remove: "entfernt",
+  resolve: "geschlossen", confirm: "bestätigt", reject: "verworfen",
+};
+const humanizeSnapshotSummary = (raw: string | undefined): string | undefined => {
+  if (!raw) return undefined;
+  const m = raw.match(/^Snapshot nach\s+([a-z_]+):([a-z_]+)(?::([a-z_]+))?/i);
+  if (!m) return raw;
+  const subj = SUBJECT_DE[m[2]] ?? m[2];
+  const verb = VERB_DE[m[3] ?? ""] ?? "aktualisiert";
+  return `${subj} ${verb}.`;
+};
+
 const titleFromJson = (v: unknown, fallback = "—"): string => {
   if (!v || typeof v !== "object") return fallback;
   const o = v as Record<string, unknown>;
@@ -383,8 +404,10 @@ export function useProject(projectId: string | null | undefined): UseProjectResu
         return v && (v.kind === "budget" || (typeof v.label === "string" && v.label.toLowerCase().includes("budget")));
       });
 
-      // Lagetext
-      const snapshotSummary = snapshotRes.data?.[0]?.summary;
+      // Lagetext — Maschinen-Codes ("Snapshot nach commit:stakeholder:add")
+      // werden hier in lesbare Sprache übersetzt, damit Altdaten auch funktionieren.
+      const rawSummary = snapshotRes.data?.[0]?.summary as string | undefined;
+      const snapshotSummary = humanizeSnapshotSummary(rawSummary);
       const fallbackLage =
         konflikte.length || gapVMs.length || handlungsbedarf.length
           ? `${handlungsbedarf.length} offen, ${konflikte.length} Konflikt${

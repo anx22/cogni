@@ -54,9 +54,18 @@ const ZuordnungsBox = ({ box }: { box: DialogBox }) => {
         </ActionBtn>
       }
     >
-      {agentReason && (
+      {agentReason ? (
         <p className="text-lg text-foreground/80 font-light leading-relaxed">
           {agentReason}
+        </p>
+      ) : candidates.length === 0 ? (
+        <p className="text-lg text-foreground/80 font-light leading-relaxed">
+          Kein bestehendes Projekt passt zu diesem Inhalt. Ich schlage vor, ein
+          neues Projekt anzulegen — Name kannst du anpassen.
+        </p>
+      ) : (
+        <p className="text-lg text-foreground/80 font-light leading-relaxed">
+          Wähle das passende Projekt — oder leg ein neues an.
         </p>
       )}
 
