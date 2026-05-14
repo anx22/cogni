@@ -1,108 +1,74 @@
-# Fix-Plan zum QA-Audit-Report
+## Ziel
 
-Reihenfolge nach Impact. Jede Stufe ist eigenständig commit-fähig — bei Abbruch bleibt der Stand grün.
+Aktuell liegen QA-Wissen und Produkt-/Tech-Doku verstreut in 8 Dateien unterschiedlicher Reife. Das Workspace-Konvention (`AGENTS.md` / `PRODUCT.md` / `ARCHITECTURE.md` / `NOW.md` / `DECISIONS.md`) wird nur teilweise eingehalten. Diese Konsolidierung bringt das Repo auf den Standard, verdichtet Vergangenes und bildet den heutigen Stand (Stages 1–7 abgeschlossen, 40 Vitest + 18 Deno grün, 11/16 Edge Functions mit Logger) sauber ab.
 
-## 1. Graphiti-422 fixen — Knowledge-Graph wieder aktiv (höchste Priorität)
+## Bestand
 
-**Problem:** 0 / 4 erfolgreiche Mirrors in 24 h. Canonical-Facts landen nur in Supabase, nie in Neo4j. RAG ist faktisch tot.
+```text
+Wurzel:   README.md   NOW.md   QA-PLAN.md   QA-AUDIT-REPORT.md
+docs/:    produkt-gesamt.md  implementierung-aktuell.md  geplant.md  qa-seam-inventar.md
+fehlt:    AGENTS.md   PRODUCT.md   ARCHITECTURE.md   DECISIONS.md
+```
 
-**Diagnose zuerst** (5 min, real, nicht raten):
-- `inspect-graphiti` aufrufen mit letzter `commit-fact`-Payload aus `pipeline_events`.
-- 422-Body live reproduzieren via `railway-admin` → `graphiti-probe`.
-- Vergleich gegen Graphiti-OpenAPI: welches Feld fehlt wirklich? (`role`, `name`, `group_id`, `source_description`?)
+## Zielzustand
 
-**Fix:**
-- In `supabase/functions/_shared/graphiti.ts` betroffenes Feld ergänzen oder Default setzen.
-- Logger-Stage `mirror_request` + `mirror_response` mit Body-Hash, damit künftige Drifts sofort sichtbar.
-- Backfill: einen `graphiti-reconcile`-Lauf für die 25 ungemirrorten canonical_facts der letzten 24 h.
+```text
+Wurzel (5-Datei-System):
+  AGENTS.md         neu, Karte (≤40 Zeilen)
+  PRODUCT.md        neu, aus produkt-gesamt.md verdichtet (≤80 Zeilen)
+  ARCHITECTURE.md   neu, aus implementierung-aktuell.md + Techstack-Memory verdichtet (≤80 Zeilen)
+  NOW.md            bleibt, aktueller Sprint + Backlog + Recently completed (2 Sprints)
+  DECISIONS.md      neu, Append-only, beginnt mit Rück-Datierung der wichtigsten Calls
+  README.md         bleibt minimal, zeigt auf AGENTS.md
 
-**Akzeptanz:** ein frischer commit-fact-Lauf produziert `pipeline_events` mit `mirror_response.status=200` und `graphiti_uuid` ist in `canonical_facts` gesetzt.
+docs/:
+  qa-seam-inventar.md   bleibt unverändert (Referenz für Phase 1)
+  qa-historie.md        neu, einmalige Verdichtung aus QA-PLAN.md + QA-AUDIT-REPORT.md
+                        (Phase-1–4-Plan + Auditor-Befund vom 14.05. + Stages 1–7)
+  produkt-gesamt.md     archiviert → wird durch PRODUCT.md ersetzt, Datei wird gelöscht
+                        nachdem alle Inhalte in PRODUCT.md/ARCHITECTURE.md übernommen sind
+  implementierung-aktuell.md  archiviert, gleicher Vorgang
+  geplant.md            archiviert, Inhalte fließen in NOW.md-Backlog ein
 
-## 2. `intake-trigger` instrumentieren + ESLint-Error fixen
+gelöscht:
+  QA-PLAN.md            → Inhalt in docs/qa-historie.md
+  QA-AUDIT-REPORT.md    → Inhalt in docs/qa-historie.md
+```
 
-**Problem:** Async-Pipeline-Hänger (siehe 08:41-Vorfall) sind im Health-Panel unsichtbar. Zusätzlich blockt `@ts-ignore` in Zeile 163 jedes spätere ESLint-Error-Gate.
+## Inhaltliche Verdichtung
 
-**Fix:**
-- `createLogger({ fn: "intake-trigger" })` einziehen.
-- Stages: `enter | aol_call | invoke_understand_bg | exit | error` plus `bg_completed` / `bg_failed` aus den `.then`/`.catch`-Handlern → schreiben in `pipeline_events` mit `run_id`.
-- Alle `console.error` ersetzen.
-- Zeile 163: `@ts-ignore` → `@ts-expect-error EdgeRuntime ist global im Supabase Edge Runtime`.
+**PRODUCT.md** (max 80 Zeilen) enthält: Vision (PM-App), Zielnutzer, kanonischer Datenfluss `asset → parsed_document → proposed_facts → review_cases → canonical_facts → change_events → graphiti_sync_log → Episode/Entities → RAG`, Feature-Map (Entität, Projekt, Overlay, Voice, Pipeline-Health, Review-First), explizite "Was es nicht ist"-Sektion (kein Auto-Commit, keine Sidebar, keine Dashboard-Ästhetik).
 
-**Akzeptanz:** `bunx eslint .` 0 Errors. Ein Asset-Upload zeigt im `/pipeline-health` lückenlose Stage-Kette `intake-trigger.enter → … → intake-understand.exit`.
+**ARCHITECTURE.md** (max 80 Zeilen): Stack (React 18 + Vite 5 + Tailwind, Supabase = Wahrheit, Graphiti/Neo4j = Spiegel, Unstructured = Parsing, AOL-Service auf Railway, LangSmith Prompts, Lovable AI Gateway). Layer-Regeln. Golden Principles aus AGENTS.md + Memory mit `[HARD]`/`[PREFER]`-Tags (z. B. `[HARD] Roles in separater Tabelle`, `[HARD] Logger statt console.log`, `[PREFER] withErrorBoundary auf jeder Edge Function`).
 
-## 3. Restliche `console.log` raus + Logger in 4 weitere Hot-Funktionen
+**NOW.md** wird beim Konsolidieren leicht überarbeitet: Sprint-Tabelle bleibt, Backlog nur noch echte offene Punkte (Browser-E2E, Inspector-Logger), "Recently completed" auf die letzten 2 Sprints (Stage 1–4 + Stage 5–7) komprimiert, ältere Einträge wandern nach DECISIONS/qa-historie.
 
-**Problem:** 4 Treffer in `_shared/agentClient.ts`, `intake-understand`, `intake-process`. CI-Smoke `rg console.log supabase/functions/` wäre rot. `intake-process` ist Teil des Hot-Paths.
+**DECISIONS.md** (Append-only, Format `[YYYY-MM-DD] Problem → Choice → Reason`) startet mit ~10 Rückeinträgen aus Memory + QA-Audit:
+- 2026-05-14 commit-fact-Logik testbar machen → pure `commitFact()` extrahieren → Closure war nur via HTTP-Curl prüfbar
+- 2026-05-14 Edge-Function-Last-Resort → `withErrorBoundary` Pflicht → vorher stille Crashes ohne `correlation_id`
+- 2026-05-14 console.log in Edge Functions → CI-Smoke-Job blockt → Logger-Disziplin nicht verlässlich nur via Lint
+- 2026-05-14 Knowledge Graph → Graphiti statt Cognee → bessere Episode-Semantik
+- (weitere ältere Einträge aus `mem://features/entscheidungen`)
 
-**Fix:**
-- `intake-process` und `intake-understand`: alle `console.log` → `log.info/warn/error` mit passender Stage.
-- `_shared/agentClient.ts`: auf `log.debug` mit injiziertem Logger umstellen (Caller übergibt).
-- `_shared/logger.ts` darf weiter auf stdout spiegeln — als einziger erlaubter Treffer markieren.
+**docs/qa-historie.md** verdichtet QA-PLAN.md (4-Phasen-Plan) + QA-AUDIT-REPORT.md (Soll-Ist-Audit) auf eine Datei: oben Methodik + Phasen-Tabelle, dann Audit-Befund vom 14.05., dann Stages 1–7 chronologisch (jeweils 2–3 Zeilen). So bleibt das Wissen auffindbar, blockiert aber kein neues Onboarding.
 
-**Akzeptanz:** `rg "console\.log" supabase/functions/ | rg -v "_shared/logger.ts"` ist leer.
+**AGENTS.md** (max 40 Zeilen): nur Karte. Was wo liegt, aktueller Sprint-Verweis nach NOW.md, Routing nach PRODUCT/ARCHITECTURE/DECISIONS, Hinweis auf Memory-Files für Detailwissen.
 
-## 4. `commit-fact` testbar machen
+**README.md**: einzeiliger Verweis auf AGENTS.md.
 
-**Problem:** Kernlogik in `Deno.serve`-Closure → keine Unit-Tests möglich. Schwerstes 643-LOC-Modul ist ungetestet.
+## Technische Schritte (Build-Mode)
 
-**Fix:**
-- Pure Funktion `commitFact({ admin, user, payload, log }): Promise<CommitResult>` extrahieren. `Deno.serve`-Wrapper nur noch HTTP-Adapter.
-- `_shared/testFixtures.ts` um `mockAdmin()` erweitern (in-memory Supabase-Stub mit `from().select/insert/update`).
-- Drei Deno-Tests in `commit-fact/index_test.ts`:
-  - Happy: Proposed → Canonical, `change_events` geschrieben.
-  - Konflikt: zweiter widersprüchlicher Fact erzeugt `contradictions`-Eintrag.
-  - Supersede: Re-Commit setzt `superseded_by` + neuen `valid_from`.
-- Über `supabase--test_edge_functions` ausführen.
+1. `AGENTS.md`, `PRODUCT.md`, `ARCHITECTURE.md`, `DECISIONS.md` neu schreiben (4 neue Dateien im Root, jeweils nach Vorlage oben).
+2. `NOW.md` straffen: Backlog auf 2 echte Items kürzen, "Recently completed" auf 2 Sprints (alte Einträge in `qa-historie.md` migrieren).
+3. `docs/qa-historie.md` neu erstellen mit verdichtetem Inhalt aus QA-PLAN.md + QA-AUDIT-REPORT.md.
+4. `QA-PLAN.md`, `QA-AUDIT-REPORT.md`, `docs/produkt-gesamt.md`, `docs/implementierung-aktuell.md`, `docs/geplant.md` löschen.
+5. `README.md` auf einen Verweis kürzen.
+6. `mem://index.md` Core-Block prüfen — die "TOTALE OBSERVABILITY"-Regel bleibt; Memory-Liste unverändert (zeigt schon auf die richtigen Sub-Files).
 
-**Akzeptanz:** `commit-fact` Deno-Tests grün, plus 3 weitere Tests im Suite-Output.
+## Akzeptanzkriterium
 
-## 5. Phase-4-Gate vollenden — Prettier + Husky + lint-staged + Nightly
-
-**Problem:** Kein Pre-commit-Schutz, keine konsistente Formatierung, Sweeper läuft nur manuell.
-
-**Fix:**
-- `.prettierrc` (2 spaces, single quote, semi true) + `eslint-config-prettier` als letztes `extends`.
-- `husky` + `lint-staged` als devDeps. `prepare`-Skript in `package.json`. `.husky/pre-commit` ruft `lint-staged`.
-- `lint-staged` für `*.{ts,tsx}`: `eslint --max-warnings 0` + `tsc --noEmit -p tsconfig.app.json`.
-- Sobald Schritte 2 + 3 grün: ESLint-Regeln von `warn` → `error` (`no-unused-vars`, `no-floating-promises`, `no-console` mit `allow:["warn","error"]`).
-- `.github/workflows/qa-nightly.yml`: täglich `supabase--curl_edge_functions` auf `test-data-sweep`.
-
-**Akzeptanz:** Ein absichtlicher Lint-Fehler in einem Test-Commit wird vom Hook geblockt. Nightly-Run im Actions-Tab sichtbar.
-
-## 6. Frontend-Polling absichern + ErrorBoundary für Backend-Pendant
-
-**Problem:** Neu gebauter `pollAolRun` ohne Test. Backend hat kein Worker-weites Error-Catch.
-
-**Fix:**
-- `src/lib/pipeline/pollAolRun.test.ts` mit MSW-freier Stub-Strategie: Supabase-Client mocken über `vi.mock`. Pfade: completed / failed / timeout / abort.
-- In jedem Edge-Function-Entry `try { … } catch (err) { log.error("uncaught", err); throw err; }` als Pflicht — neuer Helper `withErrorBoundary(fn, log)` in `_shared/`.
-
-**Akzeptanz:** Vitest 37+/37 grün; jede Edge Function nutzt `withErrorBoundary`.
-
-## 7. E2E-Smokes (3 Pfade) — letzter Block
-
-Nach Stufe 5 sinnvoll, weil Lint stabil sein muss. MSW installieren, drei Pfade:
-- Upload EML → Review → Commit → Fact im Project sichtbar.
-- Note erfassen → Review → Commit.
-- Asset löschen → `aol_runs`-Cascade.
-
-**Akzeptanz:** `bun run test` enthält 3 E2E-Specs grün.
-
----
-
-## Reihenfolge & Sprint-Schnitt
-
-| Sprint | Stufen | Aufwand |
-|---|---|---|
-| Sofort | 1, 2 | 2–3 h — beendet die zwei akuten Blutungen |
-| Diese Woche | 3, 4 | 4–6 h — schließt Test-Lücken im schwersten Modul |
-| Nächste Woche | 5, 6 | 4 h — macht Phase-4-Gate scharf |
-| Danach | 7 | 4 h — Smoke-Netz |
-
-## Was nicht im Plan ist (bewusst)
-
-- ESLint `no-explicit-any`-Warnings (66) — kosmetisch, später als eigener Sprint.
-- Logger in `inspect-*`-Funktionen — sind read-only, niedriges Risiko.
-- `voice-transcribe`, `asset-delete`, `project-delete` — geringe Frequenz, nach Stufe 5.
-
-NOW.md wird nach jeder Stufe aktualisiert (Status + Recently completed). DECISIONS.md erhält Eintrag bei Graphiti-Body-Vertragsänderung (Stufe 1).
+- 5 Wurzel-Dateien existieren, jede unter dem definierten Limit.
+- `QA-PLAN.md` + `QA-AUDIT-REPORT.md` weg, Inhalt in `docs/qa-historie.md` auffindbar.
+- `docs/qa-seam-inventar.md` unverändert.
+- `NOW.md` zeigt aktuellen Stand (alle vier QA-Phasen ✅, 40 Vitest + 18 Deno grün, Backlog leer bis auf optionale Browser-E2E-Lane + Inspector-Logger).
+- Keine Code-Änderungen, kein Edge-Function-Touch.
