@@ -8,6 +8,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders, fail, ok, requireUser } from "../_shared/inspect-auth.ts";
 import { withErrorBoundary } from "../_shared/withErrorBoundary.ts";
+import { createLogger } from "../_shared/logger.ts";
 
 interface Body {
   asset_id?: string;
