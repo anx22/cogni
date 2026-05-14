@@ -5,18 +5,25 @@
 
 ---
 
-## Aktueller Sprint — Welle B-W2 Conflict-Detector live
+## Aktueller Sprint — Welle B-W3 Gap-Detector live
+
+Stand 2026-05-14, 14:00 UTC:
+
+- **B-W3 Gap-Detector deployed.** `commit-fact/gapDetector.ts` (deterministisch, fail-soft) erkennt nach jedem Canonical-Commit drei Gap-Kinds und schreibt nach `gap_signals` (mit `metadata.gap_kind`):
+  - `deadline_without_owner`: Deadline ohne `assignee`/`owner`/`responsible`/`assigned_to`.
+  - `decision_without_deadline`: Decision ohne korrespondierende Deadline (case-insensitive Title-Match).
+  - `task_without_due_date`: Task ohne `due_date`.
+  Idempotent über `(canonical_fact_id, metadata.gap_kind, status='open')`.
+- **Integration:** `commit-fact/kernel.ts` ruft Conflict- + Gap-Detector parallel via `Promise.all` nach `mirrorToGraphiti`. UI (`GapBox`/`mappers/gaps.ts`) liest realtime — unverändert.
+- **Tests:** 8 neue Pure-Tests in `gapDetector_test.ts`. Suite commit-fact: 28/28 grün (4 commitFact + 6 conflictDetector + 8 gapDetector + 10 projectScoring).
+- **B-W1 Linker** + **B-W2 Conflict-Detector** weiter live, **Wave-A-Stabilität** verifiziert.
+- **Nicht heute:** B-W4 Dependency-Detector, React Query (Wave 3), LLM-Gap-Heuristik (Wave 3).
+
+### Vorheriger Sprint — Welle B-W2 Conflict-Detector live
 
 Stand 2026-05-14, 13:30 UTC:
 
-- **B-W2 Conflict-Detector deployed.** `commit-fact/conflictDetector.ts` (deterministisch, fail-soft) erkennt nach jedem Canonical-Commit Widersprüche im selben Projekt:
-  - `deadline`: gleicher normalisierter Title, abweichende `due_date` (Tagesgenauigkeit).
-  - `decision`: gleicher Title, abweichendes `outcome`/`decision`/`text`/`summary`.
-  Idempotent über `(type, sorted(fact_a,fact_b))`. Fehler im Detektor brechen den Commit nicht ab.
-- **Integration:** `commit-fact/kernel.ts` ruft `detectAndPersistConflicts` direkt nach `mirrorToGraphiti`. Vorhandener `KonfliktBox`-/`konflikte.ts`-UI-Pfad bleibt unverändert (liest `contradictions` über realtime).
-- **Tests:** 6 neue Pure-Tests in `conflictDetector_test.ts`. Suite commit-fact: 20/20 grün (4 commitFact + 6 conflictDetector + 10 projectScoring).
-- **B-W1 Linker** weiter live (Graph-Match), **Wave-A-Stabilität** verifiziert.
-- **Nicht heute:** B-W3 Gap-Detector (kommt nach erster Sandbox-Validierung von B-W2), B-W4 Dependency, React Query.
+- B-W2 Conflict-Detector deployed (deadline/decision, idempotent, fail-soft). 6 Pure-Tests grün.
 
 ### Vorheriger Sprint — Welle B-W1 Linker live (Graph-Match)
 

@@ -2,6 +2,11 @@
 
 Format: `[YYYY-MM-DD] Problem → Choice → Reason`
 
+## 2026-05-14 — Welle B Detektoren
+
+- `2026-05-14` Gap-Erkennung könnte LLM-basiert im AOL-Service laufen → **deterministisch in `commit-fact/gapDetector.ts`** (analog B-W2) → drei Kinds (deadline_without_owner, decision_without_deadline, task_without_due_date), idempotent über `(canonical_fact_id, metadata.gap_kind)`, fail-soft, 8 Pure-Tests. LLM-Heuristik bleibt Wave 3.
+
+
 ## 2026-05-14 — Tier B4 + Audit
 
 - `2026-05-14` Session-Factories duplizierten `{id, anlass, context, boxes}`-Scaffold → **`mkSession()`-Helper in `sessionFactories.ts`** → 8 Factories teilen sich den Kern, öffentliche Signaturen 1:1.
