@@ -359,6 +359,24 @@ Deno.serve(async (req) => {
       .single();
     if (sErr) throw new Error(`dialog_sessions: ${sErr.message}`);
 
+    // Vorherige Sessions superseden — jetzt, wo wir die neue ID haben.
+    if (priorIds.length > 0) {
+      await admin
+        .from("dialog_sessions")
+        .update({
+          status: "cancelled",
+          metadata: { superseded_by_session_id: session!.id, superseded_at: new Date().toISOString() },
+        })
+        .in("id", priorIds);
+      // Offene review_cases der alten Sessions ebenfalls dismissen, damit das
+      // UI nicht doppelte Boxen zeigt.
+      await admin
+        .from("review_cases")
+        .update({ box_state: "dismissed" })
+        .in("session_id", priorIds)
+        .eq("box_state", "proposed");
+    }
+
     // 7. review_cases ---------------------------------------------------------
     const caseRows: any[] = [];
 
