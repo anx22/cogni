@@ -5,30 +5,34 @@
 
 ---
 
-## Aktueller Sprint — Tier B3 abgeschlossen
+## Aktueller Sprint — Tier B4 + Abschluss-Audit abgeschlossen
 
-Stand 2026-05-14 (Tier B3 — Größere Restrukturierungen):
+Stand 2026-05-14:
+
+- **B4.1 Session-Factory generalisiert** → `mkSession()`-Helper in
+  `sessionFactories.ts`. 8 Factories umgestellt, öffentliche Signaturen 1:1.
+  Vitest 5/5 grün.
+- **B4.2 `withLogging`-Wrapper** → `_shared/withLogging.ts` (createLogger +
+  handleOptions + try/finally flush). **2 von 6 Functions migriert**
+  (asset-delete, project-delete) — Curl 400/403 wie vorher. 4 weitere skipped
+  (eigene catch-Pfade, s. DECISIONS).
+- **B4.3 factRules extrahiert** → `intake-understand/factRules.ts` mit
+  `LINKABLE_FACT_TYPES` Set + `FACT_SUMMARIZERS` Map. Neue Fact-Types nur
+  noch via Map-Eintrag, kein switch mehr.
+- **Audit** → `docs/audit-2026-05-14.md`: A-Tier komplett, B-Tier mit
+  dokumentierten Verschiebungen abgeschlossen. Findings: Graphiti-Sync-Rate
+  60 % / 24h (unter SLA), 9 `console.warn` in `_shared/`, LOC-Budget
+  überschritten — alle als separate Loops, kein Refactor-Backlog mehr.
+
+Verify: Vitest 60/60 grün · `intake-understand`, `asset-delete`,
+`project-delete` deployed.
+
+### Tier B3 — Größere Restrukturierungen (vorher)
 
 - **B3.2 `railway-admin` modularisiert** → 599-LOC-Monolith → Router (72 LOC)
-  + `_helpers.ts` (145 LOC) + 6 Domänen-Handler unter `handlers/`
-  (railway 100, langsmith 201, graphiti 125, aol 36, promptHub 44, diagnose 53).
-  Verhalten 1:1 erhalten — keine Action umbenannt, keine Response-Schemas
-  geändert. Verify: 4 Stichproben (`list`, `langsmith-key-info`, `prompt-state`,
-  `unknown-foo`) liefern identische Antworten + 400 für unbekannte Action.
+  + `_helpers.ts` (145 LOC) + 6 Domänen-Handler unter `handlers/`.
 - **B3.1\* Box-Hook** → `useBoxSubmit(box, opts)` in
-  `src/lib/dialog/useBoxSubmit.ts`. Migriert: `AuswahlBox`, `KonfliktBox`,
-  `GapBox`. Bewusst nicht migriert: `EingabeBox` (eigener closeDialog-Pfad),
-  `ZuordnungsBox` (genuin komplex), `Wissens/Kontext/AktionsBox` (zu klein
-  für Hook-Win). **Voller `BoxBuilder` aus dem Originalplan abgelehnt** —
-  Realitätscheck zeigte: Scaffolding ist bereits in `BoxFrame` extrahiert,
-  weitere Indirektionsschicht ohne Lines-Win + zusätzliches Risiko. Begründung
-  in DECISIONS.md.
-
-Verify: Vitest 60/60 grün. `railway-admin` deployed.
-
-### Vorher/jetzt-Endmetriken
-Vitest 10 Files / 60 Tests · `railway-admin` jetzt 6 testbare Domänen-Module
-(jeweils <210 LOC) statt 599-LOC-Monolith · Box-Submit-Pattern in einem Hook.
+  `src/lib/dialog/useBoxSubmit.ts`. Migriert: AuswahlBox, KonfliktBox, GapBox.
 
 ---
 

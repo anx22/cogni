@@ -10,19 +10,23 @@ const mkBox = (b: Omit<DialogBox, "id" | "state"> & { state?: DialogBox["state"]
   ...b,
 });
 
+// Generic Session-Builder — alle Factories teilen sich diesen Kern.
+const mkSession = (anlass: string, context: string, boxes: DialogBox[]): DialogSession => ({
+  id: sessionId(),
+  anlass,
+  context,
+  boxes,
+});
+
 // ---------------------- Konflikt ----------------------
-// Minimal: Konflikt (mit Auswahl + optionaler Begründung) — schließt sich selbst ab.
 export const buildKonfliktSession = (k: {
   id: string;
   title: string;
   beschreibung: string;
   faktA: string;
   faktB: string;
-}): DialogSession => ({
-  id: sessionId(),
-  anlass: "Konflikt klären",
-  context: `Konflikt #${k.id}`,
-  boxes: [
+}): DialogSession =>
+  mkSession("Konflikt klären", `Konflikt #${k.id}`, [
     mkBox({
       type: "konflikt",
       title: k.title,
@@ -32,22 +36,17 @@ export const buildKonfliktSession = (k: {
         faktB: k.faktB,
       },
     }),
-  ],
-});
+  ]);
 
 // ---------------------- Gap ----------------------
-// Minimal: Gap mit eingebauter Antwort.
 export const buildGapSession = (g: {
   id: string;
   titel: string;
   wirkung: string;
   betrifft: string;
   lebensdauer: string;
-}): DialogSession => ({
-  id: sessionId(),
-  anlass: "Lücke schließen",
-  context: `Gap #${g.id}`,
-  boxes: [
+}): DialogSession =>
+  mkSession("Lücke schließen", `Gap #${g.id}`, [
     mkBox({
       type: "gap",
       title: g.titel,
@@ -57,21 +56,16 @@ export const buildGapSession = (g: {
         betrifft: g.betrifft,
       },
     }),
-  ],
-});
+  ]);
 
 // ---------------------- Handlungsbedarf ----------------------
-// Minimal: Sachverhalt + Antwort. Kein separater Aktionsblock.
 export const buildHandlungsbedarfSession = (item: {
   id: string;
   titel: string;
   beschreibung: string;
   quelle: string;
-}): DialogSession => ({
-  id: sessionId(),
-  anlass: "Handlungsbedarf",
-  context: item.id,
-  boxes: [
+}): DialogSession =>
+  mkSession("Handlungsbedarf", item.id, [
     mkBox({
       type: "wissen",
       title: item.titel,
@@ -82,8 +76,7 @@ export const buildHandlungsbedarfSession = (item: {
       title: "Antwort",
       payload: { placeholder: "Antwort, Notiz oder Korrektur…" },
     }),
-  ],
-});
+  ]);
 
 // ---------------------- Thema ----------------------
 export const buildThemaSession = (t: {
@@ -93,11 +86,8 @@ export const buildThemaSession = (t: {
   entscheidungen: number;
   offenePunkte: number;
   dokumente: number;
-}): DialogSession => ({
-  id: sessionId(),
-  anlass: "Thema",
-  context: t.name,
-  boxes: [
+}): DialogSession =>
+  mkSession("Thema", t.name, [
     mkBox({
       type: "kontext",
       title: t.name,
@@ -107,8 +97,7 @@ export const buildThemaSession = (t: {
         quelle: `Thema #${t.id}`,
       },
     }),
-  ],
-});
+  ]);
 
 // ---------------------- Dokument ----------------------
 export const buildDokumentSession = (d: {
@@ -118,11 +107,8 @@ export const buildDokumentSession = (d: {
   version: number;
   datum: string;
   thema?: string | null;
-}): DialogSession => ({
-  id: sessionId(),
-  anlass: "Dokument",
-  context: `${d.typ.toUpperCase()} v${d.version}`,
-  boxes: [
+}): DialogSession =>
+  mkSession("Dokument", `${d.typ.toUpperCase()} v${d.version}`, [
     mkBox({
       type: "kontext",
       title: d.name,
@@ -132,8 +118,7 @@ export const buildDokumentSession = (d: {
         quelle: `Dokument #${d.id}`,
       },
     }),
-  ],
-});
+  ]);
 
 // ---------------------- Verlauf ----------------------
 export const buildVerlaufSession = (e: {
@@ -143,11 +128,8 @@ export const buildVerlaufSession = (e: {
   quelle: string;
   delta: string;
   ereignisTyp: string;
-}): DialogSession => ({
-  id: sessionId(),
-  anlass: "Verlaufseintrag",
-  context: e.datum,
-  boxes: [
+}): DialogSession =>
+  mkSession("Verlaufseintrag", e.datum, [
     mkBox({
       type: "kontext",
       title: e.inhalt,
@@ -157,30 +139,21 @@ export const buildVerlaufSession = (e: {
         begruendung: "Originalereignis aus dem Projektverlauf.",
       },
     }),
-  ],
-});
+  ]);
 
 // ---------------------- Feedback ----------------------
-// Minimal: nur Eingabe — Senden schließt selbst ab.
-export const buildFeedbackSession = (context: string): DialogSession => ({
-  id: sessionId(),
-  anlass: "Feedback",
-  context,
-  boxes: [
+export const buildFeedbackSession = (context: string): DialogSession =>
+  mkSession("Feedback", context, [
     mkBox({
       type: "eingabe",
       title: "Was stimmt nicht oder fehlt?",
       payload: { placeholder: "Korrektur, Hinweis oder Frage…" },
     }),
-  ],
-});
+  ]);
 
 // ---------------------- Source ----------------------
-export const buildSourceSession = (quelle: string): DialogSession => ({
-  id: sessionId(),
-  anlass: "Quelle",
-  context: quelle,
-  boxes: [
+export const buildSourceSession = (quelle: string): DialogSession =>
+  mkSession("Quelle", quelle, [
     mkBox({
       type: "kontext",
       title: quelle,
@@ -189,5 +162,4 @@ export const buildSourceSession = (quelle: string): DialogSession => ({
         quelle,
       },
     }),
-  ],
-});
+  ]);

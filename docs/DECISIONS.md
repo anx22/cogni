@@ -2,6 +2,13 @@
 
 Format: `[YYYY-MM-DD] Problem → Choice → Reason`
 
+## 2026-05-14 — Tier B4 + Audit
+
+- `2026-05-14` Session-Factories duplizierten `{id, anlass, context, boxes}`-Scaffold → **`mkSession()`-Helper in `sessionFactories.ts`** → 8 Factories teilen sich den Kern, öffentliche Signaturen 1:1.
+- `2026-05-14` Edge-Function-Boilerplate `createLogger` + `handleOptions` + `try/finally flush` mehrfach kopiert → **`_shared/withLogging.ts`** → migrierbar nur dort, wo der catch-Pfad an `withErrorBoundary` delegiert werden darf. **Skips dokumentiert**: `aol-callback` (gibt 400 statt 500 im catch), `voice-transcribe` & `commit-fact` (eigene Body-Shape `{ok:false, error: msg}` statt `internal_error`-Hülle), `intake-trigger` (updated `aol_runs.status='failed'` im catch). Migriert: `asset-delete`, `project-delete`.
+- `2026-05-14` `linkAgainstExisting` & `factSummary` mit hardcodierten Type-Switches in `intake-understand/index.ts` → **`intake-understand/factRules.ts`** mit `LINKABLE_FACT_TYPES` Set + `FACT_SUMMARIZERS` Record → neue Fact-Types nur Map-Eintrag, kein switch.
+- `2026-05-14` Abschluss-**Audit aller A/B-Tier-Punkte** in `docs/audit-2026-05-14.md` mit Tool-Evidenz pro Anspruch. Findings (Graphiti-Sync 60 %/24h, 9 `console.warn` in `_shared/`, LOC-Budget gerissen, Vier-Rollen-User-Smoke offen) als separate Loops, kein Refactoring-Backlog mehr.
+
 ## 2026-05-14 — Doku-System & QA-Härtung
 
 - `2026-05-14` Detail-Docs in der Wurzel verstreut → **alle nach `docs/` verschoben, nur `AGENTS.md` + `README.md` bleiben in der Wurzel** → klare Trennung Karte (Wurzel) / Inhalt (`docs/`).
