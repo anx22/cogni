@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useRealtimeTables } from "@/lib/realtime/useRealtimeTables";
 import { useDialog } from "@/components/dialog/DialogProvider";
-import { fmtRelative } from "@/lib/format/relativeTime";
+import { formatRelative } from "@/lib/format/relativeTime";
 
 type ChipStatus = "parsing" | "understanding" | "review-ready" | "failed";
 
