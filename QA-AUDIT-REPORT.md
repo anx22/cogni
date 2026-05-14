@@ -1,21 +1,14 @@
-# QA-Audit-Report — schreiben als `QA-AUDIT-REPORT.md`
+# QA-Audit-Report — Stand 2026-05-14
 
-Ich habe alle vier Audit-Schritte als Read-Only durchgeführt. Da Plan-Mode keine Datei-Edits zulässt, lege ich den Report nach Approval an. Hier der vollständige Inhalt.
+Auditor: Senior-QA. Methode: Soll-Ist gegen QA-PLAN.md, ausgeführte Tests,
+Lint, Datenbank-Stichproben aus den letzten 24 h.
 
-## Audit-Methode (durchgeführt)
+## Audit-Methode
 
 1. **Struktur**: QA-PLAN.md + NOW.md gelesen, Existenz aller Deliverables per `ls` geprüft.
 2. **Funktion**: `bunx vitest run` — 7 Files / 33 Tests grün in 4,9 s. Deno-Edge-Tests separat (nicht via vitest).
 3. **Lint/Toolchain**: `bunx eslint .`, `rg console.log supabase/functions`, `package.json`-Scripts gelesen.
 4. **Datenfluss**: `pipeline_events` und Pipeline-Tabellen der letzten 24 h per SQL gezählt; Logger-Abdeckung per `rg createLogger` ermittelt.
-
-## Inhalt für `QA-AUDIT-REPORT.md`
-
-```markdown
-# QA-Audit-Report — Stand 2026-05-14
-
-Auditor: Senior-QA. Methode: Soll-Ist gegen QA-PLAN.md, ausgeführte Tests,
-Lint, Datenbank-Stichproben aus den letzten 24 h.
 
 ## ✅ Korrekt implementiert
 
@@ -46,7 +39,7 @@ Lint, Datenbank-Stichproben aus den letzten 24 h.
 
 | Punkt | Befund |
 |---|---|
-| **ESLint-Error in `intake-trigger/index.ts:163`** | `@ts-ignore` statt `@ts-expect-error` → Build fällt mit `--max-warnings 0`. Aktuell tolerieren CI/lint kein Error-Gate, deshalb unbemerkt. |
+| **ESLint-Error in `intake-trigger/index.ts:163`** | `@ts-ignore` statt `@ts-expect-error` → CI-Job `lint` fällt mit `--max-warnings 0`. Aktuell tolerieren CI/lint kein Error-Gate, deshalb unbemerkt. |
 | **Pre-commit Hook (Husky + lint-staged)** | Komplett fehlend. `.husky/` existiert nicht, kein `prepare`-Skript in `package.json`. Pre-commit-Test daher nicht durchführbar. |
 | **Prettier** | `.prettierrc` fehlt, `eslint-config-prettier` nicht installiert. |
 | **Nightly-Cron für `test-data-sweep`** | Kein Workflow-File — Sweeper läuft nur manuell. Test-Daten-Leichen-Risiko bei intensiver QA-Nutzung. |
@@ -87,9 +80,3 @@ Lint, Datenbank-Stichproben aus den letzten 24 h.
 - Logger-Abdeckung: **5 / 15 Funktionen (33 %)**.
 - Pipeline-Aktivität 24 h: **47 events, 25 canonical_facts, 7 aol_runs**.
 - Graphiti-Mirror Erfolgsquote 24 h: **0 / 4 (alle 422)**.
-```
-
-Auf Approval:
-- Lege `QA-AUDIT-REPORT.md` im Repo-Root mit obigem Inhalt an.
-- Keine Code-Änderungen, keine weiteren Files, kein Logger-Einzug — reiner Report.
-- Stoppe danach und warte auf weitere Anweisung wie gefordert.
