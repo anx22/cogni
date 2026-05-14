@@ -619,7 +619,7 @@ async function mirrorToGraphiti(
 
     // Sync-Log: Fehler ebenfalls protokollieren — Observability über Mirror-Health.
     await admin.from("graphiti_sync_log").insert({
-      user_id: (cur as any)?.user_id ?? null,
+      user_id: ownerId,
       entity_id: args.canonical_fact_id,
       entity_type: args.fact_type ?? "canonical_fact",
       operation: "mirror",
