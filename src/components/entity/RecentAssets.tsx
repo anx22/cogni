@@ -8,6 +8,7 @@ import HoverActionsMenu from "@/components/shared/HoverActionsMenu";
 import ConfirmDestructive from "@/components/shared/ConfirmDestructive";
 import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { useAssetActions } from "@/lib/object-actions/useObjectActions";
+import { useAuth } from "@/hooks/useAuth";
 
 type Asset = Database["public"]["Tables"]["assets"]["Row"];
 
