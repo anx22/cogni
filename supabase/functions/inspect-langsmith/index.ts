@@ -9,27 +9,13 @@
 import { corsHeaders, fail, ok, requireUser } from "../_shared/inspect-auth.ts";
 import { withErrorBoundary } from "../_shared/withErrorBoundary.ts";
 import { createLogger } from "../_shared/logger.ts";
-
-const BASE = (Deno.env.get("LANGSMITH_ENDPOINT") ??
-  Deno.env.get("LANGSMITH_BASE_URL") ??
-  "https://eu.api.smith.langchain.com").replace(/\/$/, "");
-const PROJECT = Deno.env.get("LANGCHAIN_PROJECT") ?? "produktintelligenz-aol";
+import { createLangSmithClient, LangSmithError } from "../_shared/clients/langsmith.ts";
 
 interface Body {
   action: "list" | "get";
   thread_id?: string;        // = aol_runs.id (LangGraph thread_id)
   run_id?: string;
   limit?: number;
-}
-
-async function lsFetch(path: string, init: RequestInit = {}, key: string): Promise<Response> {
-  const workspaceId = Deno.env.get("LANGSMITH_WORKSPACE_ID") ?? Deno.env.get("LANGSMITH_PROMPT_OWNER");
-  const headers: Record<string, string> = { "x-api-key": key, "Content-Type": "application/json", ...(init.headers as Record<string, string> ?? {}) };
-  if (workspaceId) headers["x-tenant-id"] = workspaceId;
-  return fetch(`${BASE}${path}`, {
-    ...init,
-    headers,
-  });
 }
 
 Deno.serve(withErrorBoundary("inspect-langsmith", async (req) => {
