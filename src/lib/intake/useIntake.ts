@@ -5,6 +5,46 @@ import type { IntakePayload } from "./detectInputType";
 import type { Database } from "@/integrations/supabase/types";
 import { devlog } from "@/lib/devlog/devlog";
 import { sanitizeStorageName } from "./sanitizeStorageName";
+import { pollAolRun, pollAolRunByAsset, type AolRunSnapshot } from "@/lib/pipeline/pollAolRun";
+
+/**
+ * Beobachtet einen Pipeline-Lauf (entweder per run_id oder per asset_id) und
+ * spiegelt den Fortschritt in den Entity-State / Toast. Wird fire-and-forget
+ * gestartet, damit der Aufruf von `intake()` nicht blockiert.
+ */
+function trackPipeline(
+  source: { runId?: string | null; assetId?: string | null },
+  setEntityState?: (s: "idle" | "hover" | "processing" | "review-ready" | "failed") => void,
+) {
+  const onUpdate = (snap: AolRunSnapshot) => {
+    devlog.edge("pipeline progress", {
+      runId: snap.id,
+      status: snap.status,
+      node: snap.current_node,
+    });
+  };
+  const promise = source.runId
+    ? pollAolRun(source.runId, { onUpdate })
+    : source.assetId
+    ? pollAolRunByAsset(source.assetId, { onUpdate })
+    : Promise.resolve({ status: "aborted" as const, snapshot: null });
+
+  promise.then((res) => {
+    devlog.edge("pipeline terminal", { status: res.status, runId: res.snapshot?.id });
+    if (res.status === "failed") {
+      const msg = res.snapshot?.error?.message ?? "Verstehen fehlgeschlagen";
+      toast.error("Verstehen fehlgeschlagen", { description: msg.slice(0, 160) });
+      setEntityState?.("failed");
+    } else if (res.status === "timeout") {
+      toast.warning("Verstehen läuft länger als erwartet", {
+        description: "Die Box erscheint, sobald die Pipeline fertig ist.",
+      });
+    }
+    // 'completed' wird via Realtime auf dialog_sessions in Index.tsx
+    // zu 'review-ready' — hier nichts zusätzlich tun.
+  });
+}
+
 
 type EntityState = "idle" | "hover" | "processing" | "review-ready" | "failed";
 type AssetType = Database["public"]["Enums"]["asset_type"];
