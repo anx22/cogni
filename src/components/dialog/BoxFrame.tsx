@@ -58,7 +58,7 @@ const BoxFrame = ({ box, children, hideActions, actions, ignoreGate }: BoxFrameP
       {!collapsed && (
         <div
           className={`space-y-5 text-foreground/85 ${gated ? "pointer-events-none select-none" : ""}`}
-          inert={gated ? "" : undefined}
+          aria-disabled={gated || undefined}
         >
           {children}
         </div>
