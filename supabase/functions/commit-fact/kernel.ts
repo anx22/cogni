@@ -9,6 +9,7 @@ import { handleAssignment } from "./assignment.ts";
 import { updateSessionProgress, writeProjectSnapshot } from "./snapshot.ts";
 import { notifyAol } from "./notifications.ts";
 import { mirrorToGraphiti } from "./mirror.ts";
+import { detectAndPersistConflicts } from "./conflictDetector.ts";
 
 interface Payload {
   review_case_id: string;
