@@ -1,31 +1,37 @@
 import { useState } from "react";
 import { Check, Clock } from "lucide-react";
-import { useDialog } from "../DialogProvider";
 import BoxFrame, { ActionBtn } from "../BoxFrame";
 import type { DialogBox } from "@/lib/dialog/types";
+import { useBoxSubmit } from "@/lib/dialog/useBoxSubmit";
+import { useDialog } from "../DialogProvider";
 
 const GapBox = ({ box }: { box: DialogBox }) => {
-  const { updateBoxPayload, commitBox, readonly } = useDialog();
+  const { readonly } = useDialog();
+  const { submit } = useBoxSubmit(box, { markManualOnSubmit: false });
   const [answer, setAnswer] = useState(box.payload?.antwort ?? "");
 
-  const submit = () => {
+  const onSubmit = () => {
     if (!answer.trim()) return;
-    updateBoxPayload(box.id, { antwort: answer });
-    commitBox(box.id, "confirm", { antwort: answer });
+    submit({ antwort: answer });
   };
+
+  const onLater = () => {
+    // GapBox erlaubt explizit "Später" auch unter Gate (kein reject-Block).
+    submit; // explizit nichts tun, reject geht über useBoxSubmit:
+    void 0;
+  };
+  // Nutzen reject() aus dem Hook für „Später":
+  const { reject } = useBoxSubmit(box, { markManualOnSubmit: false });
 
   return (
     <BoxFrame
       box={box}
       actions={
         <>
-          <ActionBtn variant="primary" icon={<Check className="w-4 h-4" />} onClick={submit}>
+          <ActionBtn variant="primary" icon={<Check className="w-4 h-4" />} onClick={onSubmit}>
             Lücke schließen
           </ActionBtn>
-          <ActionBtn
-            icon={<Clock className="w-4 h-4" />}
-            onClick={() => commitBox(box.id, "reject")}
-          >
+          <ActionBtn icon={<Clock className="w-4 h-4" />} onClick={reject}>
             Später
           </ActionBtn>
         </>
