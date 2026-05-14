@@ -10,7 +10,7 @@ import { linkAgainstExisting } from "./linker.ts";
 import type { GraphitiHit } from "../_shared/clients/graphitiSearch.ts";
 
 const fact = (over: Partial<{ fact_type: string; title: string }> = {}) => ({
-  fact_type: "task",
+  fact_type: "stakeholder",
   title: "Bibliothek aufbauen",
   content: {},
   confidence: 0.9,
