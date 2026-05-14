@@ -39,23 +39,25 @@ Deno.serve(withErrorBoundary("project-delete", async (req) => {
   if (!project_id) return json({ error: "project_id" }, 400);
 
   const admin = createClient(url, service);
+  const log = createLogger({ fn: "project-delete", userId, client: admin });
+  log.stage("enter", "deleting project", { project_id });
 
-  // Verify ownership
   const { data: project } = await admin
     .from("projects")
     .select("id, user_id")
     .eq("id", project_id)
     .maybeSingle();
-  if (!project || project.user_id !== userId) return json({ error: "forbidden" }, 403);
+  if (!project || project.user_id !== userId) {
+    log.warn("forbidden", "project not owned", { project_id });
+    await log.flush();
+    return json({ error: "forbidden" }, 403);
+  }
 
-  // Collect asset storage paths to remove from bucket
   const { data: assets } = await admin
     .from("assets")
     .select("id, storage_path")
     .eq("project_id", project_id);
   const paths = (assets ?? []).map((a) => a.storage_path).filter(Boolean) as string[];
-
-  // Cascade: delete child tables that reference project_id (or via assets)
   const assetIds = (assets ?? []).map((a) => a.id);
   if (assetIds.length > 0) {
     await admin.from("parsed_documents").delete().in("asset_id", assetIds);
@@ -86,16 +88,22 @@ Deno.serve(withErrorBoundary("project-delete", async (req) => {
     await admin.from(t).delete().eq("project_id", project_id);
   }
 
-  // Delete project itself
   const { error: pErr } = await admin.from("projects").delete().eq("id", project_id);
-  if (pErr) return json({ error: pErr.message }, 500);
+  if (pErr) {
+    log.error("delete", "projects.delete failed", pErr);
+    await log.flush();
+    return json({ error: pErr.message }, 500);
+  }
 
-  // Storage cleanup (best effort)
   if (paths.length > 0) {
     try {
       await admin.storage.from("intake-files").remove(paths);
-    } catch { /* ignore */ }
+    } catch (err) {
+      log.warn("storage", "remove failed (ignored)", { err: String(err) });
+    }
   }
 
+  log.stage("exit", "project deleted", { deleted_assets: assetIds.length });
+  await log.flush();
   return json({ ok: true, deleted_assets: assetIds.length });
 }));
