@@ -311,7 +311,12 @@ const Index = () => {
 
         {overlayOpen ? (
           <div className="absolute top-[58%] left-1/2 -translate-x-1/2 z-30 w-full max-w-xl px-4">
-            <InputOverlay open={overlayOpen} onClose={() => setOverlayOpen(false)} onSubmit={intake} />
+            <InputOverlay
+              open={overlayOpen}
+              onClose={() => setOverlayOpen(false)}
+              onSubmit={intake}
+              contextHint="Wird global aufgenommen — Zuordnung kommt im Dialog."
+            />
           </div>
         ) : (
           !voice.text && (

@@ -166,11 +166,15 @@ const AssetTile = ({ asset, Icon, onClick }: AssetTileProps) => {
       </button>
       <div className="absolute -top-1 -right-1">
         <HoverActionsMenu label={`Aktionen für ${asset.file_name}`}>
-          <DropdownMenuItem onClick={() => actions.reprocess(asset.id)}>
+          <DropdownMenuItem
+            disabled={actions.pending}
+            onClick={() => actions.reprocess(asset.id)}
+          >
             Erneut verarbeiten
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
+            disabled={actions.pending}
             className="text-rose-400 focus:text-rose-300"
             onClick={() => setConfirmDelete(true)}
           >

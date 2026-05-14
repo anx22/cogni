@@ -83,7 +83,7 @@ export function useAssetActions() {
 
   const reprocess = useCallback(async (id: string) => {
     setPending(true);
-    const r = await callFn("intake-trigger", { asset_id: id, retry: true });
+    const r = await callFn("intake-understand", { asset_id: id, retry: true });
     setPending(false);
     if (r.ok === false) {
       toast.error("Erneute Verarbeitung fehlgeschlagen", { description: r.error });

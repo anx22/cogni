@@ -9,10 +9,14 @@ type Project = ProjectViewModel;
 interface LageZoneProps {
   project: Project;
   editableName?: boolean;
+  forceEdit?: boolean;
+  onEditDone?: () => void;
   onNameChange?: (name: string) => void;
 }
 
-const LageZone = ({ project, editableName, onNameChange }: LageZoneProps) => {
+const LageZone = ({ project, editableName, forceEdit, onEditDone, onNameChange }: LageZoneProps) => {
+  void forceEdit;
+  void onEditDone;
   return (
     <section className="relative px-8 md:px-12 lg:px-16 xl:px-20 pt-16 pb-12 bg-surface-1 border-b border-border-strong">
       {/* Subtle gradient backdrop */}

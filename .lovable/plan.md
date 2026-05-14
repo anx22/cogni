@@ -1,193 +1,140 @@
-## Diagnose
+## Was am letzten Plan vorbei lief
 
-Das gemeldete Problem ist real und größer als nur ein fehlender Refresh:
+Der letzte Plan hat Realtime, Projektanlage, Overlay-Gating und Projekt-Lifecycle adressiert — aber gleichzeitig zentrale Verhaltens- und Logikfehler im Overlay, in den Aktionen und im Projekt-Screen unangetastet gelassen. Hier die scharf geschnittenen Mängel, gefunden beim erneuten Lesen aller relevanten Dateien.
 
-1. **Projektpanel aktualisiert nicht live**
-   - `useProjects.ts` hat zwar eine Realtime-Subscription auf `projects`.
-   - Die Datenbank-Publication enthält `projects` aber nicht.
-   - Ergebnis: Insert/Update/Delete/Archivierung feuern im Client nie an.
+## Kritische Bugs (echte Fehlfunktionen, kein Geschmack)
 
-2. **Projektanlage ist kein sauberer UX-Flow**
-   - `+ Neues Projekt` erzeugt sofort `Neues Projekt` und navigiert weg.
-   - Es gibt keine Namensfrage, keine Intent-Klärung, keinen leeren Projektzustand mit klarer nächster Aktion.
-   - Das führt zu falschen/identitätslosen Projekten und Karteileichen.
+1. **„Erneut verarbeiten" ist tot.**
+   `useAssetActions.reprocess` ruft `intake-trigger` auf — diese Edge Function existiert nicht. Vorhanden: `intake-process`, `intake-understand`. Jeder Klick auf „Erneut verarbeiten" failt still. Korrekter Fallback: `intake-understand` mit `{ asset_id, retry: true }` (analog zu `Index.handleRetry` und `IntakeSessionsPanel.handleRetry`).
 
-3. **Overlay verletzt Kontext-Constraints**
-   - Boxen können bestätigt werden, obwohl projektabhängige Voraussetzungen noch fehlen.
-   - Der Backend-Commit blockt zwar teilweise mit `NEEDS_ASSIGNMENT`, aber die UI lässt den Nutzer trotzdem in falsche Reihenfolgen laufen.
-   - Das Overlay braucht eine explizite Ablaufsteuerung: erst Zuordnung, dann Fakten/Antworten/Commit.
+2. **AuswahlBox commitet nicht ans Backend.**
+   `Übernehmen` setzt nur `updateBoxState("bestaetigt")` lokal, ruft aber nie `commitBox(...)`. Die Entscheidung verlässt den Browser nie, kein `commit-fact`, kein `change_event`, kein `review_case.user_decision`. Genauso fehlerhaft: **AktionsBox** (nur `updateBoxState`, kein `commitBox`).
 
-4. **Projekt-/Asset-Zustände sind nicht konsequent sichtbar**
-   - Projektliste zeigt nur aktive Projekte, aber kein klares Modell für Archiv/Leer/Fehler/Sync.
-   - Vorhandene Projekte wirken „nicht abgerufen“, weil Fehlerzustände und leere Zustände zu wenig unterscheidbar sind.
-   - Neue Projekt- und Rename-Flows sind optimistisch/fragmentiert statt zentral kontrolliert.
+3. **KontextBox „Quelle öffnen" hat keinen onClick.**
+   Reine Deko. Entweder echten Link öffnen (aus `box.payload.source_url`/`quelle`) oder Button entfernen.
 
-5. **Projekt-Screen lädt zwar viele Tabellen live, aber nur sofern diese Tabellen in Realtime publiziert sind**
-   - `useProject.ts` subscribed auf viele Tabellen.
-   - In der Publication sind aktuell nur `app_settings`, `assets`, `dialog_sessions`, `proposed_facts`.
-   - Damit sind Verlauf, Handlungsbedarf, Substanz und Snapshot ebenfalls nicht zuverlässig live.
+4. **GapBox / KonfliktBox / AktionsBox schließen das ganze Overlay vorzeitig.**
+   Nach `commitBox` rufen sie `setTimeout(closeDialog, 250)`. Wenn die Session weitere offene Boxen hat, bricht der ganze Lauf ab. Die Auto-Close-Logik im Provider regelt das bereits korrekt, sobald alle Boxen final sind — die per-Box-Closes müssen weg.
 
-## Zielbild
+5. **ProjectScreen im `ready`-State hat keine Projektaktionen.**
+   Kein Umbenennen, kein Archivieren, kein Löschen, kein Re-Ingest direkt aus dem Projekt heraus. Inline-Edit am Namen existiert nur im `empty`-State und auch dort über `contentEditable` ohne Pending/Validierung. Resultat: User muss zurück zur Entität, um simpelste Pflege zu machen.
 
-Die UI bekommt einen konsistenten Produktfluss:
+6. **Archivierte Projekte sind unerreichbar.**
+   `useProjects` filtert `status != 'archived'` raus. Es gibt keinen Archiv-View, keine Toggle „Archiv anzeigen", keinen Wiederherstellen-Pfad außerhalb des (gefilterten) Tile-Menüs. Archivieren ist effektiv eine Sackgasse.
 
-```text
-Entität
-  -> Projekt wählen oder Projekt sauber anlegen
-  -> Input aufnehmen
-  -> Overlay ordnet/prüft in fester Reihenfolge
-  -> Commit aktualisiert Projektzustand live
-  -> Projektpanel und Projektscreen ziehen sofort nach
-```
+7. **Pending-Zustände werden nicht angezeigt.**
+   `useProjectActions`/`useAssetActions` exportieren `pending`, aber kein Konsument benutzt es. Doppelklicks auf „Löschen" / „Archivieren" / „Umbenennen" feuern mehrfach.
 
-Keine versteckten manuellen Reloads. Keine editierbaren Folgeboxen ohne gültigen Projektkontext. Keine anonymen „Neues Projekt“-Leichen.
+8. **DialogOverlay zeigt nicht, zu welchem Projekt der Dialog gehört.**
+   Header zeigt `session.context` (z. B. „Verstehen") und `anlass` — aber nie den Projektnamen, auch nicht nach erfolgter Zuordnung. User verliert Anker bei mehreren parallelen Sessions.
 
-## Umsetzungsplan
+## Vergessene Basics
 
-### 1. Realtime-Fundament reparieren
+9. **Kein Mobile/Tablet-Fallback.**
+   `SideGrid` ist `hidden lg:block`, `IntakeSessionsPanel` ist `hidden xl:block`. Unter xl gibt es keine Projektliste, unter lg überhaupt keine Navigation. Auf Tablet/Phone ist die App unbedienbar — keine Schublade, kein Drawer, nichts.
 
-Migration:
+10. **Kein Projekt-Wechsler innerhalb von ProjectScreen.**
+    Nur „← Entität". Zwischen zwei Projekten zu springen erfordert immer den Umweg über die Entität.
 
-```sql
-ALTER TABLE public.projects REPLICA IDENTITY FULL;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.projects;
-```
+11. **Fehlerzustand im Projektpanel ist unsichtbar.**
+    `useProjects` liefert jetzt `error`, aber `SideGrid` zeigt nur `isEmpty`. Bei tatsächlichem Lade-Fehler sieht der User „Erstes Projekt anlegen" — irreführend.
 
-Zusätzlich alle Tabellen live schalten, die bereits von `useProject.ts` oder `useProjects.ts` erwartet werden:
+12. **Inline-Rename am Tile ist fragil.**
+    Verlässt sich auf `onBlur`. Klick aufs Aktionsmenü kann den Blur-Commit verschlucken; kein Pending-State; Escape funktioniert, aber Doppel-Submit per Enter+Blur ist möglich.
 
-```sql
-ALTER TABLE public.canonical_facts REPLICA IDENTITY FULL;
-ALTER TABLE public.change_events REPLICA IDENTITY FULL;
-ALTER TABLE public.tasks REPLICA IDENTITY FULL;
-ALTER TABLE public.decisions REPLICA IDENTITY FULL;
-ALTER TABLE public.deadlines REPLICA IDENTITY FULL;
-ALTER TABLE public.gap_signals REPLICA IDENTITY FULL;
-ALTER TABLE public.dependencies REPLICA IDENTITY FULL;
-ALTER TABLE public.contradictions REPLICA IDENTITY FULL;
-ALTER TABLE public.outcome_signals REPLICA IDENTITY FULL;
-ALTER TABLE public.topics REPLICA IDENTITY FULL;
-ALTER TABLE public.project_stakeholder_links REPLICA IDENTITY FULL;
-ALTER TABLE public.open_points REPLICA IDENTITY FULL;
-ALTER TABLE public.feedback REPLICA IDENTITY FULL;
-ALTER TABLE public.project_state_snapshots REPLICA IDENTITY FULL;
+13. **AccountDrawer ist halb leer.**
+    Nur Logout. Keine Anzeige des aktuellen Projektkontexts, keine offenen Sessions, kein „Datenexport" (im Footer angekündigt, nicht umgesetzt).
 
-ALTER PUBLICATION supabase_realtime ADD TABLE
-  public.canonical_facts,
-  public.change_events,
-  public.tasks,
-  public.decisions,
-  public.deadlines,
-  public.gap_signals,
-  public.dependencies,
-  public.contradictions,
-  public.outcome_signals,
-  public.topics,
-  public.project_stakeholder_links,
-  public.open_points,
-  public.feedback,
-  public.project_state_snapshots;
-```
+14. **InputOverlay weiß nichts vom Kontext.**
+    Auf der Entität-Seite gibt es keine Anzeige „du legst gerade global ab → Zuordnung kommt im Overlay". Auf einer Projektseite kein Hinweis „diese Notiz/dieser Link wird direkt diesem Projekt zugeordnet". Komplett unsichtbarer Modus-Wechsel.
 
-Falls eine Tabelle bereits enthalten ist, wird die Migration idempotent formuliert.
+15. **Keine Tastaturbedienung für die Projektliste insgesamt.**
+    Pfeiltasten innerhalb einer Seite funktionieren, aber Page-Wechsel (Pos1/Ende, PgUp/PgDn) und Enter-zum-Öffnen sind nicht verkabelt.
 
-### 2. Projektpanel robust machen
+16. **`onChanged?.()` an `ProjectTile` ist toter Code.**
+    Wird im `SideGrid` nie übergeben. Realtime deckt es ab — aber Prop dann auch entfernen oder konsequent benutzen.
 
-`useProjects.ts`:
-- Fehlerzustand sichtbar zurückgeben (`error`, `reload`).
-- Nach Realtime-Events debounced reloaden.
-- Zusätzlich auf signalgebende Tabellen hören: `tasks`, `decisions`, `deadlines`, `gap_signals`, `contradictions`.
-- Bei leerer Liste echten Empty-State zeigen, nicht nur eine einzelne Kachel.
+## Plan
 
-`SideGrid.tsx`:
-- Lade-/Fehler-/Empty-State klar unterscheiden.
-- Nach Delete/Archive/Rename nicht auf manuelles `onChanged` angewiesen sein, sondern Realtime + optional `reload()` verwenden.
-- Pagination nach Änderungen korrigieren, damit die UI nicht auf einer leeren Seite stehen bleibt.
+### A. Bug-Fix-Block (muss vor allem anderen)
 
-### 3. Projektanlage als geführten Flow bauen
+A1. `useAssetActions.reprocess` → `intake-understand` mit `{ asset_id, retry: true }`. Optional zusätzlich `parsed: false` resetten, falls Pipeline das braucht.
 
-Statt sofort `Neues Projekt` anzulegen:
-- Klick auf `+ Neues Projekt` öffnet einen ruhigen Inline-/Dialog-Composer.
-- Pflichtfeld: Projektname.
-- Optional: kurzer Kontext/Outcome, damit die Entität einen Anfang hat.
-- Erst nach Bestätigung wird das Projekt angelegt.
-- Danach Navigation auf `/projekt/:id`.
+A2. AuswahlBox + AktionsBox: echtes `commitBox(box.id, "confirm", payload)` rufen, lokales `updateBoxState` rausziehen (übernimmt der Provider). KontextBox: `Quelle öffnen` entweder mit `onClick={() => window.open(box.payload.source_url, "_blank")}` oder Button entfernen, wenn keine URL existiert.
 
-Guardrails:
-- Kein leeres Projekt ohne Namen.
-- Kein mehrfacher Submit während Pending.
-- Enter bestätigt, Escape bricht ab.
-- Neu angelegtes Projekt erscheint durch Realtime sofort im Panel.
+A3. KonfliktBox / GapBox / AktionsBox: `setTimeout(closeDialog, 250)` entfernen. Auto-Close des Providers übernimmt das, sobald alle Boxen final sind.
 
-### 4. Overlay-Ablaufsteuerung erzwingen
+A4. `useObjectActions`: konsumierende Komponenten (`ProjectTile`, `RecentAssets`, `IntakeSessionsPanel`) müssen `pending` lesen und Buttons währenddessen disabled rendern.
 
-`DialogProvider` / `BoxRenderer` / relevante Boxen:
-- Session-weiten Kontextstatus berechnen: Gibt es eine bestätigte Projektzuordnung oder ein festes `project_id`?
-- Boxen, die Commit/Antwort/Faktübernahme brauchen, bleiben gesperrt, solange Projektzuordnung fehlt.
-- Die Zuordnungsbox bleibt als erste aktive Entscheidung sichtbar.
-- Bei gesperrten Boxen keine Fake-Editierbarkeit, sondern ruhiger Disabled-State mit Hinweis „Erst Projekt wählen“.
+### B. Overlay-Anker und Kontextklarheit
 
-`ZuordnungsBox.tsx`:
-- Neue-Projekt-Pfad mit Pflichtnamen.
-- Kandidaten müssen echte Projekt-IDs und Namen haben; sonst werden sie nicht als wählbar angezeigt.
-- Wenn keine vorhandenen Projekte geladen wurden, klarer Zustand: „Neues Projekt benennen“ statt leerer Auswahl.
+B1. `DialogOverlay`-Header zusätzlich Projektname zeigen, sobald entweder `session.project_id` gesetzt ist oder eine Zuordnungsbox bestätigt wurde. Quelle: `dialog_sessions.project_id` → bei Load mitliefern und im Header verlinken auf `/projekt/:id`.
 
-`EingabeBox.tsx` und andere Commit-Boxen:
-- Schreib-/Bestätigungsaktionen deaktivieren, wenn die Box fachlich noch nicht dran ist.
-- Kein lokales `setState -> closeDialog`, wenn der Zustand eigentlich persistiert werden muss.
+B2. `InputOverlay` zeigt einen kleinen Kontext-Hinweis oben:
+- auf `/`: „Wird global aufgenommen — Zuordnung kommt gleich"
+- auf `/projekt/:id`: „Wird direkt zu „<Projektname>" hinzugefügt"
 
-### 5. Projekt-Screen live und logisch schließen
+### C. ProjectScreen vollwertig machen
 
-`useProject.ts`:
-- Realtime-Publication passt nach Migration; Hook kann bleiben, bekommt aber robustere Fehler-/Empty-Transitions.
-- Projekt-Update selbst (`projects`) ebenfalls abonnieren, damit Rename/Status sofort im Header landet.
-- Bei gelöscht/archiviert: sauber zurück zur Entität mit Toast statt kaputter Projektseite.
+C1. Header bekommt ein dezentes Aktionsmenü (gleiches Pattern wie `HoverActionsMenu` am Tile): Umbenennen, Archivieren, Löschen, „Erneut verstehen" (für letztes Asset), „Snapshot anzeigen". Pending-Zustände sichtbar.
 
-`ProjectScreen.tsx`:
-- Empty-State als echte Arbeitsfläche: Name editieren, Input ablegen, optional Projekt löschen/archivieren.
-- Name-Edit auch im `ready`-State konsistent erlauben oder bewusst zentralisieren.
-- Drag/drop-Feedback bleibt projektgebunden und darf keine globale Zuordnung suggerieren, wenn `projectId` sicher ist.
+C2. Inline-Rename am Titel auch im `ready`-State, nicht nur `empty`. Konsistent über `useProjectActions.rename`, nicht roh per `supabase.from(...)`.
 
-### 6. UI-Basics nachziehen
+C3. Bei Projekt-Wechsel: schmaler Project-Switcher (Combobox, ⌘K) im Header, der `useProjects` als Quelle nutzt.
 
-Größte Basics, die ergänzt/überprüft werden:
-- Rename/Delete/Archive überall mit identischem Pattern.
-- Projektname nie als leerer/falscher Fallback angezeigt.
-- Pending-Zustände bei Create/Rename/Delete/Reprocess.
-- Fehler nicht nur Toast, sondern lokaler Wiederholen-Pfad.
-- Keine Interaktion, die der aktuelle Zustand nicht erfüllen kann.
-- Keine Boxen/Buttons, die visuell aktiv sind, aber backendseitig 403/blocked erzeugen.
+### D. Archiv und Lifecycle
 
-### 7. Smoke-Test nach Umsetzung
+D1. `useProjects` bekommt einen Toggle `includeArchived`. SideGrid zeigt eine kleine Toggle-Pille „Archiv anzeigen" (Default aus). Archivierte Tiles bleiben erkennbar (aktuell schon `archived` opacity).
 
-Direkt nach Umsetzung prüfen:
+D2. Archivieren mit Undo-Toast (sonner action) für 5 s.
 
-1. Projekt anlegen mit Namen → erscheint sofort im linken Panel.
-2. Projekt umbenennen → Tile und Projektheader aktualisieren live.
-3. Projekt archivieren/löschen → verschwindet ohne Reload.
-4. Neues Asset in Projekt droppen → Projekt-Screen und Panel-Signale aktualisieren.
-5. Globaler Input ohne Projekt → Overlay erzwingt zuerst Zuordnung.
-6. Overlay-Fakten vor Zuordnung → sind nicht editier-/commitbar.
-7. Vorhandene Projekte im Overlay → Kandidaten zeigen echte Namen.
-8. Gelöschtes Projekt direkt geöffnet → sauberer Redirect.
+D3. Löschen: bei aktivem Projekt (Route-Match) zuerst zur Entität navigieren, dann löschen — sonst rendert ProjectScreen kurz ins Leere bevor `vanished` greift.
 
-## Dateien/Orte
+### E. Fehlerzustand sichtbar machen
 
-- Migration für Realtime-Publication
-- `src/lib/project/useProjects.ts`
-- `src/components/entity/SideGrid.tsx`
-- `src/components/entity/ProjectTile.tsx`
-- `src/pages/Index.tsx`
-- `src/components/project/ProjectScreen.tsx`
-- `src/lib/project/useProject.ts`
-- `src/components/dialog/DialogProvider.tsx`
-- `src/components/dialog/BoxRenderer.tsx`
-- `src/components/dialog/boxes/ZuordnungsBox.tsx`
-- `src/components/dialog/boxes/EingabeBox.tsx`
-- bei Bedarf weitere Boxen mit Commit-Aktionen
+E1. `SideGrid` rendert bei `error` einen klar erkennbaren Zustand mit „Erneut versuchen", der `reload()` aus `useProjects` aufruft.
 
-## Nicht im Scope dieses Schritts
+E2. `useProjects.error` wird in `Index` nicht geschluckt — kleines Toast einmalig pro Fehler-ID, nicht pro Render.
 
-- Keine neue Informationsarchitektur außerhalb der drei Modi.
-- Kein Dashboard, keine Sidebar.
+### F. Mobile/Tablet (Pflicht-Basis)
+
+F1. Unter `lg`: AccountDrawer-Header zusätzlich mit Burger-Icon links, das einen `Sheet` mit Projektliste (ProjectTile-Vertikal) und Intake-Sessions öffnet. Inhalt = `SideGrid`-Inhalt + `IntakeSessionsPanel`-Inhalt, untereinander.
+
+F2. Entity Orb skaliert; Drop-Zonen funktionieren weiterhin.
+
+### G. Tastatur
+
+G1. ProjectTile: Enter/Space öffnet, bereits vorhanden. PgUp/PgDn wechselt Page in `SideGrid`. Pos1/Ende springt zum ersten/letzten Tile.
+
+G2. Globaler ⌘/Ctrl+K öffnet einen Quick-Switcher (Projekte + offene Intake-Sessions).
+
+### H. Cleanup
+
+H1. `onChanged?.()` Prop aus `ProjectTile` raus, alle Aufrufer angepasst (Realtime deckt ab).
+
+H2. `RecentAssets` — Query optional auf aktuelle `userId` filtern (RLS reicht, aber Performance/Cache-Klarheit).
+
+## Reihenfolge
+
+A → B → C → D → E → F → G → H. A ist ein Korrektheitsblock, ohne den keine Aussage über „funktioniert" möglich ist. B/C heben die Bedienbarkeit auf den im letzten Plan bereits gemeinten Stand. D/E/F/G/H sind die echten Basics, die der letzte Plan einfach übersprungen hat.
+
+## Nicht im Scope
+
+- Keine Architekturänderung der Overlay-Pipeline.
+- Keine neue Sidebar / kein Dashboard.
+- Kein Umbau Graphiti/RAG.
 - Keine Änderung an `client.ts` oder generierten Typen.
-- Kein Umbau der Graphiti/RAG-Pipeline in diesem UI-Sanierungsschritt.
+
+## Dateien (erwartet)
+
+- `src/lib/object-actions/useObjectActions.ts` (A1, A4)
+- `src/components/dialog/boxes/AuswahlBox.tsx`, `AktionsBox.tsx`, `KontextBox.tsx`, `GapBox.tsx`, `KonfliktBox.tsx` (A2, A3)
+- `src/components/dialog/DialogOverlay.tsx`, `src/lib/dialog/loadSession.ts` (B1)
+- `src/components/entity/InputOverlay.tsx` (B2)
+- `src/components/project/ProjectScreen.tsx`, `LageZone.tsx` (C1, C2)
+- neuer `ProjectSwitcher.tsx` (C3, G2)
+- `src/lib/project/useProjects.ts`, `src/components/entity/SideGrid.tsx` (D1, E1)
+- `src/components/entity/ProjectTile.tsx`, `src/components/entity/RecentAssets.tsx`, `src/components/entity/IntakeSessionsPanel.tsx` (A4, H1)
+- `src/pages/Index.tsx` (E2, F1)
+- neuer `MobileNavSheet.tsx` (F1)
+- `src/components/entity/AccountDrawer.tsx` (Header-Burger, optional)

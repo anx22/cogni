@@ -81,6 +81,16 @@ export async function loadDialogSession(sessionId: string): Promise<DialogSessio
 
   const mode = deriveSessionMode(session.status, boxes);
 
+  let projectName: string | null = null;
+  if (session.project_id) {
+    const { data: proj } = await supabase
+      .from("projects")
+      .select("name")
+      .eq("id", session.project_id)
+      .maybeSingle();
+    projectName = proj?.name ?? null;
+  }
+
   return {
     id: session.id,
     anlass: session.summary ?? "Verstehens-Lauf",
@@ -88,6 +98,8 @@ export async function loadDialogSession(sessionId: string): Promise<DialogSessio
     boxes,
     mode,
     closedAt: mode === "readonly" ? session.updated_at : null,
+    projectId: session.project_id ?? null,
+    projectName,
   };
 }
 

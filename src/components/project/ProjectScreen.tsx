@@ -1,15 +1,18 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useState } from "react";
+
 import { toast } from "sonner";
 import LageZone from "./LageZone";
 import HandlungsbedarfList from "./HandlungsbedarfList";
 import VerlaufFeed from "./VerlaufFeed";
 import SubstanzSection from "./SubstanzSection";
+import ProjectHeaderActions from "./ProjectHeaderActions";
+import ProjectSwitcher from "./ProjectSwitcher";
 import { useIntake } from "@/lib/intake/useIntake";
 import { detectFromDrop } from "@/lib/intake/detectInputType";
 import { useProject } from "@/lib/project/useProject";
+import { useProjectActions } from "@/lib/object-actions/useObjectActions";
 import { Skeleton } from "@/components/ui/skeleton";
-import { supabase } from "@/integrations/supabase/client";
+
 
 interface ProjectScreenProps {
   onBack: () => void;
@@ -22,11 +25,20 @@ const isUuid = (v: unknown): v is string =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 
 const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
-  const navigate = useNavigate();
   const [dragActive, setDragActive] = useState(false);
   const realProjectId = isUuid(projectId) ? projectId : null;
   const { intake } = useIntake({ projectId: realProjectId });
   const { status, project, error, vanished } = useProject(realProjectId);
+  const projectActions = useProjectActions();
+  const [forceRename, setForceRename] = useState(false);
+
+  const handleRename = useCallback(
+    async (newName: string) => {
+      if (!realProjectId || !newName.trim()) return;
+      await projectActions.rename(realProjectId, newName);
+    },
+    [realProjectId, projectActions],
+  );
 
   // Demo-/Fake-IDs: zurück zur Entität mit Hinweis
   useEffect(() => {
@@ -92,6 +104,21 @@ const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
         ← Entität
       </button>
 
+      {(status === "ready" || status === "empty") && project && realProjectId && (
+        <div className="fixed top-5 right-6 z-50 flex items-center gap-2">
+          <ProjectSwitcher
+            currentId={realProjectId}
+            currentName={project.name}
+            globalShortcut
+          />
+          <ProjectHeaderActions
+            projectId={realProjectId}
+            projectName={project.name}
+            onRequestRename={() => setForceRename(true)}
+          />
+        </div>
+      )}
+
       {status === "loading" && (
         <section className="px-8 md:px-12 lg:px-16 xl:px-20 pt-16 pb-12 bg-surface-1 border-b border-border-strong">
           <div className="max-w-7xl mx-auto space-y-6">
@@ -105,10 +132,13 @@ const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
 
       {status === "empty" && project && (
         <>
-          <LageZone project={project} editableName onNameChange={async (newName) => {
-            if (!realProjectId || !newName.trim()) return;
-            await supabase.from("projects").update({ name: newName.trim() }).eq("id", realProjectId);
-          }} />
+          <LageZone
+            project={project}
+            editableName
+            forceEdit={forceRename}
+            onEditDone={() => setForceRename(false)}
+            onNameChange={handleRename}
+          />
           <section className="px-8 md:px-12 lg:px-16 xl:px-20 py-24 bg-surface-1 border-b border-border-strong">
             <div className="max-w-3xl mx-auto text-center">
               <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground/60 mb-3">Noch keine Substanz</p>
@@ -122,7 +152,13 @@ const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
 
       {status === "ready" && project && (
         <>
-          <LageZone project={project} />
+          <LageZone
+            project={project}
+            editableName
+            forceEdit={forceRename}
+            onEditDone={() => setForceRename(false)}
+            onNameChange={handleRename}
+          />
 
           <section className="px-8 md:px-12 lg:px-16 xl:px-20 py-16 bg-surface-1 border-b border-border-strong">
             <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-5 gap-6">

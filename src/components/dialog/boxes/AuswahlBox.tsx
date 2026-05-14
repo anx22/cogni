@@ -6,10 +6,17 @@ import type { DialogBox } from "@/lib/dialog/types";
 import { useManualOverrides } from "@/lib/dialog/manualOverrides";
 
 const AuswahlBox = ({ box }: { box: DialogBox }) => {
-  const { session, updateBoxState, updateBoxPayload, readonly } = useDialog();
+  const { session, updateBoxPayload, commitBox, readonly } = useDialog();
   const { markManual } = useManualOverrides();
   const opts: string[] = box.payload?.optionen ?? [];
   const [sel, setSel] = useState<string>(box.payload?.auswahl ?? "");
+
+  const confirm = () => {
+    if (!sel) return;
+    updateBoxPayload(box.id, { auswahl: sel });
+    commitBox(box.id, "confirm", { auswahl: sel });
+    if (session?.context) markManual(session.context);
+  };
 
   return (
     <BoxFrame
@@ -18,13 +25,8 @@ const AuswahlBox = ({ box }: { box: DialogBox }) => {
         <ActionBtn
           variant="primary"
           icon={<Check className="w-4 h-4" />}
-          onClick={() => {
-            updateBoxPayload(box.id, { auswahl: sel });
-            if (sel) {
-              updateBoxState(box.id, "bestaetigt");
-              if (session?.context) markManual(session.context);
-            }
-          }}
+          onClick={confirm}
+          disabled={!sel}
         >
           Übernehmen
         </ActionBtn>

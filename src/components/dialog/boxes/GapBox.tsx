@@ -5,14 +5,13 @@ import BoxFrame, { ActionBtn } from "../BoxFrame";
 import type { DialogBox } from "@/lib/dialog/types";
 
 const GapBox = ({ box }: { box: DialogBox }) => {
-  const { updateBoxPayload, commitBox, closeDialog, readonly } = useDialog();
+  const { updateBoxPayload, commitBox, readonly } = useDialog();
   const [answer, setAnswer] = useState(box.payload?.antwort ?? "");
 
   const submit = () => {
     if (!answer.trim()) return;
     updateBoxPayload(box.id, { antwort: answer });
     commitBox(box.id, "confirm", { antwort: answer });
-    setTimeout(closeDialog, 250);
   };
 
   return (
@@ -25,10 +24,7 @@ const GapBox = ({ box }: { box: DialogBox }) => {
           </ActionBtn>
           <ActionBtn
             icon={<Clock className="w-4 h-4" />}
-            onClick={() => {
-              commitBox(box.id, "reject");
-              setTimeout(closeDialog, 250);
-            }}
+            onClick={() => commitBox(box.id, "reject")}
           >
             Später
           </ActionBtn>

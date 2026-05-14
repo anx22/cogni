@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
-import { X } from "lucide-react";
+import { X, FolderOpen } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useDialog } from "./DialogProvider";
 import BoxRenderer from "./BoxRenderer";
 import { END_STATES } from "@/lib/dialog/types";
@@ -21,6 +22,7 @@ const formatDate = (iso?: string | null) => {
 
 const DialogOverlay = () => {
   const { session, closeDialog, readonly } = useDialog();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -59,6 +61,19 @@ const DialogOverlay = () => {
           <h2 className="text-3xl md:text-4xl font-light text-foreground/95 tracking-tight leading-tight">
             {session.anlass}
           </h2>
+          {session.projectId && session.projectName && (
+            <button
+              type="button"
+              onClick={() => {
+                closeDialog();
+                navigate(`/projekt/${session.projectId}`);
+              }}
+              className="mt-3 inline-flex items-center gap-2 text-sm text-primary/80 hover:text-primary transition-colors tracking-wide"
+            >
+              <FolderOpen className="w-3.5 h-3.5" />
+              <span className="truncate max-w-[40ch]">{session.projectName}</span>
+            </button>
+          )}
           {!readonly && total > 0 && (
             <p className="mt-3 text-sm text-muted-foreground/70 tracking-wide">
               {decided} von {total} entschieden

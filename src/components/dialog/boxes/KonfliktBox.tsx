@@ -6,7 +6,7 @@ import type { DialogBox } from "@/lib/dialog/types";
 import { useManualOverrides } from "@/lib/dialog/manualOverrides";
 
 const KonfliktBox = ({ box }: { box: DialogBox }) => {
-  const { session, updateBoxPayload, commitBox, closeDialog, readonly } = useDialog();
+  const { session, updateBoxPayload, commitBox, readonly } = useDialog();
   const { markManual } = useManualOverrides();
   const [choice, setChoice] = useState<"A" | "B" | null>(box.payload?.auswahl ?? null);
   const [reason, setReason] = useState<string>(box.payload?.begruendung ?? "");
@@ -16,7 +16,6 @@ const KonfliktBox = ({ box }: { box: DialogBox }) => {
     updateBoxPayload(box.id, { auswahl: choice, begruendung: reason });
     commitBox(box.id, "confirm", { auswahl: choice, begruendung: reason });
     if (session?.context) markManual(session.context);
-    setTimeout(closeDialog, 250);
   };
 
   return (

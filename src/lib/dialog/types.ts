@@ -33,6 +33,8 @@ export interface DialogSession {
   boxes: DialogBox[];
   mode?: DialogMode;
   closedAt?: string | null;
+  projectId?: string | null;
+  projectName?: string | null;
 }
 
 export const END_STATES: BoxState[] = ["bestaetigt", "verworfen", "eskaliert"];

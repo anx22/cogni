@@ -24,9 +24,11 @@ interface InputOverlayProps {
   onClose: () => void;
   onSubmit: (payload: IntakePayload) => void;
   className?: string;
+  /** Kurzer Kontextsatz oben im Composer, z.B. "Wird global aufgenommen". */
+  contextHint?: string;
 }
 
-const InputOverlay = ({ open, onClose, onSubmit, className }: InputOverlayProps) => {
+const InputOverlay = ({ open, onClose, onSubmit, className, contextHint }: InputOverlayProps) => {
   const [mode, setMode] = useState<InputMode>("note");
   const [noteText, setNoteText] = useState("");
   const [linkText, setLinkText] = useState("");
@@ -129,6 +131,12 @@ const InputOverlay = ({ open, onClose, onSubmit, className }: InputOverlayProps)
       >
         <X className="size-4" />
       </button>
+
+      {contextHint && (
+        <p className="mb-3 text-center text-[11px] text-muted-foreground/60 tracking-wide">
+          {contextHint}
+        </p>
+      )}
 
       <div className="mb-4 flex justify-center">
         <InputPills active={mode} onChange={setMode} />
