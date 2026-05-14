@@ -51,8 +51,18 @@ Deno.serve(withErrorBoundary("inspect-pipeline", async (req) => {
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const sb = createClient(url, serviceKey);
 
+  const log = createLogger({ fn: "inspect-pipeline", userId, client: sb });
+
   let body: Body;
-  try { body = await req.json() as Body; } catch { return fail(400, "invalid JSON"); }
+  try { body = await req.json() as Body; } catch {
+    log.warn("input", "invalid JSON");
+    await log.flush();
+    return fail(400, "invalid JSON");
+  }
+  log.stage("start", "request", {
+    has_asset: !!body.asset_id, has_project: !!body.project_id,
+    has_correlation: !!body.correlation_id, recent: body.recent ?? null,
+  });
 
   const trace: Record<string, unknown> = { user_id: userId };
 
