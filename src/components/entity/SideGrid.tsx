@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef, useCallback, KeyboardEvent } from "react";
+import { useMemo, useState, useRef, useCallback, useEffect, KeyboardEvent } from "react";
 import { Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ProjectTile from "./ProjectTile";
