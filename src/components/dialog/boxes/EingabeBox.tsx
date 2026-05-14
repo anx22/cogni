@@ -6,12 +6,15 @@ import type { DialogBox } from "@/lib/dialog/types";
 import { useManualOverrides } from "@/lib/dialog/manualOverrides";
 
 const EingabeBox = ({ box }: { box: DialogBox }) => {
-  const { session, updateBoxState, updateBoxPayload, closeDialog, readonly } = useDialog();
+  const { session, updateBoxState, updateBoxPayload, closeDialog, readonly, gateReason } = useDialog();
   const { markManual } = useManualOverrides();
   const [text, setText] = useState(box.payload?.text ?? "");
 
+  const blocked = !!gateReason;
+  const canSubmit = !blocked && !readonly && text.trim().length > 0;
+
   const submit = () => {
-    if (!text.trim()) return;
+    if (!canSubmit) return;
     updateBoxPayload(box.id, { text });
     updateBoxState(box.id, "bestaetigt");
     if (session?.context) markManual(session.context);
@@ -22,7 +25,12 @@ const EingabeBox = ({ box }: { box: DialogBox }) => {
     <BoxFrame
       box={box}
       actions={
-        <ActionBtn variant="primary" icon={<Check className="w-4 h-4" />} onClick={submit}>
+        <ActionBtn
+          variant="primary"
+          icon={<Check className="w-4 h-4" />}
+          onClick={submit}
+          disabled={!canSubmit}
+        >
           Senden
         </ActionBtn>
       }

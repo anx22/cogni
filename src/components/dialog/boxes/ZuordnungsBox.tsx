@@ -27,10 +27,13 @@ const ZuordnungsBox = ({ box }: { box: DialogBox }) => {
   const [sel, setSel] = useState<string>(defaultSelection);
   const [newName, setNewName] = useState<string>(suggestedNewName ?? "");
 
+  const newNameValid = newName.trim().length >= 2;
+  const canConfirm = sel === "__new__" ? newNameValid : !!sel;
+
   const handleConfirm = () => {
+    if (!canConfirm) return;
     if (sel === "__new__") {
-      const name = newName.trim() || suggestedNewName?.trim() || "Neues Projekt";
-      commitBox(box.id, "confirm", { new_project_name: name });
+      commitBox(box.id, "confirm", { new_project_name: newName.trim() });
     } else {
       commitBox(box.id, "confirm", { project_id: sel });
     }
@@ -39,11 +42,13 @@ const ZuordnungsBox = ({ box }: { box: DialogBox }) => {
   return (
     <BoxFrame
       box={box}
+      ignoreGate
       actions={
         <ActionBtn
           variant="primary"
           icon={<Check className="w-4 h-4" />}
           onClick={handleConfirm}
+          disabled={!canConfirm}
         >
           Zuordnen
         </ActionBtn>

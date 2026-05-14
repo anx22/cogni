@@ -1,5 +1,5 @@
 import { ReactNode, forwardRef } from "react";
-import { Check, X } from "lucide-react";
+import { Check, Lock } from "lucide-react";
 import { useDialog } from "./DialogProvider";
 import type { DialogBox } from "@/lib/dialog/types";
 
@@ -10,21 +10,32 @@ interface BoxFrameProps {
   hideActions?: boolean;
   /** Custom action set. */
   actions?: ReactNode;
+  /** Wenn true, ignoriert die Box das globale gateReason (z. B. die Zuordnungsbox selbst). */
+  ignoreGate?: boolean;
 }
 
-const BoxFrame = ({ box, children, hideActions, actions }: BoxFrameProps) => {
-  const { commitBox, readonly } = useDialog();
+const BoxFrame = ({ box, children, hideActions, actions, ignoreGate }: BoxFrameProps) => {
+  const { commitBox, readonly, gateReason } = useDialog();
   const verworfen = box.state === "verworfen";
   const bestaetigt = box.state === "bestaetigt";
   const geaendert = box.state === "geaendert";
-  // Im Edit-Modus bleiben Inhalt + Aktionen IMMER sichtbar — auch bei
-  // bestätigten/verworfenen Boxen, damit der Nutzer korrigieren kann.
   const collapsed = false;
 
-  const opacity = verworfen ? "opacity-50" : bestaetigt ? "opacity-70" : "opacity-100";
+  const gated = !ignoreGate && !!gateReason && !bestaetigt && !verworfen;
+
+  const opacity = verworfen
+    ? "opacity-50"
+    : bestaetigt
+      ? "opacity-70"
+      : gated
+        ? "opacity-60"
+        : "opacity-100";
 
   return (
-    <section className={`relative transition-opacity ${opacity}`}>
+    <section
+      className={`relative transition-opacity ${opacity}`}
+      aria-disabled={gated || undefined}
+    >
       <div className="flex items-baseline gap-3 mb-5">
         {geaendert && (
           <span
@@ -44,9 +55,23 @@ const BoxFrame = ({ box, children, hideActions, actions }: BoxFrameProps) => {
         </h3>
       </div>
 
-      {!collapsed && <div className="space-y-5 text-foreground/85">{children}</div>}
+      {!collapsed && (
+        <div
+          className={`space-y-5 text-foreground/85 ${gated ? "pointer-events-none select-none" : ""}`}
+          inert={gated ? "" : undefined}
+        >
+          {children}
+        </div>
+      )}
 
-      {!hideActions && !collapsed && !readonly && (
+      {gated && (
+        <div className="mt-5 inline-flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-muted-foreground/70">
+          <Lock className="w-3.5 h-3.5" />
+          <span>{gateReason}</span>
+        </div>
+      )}
+
+      {!hideActions && !collapsed && !readonly && !gated && (
         <div className="flex flex-wrap items-center gap-6 mt-8">
           {actions ?? (
             <>
@@ -67,10 +92,11 @@ interface ActionBtnProps {
   onClick?: () => void;
   variant?: "primary" | "ghost" | "danger";
   icon?: ReactNode;
+  disabled?: boolean;
 }
 
 export const ActionBtn = forwardRef<HTMLButtonElement, ActionBtnProps>(
-  ({ children, onClick, variant = "ghost", icon }, ref) => {
+  ({ children, onClick, variant = "ghost", icon, disabled }, ref) => {
     const cls =
       variant === "primary"
         ? "text-primary hover:text-primary/80 border-primary/40 hover:border-primary/70"
@@ -82,7 +108,8 @@ export const ActionBtn = forwardRef<HTMLButtonElement, ActionBtnProps>(
         ref={ref}
         type="button"
         onClick={onClick}
-        className={`inline-flex items-center gap-2 text-base font-light tracking-wide pb-1 border-b transition-colors ${cls}`}
+        disabled={disabled}
+        className={`inline-flex items-center gap-2 text-base font-light tracking-wide pb-1 border-b transition-colors ${cls} disabled:opacity-40 disabled:pointer-events-none`}
       >
         {icon}
         {children}
