@@ -556,7 +556,7 @@ async function mirrorToGraphiti(
     // Sync-Log: 'queued' direkt nach erfolgreichem POST. Die echte Episode-UUID
     // wird von graphiti-reconcile später nachgeliefert.
     await admin.from("graphiti_sync_log").insert({
-      user_id: (await admin.from("canonical_facts").select("user_id").eq("id", args.canonical_fact_id).single()).data?.user_id,
+      user_id: ownerId,
       entity_id: args.canonical_fact_id,
       entity_type: args.fact_type ?? "canonical_fact",
       operation: "mirror",
