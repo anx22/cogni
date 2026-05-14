@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import Entity from "@/components/entity/Entity";
 import { useSelectedCharacter } from "@/components/entity/useSelectedCharacter";
@@ -20,7 +20,6 @@ import { useDialog } from "@/components/dialog/DialogProvider";
 import { useEntityVoice } from "@/lib/voice/useEntityVoice";
 import { useRealtimeTables, type RealtimeListener } from "@/lib/realtime/useRealtimeTables";
 import { toast } from "sonner";
-import { useMemo } from "react";
 import type { EntityState } from "@/components/entity/orbPresets";
 
 const Index = () => {
