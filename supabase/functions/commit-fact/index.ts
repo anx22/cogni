@@ -532,13 +532,28 @@ async function mirrorToGraphiti(
   const episodeContent = rest ? `${title} — ${rest}` : title;
 
   try {
+    // role/role_type/name werden vom Graphiti-Server in den Episode-Text
+    // geprependet ("role(role_type): content"). Das macht den Sender selbst
+    // zur Entity ("produktintelligenz(system) IS_AUFTRAGGEBER_OF Stefan").
+    // → role weglassen, role_type='user'. Identifizierung läuft ausschließlich
+    // über source_description (canonical_fact:<id>) und name (für UI/Probe).
     await graphitiAddMessage({
       project_id: args.project_id,
       content: episodeContent,
-      role_type: "system",
-      role: "produktintelligenz",
+      role_type: "user",
       name: `${args.fact_type}:${args.canonical_fact_id.slice(0, 8)}`,
       source_description: `canonical_fact:${args.canonical_fact_id}`,
+    });
+
+    // Sync-Log: 'queued' direkt nach erfolgreichem POST. Die echte Episode-UUID
+    // wird von graphiti-reconcile später nachgeliefert.
+    await admin.from("graphiti_sync_log").insert({
+      user_id: (await admin.from("canonical_facts").select("user_id").eq("id", args.canonical_fact_id).single()).data?.user_id,
+      entity_id: args.canonical_fact_id,
+      entity_type: args.fact_type ?? "canonical_fact",
+      operation: "mirror",
+      status: "queued",
+      payload: { source_description: `canonical_fact:${args.canonical_fact_id}`, project_id: args.project_id },
     });
 
     // Graphiti `/messages` ist asynchron und liefert KEINE Episode-UUID
