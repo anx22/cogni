@@ -41,8 +41,6 @@ const Index = () => {
   const { projects: liveProjects, error: projectsError, reload: reloadProjects } = useProjects();
 
   const busy = entityState === "processing" || entityState === "review-ready";
-  const isDragActive = dragActive || entityState === "hover";
-
   const resetDragState = useCallback(() => {
     dragCounter.current = 0;
     setDragActive(false);
