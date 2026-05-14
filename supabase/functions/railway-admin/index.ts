@@ -599,11 +599,15 @@ Deno.serve(withErrorBoundary("railway-admin", async (req) => {
       return new Response(JSON.stringify({ ok: true, services: out }, null, 2), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
+    log.stage("done", "ok", { action });
+    await log.flush();
     return new Response(JSON.stringify({ error: "unknown action" }), {
       status: 400,
       headers: { ...cors, "Content-Type": "application/json" },
     });
   } catch (e) {
+    log.error("dispatch", "railway-admin failed", e, { action });
+    await log.flush();
     return new Response(
       JSON.stringify({ error: e instanceof Error ? e.message : String(e) }),
       { status: 500, headers: { ...cors, "Content-Type": "application/json" } },
