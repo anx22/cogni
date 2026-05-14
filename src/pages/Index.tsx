@@ -329,18 +329,7 @@ const Index = () => {
       </div>
 
       <div className="absolute top-6 right-6 flex items-center gap-4">
-        <button
-          className="text-xs text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors tracking-widest uppercase"
-          onClick={() => navigate("/projekt/" + (liveProjects?.[0]?.id ?? ""))}
-        >
-          Projekte
-        </button>
-        <button
-          className="text-xs text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors tracking-widest uppercase"
-          onClick={signOut}
-        >
-          Abmelden
-        </button>
+        <AccountDrawer />
       </div>
 
       <HomeDropOverlay active={dragActive} busy={busy} />
