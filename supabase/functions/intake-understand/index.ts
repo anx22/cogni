@@ -100,8 +100,35 @@ Deno.serve(async (req) => {
     const meta = (asset.metadata ?? {}) as Record<string, unknown>;
     if (meta.kind === "note" && typeof meta.text === "string") {
       text = meta.text;
+      // Stub-parsed_document, damit jeder proposed_fact eine Provenance-Quelle
+      // hat (UI-Snippets, RAG-Anker). Notes umgehen Unstructured legitim, aber
+      // brauchen trotzdem den Provenance-Ankerpunkt.
+      const { data: noteDoc } = await admin
+        .from("parsed_documents")
+        .insert({
+          asset_id,
+          user_id: asset.user_id,
+          parser_version: "note-direct",
+          segments: [{ text: meta.text, kind: "note", offset: 0 }],
+          metadata: { source: "note-stub", file_name: asset.file_name },
+        })
+        .select("id")
+        .single();
+      parsed_document_id = noteDoc?.id ?? null;
     } else if (meta.kind === "url" && typeof meta.url === "string") {
       text = `Link: ${meta.url}`;
+      const { data: urlDoc } = await admin
+        .from("parsed_documents")
+        .insert({
+          asset_id,
+          user_id: asset.user_id,
+          parser_version: "url-direct",
+          segments: [{ text: `Link: ${meta.url}`, kind: "url", offset: 0 }],
+          metadata: { source: "url-stub", url: meta.url },
+        })
+        .select("id")
+        .single();
+      parsed_document_id = urlDoc?.id ?? null;
     } else {
       const { data: pd } = await admin
         .from("parsed_documents")
@@ -288,6 +315,18 @@ Deno.serve(async (req) => {
     if (pfErr) throw new Error(`proposed_facts: ${pfErr.message}`);
 
     // 6. Dialog-Session anlegen ----------------------------------------------
+    // Session-Dedup: bestehende offene Sessions für DAS GLEICHE Asset werden
+    // 'cancelled' gesetzt + metadata.superseded_by_session_id wird beim
+    // späteren Insert nachgereicht. Verhindert das Duplikat-Sessions-Problem,
+    // wenn dasselbe Asset re-getriggert wird.
+    const { data: priorSessions } = await admin
+      .from("dialog_sessions")
+      .select("id")
+      .eq("user_id", asset.user_id)
+      .eq("trigger_ref_id", asset_id)
+      .in("status", ["open", "in_progress"]);
+    const priorIds = (priorSessions ?? []).map((s: any) => s.id);
+
     const needsAssignmentBox =
       assignment.mode === "uncertain" || assignment.mode === "new" || assignment.mode === "auto";
 
@@ -319,6 +358,24 @@ Deno.serve(async (req) => {
       .select("id")
       .single();
     if (sErr) throw new Error(`dialog_sessions: ${sErr.message}`);
+
+    // Vorherige Sessions superseden — jetzt, wo wir die neue ID haben.
+    if (priorIds.length > 0) {
+      await admin
+        .from("dialog_sessions")
+        .update({
+          status: "cancelled",
+          metadata: { superseded_by_session_id: session!.id, superseded_at: new Date().toISOString() },
+        })
+        .in("id", priorIds);
+      // Offene review_cases der alten Sessions auf 'rejected' setzen, damit
+      // das UI nicht doppelte Boxen zeigt. (Kein 'dismissed' im Enum.)
+      await admin
+        .from("review_cases")
+        .update({ box_state: "rejected" })
+        .in("session_id", priorIds)
+        .eq("box_state", "proposed");
+    }
 
     // 7. review_cases ---------------------------------------------------------
     const caseRows: any[] = [];
