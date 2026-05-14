@@ -163,6 +163,35 @@
   --entity-rim:      rgba(10,11,13,.06);
 
   --noise: 0.012;
+
+  /* shadcn-Token-Bridge — alle ui/* Komponenten erben Day-Theme */
+  --background: 48 33% 97%;
+  --foreground: 220 13% 5%;
+  --card: 0 0% 100%;
+  --card-foreground: 220 13% 5%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 220 13% 5%;
+  --muted: 45 22% 92%;
+  --muted-foreground: 226 4% 48%;
+  --secondary: 45 22% 92%;
+  --secondary-foreground: 225 6% 27%;
+  --accent: 45 19% 90%;
+  --accent-foreground: 220 13% 5%;
+  --primary: 218 73% 52%;
+  --primary-foreground: 0 0% 100%;
+  --destructive: 4 64% 47%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 220 13% 86%;
+  --input: 220 13% 86%;
+  --ring: 218 73% 52%;
+  --sidebar-background: 0 0% 100%;
+  --sidebar-foreground: 225 6% 27%;
+  --sidebar-primary: 218 73% 52%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 45 22% 92%;
+  --sidebar-accent-foreground: 220 13% 5%;
+  --sidebar-border: 220 13% 86%;
+  --sidebar-ring: 218 73% 52%;
 }
 
 [data-theme="night"] {
