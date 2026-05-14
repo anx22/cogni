@@ -1,8 +1,7 @@
 # NOW — Aktueller Sprint & Backlog
 
 > Co-Doku zu `AGENTS.md`, `PRODUCT.md`, `ARCHITECTURE.md`, `DECISIONS.md`.
-> QA-Historie und Audit-Befund liegen in `docs/qa-historie.md`,
-> Seam-Inventar in `docs/qa-seam-inventar.md`.
+> Seam-Inventar (lebende QA-Karte) in `./qa-seam-inventar.md`.
 
 ---
 
