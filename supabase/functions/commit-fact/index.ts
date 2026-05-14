@@ -521,6 +521,14 @@ async function mirrorToGraphiti(
     return;
   }
 
+  // user_id einmal vorab holen — wird sowohl für sync_log als auch im Catch gebraucht.
+  const { data: ownerRow } = await admin
+    .from("canonical_facts")
+    .select("user_id")
+    .eq("id", args.canonical_fact_id)
+    .single();
+  const ownerId = ownerRow?.user_id ?? null;
+
   // Episode-Body als lesbare Zeile bauen — Graphiti extrahiert daraus
   // Entitäten + Edges. Title voran, dann key:value Paare.
   const c = args.content ?? {};
