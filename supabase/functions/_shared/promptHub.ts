@@ -138,11 +138,10 @@ function applyVariables(tmpl: string, vars?: Record<string, string>): string {
 }
 
 async function ensureRepo(
-  owner: string,
   name: string,
   fallback: string,
 ): Promise<void> {
-  const key = `${owner}/${name}`;
+  const key = `${PRIVATE_OWNER}/${name}`;
   if (ensuredRepos.has(key)) return;
   const headers = { ...authHeaders(), "Content-Type": "application/json" };
   // 1. Repo anlegen (ignoriert wenn schon existiert).
@@ -165,7 +164,7 @@ async function ensureRepo(
   // 2. Initialen Commit aus Fallback schreiben.
   try {
     await withTimeout(
-      fetch(`${HUB_BASE}/api/v1/commits/${owner}/${name}`, {
+      fetch(`${HUB_BASE}/api/v1/commits/${PRIVATE_OWNER}/${name}`, {
         method: "POST",
         headers,
         body: JSON.stringify({
