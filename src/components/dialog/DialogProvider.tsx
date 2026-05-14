@@ -80,6 +80,16 @@ export const DialogProvider = ({ children }: { children: ReactNode }) => {
         if (data && data.ok === false) {
           if (previousState) updateBoxState(boxId, previousState);
           if (data.code === "NEEDS_ASSIGNMENT") {
+            const assignment = session?.boxes.find((b) => b.type === "zuordnung");
+            if (assignment) {
+              const el = document.getElementById(`dialog-box-${assignment.id}`);
+              el?.scrollIntoView({ behavior: "smooth", block: "start" });
+              el?.classList.add("ring-2", "ring-primary/60", "rounded-xl");
+              setTimeout(
+                () => el?.classList.remove("ring-2", "ring-primary/60", "rounded-xl"),
+                2400,
+              );
+            }
             toast.message("Erst Projekt wählen", {
               description: "Entscheide zuerst die Zuordnungsbox oben.",
             });

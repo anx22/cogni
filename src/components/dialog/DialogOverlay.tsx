@@ -48,9 +48,9 @@ const DialogOverlay = () => {
       }}
     >
       {/* Schwebender Header — kein Card-Look */}
-      <div className="sticky top-0 z-10 flex items-start justify-between gap-6 px-10 md:px-16 lg:px-24 pt-10 pb-6 backdrop-blur-md bg-background/40">
+      <div className="sticky top-0 z-10 flex items-start justify-between gap-4 px-5 sm:px-10 md:px-16 lg:px-24 pt-5 sm:pt-10 pb-4 sm:pb-6 backdrop-blur-md bg-background/40">
         <div className="min-w-0 flex-1">
-          <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground/60 mb-2">
+          <p className="text-[10px] sm:text-xs uppercase tracking-[0.3em] text-muted-foreground/60 mb-1.5 sm:mb-2">
             {readonly ? "Abgeschlossen" : session.context ?? "Verstehen"}
             {readonly && closedAt && (
               <span className="ml-3 normal-case tracking-normal text-muted-foreground/50">
@@ -58,7 +58,7 @@ const DialogOverlay = () => {
               </span>
             )}
           </p>
-          <h2 className="text-3xl md:text-4xl font-light text-foreground/95 tracking-tight leading-tight">
+          <h2 className="text-xl sm:text-3xl md:text-4xl font-light text-foreground/95 tracking-tight leading-tight line-clamp-2">
             {session.anlass}
           </h2>
           {session.projectId && session.projectName && (
@@ -68,14 +68,14 @@ const DialogOverlay = () => {
                 closeDialog();
                 navigate(`/projekt/${session.projectId}`);
               }}
-              className="mt-3 inline-flex items-center gap-2 text-sm text-primary/80 hover:text-primary transition-colors tracking-wide"
+              className="mt-2 sm:mt-3 inline-flex items-center gap-2 text-sm text-primary/80 hover:text-primary transition-colors tracking-wide"
             >
               <FolderOpen className="w-3.5 h-3.5" />
               <span className="truncate max-w-[40ch]">{session.projectName}</span>
             </button>
           )}
           {!readonly && total > 0 && (
-            <p className="mt-3 text-sm text-muted-foreground/70 tracking-wide">
+            <p className="mt-2 sm:mt-3 text-xs sm:text-sm text-muted-foreground/70 tracking-wide">
               {decided} von {total} entschieden
             </p>
           )}
@@ -91,12 +91,14 @@ const DialogOverlay = () => {
       </div>
 
       {/* Body — viel Luft, plakative Boxen */}
-      <div className="px-10 md:px-16 lg:px-24 pb-32 max-w-4xl mx-auto space-y-10">
+      <div className="px-5 sm:px-10 md:px-16 lg:px-24 pb-32 max-w-4xl mx-auto space-y-8 sm:space-y-10">
         {session.boxes.map((b, i) => (
           <div
             key={b.id}
+            id={`dialog-box-${b.id}`}
+            data-box-type={b.type}
             style={{ animationDelay: `${i * 80}ms` }}
-            className="animate-[fade-in_0.35s_ease-out_both]"
+            className="animate-[fade-in_0.35s_ease-out_both] scroll-mt-32"
           >
             <BoxRenderer box={b} />
           </div>
