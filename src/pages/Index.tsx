@@ -8,6 +8,7 @@ import HomePrompt from "@/components/home/HomePrompt";
 import ImpactPipelinePanel from "@/components/home/ImpactPipelinePanel";
 import MobileNavSheet from "@/components/entity/MobileNavSheet";
 import HomeDropOverlay from "@/components/entity/HomeDropOverlay";
+import AssetOrbit from "@/components/entity/AssetOrbit";
 import InputOverlay from "@/components/entity/InputOverlay";
 import AccountDrawer from "@/components/entity/AccountDrawer";
 import CreateProjectDialog from "@/components/entity/CreateProjectDialog";
@@ -278,6 +279,7 @@ const Index = () => {
       />
 
       <main className="relative flex-1 flex flex-col items-center justify-center" style={{ minWidth: 0 }}>
+        <AssetOrbit />
         <Entity
           state={entityState}
           onDrop={handleDrop}
