@@ -10,6 +10,7 @@ export interface DemoProject {
   signal?: ProjectSignal;
   // Optional secondary signal for "up to two dots"
   signal2?: ProjectSignal;
+  archived?: boolean;
 }
 
 const now = Date.now();
