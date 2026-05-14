@@ -115,7 +115,26 @@ const SideGrid = ({
           backgroundSize: "16px 16px",
         }}
       >
-        {isPlaceholder ? (
+        {error && side === "left" ? (
+          <div
+            className="flex flex-col items-center justify-center gap-3 text-center"
+            style={{ width: `${COLS * 140 + (COLS - 1) * 10}px`, height: `${ROWS * 72 + (ROWS - 1) * 12}px` }}
+            role="alert"
+          >
+            <AlertCircle size={18} className="text-destructive/70" strokeWidth={1.5} />
+            <p className="text-[11px] text-muted-foreground/70 max-w-[180px] leading-relaxed">
+              Projekte konnten nicht geladen werden.
+            </p>
+            {onRetry && (
+              <button
+                onClick={onRetry}
+                className="text-[10px] tracking-wide text-primary/80 hover:text-primary transition-colors"
+              >
+                Erneut versuchen
+              </button>
+            )}
+          </div>
+        ) : isPlaceholder ? (
           <div
             className="grid"
             style={{
