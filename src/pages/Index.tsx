@@ -3,8 +3,9 @@ import { useNavigate } from "react-router-dom";
 import Entity from "@/components/entity/Entity";
 import { useSelectedCharacter } from "@/components/entity/useSelectedCharacter";
 import EntityVoice from "@/components/entity/EntityVoice";
-import SideGrid from "@/components/entity/SideGrid";
-import IntakeSessionsPanel from "@/components/entity/IntakeSessionsPanel";
+import AppSidebar from "@/components/sidebar/AppSidebar";
+import HomePrompt from "@/components/home/HomePrompt";
+import ImpactPipelinePanel from "@/components/home/ImpactPipelinePanel";
 import MobileNavSheet from "@/components/entity/MobileNavSheet";
 import HomeDropOverlay from "@/components/entity/HomeDropOverlay";
 import InputOverlay from "@/components/entity/InputOverlay";
@@ -245,31 +246,22 @@ const Index = () => {
 
   return (
     <div
-      className="relative flex flex-col items-center justify-center min-h-screen overflow-hidden bg-background"
+      className="relative flex w-full min-h-screen overflow-hidden"
+      style={{ background: "var(--surface-0)" }}
       onDragEnter={handleWindowDragEnter}
       onDragOver={handleWindowDragOver}
       onDragLeave={handleWindowDragLeave}
       onDrop={handleWindowDrop}
     >
-      <div className="relative w-full flex-1 flex items-center justify-center">
-        <div className="hidden lg:block absolute left-[6%] top-1/2 -translate-y-1/2 z-10">
-          <SideGrid
-            side="left"
-            label="Projekte"
-            projects={liveProjects}
-            activeId={undefined}
-            onProjectClick={handleProjectClick}
-            onCreateProject={handleCreateProject}
-            isDragActive={isDragActive}
-            error={projectsError}
-            onRetry={reloadProjects}
-          />
-        </div>
+      <AppSidebar
+        projects={liveProjects}
+        activeProjectId={undefined}
+        onProjectSelect={handleProjectClick}
+        onCreateProject={handleCreateProject}
+        showMiniEntity={false}
+      />
 
-        <div className="hidden xl:block absolute right-[6%] top-1/2 -translate-y-1/2 z-10">
-          <IntakeSessionsPanel isDragActive={isDragActive} />
-        </div>
-
+      <main className="relative flex-1 flex flex-col items-center justify-center" style={{ minWidth: 0 }}>
         <Entity
           state={entityState}
           onDrop={handleDrop}
@@ -280,12 +272,8 @@ const Index = () => {
           onPickInputMode={() => setOverlayOpen(true)}
         />
 
-        <div className="absolute bottom-[22%] z-20 pointer-events-auto">
-          <EntityVoice voice={voice} onRetry={handleRetry} />
-        </div>
-
         {overlayOpen ? (
-          <div className="absolute top-[58%] left-1/2 -translate-x-1/2 z-30 w-full max-w-xl px-4">
+          <div className="w-full max-w-xl px-4 mt-8 z-30">
             <InputOverlay
               open={overlayOpen}
               onClose={() => setOverlayOpen(false)}
@@ -294,15 +282,32 @@ const Index = () => {
             />
           </div>
         ) : (
-          !voice.text && (
-            <p className="absolute bottom-[14%] text-muted-foreground text-sm tracking-wide opacity-50 animate-float-in">
-              Klick auf den Kern oder lege etwas hier ab — Datei, Link, Notiz
-            </p>
-          )
+          <HomePrompt
+            onUpload={() => setOverlayOpen(true)}
+            onPaste={() => setOverlayOpen(true)}
+            onLink={() => setOverlayOpen(true)}
+            onVoice={() => setOverlayOpen(true)}
+            onNote={() => setOverlayOpen(true)}
+          />
         )}
-      </div>
 
-      <div className="absolute top-6 right-6 flex items-center gap-4">
+        <div className="absolute bottom-[8%] z-20 pointer-events-auto">
+          <EntityVoice voice={voice} onRetry={handleRetry} />
+        </div>
+
+        {!voice.text && !overlayOpen && (
+          <p
+            className="absolute bottom-[3%] t-small opacity-50 animate-float-in"
+            style={{ color: "var(--ink-4)" }}
+          >
+            Klick auf den Kern oder lege etwas hier ab — Datei, Link, Notiz
+          </p>
+        )}
+      </main>
+
+      <ImpactPipelinePanel />
+
+      <div className="absolute top-6 right-6 flex items-center gap-4 z-40">
         <AccountDrawer />
       </div>
 
