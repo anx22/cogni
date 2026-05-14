@@ -19,14 +19,14 @@ const fact = (over: Partial<{ fact_type: string; title: string }> = {}) => ({
 
 Deno.test("title-match: exakt → confirm via title", () => {
   const r = linkAgainstExisting(fact(), [
-    { id: "cf-1", fact_type: "task", content: { title: "Bibliothek aufbauen" } },
+    { id: "cf-1", fact_type: "stakeholder", content: { title: "Bibliothek aufbauen" } },
   ]);
   assertEquals(r, { delta_type: "confirm", against_fact_id: "cf-1", matched_via: "title" });
 });
 
 Deno.test("title-match: anderer fact_type → add", () => {
   const r = linkAgainstExisting(fact(), [
-    { id: "cf-1", fact_type: "decision", content: { title: "Bibliothek aufbauen" } },
+    { id: "cf-1", fact_type: "topic", content: { title: "Bibliothek aufbauen" } },
   ]);
   assertEquals(r.delta_type, "add");
   assertEquals(r.against_fact_id, null);
@@ -39,8 +39,8 @@ Deno.test("graph-match: hit substring + existing title → confirm via graph", (
   const r = linkAgainstExisting(
     fact(),
     [
-      { id: "cf-other", fact_type: "task", content: { title: "Etwas anderes" } },
-      { id: "cf-2", fact_type: "task", content: { title: "Bibliothek aufbauen Übergabe" } },
+      { id: "cf-other", fact_type: "stakeholder", content: { title: "Etwas anderes" } },
+      { id: "cf-2", fact_type: "stakeholder", content: { title: "Bibliothek aufbauen Übergabe" } },
     ],
     { searchHits: hits },
   );
@@ -56,7 +56,7 @@ Deno.test("graph-match: hit ohne passenden existing fact → add", () => {
 
 Deno.test("graph fallback: searchHits null → verhält sich wie alter Title-Linker", () => {
   const r = linkAgainstExisting(fact(), [
-    { id: "cf-1", fact_type: "task", content: { title: "Bibliothek aufbauen" } },
+    { id: "cf-1", fact_type: "stakeholder", content: { title: "Bibliothek aufbauen" } },
   ], { searchHits: null });
   assertEquals(r.delta_type, "confirm");
   assertEquals(r.against_fact_id, "cf-1");
