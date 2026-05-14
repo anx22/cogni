@@ -212,17 +212,15 @@ export async function getPrompt(
     };
   }
 
-  // 2. Tenant + ggf. Auto-Create
-  const owner = await getTenantHandle();
-  if (!owner) return fallbackResult();
+  // 2. Private Prompt ggf. auto-erstellen (Owner "-" wird über x-tenant-id/API-Key auf Workspace geroutet)
   if (opts.autoCreate) {
-    await ensureRepo(owner, name, opts.fallback);
+    await ensureRepo(name, opts.fallback);
   }
 
   // 3. Pull latest commit
   try {
     const res = await withTimeout(
-      fetch(`${HUB_BASE}/api/v1/commits/${owner}/${name}/latest`, { headers }),
+      fetch(`${HUB_BASE}/api/v1/commits/${PRIVATE_OWNER}/${name}/latest`, { headers }),
       FETCH_TIMEOUT_MS,
     );
     if (!res.ok) {
@@ -261,12 +259,14 @@ export function bustPromptCache(): { cleared: number } {
 
 /** Status-Snapshot fürs Debugging. */
 export function promptCacheState(): {
-  tenant: string | null;
+  endpoint: string;
+  workspaceConfigured: boolean;
   entries: { name: string; version: string; ageMs: number }[];
 } {
   const now = Date.now();
   return {
-    tenant: cachedTenant,
+    endpoint: HUB_BASE,
+    workspaceConfigured: !!Deno.env.get("LANGSMITH_WORKSPACE_ID"),
     entries: Array.from(cache.entries()).map(([name, v]) => ({
       name,
       version: v.version,
