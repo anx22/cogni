@@ -334,6 +334,14 @@ const Index = () => {
         <AccountDrawer />
       </div>
 
+      <MobileNavSheet
+        projects={liveProjects}
+        projectsError={projectsError}
+        onReloadProjects={reloadProjects}
+        onProjectClick={handleProjectClick}
+        onCreateProject={handleCreateProject}
+      />
+
       <HomeDropOverlay active={dragActive} busy={busy} />
 
       {session?.user && (
