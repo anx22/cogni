@@ -315,6 +315,18 @@ Deno.serve(async (req) => {
     if (pfErr) throw new Error(`proposed_facts: ${pfErr.message}`);
 
     // 6. Dialog-Session anlegen ----------------------------------------------
+    // Session-Dedup: bestehende offene Sessions für DAS GLEICHE Asset werden
+    // 'cancelled' gesetzt + metadata.superseded_by_session_id wird beim
+    // späteren Insert nachgereicht. Verhindert das Duplikat-Sessions-Problem,
+    // wenn dasselbe Asset re-getriggert wird.
+    const { data: priorSessions } = await admin
+      .from("dialog_sessions")
+      .select("id")
+      .eq("user_id", asset.user_id)
+      .eq("trigger_ref_id", asset_id)
+      .in("status", ["open", "in_progress"]);
+    const priorIds = (priorSessions ?? []).map((s: any) => s.id);
+
     const needsAssignmentBox =
       assignment.mode === "uncertain" || assignment.mode === "new" || assignment.mode === "auto";
 
