@@ -5,21 +5,22 @@
 
 ---
 
-## Aktueller Sprint — Welle B vorbereitet (V1–V4 grün)
+## Aktueller Sprint — Welle B-W1 Linker live (Graph-Match)
+
+Stand 2026-05-14, 12:50 UTC:
+
+- **Wave-A-Stabilität verifiziert.** `graphiti-reconcile` invoked → 14/14 pending facts resolved, `canonical_facts.graphiti_uuid` 100 % befüllt. Latest-status-per-entity (24h): 29/29 ok. Master-Checklist Punkt 1 effektiv ✅.
+- **Logger-Coverage 16/16.** Inspector-Funktionen (inspect-graphiti, inspect-langsmith, inspect-railway) sind über `_shared/inspector.ts` (`withErrorBoundary` + `createLogger`) bereits transitiv instrumentiert.
+- **Claude-Review-Abgleich:** 5 von 9 Punkten veraltet (Graphiti-422, commit-fact-Godfile, useProject-God-Hook, strictNullChecks, JSONB-Validation, E2E-Smokes alle erledigt). Details in `audit-2026-05-14.md`.
+- **B-W1 Linker auf Graph-Match deployed.** Neuer `_shared/clients/graphitiSearch.ts` (fail-soft Wrapper). `linker.ts` async-erweitert: zuerst exact title, dann Graph-Evidenz (Hit-Substring + same-fact_type-Title), Fallback bleibt Title-only. `understandRun.ts` holt Hits parallel pro Fakt. 6 Linker-Tests grün, 14 Bestandstests grün → 20/20.
+- **Nicht heute:** React Query (Wave 3), B-W2 Conflict, B-W3 Gap, B-W4 Dependency.
+
+### Vorheriger Sprint — Welle B vorbereitet (V1–V4 grün)
 
 Stand 2026-05-14, 12:30 UTC:
 
-- **Re-Verifikation Master-Checklist:** 8/10 grün, 2 LOC-Budgets bleiben
-  überschritten (akzeptiert, dokumentiert in `audit-2026-05-14.md`).
-  Graphiti-Sync post-A1.1-Deploy: 24/24 erfolgreich seit 09:02.
-- **V1 Reuse:** `inspect-graphiti search` Sandbox-Projekt liefert 5 Facts
-  mit semantischen Edges. ✅
-- **V2 Graph-Konsistenz:** Episoden vorhanden, `group_id == project_id`.
-  Nebenfix: `inspect-graphiti` URL-Härtung (https://-Default) ergänzt + deployed.
-- **V3 Spiegel-SLA:** post-fix 100 %, 24h-Fenster normalisiert sich.
-- **V4 Linker-Schnittstelle:** `intake-understand/linker.ts` Drop-in-fähig.
-- **Welle B freigegeben.** Reihenfolge: B-W1 Linker → B-W2 Conflict
-  (Railway+UI) → B-W3 Gap → B-W4 Dependency.
+- Re-Verifikation Master-Checklist: 8/10 grün, 2 LOC-Budgets dokumentiert akzeptiert.
+- V1–V4 alle erfüllt; Nebenfix `inspect-graphiti` URL-Härtung deployed.
 
 ### Vorheriger Sprint — Tier B4 + Abschluss-Audit abgeschlossen
 

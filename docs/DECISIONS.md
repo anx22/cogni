@@ -74,3 +74,5 @@ aber die geteilten `corsHeaders` — Verhalten unverändert.
 - C3: projectViewModel.ts 467 → 160 LOC (Composer + Barrel), 9 Mapper unter src/lib/project/mappers/. Re-Exports erhalten.
 - C4: ok/fail-Sweep — alle 6 Edge Functions mit lokalem `{ok:true|false}`-Envelope explizit als `// custom shape, intentional` markiert. Shared `_shared/http.ts` bleibt für neue Functions ohne Envelope-Anforderung.
 - C5: Postponed (IntakeSessionsPanel split nicht zwingend nötig).
+
+[2026-05-14] B-W1 Linker auf Graph-Match. Problem: Linker mappte Facts nur über exakten Title-Match — semantische Synonyme (z. B. "Bibliothek aufbauen" vs. "Bibliothek einrichten") wurden als neue Facts geführt. Choice: Async-Erweiterung von `linkAgainstExisting` mit optionalen `searchHits` aus neuem `_shared/clients/graphitiSearch.ts`. Reihenfolge: 1) exact title, 2) Hit-Substring + same-fact_type-Title, 3) add. Reason: Graphiti `/search` liefert Edges/Facts (keine source_description-Mappings zurück), daher Hit als Evidenz, nicht als ID-Quelle. Fail-soft auf Title-only bei Graphiti-Ausfall — Backwards-compat. Tests: 6 neue Linker-Tests + Bestand grün (20/20).
