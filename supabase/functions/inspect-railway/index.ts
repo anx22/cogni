@@ -9,8 +9,7 @@
 import { corsHeaders, fail, ok, requireUser } from "../_shared/inspect-auth.ts";
 import { withErrorBoundary } from "../_shared/withErrorBoundary.ts";
 import { createLogger } from "../_shared/logger.ts";
-
-const RAILWAY_GRAPHQL = "https://backboard.railway.com/graphql/v2";
+import { createRailwayClient } from "../_shared/clients/railway.ts";
 
 interface Body {
   action: "me" | "projects" | "deployments" | "logs";
@@ -19,22 +18,6 @@ interface Body {
   environment_id?: string;
   deployment_id?: string;
   limit?: number;
-}
-
-async function gql<T>(query: string, variables: Record<string, unknown>, token: string): Promise<T> {
-  const res = await fetch(RAILWAY_GRAPHQL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ query, variables }),
-  });
-  const txt = await res.text();
-  if (!res.ok) throw new Error(`Railway ${res.status}: ${txt.slice(0, 400)}`);
-  const json = JSON.parse(txt);
-  if (json.errors) throw new Error(`Railway GraphQL: ${JSON.stringify(json.errors).slice(0, 400)}`);
-  return json.data as T;
 }
 
 Deno.serve(withErrorBoundary("inspect-railway", async (req) => {
