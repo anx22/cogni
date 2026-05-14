@@ -13,13 +13,14 @@
 
 import {
   AGENT_MODEL,
-  AGENT_SYSTEM_PROMPT,
+  AGENT_SYSTEM_PROMPT_FALLBACK,
   AGENT_TIMEOUT_MS,
-  ASSIGNMENT_SYSTEM_PROMPT,
+  ASSIGNMENT_SYSTEM_PROMPT_FALLBACK,
   EXTRACT_FACTS_TOOL,
   SUGGEST_ASSIGNMENT_TOOL,
   type FactType,
 } from "./agentConfig.ts";
+import { getPrompt } from "./promptHub.ts";
 
 export interface ExtractedFact {
   fact_type: FactType;
