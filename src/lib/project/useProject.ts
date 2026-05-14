@@ -474,6 +474,12 @@ export function useProject(projectId: string | null | undefined): UseProjectResu
         trigger,
       );
     });
+    // Auch das Projekt selbst (Rename, Status-Wechsel, Delete) live verfolgen.
+    channel.on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "projects", filter: `id=eq.${projectId}` },
+      trigger,
+    );
     channel.subscribe();
 
     return () => {
@@ -482,5 +488,5 @@ export function useProject(projectId: string | null | undefined): UseProjectResu
     };
   }, [projectId, userId, load]);
 
-  return { status, project, error };
+  return { status, project, error, vanished };
 }
