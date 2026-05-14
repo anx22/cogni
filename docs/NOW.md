@@ -16,8 +16,8 @@ Stand 2026-05-14:
 | 3 Tests | Fixtures, Sweeper, Unit + Edge + E2E-Smokes | 40 Vitest + 18 Deno grün | ✅ |
 | 4 Automatisierung | ESLint scharf, Prettier, Husky, CI, withErrorBoundary, console.log-Smoke | alle 16 Edge Functions gewrappt, CI blockt | ✅ |
 
-Endmetriken: Vitest 9 Files / 40 Tests · Deno 18 Tests · ESLint 0 Errors ·
-Logger-Abdeckung 11/16 (alle Hot-Path) · Graphiti-Mirror wieder ~100 %.
+Endmetriken: Vitest 9 Files / 40 Tests · Deno 19 Tests · ESLint 0 Errors ·
+Logger-Abdeckung **16/16** (inkl. Inspector + railway-admin) · Graphiti-Mirror wieder ~100 %.
 
 ---
 
@@ -31,9 +31,9 @@ Logger-Abdeckung 11/16 (alle Hot-Path) · Graphiti-Mirror wieder ~100 %.
    - Playwright-Setup, ein Smoke pro Persona-Pfad (Upload, Notiz, Asset-Delete).
    - Erst sinnvoll, sobald Persona-/Auth-Fixtures als Browser-Cookie gespiegelt sind.
 
-3. **Logger in Inspector-/Admin-Funktionen** *(QA, low priority)*
-   - `inspect-graphiti`, `inspect-langsmith`, `inspect-railway`, `inspect-pipeline`, `railway-admin`.
-   - Read-only & durch `withErrorBoundary` abgesichert; Logger bringt nur Diagnose-Schärfe.
+3. **Tier B — Vereinfachung / Duplikationsabbau** *(siehe `agent-execution-plan.md`)*
+   - B1 Quick Wins (Date-Formatter, mapById, http-Wrapper, Auth-Helper, SectionHeader).
+   - B2 mittlere Refactors (`useRealtimeTable`, View-Model-Mapper, Inspector-Merge).
 
 ---
 
