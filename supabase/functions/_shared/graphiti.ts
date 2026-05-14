@@ -108,10 +108,16 @@ export interface AddMessageInput {
 // zurück. Wenn ein Aufrufer explizit eine bereits existierende Episode meint,
 // kann er `input.uuid` mitsenden — Standard ist „neu, ohne UUID".
 export async function addMessage(input: AddMessageInput): Promise<{ queued: true }> {
+  // Graphiti-Server (graph_service) erwartet `role` als Pflichtfeld auf jedem
+  // Message-Objekt — sonst 422 "Field required". `role_type` allein reicht
+  // NICHT (validiert 2026-05-14 anhand graphiti_sync_log-Fehlern). Wir setzen
+  // `role` deshalb defensiv auf den `role_type` als Default, falls der Caller
+  // nichts mitgibt. Damit bleibt der Caller-Vertrag unverändert.
+  const role_type = input.role_type ?? "user";
   const message: Record<string, unknown> = {
     content: input.content,
-    role_type: input.role_type ?? "user",
-    role: input.role,
+    role_type,
+    role: input.role ?? role_type,
     name: input.name,
     source_description: input.source_description,
     timestamp: input.timestamp ?? new Date().toISOString(),
