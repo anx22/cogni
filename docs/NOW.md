@@ -5,7 +5,20 @@
 
 ---
 
-## Aktueller Sprint — Welle B-W1 Linker live (Graph-Match)
+## Aktueller Sprint — Welle B-W2 Conflict-Detector live
+
+Stand 2026-05-14, 13:30 UTC:
+
+- **B-W2 Conflict-Detector deployed.** `commit-fact/conflictDetector.ts` (deterministisch, fail-soft) erkennt nach jedem Canonical-Commit Widersprüche im selben Projekt:
+  - `deadline`: gleicher normalisierter Title, abweichende `due_date` (Tagesgenauigkeit).
+  - `decision`: gleicher Title, abweichendes `outcome`/`decision`/`text`/`summary`.
+  Idempotent über `(type, sorted(fact_a,fact_b))`. Fehler im Detektor brechen den Commit nicht ab.
+- **Integration:** `commit-fact/kernel.ts` ruft `detectAndPersistConflicts` direkt nach `mirrorToGraphiti`. Vorhandener `KonfliktBox`-/`konflikte.ts`-UI-Pfad bleibt unverändert (liest `contradictions` über realtime).
+- **Tests:** 6 neue Pure-Tests in `conflictDetector_test.ts`. Suite commit-fact: 20/20 grün (4 commitFact + 6 conflictDetector + 10 projectScoring).
+- **B-W1 Linker** weiter live (Graph-Match), **Wave-A-Stabilität** verifiziert.
+- **Nicht heute:** B-W3 Gap-Detector (kommt nach erster Sandbox-Validierung von B-W2), B-W4 Dependency, React Query.
+
+### Vorheriger Sprint — Welle B-W1 Linker live (Graph-Match)
 
 Stand 2026-05-14, 12:50 UTC:
 
@@ -13,7 +26,6 @@ Stand 2026-05-14, 12:50 UTC:
 - **Logger-Coverage 16/16.** Inspector-Funktionen (inspect-graphiti, inspect-langsmith, inspect-railway) sind über `_shared/inspector.ts` (`withErrorBoundary` + `createLogger`) bereits transitiv instrumentiert.
 - **Claude-Review-Abgleich:** 5 von 9 Punkten veraltet (Graphiti-422, commit-fact-Godfile, useProject-God-Hook, strictNullChecks, JSONB-Validation, E2E-Smokes alle erledigt). Details in `audit-2026-05-14.md`.
 - **B-W1 Linker auf Graph-Match deployed.** Neuer `_shared/clients/graphitiSearch.ts` (fail-soft Wrapper). `linker.ts` async-erweitert: zuerst exact title, dann Graph-Evidenz (Hit-Substring + same-fact_type-Title), Fallback bleibt Title-only. `understandRun.ts` holt Hits parallel pro Fakt. 6 Linker-Tests grün, 14 Bestandstests grün → 20/20.
-- **Nicht heute:** React Query (Wave 3), B-W2 Conflict, B-W3 Gap, B-W4 Dependency.
 
 ### Vorheriger Sprint — Welle B vorbereitet (V1–V4 grün)
 
