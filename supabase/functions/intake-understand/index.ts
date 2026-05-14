@@ -100,8 +100,35 @@ Deno.serve(async (req) => {
     const meta = (asset.metadata ?? {}) as Record<string, unknown>;
     if (meta.kind === "note" && typeof meta.text === "string") {
       text = meta.text;
+      // Stub-parsed_document, damit jeder proposed_fact eine Provenance-Quelle
+      // hat (UI-Snippets, RAG-Anker). Notes umgehen Unstructured legitim, aber
+      // brauchen trotzdem den Provenance-Ankerpunkt.
+      const { data: noteDoc } = await admin
+        .from("parsed_documents")
+        .insert({
+          asset_id,
+          user_id: asset.user_id,
+          parser_version: "note-direct",
+          segments: [{ text: meta.text, kind: "note", offset: 0 }],
+          metadata: { source: "note-stub", file_name: asset.file_name },
+        })
+        .select("id")
+        .single();
+      parsed_document_id = noteDoc?.id ?? null;
     } else if (meta.kind === "url" && typeof meta.url === "string") {
       text = `Link: ${meta.url}`;
+      const { data: urlDoc } = await admin
+        .from("parsed_documents")
+        .insert({
+          asset_id,
+          user_id: asset.user_id,
+          parser_version: "url-direct",
+          segments: [{ text: `Link: ${meta.url}`, kind: "url", offset: 0 }],
+          metadata: { source: "url-stub", url: meta.url },
+        })
+        .select("id")
+        .single();
+      parsed_document_id = urlDoc?.id ?? null;
     } else {
       const { data: pd } = await admin
         .from("parsed_documents")
