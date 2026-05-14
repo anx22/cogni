@@ -98,7 +98,7 @@ const AppSidebar = ({
 
         {projects.map((p) => {
           const isActive = p.id === activeProjectId;
-          const signalClass = SIGNAL_TO_DOT[p.signal] ?? "dot--calm";
+          const signalClass = p.signal ? SIGNAL_TO_DOT[p.signal] : "dot--calm";
           const signal2Class = p.signal2 ? SIGNAL_TO_DOT[p.signal2] : null;
           return (
             <button
