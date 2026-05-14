@@ -21,7 +21,7 @@ interface Body {
 }
 
 async function lsFetch(path: string, init: RequestInit = {}, key: string): Promise<Response> {
-  const workspaceId = Deno.env.get("LANGSMITH_WORKSPACE_ID");
+  const workspaceId = Deno.env.get("LANGSMITH_WORKSPACE_ID") ?? Deno.env.get("LANGSMITH_PROMPT_OWNER");
   const headers: Record<string, string> = { "x-api-key": key, "Content-Type": "application/json", ...(init.headers as Record<string, string> ?? {}) };
   if (workspaceId) headers["x-tenant-id"] = workspaceId;
   return fetch(`${BASE}${path}`, {
