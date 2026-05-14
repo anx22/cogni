@@ -1,85 +1,73 @@
-## Stand-Review
+## Befund
 
-| Phase | Status |
-|---|---|
-| 1 Tokens/Geist | ✅ |
-| 2 LageZone Hero | ✅ |
-| 3 AppSidebar + ProjectScreen | ✅ |
-| 4 Home 3-Spalten + ImpactPipelinePanel | ✅ Vitest 60/60 |
-| 5 Dialog V2 (BatchReview/FaktDrill) | ⚠ hinter Flag `?dialogV2=1`, alte Boxen noch Default |
-| 6 AssetOrbit | ⏳ |
+Es gibt **zwei parallele Theme-Systeme**, die nicht miteinander reden:
 
-Sidequest aus letzter Runde (Entity-Touch + Home-Scroll-Lock auf Mobile Safari) ist live, kein offener Punkt dort.
+1. **shadcn HSL-Tokens** (`--background`, `--card`, `--primary`, `--muted`, `--secondary`, `--input`, `--border`, `--ring`, `--accent` …) — nur in `:root` definiert, **nie** unter `[data-theme="day"]` oder `[data-theme="night"]` überschrieben.
+2. **Cogni-Hex-Tokens** (`--surface-0..3`, `--ink`, `--ink-2..4`, `--hair*`, `--sig-*`, `--c-accent*`, `--shadow-card-cogni`) — wechseln korrekt mit `data-theme`.
 
-**Gate vor Cleanup (laut design-implementation-plan.md, Stopp-Bedingung 4):** alte Boxen dürfen erst nach Phase-5-Verify gelöscht werden — Live-Smoke in „Hase & Söhne Couture" mit `?dialogV2=1` fehlt formell noch.
+Konsequenz: Jede Komponente, die shadcn-Tokens nutzt (alle `ui/*` plus alle Composer-/Project-Komponenten mit `bg-secondary`, `bg-muted`, `bg-card`, `bg-background/40` usw.), bleibt **immer dunkel**, egal ob Tag oder Nacht aktiv ist. Genau das ist im Screenshot zu sehen — dunkelgrauer Composer auf cremefarbenem Papier.
 
----
+Außerdem ein paar harte Farben:
+- `bg-white`, `bg-white/5`, `text-white` in `FacePillCharacter`, `ConfirmDestructive`
+- `bg-black/80` als Overlay-Tint in shadcn `dialog`, `alert-dialog`, `sheet`, `drawer`
 
-## Phase 5.4 — Live-Smoke V2 (Voraussetzung für Cleanup)
+## Plan — Phase 7c · Theme-Vereinigung
 
-Im Sandbox-Projekt „Hase & Söhne Couture" mit `?dialogV2=1`:
+### 1. Theme-Brücke in `src/index.css`
 
-1. Datei droppen → BatchReviewOverlay öffnet, Type-Chips korrekt, Theme erbt Tag/Nacht
-2. Konflikt-Row: Inline-Chips + Details-Toggle, Quellen-Cards expandieren
-3. Gap-Row: Suggestion-Chips aus `box.suggestions[]`
-4. CommitButton glüht blau, „M übernehmen ↵" committed + schließt
-5. Single-Box-Session → FaktDrillOverlay (38px Datum bei Konflikt, Tile-Auswahl aktiviert „Entscheidung speichern")
-6. ESC schließt zuverlässig
-7. Token-Sanity: `--d-blue` = `--accent`, kein `forced dark`
+Innerhalb von `[data-theme="day"]` und `[data-theme="night"]` **alle shadcn-HSL-Tokens** auf die jeweiligen Cogni-Werte mappen. Damit erbt jede shadcn-Komponente automatisch das aktive Theme — kein Komponenten-Rewrite nötig.
 
-Wenn rot: V2-Komponenten patchen, Cleanup verschieben, Default bleibt alte Boxen.
+Mapping-Schema (HSL-Tripel aus den Hex-Werten ableiten):
 
----
-
-## Phase 5.5 — V2 als Default + Cleanup (nur wenn 5.4 grün)
-
-**Schritt A — Flag entfernen, V2 = Default**
-- `src/components/dialog/DialogOverlay.tsx`: `useDialogV2Flag` + Branch löschen, V2-Pfad direkt rendern, alten Header/Body-JSX entfernen.
-
-**Schritt B — Tote Boxen löschen**
+```text
+--background          ← surface-0
+--foreground          ← ink
+--card / --popover    ← surface-1
+--card-foreground     ← ink
+--muted               ← surface-2
+--muted-foreground    ← ink-3
+--secondary           ← surface-2
+--secondary-foreground← ink-2
+--accent              ← surface-3
+--accent-foreground   ← ink
+--primary             ← c-accent
+--primary-foreground  ← surface-1 (day) / surface-0 (night)
+--border / --input    ← hair-2
+--ring                ← c-accent
+--destructive         ← sig-conflict
+--sidebar-*           ← surface-1 / ink-2 / hair / c-accent
 ```
-src/components/dialog/BoxRenderer.tsx
-src/components/dialog/BoxFrame.tsx
-src/components/dialog/BoxStateBadge.tsx
-src/components/dialog/boxes/AktionsBox.tsx
-src/components/dialog/boxes/AuswahlBox.tsx
-src/components/dialog/boxes/EingabeBox.tsx
-src/components/dialog/boxes/GapBox.tsx
-src/components/dialog/boxes/KonfliktBox.tsx
-src/components/dialog/boxes/KontextBox.tsx
-src/components/dialog/boxes/WissensBox.tsx
-src/components/dialog/boxes/ZuordnungsBox.tsx
-```
-Nur löschen, was in V2-Pfad nicht referenziert wird (ripgrep-Check vorab). `useDialog`, `DialogProvider`, `sessionFactories`, `dialogContext` bleiben unberührt — Infrastruktur-Vertrag.
 
-**Schritt C — Verify**
-- `bun run lint`, `tsc --noEmit`, `bunx vitest run`
-- Browser-Smoke: BatchReview + FaktDrill ohne Flag erreichbar
-- `docs/NOW.md`: Phase 5 ✅, `docs/DECISIONS.md`: Eintrag „2026-05-14 — Dialog V2 default, Box-Renderer entfernt"
+Day und Night bekommen je einen eigenen Block — gleiche Struktur, andere Quellen.
 
----
+### 2. Overlay-Tints entdunkeln
 
-## Phase 6 — AssetOrbit (im Anschluss)
+In `ui/dialog.tsx`, `ui/alert-dialog.tsx`, `ui/sheet.tsx`, `ui/drawer.tsx` `bg-black/80` ersetzen durch `bg-[hsl(var(--surface-0)/0.78)] backdrop-blur-xl` — nutzt damit dieselbe Klasse wie `.dialog-backdrop` und sieht im Tag wie Apfel-Glas aus, in der Nacht wie Linear-Tint.
 
-**Datei:** `src/components/entity/AssetOrbit.tsx` (neu), Einbindung in `src/pages/Index.tsx` zwischen `<Entity>` und `<HomePrompt>`.
+### 3. Hartcodierte Farben säubern
 
-**Daten:** read-only Hook auf `assets` mit `committed_at IS NULL` und `status IN ('parsing','understanding','review-ready','failed')` — über `useRealtimeTables` an bestehenden `assets`-Listener andocken, kein neuer Realtime-Channel, kein `src/lib/`-Eingriff.
+- `ConfirmDestructive`: `bg-rose-500/80 text-white` → `bg-destructive text-destructive-foreground`.
+- `FacePillCharacter`: `bg-white/5` → `bg-[hsl(var(--ink)/0.05)]`; das andere `bg-white` (Mask-Layer) bleibt funktional korrekt (es ist ein SVG-Mask-Hintergrund, kein UI).
+- Sonst keine Klassen-Edits — der Mapping-Schritt erledigt 95 % automatisch.
 
-**Geometrie:** oberer Bogen 225°, Radien 250/290px, `ageRing`-basiertes Opacity-Falloff (Spec exakt aus design-implementation-plan.md §1353-1364).
+### 4. Verifikation
 
-**Chip-Visuals:** `parsing` dashed, `understanding` Spinner-Ring, `review-ready` `--sig-review` Border + klickbar (öffnet BatchReview für dieses Asset via `openSessionFromDB`), `failed` `--sig-conflict` Border. Label `[TYPE] Name · vor X min ●`.
+- `bunx vitest run` — Snapshot-/Token-Tests grün halten.
+- Preview Mobile (390 × 701) auf `/index` im Day-Theme: Composer, „Notiz/Link/Datei/Sprache"-Pills, Textarea, „Übernehmen"-Button erscheinen hell auf cremefarbenem Hintergrund.
+- AccountDrawer-Toggle Day↔Night: alle Surfaces wechseln mit, kein dunkler Rest-Block.
+- Spot-Check: Projekt-Screen (`LageZone`, `ProjectHeaderActions`, `VerlaufFeed`), Auth-Screen, Dialog V2.
 
-**Mobile:** unter `md` ausgeblendet (würde mit HomePrompt + Touch-Entity kollidieren).
+### 5. Doku
 
-**Verify:** Asset hochladen → Chip erscheint im Bogen, Status-Übergänge sichtbar, Klick auf review-ready öffnet V2-BatchReview, kein Layout-Bruch im 3-Spalten-Home.
+- `docs/NOW.md` Phase 7c eintragen („Theme-Bridge shadcn↔Cogni").
+- `docs/DECISIONS.md` Eintrag: „shadcn-Tokens werden in `[data-theme]` neu zugewiesen statt Komponenten umzuschreiben — ein Single Source of Truth bleibt Cogni-Hex."
 
----
+## Was NICHT Teil dieser Phase ist
 
-## Stopp-Bedingungen (unverändert)
-- Keine Edits in `src/lib/**` außer Format-Dateien
-- `ProjectViewModel`-Vertrag unberührt
-- Schema/Edge Functions tabu
-- Wenn 5.4 rot: kein Cleanup, kein Default-Switch — nur V2-Patches
+- Keine Layout- oder Funktions-Änderungen.
+- Kein neuer Dialog-V3, kein neues Composer-Design — nur Themen-Korrektheit.
+- Auth-Screen (`/auth`) bleibt unverändert, sofern Mapping ihn nicht visuell bricht; Korrektur dann in 7d.
 
-## Frage vor Start
-Hast du V2 selbst schon im Sandbox-Projekt mit `?dialogV2=1` durchgespielt und freigegeben — oder soll ich Schritt 5.4 als Browser-Smoke selbst fahren bevor Cleanup + Phase 6 starten?
+## Offene Frage
+
+Eine bewusste Vereinfachung: Soll der **Auth-Screen** ebenfalls dem Day/Night-Toggle folgen, oder bleibt er fest auf Day (wie eine Marketing-Landing)? Default-Vorschlag: **fest auf Day**, weil unauthentifizierte Nutzer noch keine Theme-Präferenz gewählt haben.
