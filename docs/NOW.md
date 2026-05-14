@@ -5,25 +5,25 @@
 
 ---
 
-## Aktueller Sprint — Welle B-W3 Gap-Detector live
+## Aktueller Sprint — Welle B vollständig (B-W4 Dependency-Detector live)
+
+Stand 2026-05-14, 14:30 UTC:
+
+- **B-W4 Dependency-Detector deployed.** `commit-fact/dependencyDetector.ts` (deterministisch, fail-soft) erkennt nach jedem Canonical-Commit Abhängigkeiten und schreibt nach `dependencies`:
+  - `blockiert_durch`: task mit Trigger-Phrase ("blockiert von/durch", "wartet auf", "abhängig von", "depends on", "blocked by") + Title-Substring-Match auf anderen task/decision/deadline.
+  - `wartet_auf`: deadline mit Title-/Description-Substring auf eine decision.
+  - `haengt_ab_von`: bleibt im Kernel für `fact_type === "reference"`.
+  Idempotent über `(source_id, target_id, dependency_type)`. Token-Längenfilter ≥ 4, case-insensitive.
+- **Integration:** `commit-fact/kernel.ts` ruft Conflict + Gap + Dependency parallel via `Promise.all` nach `mirrorToGraphiti`. UI (`DependencyVM`/`mappers/dependencies.ts`) liest realtime — unverändert.
+- **Tests:** 8 neue Pure-Tests in `dependencyDetector_test.ts`. Suite commit-fact: **36/36 grün** (4 commitFact + 6 conflictDetector + 8 gapDetector + 8 dependencyDetector + 10 projectScoring).
+- **Welle B abgeschlossen:** B-W1 Linker (Graph-Match), B-W2 Conflict, B-W3 Gap, B-W4 Dependency — alle live.
+- **Backlog nach vorne gerückt:** Browser-E2E (Playwright), React Query (Wave 3), Tier B Quick Wins, LLM-Heuristiken (Wave 3).
+
+### Vorheriger Sprint — Welle B-W3 Gap-Detector live
 
 Stand 2026-05-14, 14:00 UTC:
 
-- **B-W3 Gap-Detector deployed.** `commit-fact/gapDetector.ts` (deterministisch, fail-soft) erkennt nach jedem Canonical-Commit drei Gap-Kinds und schreibt nach `gap_signals` (mit `metadata.gap_kind`):
-  - `deadline_without_owner`: Deadline ohne `assignee`/`owner`/`responsible`/`assigned_to`.
-  - `decision_without_deadline`: Decision ohne korrespondierende Deadline (case-insensitive Title-Match).
-  - `task_without_due_date`: Task ohne `due_date`.
-  Idempotent über `(canonical_fact_id, metadata.gap_kind, status='open')`.
-- **Integration:** `commit-fact/kernel.ts` ruft Conflict- + Gap-Detector parallel via `Promise.all` nach `mirrorToGraphiti`. UI (`GapBox`/`mappers/gaps.ts`) liest realtime — unverändert.
-- **Tests:** 8 neue Pure-Tests in `gapDetector_test.ts`. Suite commit-fact: 28/28 grün (4 commitFact + 6 conflictDetector + 8 gapDetector + 10 projectScoring).
-- **B-W1 Linker** + **B-W2 Conflict-Detector** weiter live, **Wave-A-Stabilität** verifiziert.
-- **Nicht heute:** B-W4 Dependency-Detector, React Query (Wave 3), LLM-Gap-Heuristik (Wave 3).
-
-### Vorheriger Sprint — Welle B-W2 Conflict-Detector live
-
-Stand 2026-05-14, 13:30 UTC:
-
-- B-W2 Conflict-Detector deployed (deadline/decision, idempotent, fail-soft). 6 Pure-Tests grün.
+- B-W3 Gap-Detector deployed (3 Kinds, idempotent, fail-soft, 8 Pure-Tests).
 
 ### Vorheriger Sprint — Welle B-W1 Linker live (Graph-Match)
 
