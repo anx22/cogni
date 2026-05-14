@@ -50,3 +50,9 @@ inline Bearer-Token-Auth. Drift bei CORS-Headern und Fehler-Response-Format.
 Functions, die spezifische Response-Shapes brauchen (z. B. `{ok:true, ...}`
 in `commit-fact`/`intake-trigger`), behalten lokale `ok`/`fail`-Wrapper, nutzen
 aber die geteilten `corsHeaders` — Verhalten unverändert.
+
+[2026-05-14] Realtime-Subscriptions → Problem: Channel-Boilerplate (subscribe/removeChannel/Debounce) in 8+ Stellen mit Drift-Risiko. → Choice: Zentraler `useRealtimeTables(channelName, listeners, opts)` mit per-Listener-Handlern und optionalem debounced `onTrigger`. → Reason: Eine Quelle für Cleanup, stabile Channel-Namen erzwungen, Debounce nicht mehr ad hoc.
+
+[2026-05-14] Inspector-Skeleton → Problem: 3 inspect-* Functions mit ~95 % identischem Skelett (CORS, Auth, Logger, Body-Parse, Action-Dispatch). → Choice: `_shared/inspector.ts` als Action-Map-Wrapper. `inspect-pipeline` bewusst NICHT migriert (Selektor-API statt Action-Dispatch). → Reason: Wartung an einer Stelle, Inspector wird zu reiner Probe-Map; bricht keine Caller.
+
+[2026-05-14] External-Service-Clients → Problem: Fetch-Logik für Railway/LangSmith mehrfach dupliziert mit divergentem Token-/Header-Handling. → Choice: `_shared/clients/{railway,langsmith}.ts` als typsichere Mini-Clients. `railway-admin` nutzt sie via dünnem Adapter-Shim ohne Call-Site-Änderungen. → Reason: Ein Token-Pfad pro Service; ermöglicht spätere B3.2-Modularisierung von `railway-admin`.

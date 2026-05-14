@@ -5,33 +5,39 @@
 
 ---
 
-## Aktueller Sprint — Tier B1 abgeschlossen
+## Aktueller Sprint — Tier B2 abgeschlossen
 
-Stand 2026-05-14 (Tier B1 — Quick Wins):
+Stand 2026-05-14 (Tier B2 — Mittlere Refactors):
 
-- **B1.1 Date-Formatter konsolidiert** → neues Modul `src/lib/format/dateFormatters.ts`
-  (`fmtLong`, `fmtShort`, `fmtTime`, `fmtDateTimeShort`, `fmtDateTimeLong`,
-  `ageInDays`, `toTimestamp`). Migriert: `projectViewModel`, `DialogOverlay`,
-  `InspectorPanel`. Re-Export von `formatRelative` für Abwärtskompat.
-- **B1.2 Map-Utilities** → `mapById`, `countBy` in `src/lib/utils.ts`. Genutzt
-  in `useProjects` (entfernt manuelles `inc`-Pattern) und `projectViewModel`.
-- **B1.3 HTTP-Wrapper** → `supabase/functions/_shared/http.ts`
-  (`corsHeaders`, `ok`, `fail`, `handleOptions`). 6 Functions migriert,
-  `withErrorBoundary` + `inspect-auth` re-exportieren von dort (kein Drift).
-- **B1.4 Project-Shared-Components** → `SectionLabel`, `CardSurface`.
-  `HandlungsbedarfList` und `VerlaufFeed` migriert (visuell identisch).
-- **B1.5 Auth-Helper** → `supabase/functions/_shared/auth.ts`
-  (`getAuthenticatedUser` → `{ok, userId, user, client, token}`). Migriert:
-  `commit-fact`, `asset-delete`, `project-delete`. (`intake-trigger`,
-  `voice-transcribe`, `aol-callback` nutzen jetzt zumindest geteilte
-  CORS/OPTIONS — eigene Auth-Spezialfälle bewusst belassen.)
+- **B2.1 `useRealtimeTables`** → neuer Hook in `src/lib/realtime/useRealtimeTables.ts`
+  (Multi-Table-Channel, optionaler `onTrigger` mit Debounce, per-Listener-Handler).
+  Migriert (8 Stellen): `useProjectData`, `useProjects`, `Index.tsx`,
+  `PipelineHealth`, `IntakeSessionsPanel`, `RecentAssets`, `useEntityVoice`,
+  `useNamespace`. Channel-Boilerplate eliminiert, kein `Math.random()`-Channel
+  mehr.
+- **B2.4 Service-Clients** → `supabase/functions/_shared/clients/langsmith.ts`
+  + `clients/railway.ts` (typsicherer GraphQL-Wrapper). Migriert:
+  `inspect-langsmith`, `inspect-railway`, `railway-admin` (über Adapter-Shim,
+  Call-Sites unverändert). Graphiti-Client (`_shared/graphiti.ts`) war bereits
+  gut und blieb unverändert.
+- **B2.3 Inspector-Skelett** → `_shared/inspector.ts` (`inspector(fnName,
+  actions, opts)`) standardisiert CORS, Auth, Logger, Body-Parse, Action-
+  Dispatch und Error-Wrapping. Migriert: `inspect-langsmith`, `inspect-railway`,
+  `inspect-graphiti`. **`inspect-pipeline` bewusst belassen** — Selektor-API
+  passt nicht ins Action-Map-Modell.
+- **B2.2\* Mapper-Split** → verschoben. `projectViewModel.ts` ist nach A3.2
+  bereits klar strukturiert; reiner Datei-Split bringt keinen funktionalen
+  Gewinn.
 
-Verify: Vitest 60/60 grün. Edge-Functions deployed. Smoketests:
-OPTIONS-Preflights + ungültige/leere Auth-Token → korrekte 401-Antworten.
+Verify: Vitest 60/60 grün. Edge-Functions deployed. `railway-admin/list`
+liefert 200 mit echten Workspace-Daten. Die 3 Inspektor-Errors (LangSmith
+422, Railway-Token-Scope, Graphiti-URL) sind preexisting Konfig-Themen,
+keine Regression.
 
 ### Vorher/jetzt-Endmetriken
 Vitest 10 Files / 60 Tests · Deno 19 Tests · ESLint 0 Errors ·
-Logger-Abdeckung 16/16 · Graphiti-Mirror ~100 %.
+Logger-Abdeckung 16/16 · Realtime-Channels via Shared-Hook ·
+Service-Clients zentralisiert.
 
 ---
 
