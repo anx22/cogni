@@ -105,8 +105,12 @@ export async function callExtractFacts(
   // graphHint: kompakter Kontext aus dem Projekt-Graphen (Graphiti).
   // Wird – falls vorhanden – als zusätzliche System-Notiz vor den User-Text
   // gestellt. Pures Prompt-Enrichment, keine Schema-/Logikänderung.
+  const prompt = await getPrompt("extract-facts", {
+    fallback: AGENT_SYSTEM_PROMPT_FALLBACK,
+    autoCreate: true,
+  });
   const systemMessages: Array<{ role: "system"; content: string }> = [
-    { role: "system", content: AGENT_SYSTEM_PROMPT },
+    { role: "system", content: prompt.system },
   ];
   const trimmed = (graphHint ?? "").trim();
   if (trimmed) {
