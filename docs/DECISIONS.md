@@ -106,3 +106,8 @@ aber die geteilten `corsHeaders` — Verhalten unverändert.
 - `2026-05-14` `agent_review.md` (Strategie-Review) → **aufgelöst**. Vision/Stand-Diff: Datenmodell + Review-First-UI + Vier-Rollen-Screen vollständig umgesetzt; Kernlücken (LLM-Verfeinerung, React Query, Browser-E2E, LOC-Reduktion) als Wave-3-Backlog.
 - `2026-05-14` Claude-Review (9 Punkte) → **7 erledigt vor Review-Eingang** (Graphiti-422, commit-fact Godfile, useProject God-Hook, strictNullChecks, JSONB-Validation, E2E-Smokes, Logger 16/16). 1 zurückgestellt (React Query). 1 gestartet (Wave B → komplett).
 - `2026-05-14` `docs/`-Endstand: nur noch `PRODUCT`, `ARCHITECTURE`, `NOW`, `DECISIONS`, `qa-seam-inventar`, `design-implementation-plan` (aktiv für UI-Milestone), plus `input/` (Quellmaterial). Workspace-5-Datei-Modell + 2 lebende Arbeitsdateien.
+
+## 2026-05-14 — Welle-B-Use-Case-Smoke (Sandbox „Hase & Söhne Couture")
+
+- `2026-05-14` Smoke-Pfad: temporäre Edge Function `smoke-welle-b` mintet Magiclink + verifyOtp für `account@animatex.de` und ruft `commit-fact` als realer User. Erlaubt Agent-getriebene End-to-End-Smokes ohne UI-Klicks. Nur Sandbox; Function bleibt deployed (verify_jwt=false, klarer Header-Kommentar).
+- `2026-05-14` Smoke-Ergebnis: 4 commits → **B-W2 Conflict 1×** (deadline-Kollision), **B-W3 Gap 4×** (2× deadline_without_owner, 1× decision_without_deadline, 1× task_without_due_date), **B-W4 Dependency 2×** (`blockiert_durch` Task → beide Deadlines, je ein sortiertes Paar). Detektoren feuern wie spezifiziert, idempotent über fachliche Schlüssel, Commit nie gebrochen. Graphiti-Sync queued → läuft async. Backlog-Item „Welle-B-Use-Case-Smoke" geschlossen.
