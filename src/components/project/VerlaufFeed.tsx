@@ -84,7 +84,7 @@ const VerlaufFeed = ({ verlauf }: { verlauf: VerlaufVM[] }) => {
               <p className="text-sm text-muted-foreground italic">Keine Einträge in diesem Filter.</p>
             )}
           </div>
-        </div>
+        </CardSurface>
       </div>
     </div>
   );
