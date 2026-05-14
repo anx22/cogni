@@ -5,6 +5,46 @@ import type { IntakePayload } from "./detectInputType";
 import type { Database } from "@/integrations/supabase/types";
 import { devlog } from "@/lib/devlog/devlog";
 import { sanitizeStorageName } from "./sanitizeStorageName";
+import { pollAolRun, pollAolRunByAsset, type AolRunSnapshot } from "@/lib/pipeline/pollAolRun";
+
+/**
+ * Beobachtet einen Pipeline-Lauf (entweder per run_id oder per asset_id) und
+ * spiegelt den Fortschritt in den Entity-State / Toast. Wird fire-and-forget
+ * gestartet, damit der Aufruf von `intake()` nicht blockiert.
+ */
+function trackPipeline(
+  source: { runId?: string | null; assetId?: string | null },
+  setEntityState?: (s: "idle" | "hover" | "processing" | "review-ready" | "failed") => void,
+) {
+  const onUpdate = (snap: AolRunSnapshot) => {
+    devlog.edge("pipeline progress", {
+      runId: snap.id,
+      status: snap.status,
+      node: snap.current_node,
+    });
+  };
+  const promise = source.runId
+    ? pollAolRun(source.runId, { onUpdate })
+    : source.assetId
+    ? pollAolRunByAsset(source.assetId, { onUpdate })
+    : Promise.resolve({ status: "aborted" as const, snapshot: null });
+
+  promise.then((res) => {
+    devlog.edge("pipeline terminal", { status: res.status, runId: res.snapshot?.id });
+    if (res.status === "failed") {
+      const msg = res.snapshot?.error?.message ?? "Verstehen fehlgeschlagen";
+      toast.error("Verstehen fehlgeschlagen", { description: msg.slice(0, 160) });
+      setEntityState?.("failed");
+    } else if (res.status === "timeout") {
+      toast.warning("Verstehen läuft länger als erwartet", {
+        description: "Die Box erscheint, sobald die Pipeline fertig ist.",
+      });
+    }
+    // 'completed' wird via Realtime auf dialog_sessions in Index.tsx
+    // zu 'review-ready' — hier nichts zusätzlich tun.
+  });
+}
+
 
 type EntityState = "idle" | "hover" | "processing" | "review-ready" | "failed";
 type AssetType = Database["public"]["Enums"]["asset_type"];
@@ -89,7 +129,9 @@ export function useIntake(options: UseIntakeOptions = {}) {
             }
             devlog.db("assets insert ok", { assetId, file_name: file.name });
 
-            // Async parsing — kein await blockiert UI
+            // Async parsing — kein await blockiert UI. Polling auf den
+            // späteren aol_runs-Eintrag (intake-process triggert intake-trigger
+            // intern, das den Run anlegt).
             devlog.edge("invoke intake-process", { assetId });
             supabase.functions
               .invoke("intake-process", { body: { asset_id: assetId } })
@@ -97,6 +139,7 @@ export function useIntake(options: UseIntakeOptions = {}) {
                 if (res.error) devlog.error("intake-process invoke error", res.error);
                 else devlog.edge("intake-process responded", res.data);
               });
+            trackPipeline({ assetId }, setEntityState);
           }
           const label = `${payload.files.length} ${payload.files.length === 1 ? "Datei" : "Dateien"}`;
           toast(`${label} aufgenommen`, { description: "wird verarbeitet" });
@@ -126,8 +169,13 @@ export function useIntake(options: UseIntakeOptions = {}) {
           supabase.functions
             .invoke("intake-trigger", { body: { asset_id: data.id } })
             .then((res) => {
-              if (res.error) devlog.error("intake-trigger error", res.error);
-              else devlog.edge("intake-trigger responded", res.data);
+              if (res.error) {
+                devlog.error("intake-trigger error", res.error);
+                return;
+              }
+              devlog.edge("intake-trigger responded", res.data);
+              const runId = (res.data as { run_id?: string } | null)?.run_id ?? null;
+              trackPipeline({ runId, assetId: data.id }, setEntityState);
             });
         } else if (payload.type === "text" && payload.text) {
           const preview = payload.text.slice(0, 60);
@@ -155,8 +203,13 @@ export function useIntake(options: UseIntakeOptions = {}) {
           supabase.functions
             .invoke("intake-trigger", { body: { asset_id: data.id } })
             .then((res) => {
-              if (res.error) devlog.error("intake-trigger error", res.error);
-              else devlog.edge("intake-trigger responded", res.data);
+              if (res.error) {
+                devlog.error("intake-trigger error", res.error);
+                return;
+              }
+              devlog.edge("intake-trigger responded", res.data);
+              const runId = (res.data as { run_id?: string } | null)?.run_id ?? null;
+              trackPipeline({ runId, assetId: data.id }, setEntityState);
             });
         }
 
