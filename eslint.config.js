@@ -3,18 +3,23 @@ import globals from "globals";
 import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
+import prettier from "eslint-config-prettier";
 
-// Lint-Schärfe Phase 4:
-// - no-unused-vars als WARN (nicht error → CI bleibt grün, Drift wird sichtbar)
-// - no-console als WARN, erlaubt warn/error/debug (devlog spiegelt darauf)
-// - no-explicit-any als WARN
-// - prefer-const + eqeqeq als WARN
+// Lint-Schärfe Phase 4 (final):
+// - ERROR: no-unused-vars, prefer-const, eqeqeq, no-console (Browser),
+//   react-hooks/rules-of-hooks
+// - WARN bewusst belassen:
+//   - @typescript-eslint/no-explicit-any → Supabase-/Graphiti-Returns sind
+//     dynamisch; harter Cast zu unknown würde Lesbarkeit verschlechtern.
+//     Drift bleibt als Warning sichtbar.
+//   - react-refresh/only-export-components → reiner HMR-Hint, kein Runtime-Risiko.
+//   - react-hooks/exhaustive-deps → false-positives bei Refs/Stable-Callbacks.
 // shadcn-Komponenten und generierte Supabase-Types sind ausgenommen, weil sie
 // extern gepflegt werden und nicht unsere Stilrichtlinie tragen.
 export default tseslint.config(
   { ignores: ["dist", "src/components/ui/**", "src/integrations/supabase/types.ts", "tailwind.config.ts"] },
   {
-    extends: [js.configs.recommended, ...tseslint.configs.recommended],
+    extends: [js.configs.recommended, ...tseslint.configs.recommended, prettier],
     files: ["**/*.{ts,tsx}"],
     languageOptions: {
       ecmaVersion: 2020,
@@ -28,13 +33,13 @@ export default tseslint.config(
       ...reactHooks.configs.recommended.rules,
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
       "@typescript-eslint/no-unused-vars": [
-        "warn",
+        "error",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_", caughtErrorsIgnorePattern: "^_" },
       ],
       "@typescript-eslint/no-explicit-any": "warn",
-      "no-console": ["warn", { allow: ["warn", "error", "debug"] }],
-      "prefer-const": "warn",
-      "eqeqeq": ["warn", "smart"],
+      "no-console": ["error", { allow: ["warn", "error", "debug"] }],
+      "prefer-const": "error",
+      "eqeqeq": ["error", "smart"],
     },
   },
   {

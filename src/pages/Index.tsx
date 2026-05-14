@@ -23,7 +23,7 @@ import type { EntityState } from "@/components/entity/orbPresets";
 
 const Index = () => {
   const navigate = useNavigate();
-  const { session, loading, signOut } = useAuth();
+  const { session, loading } = useAuth();
   const [entityState, setEntityState] = useState<EntityState>("idle");
   const [overlayOpen, setOverlayOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
