@@ -12,7 +12,7 @@ import { detectFromDrop } from "@/lib/intake/detectInputType";
 import { useProject } from "@/lib/project/useProject";
 import { useProjectActions } from "@/lib/object-actions/useObjectActions";
 import { Skeleton } from "@/components/ui/skeleton";
-import { supabase } from "@/integrations/supabase/client";
+
 
 interface ProjectScreenProps {
   onBack: () => void;
