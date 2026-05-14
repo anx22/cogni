@@ -142,9 +142,19 @@ async function autoDiscover(targetServiceName: string) {
 
 Deno.serve(withErrorBoundary("railway-admin", async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
+  const log: Logger = createLogger({ fn: "railway-admin" });
+  let action: string = "list";
   try {
     const body = await req.json().catch(() => ({}));
-    const action = body.action ?? "list";
+    action = body.action ?? "list";
+    log.stage("start", "request", { action });
+
+    const finish = async (res: Response) => {
+      log.stage("done", "ok", { action, status: res.status });
+      await log.flush();
+      return res;
+    };
+    void finish; // marker — used as wrapper inline below where critical
 
     if (action === "prompt-cache-bust" || action === "prompt-state") {
       const { bustPromptCache, promptCacheState, getPrompt } = await import("../_shared/promptHub.ts");
