@@ -8,7 +8,7 @@
 
 import { corsHeaders, fail, ok, requireUser } from "../_shared/inspect-auth.ts";
 
-const BASE = "https://api.smith.langchain.com";
+const BASE = Deno.env.get("LANGSMITH_BASE_URL") ?? "https://eu.api.smith.langchain.com";
 const PROJECT = Deno.env.get("LANGCHAIN_PROJECT") ?? "produktintelligenz-aol";
 
 interface Body {

@@ -16,7 +16,9 @@
 //    LANGSMITH_PROMPT_OWNER  (optional; sonst wird Tenant per /workspaces/current geholt)
 // =============================================================================
 
-const HUB_BASE = "https://api.smith.langchain.com";
+// EU-Region (Account ist auf eu.api.smith.langchain.com gehostet — Free Plan, Workspace 1).
+// Override per ENV LANGSMITH_BASE_URL möglich.
+const HUB_BASE = Deno.env.get("LANGSMITH_BASE_URL") ?? "https://eu.api.smith.langchain.com";
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const FETCH_TIMEOUT_MS = 2_000;
 
@@ -232,7 +234,7 @@ export async function getPrompt(
   });
 
   const headers = authHeaders();
-  if (!headers["X-API-Key"]) return fallbackResult();
+  if (!headers["x-api-key"]) return fallbackResult();
 
   // 1. Cache
   const cacheKey = name;
