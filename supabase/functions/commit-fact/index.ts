@@ -258,6 +258,7 @@ Deno.serve(async (req) => {
       await writeProjectSnapshot(admin, user.id, project_id, {
         trigger_event: `commit:${pf.fact_type}:${eventType}`,
         canonical_fact_id: cf!.id,
+        log,
       });
     } else {
       if (pf) {
@@ -278,12 +279,13 @@ Deno.serve(async (req) => {
       review_case_id,
       decision,
       user_id: user.id,
-    }).catch((e) => console.warn("aol-confirm notify failed:", e?.message ?? e));
+    }).catch((e) => log.warn("aol.notify_failed", "aol-confirm notify failed", { error: e?.message ?? String(e) }));
 
     return ok({});
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error("commit-fact error:", msg);
+    log.error("commit-fact.error", "commit-fact threw", err);
+    await log.flush();
     return fail(msg, 500);
   }
 });
@@ -406,7 +408,7 @@ async function writeProjectSnapshot(
   admin: any,
   user_id: string,
   project_id: string,
-  opts: { trigger_event: string; canonical_fact_id?: string },
+  opts: { trigger_event: string; canonical_fact_id?: string; log?: Logger },
 ) {
   try {
     const tables = [
@@ -442,7 +444,7 @@ async function writeProjectSnapshot(
     });
   } catch (err) {
     // Snapshot-Fehler dürfen den Commit-Pfad nicht killen
-    console.warn("writeProjectSnapshot failed:", err);
+    opts.log?.warn("snapshot.failed", "writeProjectSnapshot failed", { error: err instanceof Error ? err.message : String(err) });
   }
 }
 
@@ -605,7 +607,7 @@ async function mirrorToGraphiti(
       })
       .eq("id", args.canonical_fact_id);
     if (uErr) {
-      console.warn("mirrorToGraphiti: provenance-Update fehlgeschlagen:", uErr.message);
+      log?.warn("graphiti.provenance_update_failed", "provenance update after mirror failed", { error: uErr.message });
     }
   } catch (err) {
     const errInfo =

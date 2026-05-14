@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { createLogger } from "../_shared/logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -19,12 +20,15 @@ Deno.serve(async (req) => {
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const unstructuredKey = Deno.env.get("UNSTRUCTURED_API_KEY")!;
   const admin = createClient(supabaseUrl, serviceKey);
+  const log = createLogger({ fn: "intake-process", client: admin });
 
   let asset_id = "";
   try {
     const body = (await req.json()) as Payload;
     asset_id = body.asset_id;
     if (!asset_id) throw new Error("asset_id fehlt");
+    log.bind({ assetId: asset_id });
+    log.stage("enter", "intake-process invoked");
 
     // Asset laden
     const { data: asset, error: aErr } = await admin
@@ -93,23 +97,30 @@ Deno.serve(async (req) => {
     admin.functions
       .invoke("intake-trigger", { body: { asset_id } })
       .then((res) => {
-        if (res.error) console.error("intake-trigger chain error:", res.error);
-        else console.log("intake-trigger chain ok:", res.data);
+        if (res.error) log.error("intake_trigger.chain", "intake-trigger chain error", res.error);
+        else log.stage("intake_trigger.chain.ok", "intake-trigger chain ok", { data: res.data });
+        return log.flush();
       })
-      .catch((e) => console.error("intake-trigger chain failed:", e));
+      .catch((e) => {
+        log.error("intake_trigger.chain", "intake-trigger chain failed", e);
+        return log.flush();
+      });
 
+    log.stage("exit", "parsed + chain dispatched", { segments_count: Array.isArray(segments) ? segments.length : 0 });
+    await log.flush();
     return new Response(JSON.stringify({ ok: true, segments_count: Array.isArray(segments) ? segments.length : 0 }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error("intake-process error:", msg);
+    log.error("intake-process.error", "intake-process threw", err);
     if (asset_id) {
       await admin
         .from("assets")
         .update({ processing_status: "failed", metadata: { error: msg } })
         .eq("id", asset_id);
     }
+    await log.flush();
     return new Response(JSON.stringify({ ok: false, error: msg }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
