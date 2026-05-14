@@ -72,7 +72,8 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: "Geist", "Inter", system-ui, -apple-system, sans-serif;
+    font-feature-settings: "ss01", "cv11";
   }
 }
 
@@ -111,4 +112,232 @@
 
 .animate-float-in {
   animation: float-in 0.6s ease-out forwards;
+}
+
+/* ============================================================
+   COGNI — Design Tokens (additiv zu shadcn :root / .dark)
+   data-theme="day"   = warmes Papier, Apple-Oblivion
+   data-theme="night" = Linear-Tech-Dark
+   Werte sind Hex (kein hsl()-Wrapper).
+   ============================================================ */
+
+[data-theme="day"] {
+  --surface-0:   #faf9f5;
+  --surface-1:   #ffffff;
+  --surface-2:   #f1efe8;
+  --surface-3:   #ebe9e1;
+  --surface-inv: #0d0e12;
+
+  --ink:        #0a0b0d;
+  --ink-strong: #000000;
+  --ink-2:      #3f4147;
+  --ink-3:      #76787f;
+  --ink-4:      #a8a9ae;
+  --ink-on-inv: #f4f3ef;
+
+  --hair:   rgba(10, 11, 13, 0.08);
+  --hair-2: rgba(10, 11, 13, 0.14);
+  --hair-3: rgba(10, 11, 13, 0.22);
+
+  --c-accent:      #2b66dd;
+  --c-accent-soft: #dde6fa;
+  --c-accent-ink:  #1f4cb0;
+
+  --sig-calm:          #8d8f96;
+  --sig-calm-soft:     #e8e7e2;
+  --sig-review:        #c98a08;
+  --sig-review-soft:   #fbecc6;
+  --sig-action:        #2b66dd;
+  --sig-action-soft:   #dde6fa;
+  --sig-conflict:      #c4382c;
+  --sig-conflict-soft: #f8dad5;
+
+  --shadow-card-cogni:  0 1px 0 rgba(10,11,13,.04), 0 10px 30px -18px rgba(10,11,13,.18);
+  --shadow-pop:         0 2px 0 rgba(10,11,13,.05), 0 24px 60px -28px rgba(10,11,13,.25);
+  --shadow-inset-cogni: inset 0 1px 0 rgba(255,255,255,.7);
+
+  --entity-aurora-a: #ffd58a;
+  --entity-aurora-b: #ff8a7a;
+  --entity-aurora-c: #7ba9ff;
+  --entity-aurora-d: #ffffff;
+  --entity-rim:      rgba(10,11,13,.06);
+
+  --noise: 0.012;
+}
+
+[data-theme="night"] {
+  --surface-0:   #0a0b0e;
+  --surface-1:   #11131a;
+  --surface-2:   #15171f;
+  --surface-3:   #1c1f29;
+  --surface-inv: #f4f3ef;
+
+  --ink:        #ecedf0;
+  --ink-strong: #ffffff;
+  --ink-2:      #b6b8c0;
+  --ink-3:      #80828c;
+  --ink-4:      #5b5d68;
+  --ink-on-inv: #0d0e12;
+
+  --hair:   rgba(255,255,255,.06);
+  --hair-2: rgba(255,255,255,.10);
+  --hair-3: rgba(255,255,255,.18);
+
+  --c-accent:      #6b94ff;
+  --c-accent-soft: rgba(107,148,255,.14);
+  --c-accent-ink:  #b9cbff;
+
+  --sig-calm:          #7d7f88;
+  --sig-calm-soft:     rgba(125,127,136,.16);
+  --sig-review:        #f4b73c;
+  --sig-review-soft:   rgba(244,183,60,.14);
+  --sig-action:        #6b94ff;
+  --sig-action-soft:   rgba(107,148,255,.14);
+  --sig-conflict:      #ff6a59;
+  --sig-conflict-soft: rgba(255,106,89,.16);
+
+  --shadow-card-cogni:  0 1px 0 rgba(0,0,0,.4), 0 12px 36px -18px rgba(0,0,0,.7);
+  --shadow-pop:         0 2px 0 rgba(0,0,0,.5), 0 24px 60px -28px rgba(0,0,0,.85);
+  --shadow-inset-cogni: inset 0 1px 0 rgba(255,255,255,.04);
+
+  --entity-aurora-a: #7ea4ff;
+  --entity-aurora-b: #9c6bff;
+  --entity-aurora-c: #2e3a6e;
+  --entity-aurora-d: #d6e1ff;
+  --entity-rim:      rgba(255,255,255,.08);
+
+  --noise: 0.04;
+}
+
+/* Cogni-Typografie */
+.mono    { font-family: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+           font-feature-settings: "zero","ss01"; }
+.tabular { font-variant-numeric: tabular-nums; }
+
+.t-display   { font-size: 76px; line-height: 0.96; letter-spacing: -0.035em; font-weight: 500; }
+.t-display-2 { font-size: 56px; line-height: 0.98; letter-spacing: -0.03em;  font-weight: 500; }
+.t-h1        { font-size: 40px; line-height: 1.04; letter-spacing: -0.025em; font-weight: 500; }
+.t-h2        { font-size: 28px; line-height: 1.10; letter-spacing: -0.02em;  font-weight: 500; }
+.t-h3        { font-size: 20px; line-height: 1.20; letter-spacing: -0.015em; font-weight: 500; }
+.t-body      { font-size: 15px; line-height: 1.55; letter-spacing: -0.005em; font-weight: 400; }
+.t-small     { font-size: 13px; line-height: 1.45; font-weight: 400; }
+.t-micro     { font-size: 11px; line-height: 1.30; font-weight: 500;
+               letter-spacing: 0.04em; text-transform: uppercase; }
+
+.ink    { color: var(--ink); }
+.ink-2  { color: var(--ink-2); }
+.ink-3  { color: var(--ink-3); }
+.ink-4  { color: var(--ink-4); }
+
+/* Cogni-Komponenten-Klassen */
+.cogni-card {
+  background: var(--surface-1);
+  border-radius: 14px;
+  box-shadow: var(--shadow-card-cogni), var(--shadow-inset-cogni);
+  position: relative;
+}
+
+.hairline {
+  background: linear-gradient(90deg, transparent, var(--hair), transparent);
+  height: 1px;
+}
+
+.dot {
+  width: 8px; height: 8px; border-radius: 999px;
+  display: inline-block; flex: 0 0 auto;
+  position: relative;
+}
+.dot--calm     { background: var(--sig-calm); }
+.dot--review   { background: var(--sig-review);   box-shadow: 0 0 0 4px var(--sig-review-soft); }
+.dot--action   { background: var(--sig-action);   box-shadow: 0 0 0 4px var(--sig-action-soft); }
+.dot--conflict { background: var(--sig-conflict); box-shadow: 0 0 0 4px var(--sig-conflict-soft); }
+
+@keyframes cogni-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%      { transform: scale(1.5); opacity: 0; }
+}
+.dot--live::after {
+  content: ""; position: absolute; inset: 0;
+  border-radius: 999px; background: inherit;
+  animation: cogni-pulse 1.8s ease-out infinite;
+}
+
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 26px; padding: 0 10px; border-radius: 999px;
+  background: var(--surface-2); color: var(--ink-2);
+  font-size: 12.5px; font-weight: 500;
+  border: 1px solid var(--hair);
+}
+.chip--strong   { background: var(--surface-3); color: var(--ink); }
+.chip--review   { background: var(--sig-review-soft);   color: var(--sig-review);   border-color: transparent; }
+.chip--action   { background: var(--sig-action-soft);   color: var(--sig-action);   border-color: transparent; }
+.chip--conflict { background: var(--sig-conflict-soft); color: var(--sig-conflict); border-color: transparent; }
+
+.src {
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 0.02em;
+  color: var(--ink-3);
+}
+
+.cogni-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  height: 36px; padding: 0 14px; border-radius: 10px;
+  background: var(--surface-2); color: var(--ink);
+  border: 1px solid var(--hair-2);
+  font-size: 13.5px; font-weight: 500;
+  cursor: pointer; transition: background .15s, transform .05s;
+}
+.cogni-btn:hover  { background: var(--surface-3); }
+.cogni-btn:active { transform: translateY(1px); }
+.cogni-btn--ghost   { background: transparent; border-color: transparent; color: var(--ink-2); }
+.cogni-btn--ghost:hover { background: var(--surface-2); color: var(--ink); }
+.cogni-btn--primary { background: var(--ink); color: var(--surface-1); border-color: transparent; }
+
+.kbd {
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: 10.5px; padding: 2px 6px; border-radius: 5px;
+  background: var(--surface-2); color: var(--ink-3);
+  border: 1px solid var(--hair); border-bottom-width: 2px;
+}
+
+@keyframes atmosphere-breathe {
+  0%, 100% { opacity: 0.5; }
+  50%      { opacity: 1; }
+}
+.atmosphere-stripe {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--entity-aurora-c) 20%,
+    var(--entity-aurora-b) 50%,
+    var(--entity-aurora-a) 80%,
+    transparent 100%
+  );
+  animation: atmosphere-breathe 6s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 10;
+}
+.atmosphere-stripe::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; top: 0;
+  height: 60px;
+  background: linear-gradient(180deg, var(--entity-aurora-b), transparent);
+  opacity: 0.12;
+  filter: blur(16px);
+  pointer-events: none;
+}
+.atmosphere-stripe.is-active { animation: atmosphere-breathe 3s ease-in-out infinite; }
+.atmosphere-stripe.is-active::after {
+  background: linear-gradient(180deg, var(--sig-review), transparent);
+  opacity: 0.18;
+}
+
+@keyframes cogni-entity-breathe {
+  0%, 100% { transform: scale(1); filter: brightness(1); }
+  50%       { transform: scale(1.04); filter: brightness(1.08); }
 }

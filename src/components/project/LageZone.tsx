@@ -19,16 +19,20 @@ const LageZone = ({ project, editableName, forceEdit, onEditDone, onNameChange }
   void onEditDone;
   return (
     <section className="relative px-8 md:px-12 lg:px-16 xl:px-20 pt-16 pb-12 bg-surface-1 border-b border-border-strong">
+      {/* Cogni Atmosphären-Stripe (3px Linie + 60px Glow) */}
+      <div className="atmosphere-stripe" aria-hidden />
+
       {/* Subtle gradient backdrop */}
       <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.06] via-transparent to-transparent pointer-events-none" />
 
       <div className="relative max-w-7xl mx-auto space-y-8">
         {/* Title row + meta strip directly underneath */}
         <div>
-          <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground/70 mb-3">Projekt</p>
+          <p className="t-micro ink-4 mb-3">Projekt</p>
           {editableName ? (
             <h1
-              className="text-4xl md:text-5xl font-light tracking-tight text-foreground mb-3 outline-none border-b border-dashed border-primary/30 focus:border-primary/60 transition-colors"
+              className="text-foreground mb-3 outline-none border-b border-dashed border-primary/30 focus:border-primary/60 transition-colors"
+              style={{ fontSize: "44px", fontWeight: 500, letterSpacing: "-0.025em", lineHeight: 1.04 }}
               contentEditable
               suppressContentEditableWarning
               onBlur={(e) => {
@@ -42,16 +46,27 @@ const LageZone = ({ project, editableName, forceEdit, onEditDone, onNameChange }
               {project.name}
             </h1>
           ) : (
-            <h1 className="text-4xl md:text-5xl font-light tracking-tight text-foreground mb-3">
+            <h1
+              className="text-foreground mb-3"
+              style={{ fontSize: "44px", fontWeight: 500, letterSpacing: "-0.025em", lineHeight: 1.04 }}
+            >
               {project.name}
             </h1>
           )}
-          <p className="text-sm text-muted-foreground max-w-3xl leading-relaxed mb-5">
-            {project.description}
+          <p
+            className="text-foreground/85 max-w-3xl mb-5"
+            style={{ fontSize: "24px", fontWeight: 300, lineHeight: 1.4, letterSpacing: "-0.015em" }}
+          >
+            {project.lagetext}
           </p>
+          {project.description && (
+            <p className="text-sm text-muted-foreground max-w-3xl leading-relaxed mb-5">
+              {project.description}
+            </p>
+          )}
 
           {/* Meta strip */}
-          <div className="flex flex-wrap gap-x-6 gap-y-2 pt-3 border-t border-border-subtle/60">
+          <div className="flex flex-wrap items-end gap-x-8 gap-y-3 pt-3 border-t border-border-subtle/60">
             <MetaChip icon={<Calendar className="w-3.5 h-3.5" />} label="Nächster Termin" value={project.stats.naechsterTermin} />
             <MetaChip icon={<Clock className="w-3.5 h-3.5" />} label="Letzte Änderung" value={project.stats.letzteAenderung} />
             <StakeholderPopover stakeholder={project.stakeholder} />
@@ -59,21 +74,7 @@ const LageZone = ({ project, editableName, forceEdit, onEditDone, onNameChange }
           </div>
         </div>
 
-        {/* Lagebild — Hero, dominant */}
-        <div className="group relative rounded-2xl border border-border-subtle bg-surface-2 shadow-card-glow p-8 overflow-hidden">
-          <span className="absolute left-0 top-6 bottom-6 w-1 rounded-r-full bg-primary/50" />
-          <div className="flex items-start justify-between gap-4 mb-3 pl-3">
-            <p className="text-[11px] uppercase tracking-[0.2em] text-primary/80">Lagebild</p>
-            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-              <FeedbackButton context="Lagebild" />
-            </div>
-          </div>
-          <p className="text-lg md:text-xl text-foreground leading-relaxed pl-3 font-light">
-            {project.lagetext}
-          </p>
-        </div>
-
-        {/* Konflikt + Zielbild */}
+        {/* Konflikt + Zielbild (Lagebild-Card entfernt — Lagetext jetzt im Hero darüber) */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           <div>
             <ConflictBanner konflikte={project.konflikte} />
@@ -94,6 +95,9 @@ const LageZone = ({ project, editableName, forceEdit, onEditDone, onNameChange }
           )}
         </div>
 
+        <div className="flex items-center justify-end">
+          <FeedbackButton context="Lagebild" />
+        </div>
       </div>
     </section>
   );

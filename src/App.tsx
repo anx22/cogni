@@ -23,6 +23,11 @@ const App = () => {
   useEffect(() => {
     attachGlobalErrorHandlers();
     attachPipelineSink();
+    // Cogni-Theme: data-theme am <html>, additiv zur shadcn .dark-Klasse.
+    // Default = "day". Theme-Switch folgt in einer späteren Phase.
+    if (!document.documentElement.getAttribute("data-theme")) {
+      document.documentElement.setAttribute("data-theme", "day");
+    }
     devlog.ui("App mounted");
   }, []);
 
