@@ -2,8 +2,7 @@
 //  inspect-railway
 // -----------------------------------------------------------------------------
 //  Liest Status + Logs des AOL-Service über die Railway Public GraphQL API
-//  (https://docs.railway.com/reference/public-api, Endpoint backboard/v2).
-//  Erfordert RAILWAY_API_TOKEN (Account-Token).
+//  via geteiltem Client (_shared/clients/railway.ts).
 // =============================================================================
 
 import { corsHeaders, fail, ok, requireUser } from "../_shared/inspect-auth.ts";
@@ -29,8 +28,8 @@ Deno.serve(withErrorBoundary("inspect-railway", async (req) => {
 
   const log = createLogger({ fn: "inspect-railway", userId: auth.userId });
 
-  const token = Deno.env.get("RAILWAY_API_TOKEN");
-  if (!token) {
+  const client = createRailwayClient();
+  if (!client) {
     log.error("config", "RAILWAY_API_TOKEN not configured", new Error("missing-env"));
     await log.flush();
     return fail(500, "RAILWAY_API_TOKEN not configured");
@@ -47,8 +46,8 @@ Deno.serve(withErrorBoundary("inspect-railway", async (req) => {
 
   try {
     if (action === "me") {
-      const data = await gql<{ me: { name: string; email: string; projects: { edges: { node: { id: string; name: string } }[] } } }>(
-        `query { me { name email projects { edges { node { id name } } } } }`, {}, token,
+      const data = await client.gql<{ me: { name: string; email: string; projects: { edges: { node: { id: string; name: string } }[] } } }>(
+        `query { me { name email projects { edges { node { id name } } } } }`,
       );
       log.stage("done", "me ok");
       await log.flush();
@@ -56,8 +55,8 @@ Deno.serve(withErrorBoundary("inspect-railway", async (req) => {
     }
 
     if (action === "projects") {
-      const data = await gql<{ projects: { edges: { node: { id: string; name: string; services: { edges: { node: { id: string; name: string } }[] }; environments: { edges: { node: { id: string; name: string } }[] } } }[] } }>(
-        `query { projects { edges { node { id name services { edges { node { id name } } } environments { edges { node { id name } } } } } } }`, {}, token,
+      const data = await client.gql<{ projects: { edges: { node: { id: string; name: string; services: { edges: { node: { id: string; name: string } }[] }; environments: { edges: { node: { id: string; name: string } }[] } } }[] } }>(
+        `query { projects { edges { node { id name services { edges { node { id name } } } environments { edges { node { id name } } } } } } }`,
       );
       log.stage("done", "projects ok", { count: data.projects.edges.length });
       await log.flush();
@@ -69,14 +68,13 @@ Deno.serve(withErrorBoundary("inspect-railway", async (req) => {
         await log.flush();
         return fail(400, "project_id, service_id, environment_id required");
       }
-      const data = await gql<{ deployments: { edges: { node: { id: string; status: string; createdAt: string; staticUrl?: string } }[] } }>(
+      const data = await client.gql<{ deployments: { edges: { node: { id: string; status: string; createdAt: string; staticUrl?: string } }[] } }>(
         `query($p: String!, $s: String!, $e: String!, $n: Int) {
            deployments(first: $n, input: { projectId: $p, serviceId: $s, environmentId: $e }) {
              edges { node { id status createdAt staticUrl } }
            }
          }`,
         { p: body.project_id, s: body.service_id, e: body.environment_id, n: body.limit ?? 10 },
-        token,
       );
       log.stage("done", "deployments ok", { count: data.deployments.edges.length });
       await log.flush();
@@ -85,10 +83,9 @@ Deno.serve(withErrorBoundary("inspect-railway", async (req) => {
 
     if (action === "logs") {
       if (!body.deployment_id) { await log.flush(); return fail(400, "deployment_id required"); }
-      const data = await gql<{ deploymentLogs: { message: string; severity?: string; timestamp: string }[] }>(
+      const data = await client.gql<{ deploymentLogs: { message: string; severity?: string; timestamp: string }[] }>(
         `query($d: String!, $n: Int) { deploymentLogs(deploymentId: $d, limit: $n) { message severity timestamp } }`,
         { d: body.deployment_id, n: body.limit ?? 100 },
-        token,
       );
       log.stage("done", "logs ok", { count: data.deploymentLogs.length });
       await log.flush();
