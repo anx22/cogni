@@ -1527,7 +1527,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      validate_fact_content: {
+        Args: {
+          _content: Json
+          _fact_type: Database["public"]["Enums"]["fact_type"]
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       asset_type: "pdf" | "docx" | "pptx" | "image" | "eml" | "note" | "other"
