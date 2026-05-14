@@ -66,7 +66,9 @@ export interface RawProjectData {
 // Format-Helpers — re-exportiert aus zentralem dateFormatters-Modul,
 // damit bestehende Importe (`fmtDate`, `fmtShort`, `ageInDays`) weiter funktionieren.
 // ---------------------------------------------------------------------------
-export { fmtLong as fmtDate, fmtShort, ageInDays } from "@/lib/format/dateFormatters";
+import { fmtLong, fmtShort, ageInDays } from "@/lib/format/dateFormatters";
+const fmtDate = fmtLong;
+export { fmtLong as fmtDate, fmtShort, ageInDays };
 
 // Übersetzt Snapshot-Summaries in lesbare Sprache. Alte Datensätze enthalten
 // noch Maschinen-Codes wie "Snapshot nach commit:stakeholder:add" — die dürfen
