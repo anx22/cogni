@@ -4,6 +4,10 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import HoverActionsMenu from "@/components/shared/HoverActionsMenu";
+import ConfirmDestructive from "@/components/shared/ConfirmDestructive";
+import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { useAssetActions } from "@/lib/object-actions/useObjectActions";
 
 type Asset = Database["public"]["Tables"]["assets"]["Row"];
 
@@ -118,26 +122,7 @@ const RecentAssets = ({ isDragActive }: Props) => {
         >
           {assets.map((a) => {
             const Icon = isUrl(a) ? LinkIcon : ICONS[a.file_type] ?? File;
-            return (
-              <button
-                key={a.id}
-                onClick={() => handleClick(a)}
-                title={a.file_name}
-                className={cn(
-                  "relative w-14 h-14 rounded-2xl flex items-center justify-center",
-                  "bg-[hsl(var(--surface-2))] hover:bg-[hsl(var(--surface-3))]",
-                  "transition-all duration-300 hover:scale-105 text-muted-foreground hover:text-foreground",
-                )}
-              >
-                <Icon size={18} strokeWidth={1.5} />
-                <span
-                  className={cn(
-                    "absolute bottom-1.5 right-1.5 w-1.5 h-1.5 rounded-full",
-                    STATUS_COLORS[a.processing_status] ?? "bg-muted-foreground/40",
-                  )}
-                />
-              </button>
-            );
+            return <AssetTile key={a.id} asset={a} Icon={Icon} onClick={() => handleClick(a)} />;
           })}
         </div>
       </div>
@@ -149,3 +134,57 @@ const RecentAssets = ({ isDragActive }: Props) => {
 };
 
 export default RecentAssets;
+
+interface AssetTileProps {
+  asset: Asset;
+  Icon: typeof FileText;
+  onClick: () => void;
+}
+
+const AssetTile = ({ asset, Icon, onClick }: AssetTileProps) => {
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const actions = useAssetActions();
+
+  return (
+    <div className="group relative">
+      <button
+        onClick={onClick}
+        title={asset.file_name}
+        className={cn(
+          "relative w-14 h-14 rounded-2xl flex items-center justify-center",
+          "bg-[hsl(var(--surface-2))] hover:bg-[hsl(var(--surface-3))]",
+          "transition-all duration-300 hover:scale-105 text-muted-foreground hover:text-foreground",
+        )}
+      >
+        <Icon size={18} strokeWidth={1.5} />
+        <span
+          className={cn(
+            "absolute bottom-1.5 right-1.5 w-1.5 h-1.5 rounded-full",
+            STATUS_COLORS[asset.processing_status] ?? "bg-muted-foreground/40",
+          )}
+        />
+      </button>
+      <div className="absolute -top-1 -right-1">
+        <HoverActionsMenu label={`Aktionen für ${asset.file_name}`}>
+          <DropdownMenuItem onClick={() => actions.reprocess(asset.id)}>
+            Erneut verarbeiten
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            className="text-rose-400 focus:text-rose-300"
+            onClick={() => setConfirmDelete(true)}
+          >
+            Löschen…
+          </DropdownMenuItem>
+        </HoverActionsMenu>
+      </div>
+      <ConfirmDestructive
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title={`„${asset.file_name}" löschen?`}
+        description="Die Datei und alle daraus extrahierten Vorschläge werden entfernt. Bereits übernommene Fakten bleiben bestehen — sie verlieren nur ihre Quelle."
+        onConfirm={async () => { await actions.remove(asset.id); }}
+      />
+    </div>
+  );
+};

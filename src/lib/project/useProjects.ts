@@ -41,8 +41,9 @@ export function useProjects() {
 
     const { data: rows } = await supabase
       .from("projects")
-      .select("id, name, updated_at")
+      .select("id, name, updated_at, status")
       .eq("user_id", userId)
+      .neq("status", "archived")
       .order("updated_at", { ascending: false });
 
     if (!rows) {
