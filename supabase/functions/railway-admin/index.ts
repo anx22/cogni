@@ -149,13 +149,6 @@ Deno.serve(withErrorBoundary("railway-admin", async (req) => {
     action = body.action ?? "list";
     log.stage("start", "request", { action });
 
-    const finish = async (res: Response) => {
-      log.stage("done", "ok", { action, status: res.status });
-      await log.flush();
-      return res;
-    };
-    void finish; // marker — used as wrapper inline below where critical
-
     if (action === "prompt-cache-bust" || action === "prompt-state") {
       const { bustPromptCache, promptCacheState, getPrompt } = await import("../_shared/promptHub.ts");
       if (action === "prompt-cache-bust") {
