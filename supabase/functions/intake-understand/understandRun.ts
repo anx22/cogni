@@ -24,6 +24,7 @@ import { loadProjectContexts, scoreProjects } from "../_shared/projectScoring.ts
 import type { Logger } from "../_shared/logger.ts";
 import { summarizeFact } from "./factRules.ts";
 import { linkAgainstExisting } from "./linker.ts";
+import { searchEntities } from "../_shared/clients/graphitiSearch.ts";
 import { deterministicRunId, initials } from "./helpers.ts";
 import { setStatus, handleAgentError } from "./agentBridge.ts";
 
