@@ -1,127 +1,150 @@
-# Pipeline-Validierung Phase B+C — Befunde & Fix-Plan
+# QA-Masterplan — Produktintelligenz
 
-## TL;DR
+Ziel: Reaktiven Brandlösch-Modus beenden. Sichtbarkeit über die gesamte Pipeline `asset → parsed_document → proposed_facts → review_cases → canonical_facts → graphiti_sync_log → Neo4j → RAG` herstellen, dann absichern.
 
-Die Kern-Innovation **läuft end-to-end durch**. Real-Daten beweisen das besser als ein synthetischer Smoke könnte:
+Bestand (Ist-Stand der Codebase):
 
-- 4 Assets · 3 Unstructured-Parsings · 30 Vorschläge · 17 Reviews offen · **15 commitete Fakten** · **15 Graphiti-Episoden mit echter Entity-Extraktion** · RAG liefert sinnvolle Edges (`IS_CUSTOMER_OF: Teinacher`, `WORKS_AS: Leo Vogler @ FLANQ`, `CAMPAIGN_FOR …`).
+- 14 Edge Functions, ~3000 LOC. Schwergewichte: `commit-fact` (643), `intake-understand` (543), `railway-admin` (600), `graphiti-reconcile` (212).
+- Frontend: `src/lib/{intake,dialog,project,object-actions,voice,devlog}` + `src/pages/{Index,Project,OrbLab,Auth}`.
+- Tests: nur 2 (`sanitizeStorageName.test.ts`, `example.test.ts`). Vitest + Testing-Library bereits konfiguriert.
+- ESLint vorhanden aber minimal — kein `no-floating-promises`, kein Import-Order, `no-unused-vars` ausgeschaltet.
+- Keine Docs (AGENTS/NOW/ARCHITECTURE/DECISIONS fehlen — unwahre Behauptung, es gibt eine Dokumentation Struktur die sehr fortschrittlich ist und diese wird benutzt).
+- Keine strukturierten Logs, keine Error Boundary, keine Pre-Commit-Hooks, keine CI.
 
-Aber: **7 strukturelle Brüche** trüben das Bild. Ein synthetischer Smoke wäre jetzt verschwendete Zeit — die echten Daten zeigen alles, was wir brauchen. Stattdessen direkt fixen.
+---
 
-## Was real funktioniert (Beleg jeweils Live-Query)
+## Phase 1 — Bestandsaufnahme (Observe)   ~4–6h
 
-```text
-Schicht              Status   Beleg
-───────────────────  ──────   ──────────────────────────────────────────────
-Parsing (EML)        ✅       3 parsed_documents · 33/54/177 Segmente
-Extraktion           ✅       30 proposed_facts · plausible Typen
-Review-UI            ✅       35 cases · 17 offen · assignment + knowledge
-Commit               ✅       15 canonical_facts · 15 change_events
-Snapshot             ✅       15 snapshots (1 pro Commit)
-Mirror → Graphiti    ✅       15 Episoden in beiden Projekten sichtbar
-Entity-Extraktion    ✅       Edges wie WORKS_AS, IS_CUSTOMER_OF …
-RAG-Search           ✅       /search liefert relevante Fakten
-```
+Ziel: Eine Karte der Datenflüsse + Liste aller "blinder" Übergabepunkte.
 
-## Die 7 Brüche
+Checkliste:
 
-### P0 — Datenintegrität
+- Pipeline-Seam-Inventar als Tabelle in `ARCHITECTURE.md`:Frontend-Seams: `useIntake.uploadAsset`, `useIntake.triggerUnderstand`, `useDialog.commitFact`, `useProject.archive`, `useProjects.list`.
+- &nbsp;
+- Edge-Seams: `intake-trigger → intake-process → intake-understand → aol-service → aol-callback → commit-fact → graphiti (Neo4j) → graphiti-reconcile`.
+- DB-Seams (Tabellen als Vertragspunkte): `assets, parsed_documents, proposed_facts, review_cases, dialog_sessions, canonical_facts, change_events, graphiti_sync_log, aol_runs`.
+- Pro Seam: Ist-Zustand markieren — `[LOG?] [TRY/CATCH?] [SCHEMA-VALIDATION?] [TEST?]`.
+- Pro Edge Function `await` ohne `try/catch` zählen (`rg "await " supabase/functions/`) → "Unbeobachtet"-Liste.
+- Schema-Drift-Audit: jeder Insert/Update gegen `src/integrations/supabase/types.ts` (rein lesend).
 
-**1. `graphiti_uuid` bleibt für ALLE 15 canonical_facts NULL.**
-`mirrorToGraphiti` setzt nur `provenance.graphiti = { queued: true, source_description: "canonical_fact:<id>" }`. Der Code-Kommentar verweist auf einen „Reconciler, der `graphiti_uuid` später auflöst" — der existiert aber nicht. Reverse-Lookup UI → Graphiti-Episode ist damit unmöglich.
+Nächste 3 Schritte:
 
-**2. `graphiti_sync_log` strukturell tot.**
-Tabelle existiert mit RLS, wird aber von keiner Edge-Function geschrieben. commit-fact loggt nur in `canonical_facts.provenance.graphiti`. Ohne Sync-Log keine Observability über fehlgeschlagene Spiegelungen, keine Retry-Strategie.
+1. Doku-Skelett schreiben
+2. Seam-Inventar-Tabelle füllen durch `rg`-Sweep über alle 14 Edge Functions + 5 Hooks — 90 min.
+3. "Top 10 unbeobachtete Seams" priorisiert (nach Risiko: alles was Graphiti/Neo4j schreibt zuerst) — 30 min.
 
-**3. Sender wird Entity.**
-`graphitiAddMessage` schickt `role: "produktintelligenz", role_type: "system"`. Graphiti macht daraus die Entity „produktintelligenz(system)" und verbindet jeden echten Stakeholder darüber (`Stefan IS_AUFTRAGGEBER_OF produktintelligenz(system)`). Vergiftet den Graph mit Phantom-Knoten.
+---
 
-### P1 — Pipeline-Sauberkeit
+## Phase 2 — Instrumentierung (Instrument)   ~6–8h   ← höchster Sichtbarkeitsgewinn
 
-**4. Note-Asset bypassed Unstructured.**
-Asset „Miriam will treffen call am Montag 13 uhr" (file_type=note) hat **kein** parsed_document. Pfad `cloud_understand` greift direkt zu, ohne Provenance-Snippets. Für Notes vermutlich gewollt — aber dann muss ein Stub-parsed_document mit dem Notentext geschrieben werden, sonst bricht Provenance-Anzeige downstream.
+Ziel: Jeder Schritt in Pipeline produziert ein strukturiertes Log mit `correlation_id` (asset_id oder run_id). Jede ungefangene Exception erzeugt sichtbares Artefakt.
 
-**5. Session-Duplikate.**
-Miriam-Asset hat **2 separate dialog_sessions** (`d6c001d3`, `22ad1473`) mit überlappenden, redundanten Boxes. Re-Trigger erzeugt neue Session statt die alte zu supersedieren.
+Checkliste:
 
-**6. Asset ohne Zuordnung versteckt.**
-Asset `113897e5` (AW_ Reels…) ist `review_ready` mit 54 Segmenten — taucht aber nirgends mit assignment-box auf. Hängt ohne UI-Anker.
+- `supabase/functions/_shared/logger.ts` neu: `log(stage, event, data, ctx)` → JSON-Zeile mit `{ts, fn, stage, event, asset_id, run_id, session_id, level, ms}`. Ablöse aller `console.log` in `commit-fact`, `intake-understand`, `graphiti-reconcile`, `aol-callback`.
+- Verpflichtende Stages pro Edge Function: `enter, validate, fetch, transform, write, mirror, exit, error`.
+- `src/lib/devlog/` erweitern: Frontend-Logger mit gleicher Struktur, Push in bestehende `devlog`-Komponente.
+- Globale `ErrorBoundary` in `App.tsx` + `window.addEventListener("unhandledrejection")` → Devlog + Toast.
+- Datenfluss-Checkpoints (Eingabe/Ausgabe-Hash) an den 4 Hot-Seams: `intake-understand` (proposed_facts geschrieben), `commit-fact` (canonical + sync_log geschrieben), `graphiti-reconcile` (uuid aufgelöst), `aol-callback` (run abgeschlossen).
+- `inspect-pipeline` erweitern: zeigt pro `asset_id` jede Stage-Zeile chronologisch (nutzt neue Logger-Tabelle `pipeline_events` ODER liest aus `function_edge_logs` via analytics_query).
+- Health-Panel im OrbLab: aol-service `/health`, graphiti `/episodes`, langsmith, neo4j — bereits via `railway-admin` möglich, nur UI nötig.
 
-### P2 — Sekundär
+Nächste 3 Schritte:
 
-**7. Stale aol_runs (Phase-A-Befund noch offen).**
-4 Runs zeigen auf gelöschte assets. Cascade-Delete für `aol_runs.asset_id` fehlt.
+1. `_shared/logger.ts` + Migration `pipeline_events` Tabelle (asset_id, run_id, fn, stage, event, level, payload, ts) — 90 min.
+2. Logger in `commit-fact` und `intake-understand` einziehen (die zwei riskantesten) — 120 min.
+3. ErrorBoundary + unhandledrejection im Frontend, Devlog-Sink hookt sich ein — 60 min.
 
-## Fix-Plan in Reihenfolge
+---
 
-### Schritt 1 — Graphiti-Reconciler + Sync-Log (P0-1, P0-2 zusammen)
+## Phase 3 — Test-Schichten (Test)   ~10–14h
 
-Eine neue Edge-Function `graphiti-reconcile` (oder als Cron-Schritt in `inspect-graphiti`):
+Ziel: Jede pure Funktion hat einen Unit-Test. Jede Pipeline-Stage hat einen Integrations-Test mit Fixture + Teardown. 3 E2E-Smoke-Pfade laufen grün.
 
-1. Findet alle `canonical_facts` mit `graphiti_uuid IS NULL` und `provenance->'graphiti'->>'queued' = 'true'`.
-2. Pro Fakt: `GET /episodes?group_id=<project>&source_description=canonical_fact:<id>` → liest die echte Episode-UUID.
-3. Schreibt `canonical_facts.graphiti_uuid = <uuid>` und einen Eintrag in `graphiti_sync_log` (`status='ok'`, `entity_id=cf.id`, `payload={episode_uuid, search_url}`).
-4. Fehler-Pfad: `graphiti_sync_log.status='failed'` mit Fehler-Body.
+Unit (Vitest, bereits konfiguriert):
 
-Zusätzlich: **commit-fact** muss bei jedem Spiegelungs-Versuch (Erfolg ODER Fehler) **direkt** in `graphiti_sync_log` schreiben. Macht die Tabelle endlich nutzbar und gibt der UI eine Quelle für „Mirror-Status pro Fakt".
+- `src/lib/intake/detectInputType.ts`
+- `src/lib/intake/sanitizeStorageName.ts` (vorhanden, ergänzen)
+- `src/lib/dialog/boxMapping.ts`, `sessionMode.ts`, `sessionFactories.ts`
+- `src/lib/format/*`
+- `supabase/functions/_shared/projectScoring.ts`, `agentConfig.ts`, `promptHub.ts`
 
-### Schritt 2 — Episode-Struktur säubern (P0-3)
+Integration (Deno-Test über `supabase--test_edge_functions`, mit Mock-Fetch für aol-service/graphiti):
 
-In `_shared/graphiti.ts` / Aufrufer:
+- `commit-fact`: Happy-Path, Konflikt, Re-Commit (Supersede).
+- `intake-understand`: Note-Asset (Stub-parsed_documents), Re-Trigger (Session-Cancel), URL-Asset.
+- `graphiti-reconcile`: alle 15 alten Facts auflösbar, Idempotenz.
+- `aol-callback`: Status-Übergänge `processing → review_ready → committed`.
 
-- `role` und `role_type` raus aus dem `content`-Feld der Message. Der Sender gehört in Metadata, nicht in den Episode-Text.
-- Episode-Body wird ausschließlich `episodeContent` (also `Title — key: value · …`).
-- Vorhandene 15 Episoden mit Phantom-Entity cleasnen  
-  
-Schritt 3 — Note-Pfad: Stub-parsed_document (P1-4)
+E2E-Smoke (kritische Nutzerpfade — Vitest + Testing-Library + MSW für Supabase-Client):
 
-In `intake-process` (oder dem Pfad, der `cloud_understand` triggert): wenn `file_type='note'`, schreibe nach Trigger ein parsed_document mit `parser_version='note-direct'` und `segments=[{text: <note_body>, kind: 'note', offset: 0}]`. Damit hat jeder proposed_fact `parsed_document_id`, Provenance-Snippets funktionieren universell.
+- Upload EML → Review-UI → Commit → Fact erscheint im Project.
+- Note erfassen → Review → Commit.
+- Asset löschen → kaskadiert (aol_runs CASCADE bereits da).
 
-### Schritt 4 — Session-Dedup (P1-5)
+Fixtures + Teardown — projektspezifisch:
 
-`intake-trigger` / `intake-understand`: vor dem Anlegen einer neuen `dialog_sessions`-Zeile prüfen, ob für `(asset_id, status='open')` schon eine existiert. Wenn ja → bestehende Session schließen (`status='superseded'`) und neue erstmalige anlegen, oder die alte wiederverwenden mit zurückgesetzten Box-States. Konkrete Wahl: **superseden + neu anlegen**, behält Verlauf, vermeidet State-Mischmasch.
+- `supabase/functions/_shared/testFixtures.ts`: `seedAsset()`, `seedProposedFacts()`, `seedCanonicalFact()`, jeweils mit `cleanup(asset_id)` der per `ON DELETE CASCADE` durchläuft.
+- Alle Test-Daten markiert mit `metadata.test_run_id = uuid` → Sweeper-Function `test-data-sweep` löscht alles mit Marker älter als 1h. Schutz vor Smoke-Daten-Leichen wie diskutiert.
+- Testdaten-Workspace: separater `auth.user` `test+qa@…` und separater `project.slug = "qa-fixtures"`.
 
-### Schritt 5 — Versteckte Assets sichtbar machen (P1-6)
+Nächste 3 Schritte:
 
-Asset `113897e5` ohne assignment-box ist Symptom: nicht jeder review_ready-Lauf erzeugt eine Zuordnungs-Box, wenn der Agent „sicher" einem Projekt zuordnet. Aber wenn die Zuordnung fehlschlägt oder NULL bleibt, fehlt der UI-Einstieg.
+1. `testFixtures.ts` + `test-data-sweep` Edge Function bauen — 120 min.
+2. Unit-Tests für alle 6 reinen Frontend-Module — 180 min.
+3. Integration-Tests `commit-fact` Happy + Konflikt — 120 min.
 
-Fix: in `aol-callback` / commit-Phase prüfen, ob `proposed_facts.project_id IS NULL` für die Session — dann assignment-box erzwingen, auch wenn der Agent keine Kandidaten lieferte (zumindest „neues Projekt"-Option).
+---
 
-### Schritt 6 — Cascade-Delete für aol_runs (P2-7)
+## Phase 4 — Automatisierung (Automate)   ~4–5h
 
-Migration: `ALTER TABLE aol_runs ADD CONSTRAINT aol_runs_asset_fk FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE CASCADE`. Phase-A-Stale-Runs einmalig per Insert-Tool aufräumen.
+Ziel: Kein Commit ohne Lint+Typecheck. Kein Merge ohne grüne Tests.
 
-## Verifikation pro Schritt
+ESLint verschärfen:
 
-Jeder Schritt wird sofort gegen reale Daten geprüft:
+- `@typescript-eslint/no-unused-vars: error` (aktuell off).
+- `@typescript-eslint/no-floating-promises: error` (kritisch für Edge Functions).
+- `no-console: ["error", { allow: ["warn","error"] }]` — zwingt Nutzung des neuen `logger`.
+- `eslint-plugin-import` mit `import/order` + `no-unresolved`.
+- Custom-Regel/Pattern: `rg "console.log" supabase/functions/` muss leer sein nach Phase 2.
 
-- **Schritt 1**: `SELECT count(*) FROM canonical_facts WHERE graphiti_uuid IS NOT NULL` → 15. `SELECT count(*) FROM graphiti_sync_log WHERE status='ok'` → ≥15.
-- **Schritt 2**: Neuen Commit triggern → `railway-admin graphiti-probe` zeigt Episode ohne „produktintelligenz(system)" als Subjekt.
-- **Schritt 3**: Note-Asset re-triggern → `parsed_documents` enthält Stub.
-- **Schritt 4**: Re-Trigger Miriam → genau 1 offene Session.
-- **Schritt 5**: Asset 113897e5 zeigt assignment-box im UI.
-- **Schritt 6**: Asset löschen → zugehörige aol_runs verschwinden.
+Prettier:
 
-## Bewusste Auslassungen
+- `.prettierrc` projektweit, integriert in eslint via `eslint-config-prettier`.
 
-- **Kein synthetischer Smoke-Test.** Real-Daten decken alle Pfade ab; ein zweiter, künstlicher Lauf liefert nichts Neues.
-- **Kein UI-Drop für Reverse-Lookup** in dieser Runde. Sobald `graphiti_uuid` zuverlässig steht, kommt das als separates kleines UI-Feature.
-- **Kein Eingriff in die Bestands-Episoden** mit Phantom-Entity. Cleanup wäre Bonus; Mehrwert gering, Risiko (Edge-Löschung in Neo4j) hoch.
+Pre-commit (Husky + lint-staged):
 
-## Technische Details
+- `husky install`, `.husky/pre-commit` → `lint-staged`.
+- `lint-staged`: `*.{ts,tsx}` → `eslint --max-warnings 0` + `tsc --noEmit` auf geänderte Dateien.
 
+CI (GitHub Actions, Datei `.github/workflows/qa.yml`):
 
-| Schicht           | Datei                                                 | Änderung                                                        |
-| ----------------- | ----------------------------------------------------- | --------------------------------------------------------------- |
-| Reconciler        | neu: `supabase/functions/graphiti-reconcile/index.ts` | matched cf.id ↔ episode.uuid via `source_description`           |
-| Sync-Log          | `supabase/functions/commit-fact/index.ts`             | bei jedem mirrorToGraphiti-Versuch insert in graphiti_sync_log  |
-| Episode-Body      | `supabase/functions/_shared/graphiti.ts`              | role/role_type bleibt in payload, NICHT in content-Text         |
-| Note-Stub         | `supabase/functions/intake-process/index.ts`          | branch `if file_type='note'` → write parsed_documents           |
-| Session-Dedup     | `supabase/functions/intake-trigger/index.ts`          | upsert-by-asset, supersede vorherige                            |
-| Forced Assignment | `supabase/functions/aol-callback/index.ts`            | falls keine assignment-box generiert wurde aber project_id NULL |
-| Cascade           | neue Migration                                        | FK auf aol_runs.asset_id ON DELETE CASCADE                      |
+- Job `lint`: `npm ci && npm run lint`.
+- Job `typecheck`: `tsc --noEmit`.
+- Job `unit`: `npm test`.
+- Job `edge`: `supabase functions test` (gegen lokales Supabase).
+- Bei Fehler: PR-Status rot + Summary-Kommentar.
+- Nightly: `test-data-sweep` Edge Function via cron triggern.
 
+Nächste 3 Schritte:
 
-## Frage vor Start
+1. ESLint-Schärfung + Prettier + alle bestehenden Verstöße fixen — 90 min.
+2. Husky + lint-staged + Typecheck-Hook — 45 min.
+3. GitHub-Action `qa.yml` mit 4 Jobs — 90 min.
 
-Schritt 5 (forced assignment-box) und Schritt 4 (session-dedup) berühren UX-Verhalten. Wenn Du eine andere Strategie für Re-Trigger willst (z.B. „Nicht supersedieren, sondern stille Fakt-Updates auf bestehender Session"), sag Bescheid — sonst gehe ich mit dem oben skizzierten Default los.
+---
+
+## Priorität (was bringt sofort am meisten Sichtbarkeit)
+
+1. **Phase 2.1+2.2 zuerst** — strukturierter Logger in `commit-fact` und `intake-understand`. Macht 80 % der heutigen "warum hängt das?"-Momente sofort sichtbar.
+2. **Phase 1 Seam-Inventar** parallel — erst dann weiß Phase 3, was getestet werden muss.
+3. **Phase 4 ESLint+Husky** vor Phase 3 — verhindert, dass neue Tests gegen sich verschiebenden Code geschrieben werden.
+4. **Phase 3 Tests** zuletzt, in Reihenfolge: Fixtures → Unit → Integration → E2E.
+
+Gesamtaufwand realistisch: **24–33 h**, sinnvoll in 4 Sprints à 1 Woche.
+
+---
+
+## Deliverable dieser Plan-Runde
+
+Nach Freigabe: `QA-PLAN.md` im Projekt-Root mit obigem Inhalt + Sprint-Tracker in `NOW.md`. Keine Code-Änderung. Stopp + warten auf "Phase 1 starten".
