@@ -264,7 +264,10 @@ Deno.serve(async (req) => {
       const out: Record<string, unknown> = {};
       for (const p of paths) {
         try {
-          const r = await fetch(`${base}${p}`, { headers: { "x-api-key": key } });
+          const tid = Deno.env.get("LANGSMITH_PROMPT_OWNER") ?? "";
+          const h: Record<string, string> = { "x-api-key": key };
+          if (/^[0-9a-f-]{36}$/i.test(tid)) h["X-Tenant-Id"] = tid;
+          const r = await fetch(`${base}${p}`, { headers: h });
           const t = await r.text();
           out[p] = { status: r.status, body: t.slice(0, 500) };
         } catch (e) {
