@@ -124,3 +124,5 @@ aber die geteilten `corsHeaders` — Verhalten unverändert.
 
 [2026-05-14] Home-Screen 3-Spalten-Layout → AppSidebar (links) · Entity+HomePrompt (Mitte) · ImpactPipelinePanel (rechts) → ersetzt SideGrid+IntakeSessionsPanel im Markup. Alte Komponenten-Dateien bleiben (Cleanup nach Phase-5-Verify).
 [2026-05-14] Dialog V2 (BatchReviewOverlay+FaktDrillOverlay) parallel zur BoxRenderer-Welt → Feature-Flag `?dialogV2=1` / `localStorage.cogniDialogV2` → alte Boxen bleiben Default bis Live-Smoke. `useDialog`-Vertrag (commitBox/gateReason/session) unverändert. Token-Mapping `[data-dialog]` → `--d-blue = var(--accent)` (NICHT sig-action).
+
+[2026-05-14] shadcn ↔ Cogni Theme-Bridge → shadcn-HSL-Tokens in [data-theme="day|night"] neu zugewiesen statt alle ui/* Komponenten umzuschreiben → Reason: Single Source of Truth bleibt Cogni-Hex; ui/*-Komponenten brauchen keine Edits, Day/Night-Toggle wirkt in jeder Schicht.
