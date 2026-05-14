@@ -341,3 +341,32 @@
   0%, 100% { transform: scale(1); filter: brightness(1); }
   50%       { transform: scale(1.04); filter: brightness(1.08); }
 }
+
+/* ============================================================
+   Dialog V2 — Token-Mapping (erbt App-Theme)
+   ============================================================ */
+[data-dialog] {
+  --d-bg:        var(--surface-1);
+  --d-surf:      var(--surface-1);
+  --d-surf-2:    var(--surface-2);
+  --d-surf-3:    var(--surface-3);
+  --d-ink:       var(--ink);
+  --d-ink-2:     var(--ink-2);
+  --d-ink-3:     var(--ink-3);
+  --d-ink-4:     var(--ink-4);
+  --d-hair:      var(--hair);
+  --d-hair-2:    var(--hair-2);
+  --d-blue:      var(--accent);
+  --d-blue-soft: var(--accent-soft);
+  --d-ok:        var(--sig-action);
+  --d-ok-soft:   var(--sig-action-soft);
+  --d-warn:      var(--sig-review);
+  --d-warn-soft: var(--sig-review-soft);
+  --d-conf:      var(--sig-conflict);
+  --d-conf-soft: var(--sig-conflict-soft);
+}
+.dialog-backdrop {
+  background: color-mix(in oklab, var(--surface-0) 78%, transparent);
+  backdrop-filter: blur(28px) saturate(1.1);
+  -webkit-backdrop-filter: blur(28px) saturate(1.1);
+}
