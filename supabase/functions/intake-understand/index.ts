@@ -503,7 +503,7 @@ function linkAgainstExisting(
   f: ExtractedFact,
   existing: { id: string; fact_type: string; content: unknown }[],
 ): { delta_type: DeltaType; against_fact_id: string | null } {
-  if (f.fact_type !== "stakeholder" && f.fact_type !== "topic") {
+  if (!LINKABLE_FACT_TYPES.has(f.fact_type)) {
     return { delta_type: "add", against_fact_id: null };
   }
   const needle = (f.title ?? "").trim().toLowerCase();
@@ -523,27 +523,8 @@ function linkAgainstExisting(
   return { delta_type: "add", against_fact_id: null };
 }
 
-/** Klartext-Summary pro Fact-Type — kein Roh-JSON ans UI. */
-function factSummary(factType: string, c: Record<string, unknown>): string {
-  const s = (k: string) => (typeof c[k] === "string" ? (c[k] as string) : "");
-  switch (factType) {
-    case "stakeholder": {
-      const parts = [s("name"), s("role") && `(${s("role")})`, s("organization"), s("email")].filter(Boolean);
-      return parts.join(" · ");
-    }
-    case "decision": return s("decision") || s("title") || "Entscheidung";
-    case "task": return s("task") || s("title") || "Aufgabe";
-    case "deadline": {
-      const what = s("what") || s("title") || "Termin";
-      const when = s("when") || s("due_date");
-      return when ? `${what} — ${when}` : what;
-    }
-    case "topic": return s("topic") || s("title") || "Thema";
-    case "open_point": return s("title") || s("question") || "Offener Punkt";
-    case "reference": return s("description") || s("title") || "Referenz";
-    default: return s("title") || s("summary") || "";
-  }
-}
+/** Klartext-Summary pro Fact-Type — kein Roh-JSON ans UI. Regeln in factRules.ts. */
+const factSummary = summarizeFact;
 
 async function deterministicRunId(asset_id: string, attempt: number): Promise<string> {
   // SHA-256(asset_id|attempt) → die ersten 16 Bytes als UUID v4-ähnlich formatiert.
