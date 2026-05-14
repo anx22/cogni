@@ -388,6 +388,12 @@ Deno.serve(async (req) => {
     const caseRows: any[] = [];
 
     if (needsAssignmentBox) {
+      // Empfehlung: bei auto = Top-Kandidat, bei uncertain = Top-Kandidat,
+      // bei new = nichts (User entscheidet bewusst).
+      const recommendedProjectId =
+        assignment.mode === "auto" || assignment.mode === "uncertain"
+          ? assignment.candidates[0]?.project_id ?? null
+          : null;
       caseRows.push({
         user_id: asset.user_id,
         session_id: session!.id,
@@ -398,13 +404,14 @@ Deno.serve(async (req) => {
           assignment.mode === "auto"
             ? `Zuordnung zu „${assignment.candidates[0]?.name ?? "Projekt"}"`
             : assignment.mode === "new"
-            ? "Neues Projekt anlegen"
+            ? "Projekt wählen oder neu anlegen"
             : "Welches Projekt passt?",
         description: assignment.reason_short ?? null,
         priority: 1000, // immer ganz oben
         context: {
           assignment_mode: assignment.mode,
           candidates: assignment.candidates,
+          recommended_project_id: recommendedProjectId,
           suggested_new_name: assignment.suggested_new_name ?? null,
           agent_reason: assignment.reason_short ?? null,
           asset_id,
@@ -425,9 +432,13 @@ Deno.serve(async (req) => {
         box_type,
         box_state: "proposed",
         title: orig.title,
-        description: stringify(orig.content),
+        description: factSummary(orig.fact_type, orig.content) || orig.title,
         priority: Math.round((orig.confidence ?? 0) * 100),
-        context: { fact_type: orig.fact_type, content: orig.content },
+        context: {
+          fact_type: orig.fact_type,
+          content: orig.content,
+          summary: factSummary(orig.fact_type, orig.content),
+        },
       });
     });
 
@@ -511,13 +522,25 @@ function linkAgainstExisting(
   return { delta_type: "add", against_fact_id: null };
 }
 
-function stringify(o: Record<string, unknown>): string {
-  try {
-    return Object.entries(o)
-      .map(([k, v]) => `${k}: ${typeof v === "string" ? v : JSON.stringify(v)}`)
-      .join(" · ");
-  } catch {
-    return "";
+/** Klartext-Summary pro Fact-Type — kein Roh-JSON ans UI. */
+function factSummary(factType: string, c: Record<string, unknown>): string {
+  const s = (k: string) => (typeof c[k] === "string" ? (c[k] as string) : "");
+  switch (factType) {
+    case "stakeholder": {
+      const parts = [s("name"), s("role") && `(${s("role")})`, s("organization"), s("email")].filter(Boolean);
+      return parts.join(" · ");
+    }
+    case "decision": return s("decision") || s("title") || "Entscheidung";
+    case "task": return s("task") || s("title") || "Aufgabe";
+    case "deadline": {
+      const what = s("what") || s("title") || "Termin";
+      const when = s("when") || s("due_date");
+      return when ? `${what} — ${when}` : what;
+    }
+    case "topic": return s("topic") || s("title") || "Thema";
+    case "open_point": return s("title") || s("question") || "Offener Punkt";
+    case "reference": return s("description") || s("title") || "Referenz";
+    default: return s("title") || s("summary") || "";
   }
 }
 
