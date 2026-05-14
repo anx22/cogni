@@ -240,12 +240,30 @@ const Index = () => {
     });
   }, []);
 
+  // Lock body scroll on Home — kein Bounce in Safari, voller Touch für die Entität.
+  useEffect(() => {
+    const { body, documentElement: html } = document;
+    const prev = {
+      bodyOverflow: body.style.overflow,
+      htmlOverflow: html.style.overflow,
+      bodyOverscroll: body.style.overscrollBehavior,
+    };
+    body.style.overflow = "hidden";
+    html.style.overflow = "hidden";
+    body.style.overscrollBehavior = "none";
+    return () => {
+      body.style.overflow = prev.bodyOverflow;
+      html.style.overflow = prev.htmlOverflow;
+      body.style.overscrollBehavior = prev.bodyOverscroll;
+    };
+  }, []);
+
   if (loading || !session) return null;
 
   return (
     <div
-      className="relative flex w-full min-h-screen overflow-hidden"
-      style={{ background: "var(--surface-0)" }}
+      className="relative flex w-full overflow-hidden overscroll-none"
+      style={{ background: "var(--surface-0)", height: "100dvh" }}
       onDragEnter={handleWindowDragEnter}
       onDragOver={handleWindowDragOver}
       onDragLeave={handleWindowDragLeave}
