@@ -251,6 +251,21 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (action === "langsmith-list-workspaces") {
+      const k = Deno.env.get("LANGSMITH_API_KEY") ?? "";
+      const orgId = Deno.env.get("LANGSMITH_PROMPT_OWNER") ?? "";
+      const r = await fetch("https://api.smith.langchain.com/api/v1/workspaces?include_deleted=false", {
+        headers: {
+          "X-API-Key": k,
+          "X-Organization-Id": orgId,
+        },
+      });
+      const text = await r.text();
+      return new Response(JSON.stringify({ ok: true, status: r.status, body: text.slice(0, 2000) }, null, 2), {
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
+    }
+
     if (action === "langsmith-write-probe") {
       const key = Deno.env.get("LANGSMITH_API_KEY") ?? "";
       const r = await fetch("https://api.smith.langchain.com/api/v1/repos/", {
