@@ -1,35 +1,89 @@
-## Tier B1 — Quick Wins (5 Refactors, alle Verhalten-neutral)
+# Tier B2 — Mittlere Refactors
 
-Reihenfolge nach Risiko (klein → groß), jede Aufgabe einzeln verifiziert.
+Verhalten-neutral. Nach jedem Schritt: vitest + Health-Panel-Smoketest grün.
 
-### B1.1 Date-Formatter konsolidieren
-- **Neu:** `src/lib/format/dateFormatters.ts` mit `fmtLong`, `fmtShort`, `fmtTime`, `ageInDays`, `toTimestamp`. `relativeTime.ts` re-exportieren oder integrieren.
-- **Ersetzen in:** `useProject.ts`, `DialogOverlay.tsx`, `IntakeSessionsPanel.tsx`, `SideGrid.tsx`, `SubstanzSection.tsx`, `InspectorPanel.tsx`.
-- **Verify:** `rg "toLocaleDateString" src/` außerhalb `dateFormatters.ts` = 0. Vitest grün.
+## Status-Check vorab
+- **B2.2 (Mapper auslagern)** ist faktisch bereits in **A3.2** erledigt: `projectViewModel.ts` (467 LOC) enthält `toKonflikte`, `toHandlungsbedarf` etc., `useProject.ts` ist nur noch 42 LOC. Daher entfällt B2.2 bis auf eine kleine Aufräum-/Aufteilungs-Aktion (siehe B2.2*).
+- **B2.1, B2.3, B2.4** stehen voll an.
 
-### B1.2 Map-Utilities extrahieren
-- **In:** `src/lib/utils.ts` ergänzen: `mapById<T extends {id:string}>(items)`, `countBy<T>(items, key)`.
-- **Ersetzen in:** `useProjectData.ts` / `useProject.ts`, `useProjects.ts`.
-- **Verify:** Vitest grün, projectViewModel-Tests unverändert.
+---
 
-### B1.3 HTTP-Response-Wrapper
-- **Neu:** `supabase/functions/_shared/http.ts` mit `corsHeaders`, `ok(payload, init?)`, `fail(message, status?)`, `handleOptions(req)`.
-- **Ersetzen in:** allen Edge Functions mit lokaler `ok`/`fail`/`corsHeaders`-Definition (~10 Functions).
-- **Verify:** OPTIONS-Preflight + ein erfolgreicher Call pro Function via `supabase--curl_edge_functions` (Sample: commit-fact, inspect-pipeline, railway-admin).
+## B2.1 — `useRealtimeTables` Hook
+**Ziel:** Channel-Boilerplate (subscribe + unsubscribe + Debounce) zentralisieren.
 
-### B1.4 SectionHeader + CardList
-- **Neu:** `src/components/project/shared/SectionHeader.tsx`, `CardList.tsx`.
-- **Ersetzen in:** `HandlungsbedarfList`, `VerlaufFeed`, `SubstanzSection`, `LageZone`.
-- **Verify:** Build grün, visuell unverändert (Markup vergleichen, Klassen identisch übernehmen).
+**Neu:** `src/lib/realtime/useRealtimeTables.ts`
+```ts
+useRealtimeTables(
+  channelName: string,
+  tables: { table: string; event?: '*'|'INSERT'|'UPDATE'|'DELETE'; filter?: string }[],
+  onTrigger: () => void,
+  options?: { debounceMs?: number; enabled?: boolean }
+): void
+```
 
-### B1.5 Unified Auth Helper
-- **Neu:** `supabase/functions/_shared/auth.ts` mit `getAuthenticatedUser(req)` → `{ok, userId, user, client}` | `{ok:false, error, status}`.
-- **Ersetzen in:** `commit-fact`, `asset-delete`, `project-delete`, `intake-trigger`, `voice-transcribe`, `aol-callback`.
-- **Verify:** Curl ohne Token → 401, mit Token (Preview-Session) → 200 für GET-/Status-Pfade. `commit-fact` Happy-Path mit Sandbox-review_case erneut grün.
+**Migrieren (10 Stellen):**
+- `src/lib/project/useProjectData.ts` (project-${id} Channel)
+- `src/lib/project/useProjects.ts` (projects-list Channel)
+- `src/pages/Index.tsx` (3 listener)
+- `src/pages/PipelineHealth.tsx`
+- `src/components/entity/IntakeSessionsPanel.tsx`
+- `src/components/entity/RecentAssets.tsx`
+- `src/lib/voice/useEntityVoice.ts` (5 listener — selber Channel)
+- `src/lib/settings/useNamespace.ts`
 
-### Doku
-- `docs/NOW.md`: Tier B1 abgeschlossen, gespeicherte Zeilen (~405 LOC).
-- `docs/DECISIONS.md`: kurzer Eintrag "Shared HTTP/Auth-Helpers in `_shared/`" als Pattern für künftige Functions.
+**Verify:** Vitest grün, manuell: Asset-Upload triggert Liste, Dialog-Session-Updates kommen live an, Project-View aktualisiert.
 
-### Out of scope (Tier B2+)
-Realtime-Hook, Mapper-Auslagerung, Inspector-Merge, Service-Clients — explizit nicht in dieser Runde.
+---
+
+## B2.2* — Mapper-Datei aufteilen (Mini)
+`projectViewModel.ts` (467 LOC) in Mapper-Module zerlegen:
+- `mappers/konfliktMapper.ts`, `gapMapper.ts`, `dependencyMapper.ts`, `handlungsbedarfMapper.ts`, `verlaufMapper.ts`
+- `projectViewModel.ts` wird Composition (`buildProjectViewModel`) ~50 LOC.
+- Tests aus `projectViewModel.test.ts` analog splitten.
+
+**Verify:** 60 Tests bleiben grün, Verhalten identisch.
+
+---
+
+## B2.3 — Inspector-Functions zusammenführen
+**Option B (gewählt, weniger Bruch):** Functions bleiben, aber Skelett über `_shared/inspector.ts` standardisieren.
+
+**Neu:** `supabase/functions/_shared/inspector.ts`
+```ts
+export function runInspector(
+  fn: string,
+  req: Request,
+  probes: Record<string, () => Promise<ProbeResult>>
+): Promise<Response>
+```
+Übernimmt: CORS, Auth, withErrorBoundary, Logger, einheitliches Response-Format `{ ok, probes: {...}, took_ms }`.
+
+**Migrieren:** `inspect-pipeline`, `inspect-graphiti`, `inspect-langsmith`, `inspect-railway`. Pro Function bleibt nur die Probe-Map.
+
+**Verify:** Health-Panel zeigt alle 4 Inspektoren weiter korrekt (curl + UI-Smoke).
+
+---
+
+## B2.4 — External-Service-Clients zentralisieren
+**Neu:** `supabase/functions/_shared/clients/`
+- `langsmith.ts` — EU-Region, `x-tenant-id` Header, `query()`, `listPrompts()`, `getRun()`.
+- `railway.ts` — GraphQL-Wrapper um `RAILWAY_API_TOKEN` (`gql(query, vars)`).
+- `graphiti.ts` — bereits teilweise vorhanden in `_shared/graphiti.ts`; konsolidieren mit `post('/messages', …)`, `query()`, einheitlicher Token-/URL-Handling.
+
+**Migrieren:** `inspect-langsmith`, `inspect-railway`, `inspect-graphiti`, `railway-admin` (alle GraphQL-Calls), `commit-fact` (Graphiti-Sync).
+
+**Verify:** Inspektoren grün, `railway-admin` Aktionen `list`/`diagnose`/`graphiti-probe` erfolgreich (curl), `commit-fact` Happy-Path grün.
+
+---
+
+## Reihenfolge & Out-of-Scope
+1. B2.1 (Realtime-Hook) — niedrigstes Risiko, größter LOC-Win.
+2. B2.4 (Clients) — Voraussetzung für sauberes B2.3.
+3. B2.3 (Inspector-Skelett) — baut auf B2.4 auf.
+4. B2.2* (Mapper-Split) — abschließend.
+
+**Nicht enthalten:** B3 (Dialog-Box-Builder, railway-admin-Modularisierung), neue Features.
+
+## Doku
+- `docs/NOW.md`: Tier B2 Abschluss + LOC-Bilanz.
+- `docs/DECISIONS.md`: Eintrag „Inspector-Skelett über `_shared/inspector.ts` statt Single-Function" und „Service-Clients in `_shared/clients/`".
