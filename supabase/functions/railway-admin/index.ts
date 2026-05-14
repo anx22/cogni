@@ -169,12 +169,16 @@ Deno.serve(async (req) => {
 
     if (action === "langsmith-raw") {
       const k = Deno.env.get("LANGSMITH_API_KEY") ?? "";
-      const base = body.base ?? Deno.env.get("LANGSMITH_BASE_URL") ?? "https://eu.api.smith.langchain.com";
+      const base = body.base ?? Deno.env.get("LANGSMITH_ENDPOINT") ?? Deno.env.get("LANGSMITH_BASE_URL") ?? "https://eu.api.smith.langchain.com";
       const path: string = body.path;
       const method: string = (body.method ?? "GET").toUpperCase();
       const extraHeaders: Record<string, string> = body.headers ?? {};
       const reqBody = body.body;
       const headers: Record<string, string> = { "x-api-key": k, ...extraHeaders };
+      const workspaceId = Deno.env.get("LANGSMITH_WORKSPACE_ID");
+      if (workspaceId && !Object.keys(headers).some((h) => h.toLowerCase() === "x-tenant-id")) {
+        headers["x-tenant-id"] = workspaceId;
+      }
       if (reqBody !== undefined && reqBody !== null && !headers["Content-Type"]) {
         headers["Content-Type"] = "application/json";
       }
@@ -199,7 +203,9 @@ Deno.serve(async (req) => {
         length: k.length,
         prefix: k.slice(0, 8),
         suffix: k.slice(-4),
-        owner_env: Deno.env.get("LANGSMITH_PROMPT_OWNER") ?? null,
+        endpoint: Deno.env.get("LANGSMITH_ENDPOINT") ?? Deno.env.get("LANGSMITH_BASE_URL") ?? "https://eu.api.smith.langchain.com",
+        workspace_id_present: !!Deno.env.get("LANGSMITH_WORKSPACE_ID"),
+        owner_env_legacy: Deno.env.get("LANGSMITH_PROMPT_OWNER") ?? null,
       }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
