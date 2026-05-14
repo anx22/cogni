@@ -28,6 +28,8 @@ const SideGrid = ({
   onProjectClick,
   onCreateProject,
   isDragActive,
+  error,
+  onRetry,
 }: SideGridProps) => {
   const [page, setPage] = useState(0);
   const tileRefs = useRef<Array<HTMLButtonElement | null>>([]);
