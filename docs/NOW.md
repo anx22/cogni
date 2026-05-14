@@ -17,8 +17,8 @@ Stand 2026-05-14. Vorbereitung + Phase 1 abgeschlossen. Master-Quelle: `docs/des
 | 2 | LageZone Hero (44px Title, 24px Lage, Atmosphären-Stripe + Glow) | ✅ |
 | 3 | AppSidebar (240px) + Mini-Entity, ProjectScreen-Layout (Handlungsbedarf links / Verlauf rechts) | ✅ |
 | 4 | Home-Screen 3-spaltig: Sidebar · Entity+HomePrompt · ImpactPipelinePanel | ✅ Vitest 60/60, tsc clean |
-| 5 | Dialog V2: BatchReviewOverlay + FaktDrillOverlay hinter Flag (`?dialogV2=1` / `localStorage.cogniDialogV2`) — alte Boxen bleiben Default bis Live-Smoke grün | ⚠ Cleanup offen |
-| 6 | AssetOrbit (optional) | ⏳ |
+| 5 | Dialog V2 default: BatchReviewOverlay + FaktDrillOverlay, alte BoxRenderer/BoxFrame/BoxStateBadge + 8 Box-Komponenten gelöscht | ✅ Vitest 60/60 |
+| 6 | AssetOrbit (oberer Bogen 225°, Realtime auf assets+dialog_sessions, Klick auf review-ready öffnet Session) | ✅ |
 
 **Stopp-Bedingungen:** keine `src/lib/**`-Edits außer Format-Dateien; `ProjectViewModel`-Vertrag unberührt; Schema/Edge Functions tabu; alte Boxen erst nach Phase-5-Verify löschen; `data-theme` darf nicht durch `.dark` ersetzt werden.
 

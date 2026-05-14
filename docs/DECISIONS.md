@@ -2,6 +2,11 @@
 
 Format: `[YYYY-MM-DD] Problem → Choice → Reason`
 
+## 2026-05-14 — UI-Overhaul v2 Phase 5+6 Abschluss
+
+- `2026-05-14` Dialog V2 hinter Flag oder default? → **Default**. `useDialogV2Flag` und Legacy-Branch in `DialogOverlay.tsx` entfernt, alle 11 alten Dialog-Komponenten gelöscht (`BoxRenderer`, `BoxFrame`, `BoxStateBadge` + 8 Box-Varianten in `boxes/`). `useDialog`/`DialogProvider`/`sessionFactories` unverändert (Vertrag). Single-Box-Sessions → `FaktDrillOverlay`, sonst `BatchReviewOverlay`. Verify: Vitest 60/60, tsc clean.
+- `2026-05-14` AssetOrbit als orbitierende Chips um die Entität → **eigene Komponente `src/components/entity/AssetOrbit.tsx`**, nutzt direkten Supabase-Read (analog `RecentAssets`), Realtime auf `assets` + `dialog_sessions`, kein `src/lib/`-Eingriff. Status-Ableitung: `parsing` (processing/pending), `understanding` (understanding_status='running'), `failed` (failed/rate_limited/payment_required), `review-ready` (offene `dialog_sessions` für `trigger_ref_id=asset.id`). Klick auf review-ready → `openSessionFromDB`. Geometrie: oberer 225°-Bogen, Radien 250/290px, ageRing-Falloff. Mobile (`<md`) ausgeblendet wegen Kollision mit HomePrompt + Touch-Entity.
+
 ## 2026-05-14 — UI-Overhaul v2 Phase 1
 
 - `2026-05-14` Theme-System wechselt von `:root`/`.dark` HSL auf cogni-Hex-Tokens → **dual betrieben**: shadcn-Tokens (`:root`/`.dark`, HSL) bleiben, cogni-Tokens kommen additiv unter `[data-theme="day"|"night"]` (Hex). Vorteil: shadcn-Komponenten unverändert, neuer cogni-Layer überlagert. `data-theme="day"` als Default am `<html>` in `App.tsx` gesetzt. Tailwind-Aliase `c-surface-*`, `c-ink-*`, `sig-*`, `c-accent*` zeigen direkt auf die CSS-Vars (kein `hsl()` Wrapper). Geist + Geist Mono über Google Fonts in `index.html`. Utility-Klassen `.t-*`, `.dot--*`, `.chip*`, `.cogni-btn*`, `.kbd`, `.cogni-card`, `.hairline`, `.atmosphere-stripe`, `cogni-pulse`, `cogni-entity-breathe` in `src/index.css`. Verify: Vitest 60/60.
