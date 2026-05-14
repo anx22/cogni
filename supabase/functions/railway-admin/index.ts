@@ -179,6 +179,31 @@ Deno.serve(async (req) => {
       }), { headers: { ...cors, "Content-Type": "application/json" } });
     }
 
+    if (action === "langsmith-auth-matrix") {
+      const k = Deno.env.get("LANGSMITH_API_KEY") ?? "";
+      const tenantHint = Deno.env.get("LANGSMITH_PROMPT_OWNER") ?? "";
+      const url = "https://api.smith.langchain.com/api/v1/sessions?limit=1";
+      const variants: Record<string, Record<string, string>> = {
+        "x-api-key": { "x-api-key": k },
+        "X-API-Key": { "X-API-Key": k },
+        "Authorization Bearer": { Authorization: `Bearer ${k}` },
+        "x-api-key + X-Tenant-Id": { "x-api-key": k, "X-Tenant-Id": tenantHint },
+        "Bearer + X-Tenant-Id": { Authorization: `Bearer ${k}`, "X-Tenant-Id": tenantHint },
+      };
+      const out: Record<string, unknown> = {};
+      for (const [name, headers] of Object.entries(variants)) {
+        try {
+          const r = await fetch(url, { headers });
+          out[name] = { status: r.status, body: (await r.text()).slice(0, 200) };
+        } catch (e) {
+          out[name] = { error: String(e) };
+        }
+      }
+      return new Response(JSON.stringify({ ok: true, results: out }, null, 2), {
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
+    }
+
     if (action === "langsmith-write-probe") {
       const key = Deno.env.get("LANGSMITH_API_KEY") ?? "";
       const r = await fetch("https://api.smith.langchain.com/api/v1/repos/", {
