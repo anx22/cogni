@@ -5,19 +5,23 @@
 
 ---
 
-## Aktueller Sprint — Welle B vollständig (B-W4 Dependency-Detector live)
+## Aktueller Sprint — Welle B abgeschlossen, Konsolidierung
 
-Stand 2026-05-14, 14:30 UTC:
+Stand 2026-05-14, post-Audit:
 
-- **B-W4 Dependency-Detector deployed.** `commit-fact/dependencyDetector.ts` (deterministisch, fail-soft) erkennt nach jedem Canonical-Commit Abhängigkeiten und schreibt nach `dependencies`:
-  - `blockiert_durch`: task mit Trigger-Phrase ("blockiert von/durch", "wartet auf", "abhängig von", "depends on", "blocked by") + Title-Substring-Match auf anderen task/decision/deadline.
-  - `wartet_auf`: deadline mit Title-/Description-Substring auf eine decision.
-  - `haengt_ab_von`: bleibt im Kernel für `fact_type === "reference"`.
-  Idempotent über `(source_id, target_id, dependency_type)`. Token-Längenfilter ≥ 4, case-insensitive.
-- **Integration:** `commit-fact/kernel.ts` ruft Conflict + Gap + Dependency parallel via `Promise.all` nach `mirrorToGraphiti`. UI (`DependencyVM`/`mappers/dependencies.ts`) liest realtime — unverändert.
-- **Tests:** 8 neue Pure-Tests in `dependencyDetector_test.ts`. Suite commit-fact: **36/36 grün** (4 commitFact + 6 conflictDetector + 8 gapDetector + 8 dependencyDetector + 10 projectScoring).
-- **Welle B abgeschlossen:** B-W1 Linker (Graph-Match), B-W2 Conflict, B-W3 Gap, B-W4 Dependency — alle live.
-- **Backlog nach vorne gerückt:** Browser-E2E (Playwright), React Query (Wave 3), Tier B Quick Wins, LLM-Heuristiken (Wave 3).
+- **Welle B komplett:** B-W1 Linker (Graph-Match) · B-W2 Conflict · B-W3 Gap · B-W4 Dependency — alle live, fail-soft, idempotent, parallel via `Promise.all` nach `mirrorToGraphiti`.
+- **Tests:** commit-fact 36/36 grün (4 commitFact + 6 conflict + 8 gap + 8 dep + 10 projectScoring) · Vitest 60/60 · Deno gesamt 50/50.
+- **Detektor-Footprint Sandbox:** Reels-Projekt zeigt 1 Dep + 1 Gap; übrige Sandbox-Projekte zu klein/sauber für Treffer. Pfad ist verdrahtet — kein Bug, Datenmangel.
+- **A-Tier + B-Tier + Welle B:** keine offene strukturelle Schuld. Verbleibende Punkte sind Loops (Sync-Diagnose, console.warn) oder bewusst Wave-3-Backlog.
+- **Audit-Detail:** `docs/audit-2026-05-14.md` → Re-Audit-Abschnitt am Ende.
+
+### Echte Restschuld (Loops, nicht Features)
+
+1. **Graphiti-Sync-Diagnose** — 24h: 29 ok / 10 failed / 24 queued. Diagnose via `inspect-graphiti diagnose` als eigener Loop.
+2. **`_shared/` console.warn → Logger** — 12 best-effort-Stellen (graphiti, promptHub, agentClient, testFixtures, logger).
+3. **Vier-Rollen-Screen User-Smoke** — 5-min Klickpfad nach Welle B.
+4. **Welle-B-Use-Case-Smoke** — 1 Task „blockiert von …" in Sandbox, Dep-Karte verifizieren.
+
 
 ### Vorheriger Sprint — Welle B-W3 Gap-Detector live
 
