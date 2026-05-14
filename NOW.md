@@ -38,6 +38,7 @@ Status der vier QA-Phasen (Stand 2026-05-14):
 
 ## Recently completed
 
+- **2026-05-14 (Stage 7)** QA-Audit-Plan abgeschlossen. (a) Logger in `voice-transcribe`, `asset-delete`, `project-delete` eingezogen — Logger-Abdeckung 11/16 (alle hot-path & user-facing Funktionen, Inspector/Admin bewusst ausgespart). (b) `agentClient.ts`: 2 verbleibende `console.log` → `console.warn`. (c) CI-Smoke-Job `smoke` in `qa.yml`: blockt Build, sobald `console.log` (außer in `_shared/logger.ts`) im Edge-Tree auftaucht. (d) `aol-callback` refaktoriert: pure `handleCallback({admin,payload,log})` extrahiert, 5 Deno-Tests (running / completed / failed / leere run_id / db-error) → Deno 18/18 grün. (e) Drei E2E-Smokes als Hook-Integration in `src/test/e2e-smokes.test.ts` (Note→intake-trigger, Asset-Delete, Fakt-Retract) → Vitest 40/40 grün.
 - **2026-05-14 (Stage 6)** `pollAolRun` getestet (4 Pfade: completed/failed/timeout/abort, MSW-frei via `vi.mock` + Fake-Timers) → Vitest 37/37 grün. `_shared/withErrorBoundary.ts` als Pflicht-Wrapper für jede Edge Function eingeführt (Last-Resort-Catch → strukturierter Logger + 500-Hülle mit `correlation_id` + automatischer CORS-Preflight). Alle 16 Edge Functions gewrappt und deployed.
 
 - **2026-05-14 (Stage 4)** `commit-fact` testbar: pure `commitFact({admin,user,payload,log})` aus `Deno.serve`-Closure extrahiert (HTTP-Wrapper bleibt dünn). `mockAdmin()` in `_shared/testFixtures.ts` (chainable thenable mit Stub-Queue + Call-Recorder). 3 Deno-Tests (`commitFact_test.ts`): Happy / NEEDS_ASSIGNMENT / Reject. Suite jetzt 13/13 grün.
