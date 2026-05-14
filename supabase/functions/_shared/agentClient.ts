@@ -198,15 +198,20 @@ ${projectsBlock}
 ## Lexikalische Hinweise
 ${hintsBlock}`;
 
+  const prompt = await getPrompt("suggest-assignment", {
+    fallback: ASSIGNMENT_SYSTEM_PROMPT_FALLBACK,
+    autoCreate: true,
+  });
   const data = await callGateway({
     model: AGENT_MODEL,
     messages: [
-      { role: "system", content: ASSIGNMENT_SYSTEM_PROMPT },
+      { role: "system", content: prompt.system },
       { role: "user", content: userMsg },
     ],
     tools: [SUGGEST_ASSIGNMENT_TOOL],
     tool_choice: { type: "function", function: { name: "suggest_project_assignment" } },
   });
+  console.log(`agent.suggest_assignment prompt_version=${prompt.version} source=${prompt.source}`);
 
   const parsed = parseToolArgs(data, "suggest_project_assignment") as
     | AssignmentSuggestion
