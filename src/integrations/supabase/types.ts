@@ -1008,6 +1008,60 @@ export type Database = {
         }
         Relationships: []
       }
+      pipeline_events: {
+        Row: {
+          asset_id: string | null
+          correlation_id: string | null
+          duration_ms: number | null
+          error: Json | null
+          fn: string
+          id: string
+          level: string
+          message: string | null
+          payload: Json | null
+          project_id: string | null
+          run_id: string | null
+          session_id: string | null
+          stage: string
+          ts: string
+          user_id: string | null
+        }
+        Insert: {
+          asset_id?: string | null
+          correlation_id?: string | null
+          duration_ms?: number | null
+          error?: Json | null
+          fn: string
+          id?: string
+          level?: string
+          message?: string | null
+          payload?: Json | null
+          project_id?: string | null
+          run_id?: string | null
+          session_id?: string | null
+          stage: string
+          ts?: string
+          user_id?: string | null
+        }
+        Update: {
+          asset_id?: string | null
+          correlation_id?: string | null
+          duration_ms?: number | null
+          error?: Json | null
+          fn?: string
+          id?: string
+          level?: string
+          message?: string | null
+          payload?: Json | null
+          project_id?: string | null
+          run_id?: string | null
+          session_id?: string | null
+          stage?: string
+          ts?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       project_stakeholder_links: {
         Row: {
           created_at: string
