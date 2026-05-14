@@ -10,7 +10,7 @@ import { createLogger } from "../_shared/logger.ts";
 import { withErrorBoundary } from "../_shared/withErrorBoundary.ts";
 import { ok, fail, handleOptions } from "../_shared/http.ts";
 
-export default withErrorBoundary("smoke-welle-b", async (req: Request) => {
+const handler = withErrorBoundary("smoke-welle-b", async (req: Request) => {
   const opt = handleOptions(req);
   if (opt) return opt;
 
@@ -37,4 +37,4 @@ export default withErrorBoundary("smoke-welle-b", async (req: Request) => {
   return ok(result);
 });
 
-Deno.serve(await import("./index.ts").then((m) => m.default));
+Deno.serve(handler);
