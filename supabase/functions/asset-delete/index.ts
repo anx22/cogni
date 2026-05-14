@@ -38,13 +38,19 @@ Deno.serve(withErrorBoundary("asset-delete", async (req) => {
   if (!asset_id) return json({ error: "asset_id" }, 400);
 
   const admin = createClient(url, service);
+  const log = createLogger({ fn: "asset-delete", userId, client: admin });
+  log.stage("enter", "deleting asset", { asset_id });
 
   const { data: asset } = await admin
     .from("assets")
     .select("id, user_id, storage_path")
     .eq("id", asset_id)
     .maybeSingle();
-  if (!asset || asset.user_id !== userId) return json({ error: "forbidden" }, 403);
+  if (!asset || asset.user_id !== userId) {
+    log.warn("forbidden", "asset not owned", { asset_id });
+    await log.flush();
+    return json({ error: "forbidden" }, 403);
+  }
 
   // Find related parsed_documents and sources (by asset_id)
   const { data: pdocs } = await admin
@@ -54,7 +60,6 @@ Deno.serve(withErrorBoundary("asset-delete", async (req) => {
   const pdocIds = (pdocs ?? []).map((r) => r.id);
   const srcIds = (srcs ?? []).map((r) => r.id);
 
-  // Delete proposed_facts that reference these parsed_documents or sources
   if (pdocIds.length > 0) {
     await admin.from("proposed_facts").delete().in("parsed_document_id", pdocIds);
   }
@@ -66,13 +71,21 @@ Deno.serve(withErrorBoundary("asset-delete", async (req) => {
   await admin.from("aol_runs").delete().eq("asset_id", asset_id);
 
   const { error: dErr } = await admin.from("assets").delete().eq("id", asset_id);
-  if (dErr) return json({ error: dErr.message }, 500);
+  if (dErr) {
+    log.error("delete", "assets.delete failed", dErr);
+    await log.flush();
+    return json({ error: dErr.message }, 500);
+  }
 
   if (asset.storage_path) {
     try {
       await admin.storage.from("intake-files").remove([asset.storage_path]);
-    } catch { /* ignore */ }
+    } catch (err) {
+      log.warn("storage", "remove failed (ignored)", { err: String(err) });
+    }
   }
 
+  log.stage("exit", "asset deleted", { pdocs: pdocIds.length, sources: srcIds.length });
+  await log.flush();
   return json({ ok: true });
 }));
