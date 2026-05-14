@@ -179,11 +179,17 @@ Deno.serve(withErrorBoundary("inspect-pipeline", async (req) => {
       !body.correlation_id &&
       !body.recent
     ) {
+      log.warn("input", "no selector provided");
+      await log.flush();
       return fail(400, "asset_id, run_id, project_id, correlation_id or recent required");
     }
 
+    log.stage("done", "trace built");
+    await log.flush();
     return ok({ trace });
   } catch (e) {
+    log.error("query", "pipeline trace failed", e);
+    await log.flush();
     return fail(500, "pipeline trace failed", { detail: String((e as Error).message ?? e) });
   }
 }));
