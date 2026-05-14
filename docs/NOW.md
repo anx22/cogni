@@ -1,8 +1,7 @@
 # NOW — Aktueller Sprint & Backlog
 
 > Co-Doku zu `AGENTS.md`, `PRODUCT.md`, `ARCHITECTURE.md`, `DECISIONS.md`.
-> QA-Historie und Audit-Befund liegen in `docs/qa-historie.md`,
-> Seam-Inventar in `docs/qa-seam-inventar.md`.
+> Seam-Inventar (lebende QA-Karte) in `./qa-seam-inventar.md`.
 
 ---
 
@@ -44,4 +43,5 @@ Logger-Abdeckung 11/16 (alle Hot-Path) · Graphiti-Mirror wieder ~100 %.
 - **2026-05-14 (Stage 5–6)** Phase-4-Gate scharf: ESLint-Regeln `no-unused-vars`/`prefer-const`/`eqeqeq`/`no-console` (Browser) → **error**. Prettier 3 + Husky 9 + lint-staged 17, Nightly-Cron `qa-nightly.yml` (03:17 UTC). `_shared/withErrorBoundary.ts` als Pflicht-Wrapper auf alle 16 Edge Functions. `pollAolRun` getestet (4 Pfade, Fake-Timers).
 - **2026-05-14 (Stage 3–4)** `commit-fact` testbar: pure `commitFact()` aus `Deno.serve` extrahiert, `mockAdmin()` mit Stub-Queue + Call-Recorder, 3 Deno-Tests (Happy / NEEDS_ASSIGNMENT / Reject). Console-Sweep in `intake-process`/`intake-understand`/`commit-fact`.
 - **2026-05-14 (Sprint Sofort)** Graphiti-422-Fix: `addMessage()` setzt `role="user"`-Default, `graphiti-backfill` Edge Function zieht 20 ungemirrorte canonical_facts nach. `intake-trigger` voll instrumentiert.
-- **2026-05-14** Doku-Konsolidierung: Workspace-5-Datei-System eingeführt (`AGENTS.md`/`PRODUCT.md`/`ARCHITECTURE.md`/`NOW.md`/`DECISIONS.md`). QA-Plan + Audit-Report → `docs/qa-historie.md`. Alte `docs/produkt-gesamt.md`/`implementierung-aktuell.md`/`geplant.md` entfernt.
+- **2026-05-14** Doku-Konsolidierung Schritt 2: alle Detail-Docs (`PRODUCT`/`ARCHITECTURE`/`NOW`/`DECISIONS`) nach `docs/` verschoben, in der Wurzel bleiben nur `AGENTS.md` + `README.md`. `docs/qa-historie.md` aufgelöst (Methodik + Stages → `DECISIONS.md`, Endmetriken → hier oben). `docs/qa-seam-inventar.md` bleibt als lebende Referenztabelle.
+- **2026-05-14** Doku-Konsolidierung Schritt 1: Workspace-5-Datei-System eingeführt. Alte `docs/produkt-gesamt.md`/`implementierung-aktuell.md`/`geplant.md` entfernt.
