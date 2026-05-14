@@ -5,7 +5,34 @@
 
 ---
 
-## Aktueller Sprint — Tier B2 abgeschlossen
+## Aktueller Sprint — Tier B3 abgeschlossen
+
+Stand 2026-05-14 (Tier B3 — Größere Restrukturierungen):
+
+- **B3.2 `railway-admin` modularisiert** → 599-LOC-Monolith → Router (72 LOC)
+  + `_helpers.ts` (145 LOC) + 6 Domänen-Handler unter `handlers/`
+  (railway 100, langsmith 201, graphiti 125, aol 36, promptHub 44, diagnose 53).
+  Verhalten 1:1 erhalten — keine Action umbenannt, keine Response-Schemas
+  geändert. Verify: 4 Stichproben (`list`, `langsmith-key-info`, `prompt-state`,
+  `unknown-foo`) liefern identische Antworten + 400 für unbekannte Action.
+- **B3.1\* Box-Hook** → `useBoxSubmit(box, opts)` in
+  `src/lib/dialog/useBoxSubmit.ts`. Migriert: `AuswahlBox`, `KonfliktBox`,
+  `GapBox`. Bewusst nicht migriert: `EingabeBox` (eigener closeDialog-Pfad),
+  `ZuordnungsBox` (genuin komplex), `Wissens/Kontext/AktionsBox` (zu klein
+  für Hook-Win). **Voller `BoxBuilder` aus dem Originalplan abgelehnt** —
+  Realitätscheck zeigte: Scaffolding ist bereits in `BoxFrame` extrahiert,
+  weitere Indirektionsschicht ohne Lines-Win + zusätzliches Risiko. Begründung
+  in DECISIONS.md.
+
+Verify: Vitest 60/60 grün. `railway-admin` deployed.
+
+### Vorher/jetzt-Endmetriken
+Vitest 10 Files / 60 Tests · `railway-admin` jetzt 6 testbare Domänen-Module
+(jeweils <210 LOC) statt 599-LOC-Monolith · Box-Submit-Pattern in einem Hook.
+
+---
+
+## Vorheriger Sprint — Tier B2 abgeschlossen
 
 Stand 2026-05-14 (Tier B2 — Mittlere Refactors):
 
