@@ -127,6 +127,7 @@ const SideGrid = ({
               <ProjectTile
                 key={p.id}
                 ref={(el) => (tileRefs.current[idx] = el)}
+                id={p.id}
                 name={p.name}
                 initial={p.initial}
                 isActive={p.id === activeId}
