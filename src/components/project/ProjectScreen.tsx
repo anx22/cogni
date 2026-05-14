@@ -26,7 +26,7 @@ const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
   const [dragActive, setDragActive] = useState(false);
   const realProjectId = isUuid(projectId) ? projectId : null;
   const { intake } = useIntake({ projectId: realProjectId });
-  const { status, project, error } = useProject(realProjectId);
+  const { status, project, error, vanished } = useProject(realProjectId);
 
   // Demo-/Fake-IDs: zurück zur Entität mit Hinweis
   useEffect(() => {
@@ -38,11 +38,21 @@ const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
     }
   }, [projectId, realProjectId, onBack]);
 
+  // Projekt gelöscht oder archiviert während wir es ansehen → sauber raus.
   useEffect(() => {
-    if (status === "error" && error) {
+    if (vanished) {
+      toast.message("Projekt nicht mehr verfügbar", {
+        description: error ?? "Es wurde gelöscht oder archiviert.",
+      });
+      onBack();
+    }
+  }, [vanished, error, onBack]);
+
+  useEffect(() => {
+    if (status === "error" && error && !vanished) {
       toast.error("Projekt konnte nicht geladen werden", { description: error });
     }
-  }, [status, error]);
+  }, [status, error, vanished]);
 
   const onDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
