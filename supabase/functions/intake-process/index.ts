@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { createLogger } from "../_shared/logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -19,12 +20,15 @@ Deno.serve(async (req) => {
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const unstructuredKey = Deno.env.get("UNSTRUCTURED_API_KEY")!;
   const admin = createClient(supabaseUrl, serviceKey);
+  const log = createLogger({ fn: "intake-process", client: admin });
 
   let asset_id = "";
   try {
     const body = (await req.json()) as Payload;
     asset_id = body.asset_id;
     if (!asset_id) throw new Error("asset_id fehlt");
+    log.bind({ assetId: asset_id });
+    log.stage("enter", "intake-process invoked");
 
     // Asset laden
     const { data: asset, error: aErr } = await admin
