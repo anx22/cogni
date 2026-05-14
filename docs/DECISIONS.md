@@ -2,7 +2,11 @@
 
 Format: `[YYYY-MM-DD] Problem → Choice → Reason`
 
-## 2026-05-14 — QA-Härtung
+## 2026-05-14 — Doku-System & QA-Härtung
+
+- `2026-05-14` Detail-Docs in der Wurzel verstreut → **alle nach `docs/` verschoben, nur `AGENTS.md` + `README.md` bleiben in der Wurzel** → klare Trennung Karte (Wurzel) / Inhalt (`docs/`).
+- `2026-05-14` `docs/qa-historie.md` doppelte Buchführung zu `NOW.md`/`DECISIONS.md` → **aufgelöst**: 4-Phasen-Methodik (Bestand/Instrumentierung/Tests/Automatisierung) und Stages 1–7 leben als Einträge hier; aktuelle Endmetriken in `NOW.md`. `docs/qa-seam-inventar.md` bleibt als lebende Referenztabelle (Frontend/Edge/DB/Externe-Seams mit Risiko 1–5).
+- `2026-05-14` QA-Methodik rückwirkend dokumentiert: **Phase 1 Seam-Bestand → Phase 2 Logger + `pipeline_events` + ErrorBoundary → Phase 3 Fixtures + Unit/Edge/E2E-Smokes → Phase 4 ESLint scharf + Husky + CI + `withErrorBoundary` + console.log-Smoke**. Reihenfolge ergibt sich aus Top-10-Risiko-Liste im Seam-Inventar.
 
 - `2026-05-14` Edge Functions stürzen ohne Spur → **Pflicht-Wrapper `withErrorBoundary("fn", handler)`** → Last-Resort-Catch + 500-Hülle mit `correlation_id`, CORS-Preflight automatisch.
 - `2026-05-14` `commit-fact`-Logik nur via HTTP-Curl prüfbar → **pure `commitFact({admin,user,payload,log})` extrahiert, Deno.serve bleibt dünner Adapter** → ermöglicht 3 Deno-Integrationstests (Happy/NEEDS_ASSIGNMENT/Reject).
