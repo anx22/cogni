@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import Entity from "@/components/entity/Entity";
 import { useSelectedCharacter } from "@/components/entity/useSelectedCharacter";
@@ -18,6 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { devlog } from "@/lib/devlog/devlog";
 import { useDialog } from "@/components/dialog/DialogProvider";
 import { useEntityVoice } from "@/lib/voice/useEntityVoice";
+import { useRealtimeTables, type RealtimeListener } from "@/lib/realtime/useRealtimeTables";
 import { toast } from "sonner";
 import type { EntityState } from "@/components/entity/orbPresets";
 
@@ -77,34 +78,23 @@ const Index = () => {
     };
   }, [resetDragState]);
 
-  // Realtime: Asset-Status spiegelt sich auf den Kern
-  useEffect(() => {
-    if (!session?.user) return;
-    const channel = supabase
-      .channel("assets-understanding")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "assets",
-          filter: `user_id=eq.${session.user.id}`,
-        },
-        (payload) => {
+  // Realtime: Asset-Status spiegelt sich auf den Kern + Auto-Open neuer Sessions.
+  const userId = session?.user?.id;
+  const realtimeListeners = useMemo<RealtimeListener[]>(() => {
+    if (!userId) return [];
+    const filter = `user_id=eq.${userId}`;
+    return [
+      {
+        table: "assets", event: "INSERT", filter,
+        handler: (payload) => {
           const row = payload.new as { id?: string; file_type?: string };
           devlog.realtime(`assets INSERT → ${row.file_type}`, { id: row.id });
           setEntityState("processing");
         },
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "assets",
-          filter: `user_id=eq.${session.user.id}`,
-        },
-        (payload) => {
+      },
+      {
+        table: "assets", event: "UPDATE", filter,
+        handler: (payload) => {
           const row = payload.new as {
             id?: string;
             understanding_status?: string;
@@ -122,27 +112,10 @@ const Index = () => {
             setTimeout(() => setEntityState("idle"), 1500);
           }
         },
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [session?.user]);
-
-  // Realtime: neue Dialog-Session → Auto-Open nach kurzem Delay
-  useEffect(() => {
-    if (!session?.user) return;
-    const channel = supabase
-      .channel("dialog-sessions-new")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "dialog_sessions",
-          filter: `user_id=eq.${session.user.id}`,
-        },
-        (payload) => {
+      },
+      {
+        table: "dialog_sessions", event: "INSERT", filter,
+        handler: (payload) => {
           const row = payload.new as { id?: string; status?: string; trigger_type?: string };
           devlog.realtime(`dialog_session INSERT → ${row.status}`, { id: row.id });
           if (row.status === "open" && row.id && row.trigger_type === "intake") {
@@ -152,19 +125,18 @@ const Index = () => {
             setEntityState("review-ready");
             setTimeout(() => {
               if (pendingSessionId.current === row.id) {
-                openSessionFromDB(row.id);
+                openSessionFromDB(row.id!);
                 pendingSessionId.current = null;
                 setEntityState("idle");
               }
             }, 1400);
           }
         },
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [session?.user, openSessionFromDB]);
+      },
+    ];
+  }, [userId, openSessionFromDB]);
+
+  useRealtimeTables(userId ? `index-realtime-${userId}` : null, realtimeListeners);
 
   // Wenn Dialog manuell geschlossen wird → Kern beruhigen.
   useEffect(() => {

@@ -1,11 +1,32 @@
 # Agent Execution Plan — cogni Stabilität & Vereinfachung
 
 > **Adressat:** Implementierender Agent
-> **Stand:** 2026-05-14
+> **Stand:** 2026-05-14 (post Welle B + Re-Audit)
 > **Quelle:** Strategische Review + Duplikationsanalyse (Frontend + Backend)
 > **Format:** Jede Aufgabe hat **WAS / WO / WARUM / WIE / VERIFY**. Reihenfolge ist verbindlich.
 
 ---
+
+## Statusübersicht (post Re-Audit 2026-05-14)
+
+| Tier | Status | Notiz |
+|---|---|---|
+| A1 Sofort | ✅ done | Graphiti 422 fix, intake-trigger Logger, console.log raus |
+| A2 Testbarkeit | ✅ done | commit-fact Kernel, E2E-Smokes, Logger 16/16, Phase-4-Gate |
+| A3 Architektur | ✅ done | strictNullChecks, useProject 3-Schichten, JSONB-Trigger |
+| B1 Quick Wins | ✅ done | alle 5 erledigt |
+| B2 Mittlere Refactors | ✅ done | B2.2 bewusst skipped (kein Mehrwert) |
+| B3 Größere Restruks | ⚠ partial | B3.1 auf `useBoxSubmit`-Hook reduziert (siehe DECISIONS); B3.2 modular |
+| B4 Optional | ⚠ partial | B4.1+B4.3 done; B4.2 nur 2/6 (catch-Pfade nicht 1:1) |
+| **Welle B (Detektoren)** | ✅ done | B-W1 Linker · B-W2 Conflict · B-W3 Gap · B-W4 Dependency |
+
+**Echte Restschuld** = 4 dokumentierte Loops (siehe `docs/NOW.md` Backlog #1).
+**Wave-3-Backlog** (LLM-Heuristiken, React Query, Browser-E2E, LOC-Reduktion) bewusst out of scope.
+
+Detail-Audit: `docs/audit-2026-05-14.md`.
+
+---
+
 
 ## Leitprinzipien für die Umsetzung
 

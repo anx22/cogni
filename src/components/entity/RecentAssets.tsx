@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { FileText, Link as LinkIcon, StickyNote, Image as ImageIcon, File } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -9,6 +9,7 @@ import ConfirmDestructive from "@/components/shared/ConfirmDestructive";
 import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { useAssetActions } from "@/lib/object-actions/useObjectActions";
 import { useAuth } from "@/hooks/useAuth";
+import { useRealtimeTables } from "@/lib/realtime/useRealtimeTables";
 
 type Asset = Database["public"]["Tables"]["assets"]["Row"];
 
@@ -42,35 +43,26 @@ const RecentAssets = ({ isDragActive }: Props) => {
   const { session } = useAuth();
   const userId = session?.user?.id;
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     if (!userId) return;
-    let mounted = true;
-
-    const load = async () => {
-      const { data } = await supabase
-        .from("assets")
-        .select("*")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false })
-        .limit(LIMIT);
-      if (mounted && data) setAssets(data);
-    };
-    load();
-
-    const channel = supabase
-      .channel(`assets-recent-${userId}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "assets", filter: `user_id=eq.${userId}` },
-        () => load(),
-      )
-      .subscribe();
-
-    return () => {
-      mounted = false;
-      supabase.removeChannel(channel);
-    };
+    const { data } = await supabase
+      .from("assets")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(LIMIT);
+    if (data) setAssets(data);
   }, [userId]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  useRealtimeTables(
+    userId ? `assets-recent-${userId}` : null,
+    userId ? [{ table: "assets", filter: `user_id=eq.${userId}` }] : [],
+    { onTrigger: load },
+  );
 
   const handleClick = async (a: Asset) => {
     const meta = (a.metadata as Record<string, unknown>) ?? {};

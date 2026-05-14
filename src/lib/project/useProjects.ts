@@ -1,6 +1,9 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { countBy } from "@/lib/utils";
+import { toTimestamp } from "@/lib/format/dateFormatters";
+import { useRealtimeTables } from "@/lib/realtime/useRealtimeTables";
 import type { DemoProject, ProjectSignal } from "@/data/demoProjects";
 
 const initialOf = (name: string) =>
@@ -103,26 +106,21 @@ export function useProjects(options?: UseProjectsOptions): UseProjectsResult {
         .in("project_id", ids),
     ]);
 
-    const inc = (m: Map<string, number>, k: string) => m.set(k, (m.get(k) ?? 0) + 1);
-    const conflictMap = new Map<string, number>();
-    const gapMap = new Map<string, number>();
-    const taskMap = new Map<string, number>();
-    const decisionMap = new Map<string, number>();
-    const deadlineMap = new Map<string, boolean>();
+    const conflictMap = countBy(conflicts.data, (r) => r.project_id);
+    const gapMap = countBy(gaps.data, (r) => r.project_id);
+    const taskMap = countBy(tasks.data, (r) =>
+      r.status !== "done" && r.status !== "completed" ? r.project_id : undefined,
+    );
+    const decisionMap = countBy(decisions.data, (r) =>
+      r.status === "draft" ? r.project_id : undefined,
+    );
 
-    conflicts.data?.forEach((r) => r.project_id && inc(conflictMap, r.project_id));
-    gaps.data?.forEach((r) => r.project_id && inc(gapMap, r.project_id));
-    tasks.data?.forEach((r) => {
-      if (r.project_id && r.status !== "done" && r.status !== "completed") inc(taskMap, r.project_id);
-    });
-    decisions.data?.forEach((r) => {
-      if (r.project_id && r.status === "draft") inc(decisionMap, r.project_id);
-    });
     const now = Date.now();
     const soon = now + 7 * 86400000;
+    const deadlineMap = new Map<string, boolean>();
     deadlines.data?.forEach((r) => {
       if (!r.project_id) return;
-      const t = new Date(r.due_date).getTime();
+      const t = toTimestamp(r.due_date);
       if (t > now && t < soon) deadlineMap.set(r.project_id, true);
     });
 
@@ -157,36 +155,21 @@ export function useProjects(options?: UseProjectsOptions): UseProjectsResult {
   }, [load]);
 
   // Realtime: projects + signaltragende Tabellen → debounced Reload
-  useEffect(() => {
-    if (!userId) return;
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    const trigger = () => {
-      if (timer) clearTimeout(timer);
-      timer = setTimeout(() => load(), 250);
-    };
-    const filter = `user_id=eq.${userId}`;
-    const tables = [
-      "projects",
-      "tasks",
-      "decisions",
-      "deadlines",
-      "gap_signals",
-      "contradictions",
-    ] as const;
-    const channel = supabase.channel(`projects-list-${userId}`);
-    tables.forEach((t) => {
-      channel.on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: t, filter },
-        trigger,
-      );
-    });
-    channel.subscribe();
-    return () => {
-      if (timer) clearTimeout(timer);
-      supabase.removeChannel(channel);
-    };
-  }, [userId, load]);
+  useRealtimeTables(
+    userId ? `projects-list-${userId}` : null,
+    userId
+      ? [
+          { table: "projects", filter: `user_id=eq.${userId}` },
+          { table: "tasks", filter: `user_id=eq.${userId}` },
+          { table: "decisions", filter: `user_id=eq.${userId}` },
+          { table: "deadlines", filter: `user_id=eq.${userId}` },
+          { table: "gap_signals", filter: `user_id=eq.${userId}` },
+          { table: "contradictions", filter: `user_id=eq.${userId}` },
+        ]
+      : [],
+    { onTrigger: load, debounceMs: 250 },
+  );
 
   return { projects, loading, error, reload: load };
 }
+

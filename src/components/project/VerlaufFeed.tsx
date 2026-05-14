@@ -2,6 +2,8 @@ import { useState, useMemo } from "react";
 import DeltaTag from "./shared/DeltaTag";
 import SourceMarker from "./shared/SourceMarker";
 import FeedbackButton from "./shared/FeedbackButton";
+import SectionLabel from "./shared/SectionLabel";
+import CardSurface from "./shared/CardSurface";
 import { useDialog } from "@/components/dialog/DialogProvider";
 import { buildVerlaufSession } from "@/lib/dialog/sessionFactories";
 import type { VerlaufVM } from "@/lib/project/types";
@@ -30,7 +32,7 @@ const VerlaufFeed = ({ verlauf }: { verlauf: VerlaufVM[] }) => {
     <div>
       <div>
         <header className="mb-6">
-          <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground/70 mb-2">Chronologie</p>
+          <SectionLabel className="mb-2">Chronologie</SectionLabel>
           <h2 className="text-2xl font-light tracking-tight text-foreground">Verlauf</h2>
         </header>
 
@@ -50,7 +52,7 @@ const VerlaufFeed = ({ verlauf }: { verlauf: VerlaufVM[] }) => {
           ))}
         </div>
 
-        <div className="rounded-xl border border-border-subtle bg-surface-2 shadow-card-glow p-6 max-h-[720px] overflow-y-auto">
+        <CardSurface className="p-6 max-h-[720px] overflow-y-auto">
           <div className="relative pl-6 border-l border-border-strong space-y-5">
             {filtered.map((e) => {
               const isConflict = e.ereignisTyp === "konflikt" || e.delta === "widersprochen";
@@ -82,7 +84,7 @@ const VerlaufFeed = ({ verlauf }: { verlauf: VerlaufVM[] }) => {
               <p className="text-sm text-muted-foreground italic">Keine Einträge in diesem Filter.</p>
             )}
           </div>
-        </div>
+        </CardSurface>
       </div>
     </div>
   );

@@ -6,8 +6,8 @@
 //  Flackern bei mehreren gleichzeitigen Events.
 // =============================================================================
 
-import { useEffect, useRef, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRealtimeTables, type RealtimeListener } from "@/lib/realtime/useRealtimeTables";
 
 type UnderstandingStatus =
   | "pending" | "running" | "empty" | "review_ready"
@@ -42,7 +42,6 @@ export function useEntityVoice(userId: string | undefined) {
       lastShownAt.current = Date.now();
       setState(next);
       if (clearTimer.current) clearTimeout(clearTimer.current);
-      // Auto-Clear nach 8s, falls "ready" landet und nichts Neues kommt.
       if (next.tone === "ready" && next.text) {
         clearTimer.current = setTimeout(() => {
           setState({ text: null, tone: "calm" });
@@ -52,16 +51,21 @@ export function useEntityVoice(userId: string | undefined) {
     }, wait);
   };
 
+  // Cleanup beim Unmount.
   useEffect(() => {
-    if (!userId) return;
+    return () => {
+      if (clearTimer.current) clearTimeout(clearTimer.current);
+    };
+  }, []);
 
-    const channel = supabase
-      .channel("entity-voice")
+  const filter = userId ? `user_id=eq.${userId}` : undefined;
+  const listeners = useMemo<RealtimeListener[]>(() => {
+    if (!userId || !filter) return [];
+    return [
       // Asset-Insert (Drop, Notiz, Link)
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "assets", filter: `user_id=eq.${userId}` },
-        (p) => {
+      {
+        table: "assets", event: "INSERT", filter,
+        handler: (p) => {
           const row = p.new as { file_type?: string };
           const what =
             row.file_type === "note" ? "deine Notiz"
@@ -69,12 +73,11 @@ export function useEntityVoice(userId: string | undefined) {
             : "deine Datei";
           enqueue({ text: `Ich nehme ${what} auf.`, tone: "working" });
         },
-      )
+      },
       // Asset-Update (Status-Spur)
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "assets", filter: `user_id=eq.${userId}` },
-        (p) => {
+      {
+        table: "assets", event: "UPDATE", filter,
+        handler: (p) => {
           const row = p.new as {
             id: string;
             understanding_status?: UnderstandingStatus;
@@ -95,45 +98,30 @@ export function useEntityVoice(userId: string | undefined) {
               enqueue({ text: "Nichts Neues entdeckt — Original ist gespeichert.", tone: "calm" });
               break;
             case "failed":
-              enqueue({
-                text: "Das hat nicht geklappt — nochmal?",
-                tone: "alert",
-                retryAssetId: row.id,
-              });
+              enqueue({ text: "Das hat nicht geklappt — nochmal?", tone: "alert", retryAssetId: row.id });
               break;
             case "rate_limited":
-              enqueue({
-                text: "Bin gerade überlastet — gleich nochmal?",
-                tone: "alert",
-                retryAssetId: row.id,
-              });
+              enqueue({ text: "Bin gerade überlastet — gleich nochmal?", tone: "alert", retryAssetId: row.id });
               break;
             case "payment_required":
-              enqueue({
-                text: "Mir gehen die Credits aus.",
-                tone: "alert",
-                retryAssetId: row.id,
-              });
+              enqueue({ text: "Mir gehen die Credits aus.", tone: "alert", retryAssetId: row.id });
               break;
           }
         },
-      )
+      },
       // Erster proposed_fact eines Laufs
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "proposed_facts", filter: `user_id=eq.${userId}` },
-        () => {
-          enqueue({ text: "Ich erkenne etwas.", tone: "working" });
-        },
-      )
+      {
+        table: "proposed_facts", event: "INSERT", filter,
+        handler: () => enqueue({ text: "Ich erkenne etwas.", tone: "working" }),
+      },
       // Session offen → bereit
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "dialog_sessions", filter: `user_id=eq.${userId}` },
-        (p) => {
-          const row = p.new as { total_boxes?: number; metadata?: any };
+      {
+        table: "dialog_sessions", event: "INSERT", filter,
+        handler: (p) => {
+          const row = p.new as { total_boxes?: number; metadata?: Record<string, unknown> };
           const n = row.total_boxes ?? 0;
-          const reason = row.metadata?.assignment?.agent_reason as string | undefined;
+          const assignment = (row.metadata?.assignment ?? null) as { agent_reason?: string } | null;
+          const reason = assignment?.agent_reason;
           if (reason) {
             enqueue({ text: reason, tone: "ready" });
           } else {
@@ -143,12 +131,11 @@ export function useEntityVoice(userId: string | undefined) {
             });
           }
         },
-      )
+      },
       // Session geschlossen → Stimme räumt sich ab
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "dialog_sessions", filter: `user_id=eq.${userId}` },
-        (p) => {
+      {
+        table: "dialog_sessions", event: "UPDATE", filter,
+        handler: (p) => {
           const row = p.new as { status?: string };
           if (row.status === "completed" || row.status === "cancelled") {
             if (clearTimer.current) clearTimeout(clearTimer.current);
@@ -156,15 +143,12 @@ export function useEntityVoice(userId: string | undefined) {
             setState({ text: null, tone: "calm" });
           }
         },
-      )
-      .subscribe();
-
-    return () => {
-      if (clearTimer.current) clearTimeout(clearTimer.current);
-      supabase.removeChannel(channel);
-    };
+      },
+    ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId]);
+  }, [userId, filter]);
+
+  useRealtimeTables(userId ? "entity-voice" : null, listeners);
 
   return state;
 }

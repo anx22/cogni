@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatRelative } from "@/lib/format/relativeTime";
+import { useRealtimeTables } from "@/lib/realtime/useRealtimeTables";
 import { devlog } from "@/lib/devlog/devlog";
 
 interface CorrelationSummary {
@@ -88,18 +89,12 @@ const PipelineHealth = () => {
 
   useEffect(() => { load(); }, [load]);
 
-  // Realtime: neuer Insert → leichte Reload-Schwelle (debounced via timeout).
-  useEffect(() => {
-    let t: number | undefined;
-    const channel = supabase
-      .channel("pipeline_events_health")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "pipeline_events" }, () => {
-        window.clearTimeout(t);
-        t = window.setTimeout(() => load(), 800);
-      })
-      .subscribe();
-    return () => { window.clearTimeout(t); supabase.removeChannel(channel); };
-  }, [load]);
+  // Realtime: neuer Insert → leichte Reload-Schwelle (debounced).
+  useRealtimeTables(
+    "pipeline_events_health",
+    [{ table: "pipeline_events", event: "INSERT" }],
+    { onTrigger: load, debounceMs: 800 },
+  );
 
   const loadDetail = useCallback(async (correlationId: string) => {
     setSelectedId(correlationId);

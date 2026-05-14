@@ -1,60 +1,31 @@
 // =============================================================================
-//  inspect-auth.ts — gemeinsame Auth-Hilfe für inspect-* Functions
+//  inspect-auth.ts — Auth-Hilfe für inspect-* Functions
 // -----------------------------------------------------------------------------
-//  Inspector-Functions sind Dev-Werkzeuge (DevLog-Panel). Wir prüfen, dass der
-//  Aufruf einen gültigen User-JWT trägt — kein Anonym-Zugriff, kein Service-Key.
+//  Dünner Adapter über `_shared/auth.ts` + `_shared/http.ts`. Behält die
+//  bestehende API (`requireUser`, `corsHeaders`, `ok`, `fail`) für die
+//  Inspector-Functions, damit B1.5 keine Verhaltensänderung erzwingt.
 // =============================================================================
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { getAuthenticatedUser } from "./auth.ts";
+import { corsHeaders, ok as okJson, fail as failJson } from "./http.ts";
 
-export const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+export { corsHeaders };
 
 export async function requireUser(req: Request): Promise<
   | { ok: true; userId: string }
   | { ok: false; response: Response }
 > {
-  const auth = req.headers.get("Authorization") ?? "";
-  if (!auth.toLowerCase().startsWith("bearer ")) {
-    return {
-      ok: false,
-      response: new Response(
-        JSON.stringify({ error: "missing bearer token" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      ),
-    };
+  const r = await getAuthenticatedUser(req);
+  if (!r.ok) {
+    return { ok: false, response: failJson(r.error, r.status) };
   }
-  const token = auth.slice(7).trim();
-  const url = Deno.env.get("SUPABASE_URL")!;
-  const anon = Deno.env.get("SUPABASE_ANON_KEY")!;
-  const sb = createClient(url, anon, { global: { headers: { Authorization: `Bearer ${token}` } } });
-  const { data, error } = await sb.auth.getUser(token);
-  if (error || !data.user) {
-    return {
-      ok: false,
-      response: new Response(
-        JSON.stringify({ error: "invalid token" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      ),
-    };
-  }
-  return { ok: true, userId: data.user.id };
+  return { ok: true, userId: r.userId };
 }
 
 export function ok(data: unknown): Response {
-  return new Response(JSON.stringify(data), {
-    status: 200,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
+  return okJson(data);
 }
 
 export function fail(status: number, message: string, extra?: Record<string, unknown>): Response {
-  return new Response(JSON.stringify({ error: message, ...extra }), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
+  return failJson(message, status, extra);
 }
