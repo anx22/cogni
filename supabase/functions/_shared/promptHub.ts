@@ -53,7 +53,7 @@ function authHeaders(): Record<string, string> {
   const key = Deno.env.get("LANGSMITH_API_KEY");
   if (!key) return {};
   const headers: Record<string, string> = { "x-api-key": key };
-  const workspaceId = Deno.env.get("LANGSMITH_WORKSPACE_ID");
+  const workspaceId = Deno.env.get("LANGSMITH_WORKSPACE_ID") ?? Deno.env.get("LANGSMITH_PROMPT_OWNER");
   if (workspaceId) headers["x-tenant-id"] = workspaceId;
   return headers;
 }
@@ -266,7 +266,7 @@ export function promptCacheState(): {
   const now = Date.now();
   return {
     endpoint: HUB_BASE,
-    workspaceConfigured: !!Deno.env.get("LANGSMITH_WORKSPACE_ID"),
+    workspaceConfigured: !!(Deno.env.get("LANGSMITH_WORKSPACE_ID") ?? Deno.env.get("LANGSMITH_PROMPT_OWNER")),
     entries: Array.from(cache.entries()).map(([name, v]) => ({
       name,
       version: v.version,
