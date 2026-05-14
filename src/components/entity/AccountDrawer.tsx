@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { LogOut } from "lucide-react";
+import { useEffect, useState } from "react";
+import { LogOut, Sun, Moon } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -10,11 +10,30 @@ const initialsFromEmail = (email?: string | null) => {
   return (parts.slice(0, 2).map((p) => p[0]).join("") || local.slice(0, 2)).toUpperCase();
 };
 
+type Theme = "day" | "night";
+
+const readTheme = (): Theme => {
+  if (typeof document === "undefined") return "day";
+  const attr = document.documentElement.getAttribute("data-theme");
+  return attr === "night" ? "night" : "day";
+};
+
 const AccountDrawer = () => {
   const { session, signOut } = useAuth();
   const [open, setOpen] = useState(false);
+  const [theme, setTheme] = useState<Theme>(readTheme);
   const email = session?.user?.email ?? null;
   const initials = initialsFromEmail(email);
+
+  // Sync, falls App.tsx hydratisiert nachdem AccountDrawer schon mounted ist.
+  useEffect(() => { setTheme(readTheme()); }, []);
+
+  const toggleTheme = () => {
+    const next: Theme = theme === "day" ? "night" : "day";
+    document.documentElement.setAttribute("data-theme", next);
+    try { window.localStorage.setItem("cogniTheme", next); } catch { /* noop */ }
+    setTheme(next);
+  };
 
   return (
     <>
@@ -36,7 +55,25 @@ const AccountDrawer = () => {
               {email ?? "—"}
             </SheetDescription>
           </SheetHeader>
+
           <div className="mt-8 space-y-1">
+            <button
+              type="button"
+              onClick={toggleTheme}
+              aria-pressed={theme === "night"}
+              className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-sm text-foreground/80 hover:bg-foreground/5 hover:text-foreground transition-colors"
+            >
+              <span className="flex items-center gap-3">
+                {theme === "day"
+                  ? <Sun className="w-4 h-4" strokeWidth={1.5} />
+                  : <Moon className="w-4 h-4" strokeWidth={1.5} />}
+                Erscheinungsbild
+              </span>
+              <span className="text-[11px] uppercase tracking-widest text-muted-foreground/60">
+                {theme === "day" ? "Tag" : "Nacht"}
+              </span>
+            </button>
+
             <button
               onClick={async () => {
                 setOpen(false);

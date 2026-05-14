@@ -100,8 +100,27 @@ const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
     [intake],
   );
 
+  // Mobile Safari: nur der innere Container scrollt, Body bleibt fix.
+  // Verhindert Bounce + Address-Bar-Hopping ohne Touch-Funktionen zu blocken.
+  useEffect(() => {
+    const { body, documentElement: html } = document;
+    const prev = {
+      bodyOverflow: body.style.overflow,
+      htmlOverflow: html.style.overflow,
+      bodyOverscroll: body.style.overscrollBehavior,
+    };
+    body.style.overflow = "hidden";
+    html.style.overflow = "hidden";
+    body.style.overscrollBehavior = "none";
+    return () => {
+      body.style.overflow = prev.bodyOverflow;
+      html.style.overflow = prev.htmlOverflow;
+      body.style.overscrollBehavior = prev.bodyOverscroll;
+    };
+  }, []);
+
   return (
-    <div className="flex min-h-screen" style={{ background: "var(--surface-0)" }}>
+    <div className="flex overflow-hidden" style={{ background: "var(--surface-0)", height: "100dvh" }}>
       <AppSidebar
         projects={allProjects}
         activeProjectId={realProjectId ?? undefined}
@@ -111,7 +130,8 @@ const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
       />
 
       <div
-        className="flex-1 min-w-0 animate-[fade-in_0.5s_ease-out] relative overflow-y-auto"
+        className="flex-1 min-w-0 animate-[fade-in_0.5s_ease-out] relative overflow-y-auto overscroll-contain"
+        style={{ WebkitOverflowScrolling: "touch" }}
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
         onDrop={onDrop}
