@@ -35,6 +35,7 @@ import {
   type AssignmentSuggestion,
 } from "../_shared/agentClient.ts";
 import { loadProjectContexts, scoreProjects } from "../_shared/projectScoring.ts";
+import { createLogger } from "../_shared/logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -56,6 +57,8 @@ Deno.serve(async (req) => {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const admin = createClient(supabaseUrl, serviceKey);
+  const log = createLogger({ fn: "intake-understand", client: admin });
+  log.stage("start", "request received");
 
   let asset_id = "";
   try {
@@ -64,6 +67,8 @@ Deno.serve(async (req) => {
     const isRetry = !!body.retry;
     const graphHint = typeof body.graph_hint === "string" ? body.graph_hint : null;
     if (!asset_id) throw new Error("asset_id fehlt");
+    log.bind({ assetId: asset_id });
+    log.stage("input", "payload parsed", { retry: isRetry, has_graph_hint: !!graphHint });
 
     // 1. Asset laden ----------------------------------------------------------
     const { data: asset, error: aErr } = await admin
@@ -72,6 +77,8 @@ Deno.serve(async (req) => {
       .eq("id", asset_id)
       .single();
     if (aErr || !asset) throw new Error(`Asset nicht gefunden: ${aErr?.message}`);
+    log.bind({ userId: asset.user_id, projectId: asset.project_id });
+    log.stage("asset.loaded", "asset loaded", { understanding_status: asset.understanding_status });
 
     // 1a. Idempotenz: schon laufend/fertig → nichts tun (außer Retry)
     if (
@@ -426,19 +433,24 @@ Deno.serve(async (req) => {
 
     const { error: rcErr } = await admin.from("review_cases").insert(caseRows);
     if (rcErr) throw new Error(`review_cases: ${rcErr.message}`);
+    log.stage("review_cases.inserted", "cases written", { count: caseRows.length, session_id: session!.id });
 
     // 8. Status: review_ready
     await setStatus(admin, asset_id, "review_ready", null);
+    log.stage("done", "review_ready", { facts: insertedFacts!.length, assignment_mode: assignment.mode });
+    await log.flush();
 
     return ok({
       facts: insertedFacts!.length,
       session_id: session!.id,
       assignment_mode: assignment.mode,
+      correlation_id: log.correlationId,
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error("intake-understand error:", msg);
+    log.error("error", msg, err);
     if (asset_id) await setStatus(admin, asset_id, "failed", msg.slice(0, 240));
+    await log.flush();
     return fail(msg, 500);
   }
 });
