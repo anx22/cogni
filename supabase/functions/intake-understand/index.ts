@@ -465,7 +465,7 @@ Deno.serve(withErrorBoundary("intake-understand", async (req) => {
     await log.flush();
     return fail(msg, 500);
   }
-});
+}));
 
 // ----------------------------------------------------------------------------
 
