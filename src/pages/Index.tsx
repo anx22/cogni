@@ -5,6 +5,7 @@ import { useSelectedCharacter } from "@/components/entity/useSelectedCharacter";
 import EntityVoice from "@/components/entity/EntityVoice";
 import SideGrid from "@/components/entity/SideGrid";
 import IntakeSessionsPanel from "@/components/entity/IntakeSessionsPanel";
+import MobileNavSheet from "@/components/entity/MobileNavSheet";
 import HomeDropOverlay from "@/components/entity/HomeDropOverlay";
 import InputOverlay from "@/components/entity/InputOverlay";
 import AccountDrawer from "@/components/entity/AccountDrawer";
