@@ -104,6 +104,7 @@ const ProjectTile = forwardRef<HTMLButtonElement, ProjectTileProps>(
               value={draftName}
               onChange={(e) => setDraftName(e.target.value)}
               onClick={(e) => e.stopPropagation()}
+              disabled={actions.pending}
               onBlur={async () => {
                 if (id && draftName.trim() && draftName !== name) {
                   await actions.rename(id, draftName);
@@ -155,25 +156,40 @@ const ProjectTile = forwardRef<HTMLButtonElement, ProjectTileProps>(
           <div className="absolute bottom-1 right-1">
             <HoverActionsMenu label={`Aktionen für ${name}`}>
               {archived ? (
-                <DropdownMenuItem onClick={async () => {
-                  await actions.unarchive(id);
-                  onChanged?.();
-                }}>Wiederherstellen</DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={actions.pending}
+                  onClick={async () => {
+                    await actions.unarchive(id);
+                    onChanged?.();
+                  }}
+                >
+                  Wiederherstellen
+                </DropdownMenuItem>
               ) : (
                 <>
-                  <DropdownMenuItem onClick={() => { setDraftName(name); setRenaming(true); }}>
+                  <DropdownMenuItem
+                    disabled={actions.pending}
+                    onClick={() => {
+                      setDraftName(name);
+                      setRenaming(true);
+                    }}
+                  >
                     Umbenennen
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={async () => {
-                    await actions.archive(id);
-                    onChanged?.();
-                  }}>
+                  <DropdownMenuItem
+                    disabled={actions.pending}
+                    onClick={async () => {
+                      await actions.archive(id);
+                      onChanged?.();
+                    }}
+                  >
                     Archivieren
                   </DropdownMenuItem>
                 </>
               )}
               <DropdownMenuSeparator />
               <DropdownMenuItem
+                disabled={actions.pending}
                 className="text-rose-400 focus:text-rose-300"
                 onClick={() => setConfirmDelete(true)}
               >
