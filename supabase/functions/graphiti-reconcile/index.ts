@@ -22,6 +22,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { getEpisodes, isGraphitiConfigured } from "../_shared/graphiti.ts";
+import { createLogger } from "../_shared/logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -40,8 +41,12 @@ Deno.serve(async (req) => {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const admin = createClient(supabaseUrl, serviceKey);
+  const log = createLogger({ fn: "graphiti-reconcile", client: admin });
+  log.stage("start", "reconcile invoked");
 
   if (!isGraphitiConfigured()) {
+    log.warn("config", "GRAPHITI_SERVICE_URL not set");
+    await log.flush();
     return fail("GRAPHITI_SERVICE_URL nicht gesetzt", 503);
   }
 
@@ -59,8 +64,13 @@ Deno.serve(async (req) => {
       });
       const { data } = await userClient.auth.getUser();
       userId = data?.user?.id ?? null;
-      if (!userId) return fail("nicht angemeldet", 401);
+      if (!userId) {
+        await log.flush();
+        return fail("nicht angemeldet", 401);
+      }
+      log.bind({ userId });
     }
+    log.stage("scan", "search pending facts", { lastN, maxFacts, project_id: body.project_id ?? null });
 
     // Offene Fakten finden (graphiti_uuid IS NULL, aber Mirror lief)
     let q = admin
@@ -76,8 +86,11 @@ Deno.serve(async (req) => {
     if (pErr) throw new Error(`canonical_facts: ${pErr.message}`);
 
     if (!pending || pending.length === 0) {
-      return ok({ scanned: 0, resolved: 0, missing: 0, failed: 0, projects: [] });
+      log.stage("done", "nothing to reconcile");
+      await log.flush();
+      return ok({ scanned: 0, resolved: 0, missing: 0, failed: 0, projects: [], correlation_id: log.correlationId });
     }
+    log.stage("pending", "found", { count: pending.length });
 
     // Pro Projekt EIN /episodes-Aufruf, dann lokal matchen.
     const byProject = new Map<string, typeof pending>();
@@ -174,10 +187,13 @@ Deno.serve(async (req) => {
       });
     }
 
-    return ok({ scanned: pending.length, resolved, missing, failed, projects: perProject });
+    log.stage("done", "reconcile complete", { scanned: pending.length, resolved, missing, failed });
+    await log.flush();
+    return ok({ scanned: pending.length, resolved, missing, failed, projects: perProject, correlation_id: log.correlationId });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error("graphiti-reconcile error:", msg);
+    log.error("error", msg, err);
+    await log.flush();
     return fail(msg, 500);
   }
 });
