@@ -4,13 +4,16 @@ const corsHeaders = {
 };
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { withErrorBoundary } from "../_shared/withErrorBoundary.ts";
+import { createLogger } from "../_shared/logger.ts";
 
 Deno.serve(withErrorBoundary("voice-transcribe", async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  const log = createLogger({ fn: "voice-transcribe" });
   try {
+    log.stage("enter", "request received", { method: req.method });
     // Validate auth
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
