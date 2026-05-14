@@ -12,6 +12,7 @@ Drei Außenmodi: Entität, Projekt, Dialog-Overlay. Keine Sidebar, keine Dashboa
 - **Was läuft jetzt?** → `docs/NOW.md`
 - **Warum so entschieden?** → `docs/DECISIONS.md`
 - **Seam-Inventar (lebende QA-Karte)** → `docs/qa-seam-inventar.md`
+- **Aktive Refactor-/UI-Milestone-Pläne** → `docs/design-implementation-plan.md`
 
 ## Memory (`mem://`)
 Detailwissen liegt in Project-Memory. Index ist immer im Kontext. Wichtigste Files:
@@ -25,7 +26,7 @@ Lovable Cloud (Supabase) = kanonisch · Graphiti/Neo4j = Spiegel · Unstructured
 AOL-Service auf Railway = LangGraph-Kontext · LangSmith = Prompts/Traces · Lovable AI Gateway = Modelle.
 
 ## Aktueller Sprint
-Siehe `docs/NOW.md`. QA-Härtung Stages 1–7 abgeschlossen. Backlog: Welle B, optionale Browser-E2E, Inspector-Logger.
+Siehe `docs/NOW.md`. A/B-Tier + Welle B (B-W1…B-W4) komplett. Aktiv: UI-Redesign-Vorbereitung (UI ↔ Core trennen, ViewModel als Vertrag).
 
 ## Regeln (immer)
 - Edge Functions in `withErrorBoundary` wrappen, `createLogger` statt `console.log`.

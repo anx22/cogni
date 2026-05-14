@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.railway-admin]
 verify_jwt = false
+
+[functions.smoke-welle-b]
+verify_jwt = false
