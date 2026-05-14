@@ -27,7 +27,7 @@ const SideGrid = ({
   activeId,
   onProjectClick,
   onCreateProject,
-  isDragActive,
+  isDragActive: _isDragActive,
   error,
   onRetry,
 }: SideGridProps) => {

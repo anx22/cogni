@@ -12,8 +12,6 @@ import type {
   ThemaVM,
   DokumentVM,
   StakeholderVM,
-  Arbeitsmodus,
-  ObjektTyp,
   DeltaTyp,
 } from "./types";
 
@@ -460,6 +458,7 @@ export function useProject(projectId: string | null | undefined): UseProjectResu
   // Initial + Re-Load
   useEffect(() => {
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [load, reloadKey.current]);
 
   // Realtime: invalidiert auf jede relevante Änderung → Reload

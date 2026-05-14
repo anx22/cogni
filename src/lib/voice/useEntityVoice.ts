@@ -8,7 +8,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
 
 type UnderstandingStatus =
   | "pending" | "running" | "empty" | "review_ready"

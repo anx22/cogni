@@ -52,7 +52,7 @@ const ProjectTile = forwardRef<HTMLButtonElement, ProjectTileProps>(
     {
       id,
       name,
-      initial,
+      initial: _initial,
       isActive,
       lastChangedAt,
       openCount,

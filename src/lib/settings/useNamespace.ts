@@ -100,7 +100,6 @@ export function useNamespace<T = unknown>(
           { onConflict: "namespace,key,user_id" },
         );
         if (error) {
-          // eslint-disable-next-line no-console
           console.error("[useNamespace] upsert failed", { namespace, key, scope, error });
         }
       }, 300);
