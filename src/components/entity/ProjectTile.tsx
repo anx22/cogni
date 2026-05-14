@@ -62,7 +62,6 @@ const ProjectTile = forwardRef<HTMLButtonElement, ProjectTileProps>(
       onKeyDown,
       tabIndex,
       archived,
-      onChanged,
     },
     ref,
   ) => {
