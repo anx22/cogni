@@ -1,15 +1,18 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 import LageZone from "./LageZone";
 import HandlungsbedarfList from "./HandlungsbedarfList";
 import VerlaufFeed from "./VerlaufFeed";
 import SubstanzSection from "./SubstanzSection";
 import ProjectHeaderActions from "./ProjectHeaderActions";
 import ProjectSwitcher from "./ProjectSwitcher";
+import AppSidebar from "@/components/sidebar/AppSidebar";
 import { useIntake } from "@/lib/intake/useIntake";
 import { detectFromDrop } from "@/lib/intake/detectInputType";
 import { useProject } from "@/lib/project/useProject";
+import { useProjects } from "@/lib/project/useProjects";
 import { useProjectActions } from "@/lib/object-actions/useObjectActions";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -27,10 +30,17 @@ const isUuid = (v: unknown): v is string =>
 const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
   const [dragActive, setDragActive] = useState(false);
   const realProjectId = isUuid(projectId) ? projectId : null;
+  const navigate = useNavigate();
   const { intake } = useIntake({ projectId: realProjectId });
   const { status, project, error, vanished } = useProject(realProjectId);
+  const { projects: allProjects } = useProjects();
   const projectActions = useProjectActions();
   const [forceRename, setForceRename] = useState(false);
+
+  const handleProjectSelect = useCallback(
+    (id: string) => navigate(`/projekt/${id}`),
+    [navigate],
+  );
 
   const handleRename = useCallback(
     async (newName: string) => {
