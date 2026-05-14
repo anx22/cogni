@@ -7,6 +7,7 @@
 // =============================================================================
 
 import { corsHeaders, fail, ok, requireUser } from "../_shared/inspect-auth.ts";
+import { withErrorBoundary } from "../_shared/withErrorBoundary.ts";
 
 const RAILWAY_GRAPHQL = "https://backboard.railway.com/graphql/v2";
 
@@ -35,7 +36,7 @@ async function gql<T>(query: string, variables: Record<string, unknown>, token: 
   return json.data as T;
 }
 
-Deno.serve(async (req) => {
+Deno.serve(withErrorBoundary("inspect-railway", async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return fail(405, "POST only");
 
@@ -94,4 +95,4 @@ Deno.serve(async (req) => {
   } catch (e) {
     return fail(502, "railway upstream error", { detail: String((e as Error).message ?? e) });
   }
-});
+}));

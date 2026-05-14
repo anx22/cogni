@@ -20,6 +20,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { createLogger } from "../_shared/logger.ts";
+import { withErrorBoundary } from "../_shared/withErrorBoundary.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -37,7 +38,7 @@ interface CallbackPayload {
   metadata?: Record<string, unknown>;
 }
 
-Deno.serve(async (req) => {
+Deno.serve(withErrorBoundary("aol-callback", async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -112,7 +113,7 @@ Deno.serve(async (req) => {
     await log.flush();
     return fail(msg, 400);
   }
-});
+}));
 
 function ok(payload: unknown) {
   return new Response(JSON.stringify({ ok: true, ...(payload as object) }), {

@@ -6,6 +6,7 @@
 // =============================================================================
 
 import { corsHeaders, fail, ok, requireUser } from "../_shared/inspect-auth.ts";
+import { withErrorBoundary } from "../_shared/withErrorBoundary.ts";
 
 const BASE = (Deno.env.get("GRAPHITI_SERVICE_URL") ?? "").replace(/\/+$/, "");
 const TOKEN = Deno.env.get("GRAPHITI_SERVICE_TOKEN") ?? "";
@@ -28,7 +29,7 @@ async function gFetch(path: string, init: RequestInit = {}): Promise<Response> {
   });
 }
 
-Deno.serve(async (req) => {
+Deno.serve(withErrorBoundary("inspect-graphiti", async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return fail(405, "POST only");
 
@@ -78,4 +79,4 @@ Deno.serve(async (req) => {
   } catch (e) {
     return fail(502, "graphiti upstream error", { detail: String((e as Error).message ?? e) });
   }
-});
+}));

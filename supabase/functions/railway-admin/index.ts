@@ -1,3 +1,4 @@
+import { withErrorBoundary } from "../_shared/withErrorBoundary.ts";
 // Universeller Railway-Admin-Proxy. Nutzt RAILWAY_API_TOKEN (Team-Token).
 // Actions:
 //   { action: "list" }                                — alle Teams + Projekte + Services
@@ -138,7 +139,7 @@ async function autoDiscover(targetServiceName: string) {
   return null;
 }
 
-Deno.serve(async (req) => {
+Deno.serve(withErrorBoundary("railway-admin", async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
   try {
     const body = await req.json().catch(() => ({}));
@@ -597,4 +598,4 @@ Deno.serve(async (req) => {
       { status: 500, headers: { ...cors, "Content-Type": "application/json" } },
     );
   }
-});
+}));

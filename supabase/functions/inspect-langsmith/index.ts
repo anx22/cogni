@@ -7,6 +7,7 @@
 // =============================================================================
 
 import { corsHeaders, fail, ok, requireUser } from "../_shared/inspect-auth.ts";
+import { withErrorBoundary } from "../_shared/withErrorBoundary.ts";
 
 const BASE = (Deno.env.get("LANGSMITH_ENDPOINT") ??
   Deno.env.get("LANGSMITH_BASE_URL") ??
@@ -30,7 +31,7 @@ async function lsFetch(path: string, init: RequestInit = {}, key: string): Promi
   });
 }
 
-Deno.serve(async (req) => {
+Deno.serve(withErrorBoundary("inspect-langsmith", async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return fail(405, "POST only");
 
@@ -74,4 +75,4 @@ Deno.serve(async (req) => {
   } catch (e) {
     return fail(502, "langsmith upstream error", { detail: String((e as Error).message ?? e) });
   }
-});
+}));

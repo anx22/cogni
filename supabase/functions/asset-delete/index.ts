@@ -1,5 +1,6 @@
 // Hard-delete an asset, its storage object and all derived rows.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { withErrorBoundary } from "../_shared/withErrorBoundary.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,7 +13,7 @@ const json = (body: unknown, status = 200) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
-Deno.serve(async (req) => {
+Deno.serve(withErrorBoundary("asset-delete", async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "method" }, 405);
 
@@ -73,4 +74,4 @@ Deno.serve(async (req) => {
   }
 
   return json({ ok: true });
-});
+}));

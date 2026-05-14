@@ -21,6 +21,7 @@ import {
   isGraphitiConfigured,
 } from "../_shared/graphiti.ts";
 import { createLogger } from "../_shared/logger.ts";
+import { withErrorBoundary } from "../_shared/withErrorBoundary.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -32,7 +33,7 @@ interface Payload {
   dry_run?: boolean;
 }
 
-Deno.serve(async (req) => {
+Deno.serve(withErrorBoundary("graphiti-backfill", async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -155,7 +156,7 @@ Deno.serve(async (req) => {
     await log.flush();
     return fail(msg, 500);
   }
-});
+}));
 
 function ok(payload: unknown) {
   return new Response(JSON.stringify({ ok: true, ...(payload as object) }), {
