@@ -52,6 +52,8 @@ interface UseProjectResult {
   status: Status;
   project: ProjectViewModel | null;
   error: string | null;
+  /** True wenn das Projekt gelöscht wurde oder nicht (mehr) existiert. */
+  vanished: boolean;
 }
 
 export function useProject(projectId: string | null | undefined): UseProjectResult {
@@ -59,6 +61,7 @@ export function useProject(projectId: string | null | undefined): UseProjectResu
   const [status, setStatus] = useState<Status>("loading");
   const [project, setProject] = useState<ProjectViewModel | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [vanished, setVanished] = useState(false);
   const reloadKey = useRef(0);
 
   const userId = session?.user?.id;
@@ -136,11 +139,20 @@ export function useProject(projectId: string | null | undefined): UseProjectResu
       ]);
 
       if (projectRes.error || !projectRes.data) {
+        setVanished(true);
         setStatus("error");
         setError(projectRes.error?.message ?? "Projekt nicht gefunden");
         setProject(null);
         return;
       }
+      if (projectRes.data.status === "archived") {
+        setVanished(true);
+        setStatus("error");
+        setError("Projekt ist archiviert");
+        setProject(null);
+        return;
+      }
+      setVanished(false);
 
       const p = projectRes.data;
       const deadlines = deadlinesRes.data ?? [];
@@ -462,6 +474,12 @@ export function useProject(projectId: string | null | undefined): UseProjectResu
         trigger,
       );
     });
+    // Auch das Projekt selbst (Rename, Status-Wechsel, Delete) live verfolgen.
+    channel.on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "projects", filter: `id=eq.${projectId}` },
+      trigger,
+    );
     channel.subscribe();
 
     return () => {
@@ -470,5 +488,5 @@ export function useProject(projectId: string | null | undefined): UseProjectResu
     };
   }, [projectId, userId, load]);
 
-  return { status, project, error };
+  return { status, project, error, vanished };
 }

@@ -29,36 +29,45 @@ const deriveSignal = (c: Counts): { signal: ProjectSignal; signal2?: ProjectSign
   return { signal: sigs[0], signal2: sigs[1] };
 };
 
-export function useProjects() {
+export interface UseProjectsResult {
+  projects: DemoProject[];
+  loading: boolean;
+  error: string | null;
+  reload: () => Promise<void>;
+}
+
+export function useProjects(): UseProjectsResult {
   const { session } = useAuth();
   const [projects, setProjects] = useState<DemoProject[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const userId = session?.user?.id;
 
   const load = useCallback(async () => {
     if (!userId) return;
     setLoading(true);
+    setError(null);
 
-    const { data: rows } = await supabase
+    const { data: rows, error: pErr } = await supabase
       .from("projects")
       .select("id, name, updated_at, status")
       .eq("user_id", userId)
       .neq("status", "archived")
       .order("updated_at", { ascending: false });
 
-    if (!rows) {
+    if (pErr) {
+      setError(pErr.message);
+      setProjects([]);
+      setLoading(false);
+      return;
+    }
+    if (!rows || rows.length === 0) {
       setProjects([]);
       setLoading(false);
       return;
     }
 
     const ids = rows.map((r) => r.id);
-    if (ids.length === 0) {
-      setProjects([]);
-      setLoading(false);
-      return;
-    }
-
     const [conflicts, gaps, tasks, decisions, deadlines] = await Promise.all([
       supabase
         .from("contradictions")
@@ -141,27 +150,37 @@ export function useProjects() {
     load();
   }, [load]);
 
-  // Realtime: jede projects-Änderung → Reload (gefiltert per user_id)
+  // Realtime: projects + signaltragende Tabellen → debounced Reload
   useEffect(() => {
     if (!userId) return;
     let timer: ReturnType<typeof setTimeout> | null = null;
     const trigger = () => {
       if (timer) clearTimeout(timer);
-      timer = setTimeout(() => load(), 300);
+      timer = setTimeout(() => load(), 250);
     };
-    const channel = supabase
-      .channel(`projects-list-${userId}`)
-      .on(
+    const filter = `user_id=eq.${userId}`;
+    const tables = [
+      "projects",
+      "tasks",
+      "decisions",
+      "deadlines",
+      "gap_signals",
+      "contradictions",
+    ] as const;
+    const channel = supabase.channel(`projects-list-${userId}`);
+    tables.forEach((t) => {
+      channel.on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "projects", filter: `user_id=eq.${userId}` },
+        { event: "*", schema: "public", table: t, filter },
         trigger,
-      )
-      .subscribe();
+      );
+    });
+    channel.subscribe();
     return () => {
       if (timer) clearTimeout(timer);
       supabase.removeChannel(channel);
     };
   }, [userId, load]);
 
-  return { projects, loading };
+  return { projects, loading, error, reload: load };
 }

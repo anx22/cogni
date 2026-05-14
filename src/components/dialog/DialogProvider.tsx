@@ -50,6 +50,13 @@ export const DialogProvider = ({ children }: { children: ReactNode }) => {
 
   const readonly = session?.mode === "readonly";
 
+  // Gating: existiert eine offene Zuordnungsbox, sind Folge-Boxen gesperrt.
+  const assignmentBox = session?.boxes.find((b) => b.type === "zuordnung");
+  const gateReason =
+    !readonly && assignmentBox && !END_STATES.includes(assignmentBox.state)
+      ? "Erst Projekt wählen"
+      : null;
+
   const commitBox = useCallback(
     async (boxId: string, decision: "confirm" | "reject", userDecision?: Record<string, any>) => {
       if (readonly) {
@@ -112,6 +119,7 @@ export const DialogProvider = ({ children }: { children: ReactNode }) => {
       value={{
         session,
         readonly: !!readonly,
+        gateReason,
         openDialog,
         closeDialog,
         updateBoxState,

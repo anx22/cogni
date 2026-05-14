@@ -1,118 +1,193 @@
-# Lücken-Schließung: Verwaltungs-Grundfunktionen
+## Diagnose
 
-Beim Audit der UI gegen `docs/produkt-gesamt.md` und `docs/implementierung-aktuell.md` fehlen elementare Verwaltungswege. Sie wurden bisher nicht gebaut, weil das Produkt sich „stiller Pflege" verschrieben hatte — aber ohne Löschen / Bereinigen / Konto-Selbsthilfe ist das Tool im Alltag unbrauchbar.
+Das gemeldete Problem ist real und größer als nur ein fehlender Refresh:
 
-## Was fehlt heute
+1. **Projektpanel aktualisiert nicht live**
+   - `useProjects.ts` hat zwar eine Realtime-Subscription auf `projects`.
+   - Die Datenbank-Publication enthält `projects` aber nicht.
+   - Ergebnis: Insert/Update/Delete/Archivierung feuern im Client nie an.
 
+2. **Projektanlage ist kein sauberer UX-Flow**
+   - `+ Neues Projekt` erzeugt sofort `Neues Projekt` und navigiert weg.
+   - Es gibt keine Namensfrage, keine Intent-Klärung, keinen leeren Projektzustand mit klarer nächster Aktion.
+   - Das führt zu falschen/identitätslosen Projekten und Karteileichen.
 
-| Bereich                                     | Status                              | Wirkung                           |
-| ------------------------------------------- | ----------------------------------- | --------------------------------- |
-| Projekt löschen                             | Kein Pfad in UI                     | Karteileichen, kein Reset möglich |
-| Projekt umbenennen außerhalb Project-Screen | Nur inline auf `/projekt/:id`       | Kein Schnellweg vom Grid          |
-| Asset löschen / erneut verarbeiten          | Nur Toast-Anzeige in `RecentAssets` | Kein Aufräumen, kein Retry-Knopf  |
-| Canonical Fact zurückziehen                 | Nicht vorhanden                     | Falsch übernommene Facts bleiben  |
-| Konto / Abmelden                            | Versteckter Button, kein Profil     | Schwer auffindbar                 |
-| Bestätigungs-Pattern                        | Fehlt komplett                      | Riskante Aktionen ohne Schutz     |
+3. **Overlay verletzt Kontext-Constraints**
+   - Boxen können bestätigt werden, obwohl projektabhängige Voraussetzungen noch fehlen.
+   - Der Backend-Commit blockt zwar teilweise mit `NEEDS_ASSIGNMENT`, aber die UI lässt den Nutzer trotzdem in falsche Reihenfolgen laufen.
+   - Das Overlay braucht eine explizite Ablaufsteuerung: erst Zuordnung, dann Fakten/Antworten/Commit.
 
+4. **Projekt-/Asset-Zustände sind nicht konsequent sichtbar**
+   - Projektliste zeigt nur aktive Projekte, aber kein klares Modell für Archiv/Leer/Fehler/Sync.
+   - Vorhandene Projekte wirken „nicht abgerufen“, weil Fehlerzustände und leere Zustände zu wenig unterscheidbar sind.
+   - Neue Projekt- und Rename-Flows sind optimistisch/fragmentiert statt zentral kontrolliert.
 
-Alles andere (Pipeline, Mirror, Graphiti, AOL) bleibt unangetastet. Das ist reine Frontend- + leichte Edge-Arbeit.
+5. **Projekt-Screen lädt zwar viele Tabellen live, aber nur sofern diese Tabellen in Realtime publiziert sind**
+   - `useProject.ts` subscribed auf viele Tabellen.
+   - In der Publication sind aktuell nur `app_settings`, `assets`, `dialog_sessions`, `proposed_facts`.
+   - Damit sind Verlauf, Handlungsbedarf, Substanz und Snapshot ebenfalls nicht zuverlässig live.
 
-## Designhaltung
+## Zielbild
 
-Treu zur Leitlinie: dunkel, glasartig, ruhig. Keine Sidebar, kein Klassik-Menü. Verwaltung erscheint dort, wo das Objekt gerade lebt:
+Die UI bekommt einen konsistenten Produktfluss:
 
-- **Long-press / Rechtsklick** auf einer Kachel → kleines Glas-Popover mit „Umbenennen · Archivieren · Löschen"
-- **Hover-Reveal**: dezenter `…`-Punkt oben rechts auf `ProjectTile` und `RecentAssets`-Tile, der dasselbe Popover öffnet
-- **Bestätigung als Dialog-Box-Typ** (`destructive_box`), wiederverwendet aus dem bestehenden Dialog-Overlay-System — keine fremde AlertDialog-Optik
+```text
+Entität
+  -> Projekt wählen oder Projekt sauber anlegen
+  -> Input aufnehmen
+  -> Overlay ordnet/prüft in fester Reihenfolge
+  -> Commit aktualisiert Projektzustand live
+  -> Projektpanel und Projektscreen ziehen sofort nach
+```
 
-## Umfang
+Keine versteckten manuellen Reloads. Keine editierbaren Folgeboxen ohne gültigen Projektkontext. Keine anonymen „Neues Projekt“-Leichen.
 
-### A. Projekt-Verwaltung
+## Umsetzungsplan
 
-- Popover an `ProjectTile` (Hover-`…` + Rechtsklick): Umbenennen, Archivieren, Löschen
-- Inline-Rename im Popover (kleiner Input + Enter)
-- Archivieren: setzt `projects.status = 'archived'`, blendet aus dem Grid aus, eigener Filter-Reiter „Archiv" als kleine Pille unter dem Grid
-- Löschen: harter Delete via Edge Function `project-delete` (Service-Role), entfernt Projekt + abhängige Zeilen (assets, sources, parsed_documents, proposed_facts, canonical_facts, review_cases, dialog_sessions, snapshots, gap_signals, dependencies). Graphiti-Mirror nicht angefasst (späteres Aufräumen separat).
-- Bestätigung über `destructive_box` im Dialog-Overlay
+### 1. Realtime-Fundament reparieren
 
-### B. Asset-Verwaltung in `RecentAssets`
+Migration:
 
-- Hover-Reveal `…`: Erneut verarbeiten, Löschen, In Projekt verschieben
-- „Erneut verarbeiten" ruft `intake-trigger` mit bestehender `asset_id`
-- „Löschen" → `destructive_box`-Bestätigung → Edge Function `asset-delete` (Storage-Objekt + DB-Zeile + abhängige `parsed_documents`/`sources`/`proposed_facts`)
+```sql
+ALTER TABLE public.projects REPLICA IDENTITY FULL;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.projects;
+```
 
-### C. Canonical Fact zurückziehen
+Zusätzlich alle Tabellen live schalten, die bereits von `useProject.ts` oder `useProjects.ts` erwartet werden:
 
-- Im `VerlaufFeed` und `SubstanzSection` Hover-Reveal `…` mit „Zurückziehen" → setzt `valid_until = now()`, schreibt `change_event` (`event_type='retract'`), blendet im UI aus
-- Bestätigung ebenfalls `destructive_box`
+```sql
+ALTER TABLE public.canonical_facts REPLICA IDENTITY FULL;
+ALTER TABLE public.change_events REPLICA IDENTITY FULL;
+ALTER TABLE public.tasks REPLICA IDENTITY FULL;
+ALTER TABLE public.decisions REPLICA IDENTITY FULL;
+ALTER TABLE public.deadlines REPLICA IDENTITY FULL;
+ALTER TABLE public.gap_signals REPLICA IDENTITY FULL;
+ALTER TABLE public.dependencies REPLICA IDENTITY FULL;
+ALTER TABLE public.contradictions REPLICA IDENTITY FULL;
+ALTER TABLE public.outcome_signals REPLICA IDENTITY FULL;
+ALTER TABLE public.topics REPLICA IDENTITY FULL;
+ALTER TABLE public.project_stakeholder_links REPLICA IDENTITY FULL;
+ALTER TABLE public.open_points REPLICA IDENTITY FULL;
+ALTER TABLE public.feedback REPLICA IDENTITY FULL;
+ALTER TABLE public.project_state_snapshots REPLICA IDENTITY FULL;
 
-### D. Konto-Drawer am Entitäts-Screen
+ALTER PUBLICATION supabase_realtime ADD TABLE
+  public.canonical_facts,
+  public.change_events,
+  public.tasks,
+  public.decisions,
+  public.deadlines,
+  public.gap_signals,
+  public.dependencies,
+  public.contradictions,
+  public.outcome_signals,
+  public.topics,
+  public.project_stakeholder_links,
+  public.open_points,
+  public.feedback,
+  public.project_state_snapshots;
+```
 
-- Rechte obere Ecke: kleiner Avatar-Punkt (Initialen aus E-Mail) statt versteckter Text-Button
-- Klick öffnet schmales Glas-Drawer von rechts: E-Mail, „Stiller Modus" (ein/aus, in `app_settings` user-scope), „Abmelden", Link „Datenexport (bald)"
-- Ersetzt heutigen `Abmelden`-Button bei Index.tsx Zeile 340
+Falls eine Tabelle bereits enthalten ist, wird die Migration idempotent formuliert.
 
-### E. Wiederverwendbare Bausteine
+### 2. Projektpanel robust machen
 
-- `useObjectActions(objectType, id)` Hook bündelt rename / archive / delete / retract
-- `ConfirmDestructive` als dünner Wrapper um `useDialog` — öffnet `destructive_box`
-- `HoverActionsMenu` Komponente für die `…`-Affordance
+`useProjects.ts`:
+- Fehlerzustand sichtbar zurückgeben (`error`, `reload`).
+- Nach Realtime-Events debounced reloaden.
+- Zusätzlich auf signalgebende Tabellen hören: `tasks`, `decisions`, `deadlines`, `gap_signals`, `contradictions`.
+- Bei leerer Liste echten Empty-State zeigen, nicht nur eine einzelne Kachel.
 
----
+`SideGrid.tsx`:
+- Lade-/Fehler-/Empty-State klar unterscheiden.
+- Nach Delete/Archive/Rename nicht auf manuelles `onChanged` angewiesen sein, sondern Realtime + optional `reload()` verwenden.
+- Pagination nach Änderungen korrigieren, damit die UI nicht auf einer leeren Seite stehen bleibt.
 
-- Graphiti-seitiges Aufräumen gelöschter Facts → eigene Iteration
+### 3. Projektanlage als geführten Flow bauen
 
-## Out of Scope (bewusst ausgelassen, falls nichts gegen spricht)
+Statt sofort `Neues Projekt` anzulegen:
+- Klick auf `+ Neues Projekt` öffnet einen ruhigen Inline-/Dialog-Composer.
+- Pflichtfeld: Projektname.
+- Optional: kurzer Kontext/Outcome, damit die Entität einen Anfang hat.
+- Erst nach Bestätigung wird das Projekt angelegt.
+- Danach Navigation auf `/projekt/:id`.
 
-- Multi-Select / Bulk-Aktionen
-- Papierkorb / Undo-Fenster (Archiv erfüllt erste Stufe)
-- &nbsp;
-- Vollständiges Settings-Center
+Guardrails:
+- Kein leeres Projekt ohne Namen.
+- Kein mehrfacher Submit während Pending.
+- Enter bestätigt, Escape bricht ab.
+- Neu angelegtes Projekt erscheint durch Realtime sofort im Panel.
 
-## Technische Details
+### 4. Overlay-Ablaufsteuerung erzwingen
 
-**Neue Edge Functions**
+`DialogProvider` / `BoxRenderer` / relevante Boxen:
+- Session-weiten Kontextstatus berechnen: Gibt es eine bestätigte Projektzuordnung oder ein festes `project_id`?
+- Boxen, die Commit/Antwort/Faktübernahme brauchen, bleiben gesperrt, solange Projektzuordnung fehlt.
+- Die Zuordnungsbox bleibt als erste aktive Entscheidung sichtbar.
+- Bei gesperrten Boxen keine Fake-Editierbarkeit, sondern ruhiger Disabled-State mit Hinweis „Erst Projekt wählen“.
 
-- `project-delete` — auth-required, prüft `auth.uid() = user_id`, kaskadiert Löschungen via Service-Role
-- `asset-delete` — auth-required, gleiche Logik, plus Storage-Objekt
-- `fact-retract` — setzt `valid_until`, schreibt `change_event`
+`ZuordnungsBox.tsx`:
+- Neue-Projekt-Pfad mit Pflichtnamen.
+- Kandidaten müssen echte Projekt-IDs und Namen haben; sonst werden sie nicht als wählbar angezeigt.
+- Wenn keine vorhandenen Projekte geladen wurden, klarer Zustand: „Neues Projekt benennen“ statt leerer Auswahl.
 
-**Neue Frontend-Module**
+`EingabeBox.tsx` und andere Commit-Boxen:
+- Schreib-/Bestätigungsaktionen deaktivieren, wenn die Box fachlich noch nicht dran ist.
+- Kein lokales `setState -> closeDialog`, wenn der Zustand eigentlich persistiert werden muss.
 
-- `src/components/shared/HoverActionsMenu.tsx`
-- `src/components/shared/ConfirmDestructive.tsx`
-- `src/lib/object-actions/useObjectActions.ts`
-- `src/components/dialog/boxes/DestructiveBox.tsx` (falls noch nicht da)
-- `src/components/entity/AccountDrawer.tsx`
+### 5. Projekt-Screen live und logisch schließen
 
-**Geänderte Dateien**
+`useProject.ts`:
+- Realtime-Publication passt nach Migration; Hook kann bleiben, bekommt aber robustere Fehler-/Empty-Transitions.
+- Projekt-Update selbst (`projects`) ebenfalls abonnieren, damit Rename/Status sofort im Header landet.
+- Bei gelöscht/archiviert: sauber zurück zur Entität mit Toast statt kaputter Projektseite.
 
-- `src/components/entity/ProjectTile.tsx` (+ Hover-Affordance, Popover-Anker)
-- `src/components/entity/SideGrid.tsx` (Archiv-Filter-Pille, Rerouting)
-- `src/components/entity/RecentAssets.tsx` (Hover-Affordance, Popover)
-- `src/components/project/VerlaufFeed.tsx` + `SubstanzSection.tsx` (Hover-Affordance auf Fakten)
-- `src/pages/Index.tsx` (AccountDrawer statt Text-Button)
-- `src/components/dialog/BoxRenderer.tsx` (DestructiveBox-Eintrag)
+`ProjectScreen.tsx`:
+- Empty-State als echte Arbeitsfläche: Name editieren, Input ablegen, optional Projekt löschen/archivieren.
+- Name-Edit auch im `ready`-State konsistent erlauben oder bewusst zentralisieren.
+- Drag/drop-Feedback bleibt projektgebunden und darf keine globale Zuordnung suggerieren, wenn `projectId` sicher ist.
 
-**DB**
+### 6. UI-Basics nachziehen
 
-- Keine Schema-Änderung. `projects.status` existiert bereits, `archived` ist gültiger Textwert.
-- Optional Migration später, falls wir `status` zu Enum hochziehen wollen — jetzt nicht.
+Größte Basics, die ergänzt/überprüft werden:
+- Rename/Delete/Archive überall mit identischem Pattern.
+- Projektname nie als leerer/falscher Fallback angezeigt.
+- Pending-Zustände bei Create/Rename/Delete/Reprocess.
+- Fehler nicht nur Toast, sondern lokaler Wiederholen-Pfad.
+- Keine Interaktion, die der aktuelle Zustand nicht erfüllen kann.
+- Keine Boxen/Buttons, die visuell aktiv sind, aber backendseitig 403/blocked erzeugen.
 
-## Reihenfolge
+### 7. Smoke-Test nach Umsetzung
 
-1. Edge Functions `project-delete`, `asset-delete`, `fact-retract`
-2. `ConfirmDestructive` + `HoverActionsMenu` + `DestructiveBox`
-3. ProjectTile/SideGrid Verwaltung + Archiv-Filter
-4. RecentAssets Verwaltung
-5. VerlaufFeed/SubstanzSection Retract
-6. AccountDrawer
+Direkt nach Umsetzung prüfen:
 
-Nach jedem Schritt: kurzer manueller Smoke (anlegen → bearbeiten → löschen → reload).
+1. Projekt anlegen mit Namen → erscheint sofort im linken Panel.
+2. Projekt umbenennen → Tile und Projektheader aktualisieren live.
+3. Projekt archivieren/löschen → verschwindet ohne Reload.
+4. Neues Asset in Projekt droppen → Projekt-Screen und Panel-Signale aktualisieren.
+5. Globaler Input ohne Projekt → Overlay erzwingt zuerst Zuordnung.
+6. Overlay-Fakten vor Zuordnung → sind nicht editier-/commitbar.
+7. Vorhandene Projekte im Overlay → Kandidaten zeigen echte Namen.
+8. Gelöschtes Projekt direkt geöffnet → sauberer Redirect.
 
-## Frage vor Start
+## Dateien/Orte
 
-Eine Entscheidung möchte ich vor Implementierung verbindlich von dir:
+- Migration für Realtime-Publication
+- `src/lib/project/useProjects.ts`
+- `src/components/entity/SideGrid.tsx`
+- `src/components/entity/ProjectTile.tsx`
+- `src/pages/Index.tsx`
+- `src/components/project/ProjectScreen.tsx`
+- `src/lib/project/useProject.ts`
+- `src/components/dialog/DialogProvider.tsx`
+- `src/components/dialog/BoxRenderer.tsx`
+- `src/components/dialog/boxes/ZuordnungsBox.tsx`
+- `src/components/dialog/boxes/EingabeBox.tsx`
+- bei Bedarf weitere Boxen mit Commit-Aktionen
 
-**Soll „Löschen" hart sein (DB-Zeile + Storage weg) oder weich (Soft-Delete via `valid_until`/`status='deleted'`, später per Job entsorgt)?**
-Ich tendiere zu **hart für Projekte/Assets** und **weich (retract) für Facts**, weil Facts Historie tragen und Projekte im Alltag wirklich verschwinden sollen. Wenn du anders denkst, sag Bescheid bevor ich starte. ja wie vorgeschl hart und weich
+## Nicht im Scope dieses Schritts
+
+- Keine neue Informationsarchitektur außerhalb der drei Modi.
+- Kein Dashboard, keine Sidebar.
+- Keine Änderung an `client.ts` oder generierten Typen.
+- Kein Umbau der Graphiti/RAG-Pipeline in diesem UI-Sanierungsschritt.
