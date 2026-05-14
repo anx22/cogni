@@ -11,6 +11,7 @@ import { notifyAol } from "./notifications.ts";
 import { mirrorToGraphiti } from "./mirror.ts";
 import { detectAndPersistConflicts } from "./conflictDetector.ts";
 import { detectAndPersistGaps } from "./gapDetector.ts";
+import { detectAndPersistDependencies } from "./dependencyDetector.ts";
 
 interface Payload {
   review_case_id: string;
