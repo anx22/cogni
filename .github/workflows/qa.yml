@@ -54,3 +54,20 @@ jobs:
           bun-version: latest
       - run: bun install --frozen-lockfile
       - run: bun run build
+
+  smoke:
+    name: Smoke (no console.log in edge functions)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verbiete console.log in Edge Functions (außer logger.ts)
+        run: |
+          MATCHES=$(grep -rn "console\.log" supabase/functions/ \
+            --exclude-dir=node_modules \
+            | grep -v "_shared/logger.ts" || true)
+          if [ -n "$MATCHES" ]; then
+            echo "console.log in Edge Functions gefunden — nutze createLogger():"
+            echo "$MATCHES"
+            exit 1
+          fi
+          echo "OK — keine console.log-Treffer."
