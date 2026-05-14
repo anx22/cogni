@@ -2,6 +2,8 @@ import { useState, useMemo } from "react";
 import DeltaTag from "./shared/DeltaTag";
 import SourceMarker from "./shared/SourceMarker";
 import FeedbackButton from "./shared/FeedbackButton";
+import SectionLabel from "./shared/SectionLabel";
+import CardSurface from "./shared/CardSurface";
 import { useDialog } from "@/components/dialog/DialogProvider";
 import { buildVerlaufSession } from "@/lib/dialog/sessionFactories";
 import type { VerlaufVM } from "@/lib/project/types";
@@ -30,7 +32,7 @@ const VerlaufFeed = ({ verlauf }: { verlauf: VerlaufVM[] }) => {
     <div>
       <div>
         <header className="mb-6">
-          <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground/70 mb-2">Chronologie</p>
+          <SectionLabel className="mb-2">Chronologie</SectionLabel>
           <h2 className="text-2xl font-light tracking-tight text-foreground">Verlauf</h2>
         </header>
 
