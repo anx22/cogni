@@ -1,89 +1,131 @@
-# Tier B2 — Mittlere Refactors
+# Tier B3 — Größere Restrukturierungen
 
-Verhalten-neutral. Nach jedem Schritt: vitest + Health-Panel-Smoketest grün.
-
-## Status-Check vorab
-- **B2.2 (Mapper auslagern)** ist faktisch bereits in **A3.2** erledigt: `projectViewModel.ts` (467 LOC) enthält `toKonflikte`, `toHandlungsbedarf` etc., `useProject.ts` ist nur noch 42 LOC. Daher entfällt B2.2 bis auf eine kleine Aufräum-/Aufteilungs-Aktion (siehe B2.2*).
-- **B2.1, B2.3, B2.4** stehen voll an.
+Reihenfolge: **B3.2 zuerst** (klar gewinnbringend, isoliert), **B3.1\* danach** (bewusst zurückgeschnitten — siehe Realitätscheck unten).
 
 ---
 
-## B2.1 — `useRealtimeTables` Hook
-**Ziel:** Channel-Boilerplate (subscribe + unsubscribe + Debounce) zentralisieren.
+## Realitätscheck zu B3.1 (Box-Builder)
 
-**Neu:** `src/lib/realtime/useRealtimeTables.ts`
-```ts
-useRealtimeTables(
-  channelName: string,
-  tables: { table: string; event?: '*'|'INSERT'|'UPDATE'|'DELETE'; filter?: string }[],
-  onTrigger: () => void,
-  options?: { debounceMs?: number; enabled?: boolean }
-): void
+Plan-Annahme: „70 % identisches Scaffolding, ~380 Zeilen Ersparnis".
+Befund nach Codelesen:
+
+- 8 Box-Dateien = **558 LOC gesamt** (nicht 700+).
+- Scaffolding ist **bereits in `BoxFrame` extrahiert** (Title, States, Gate, Actions, Readonly).
+- Was bleibt, ist **echter Box-spezifischer Inhalt** (Auswahllisten, Textareas, Konfliktvarianten, Zuordnungs-UI mit 205 LOC).
+- Ein generischer `BoxBuilder({ renderContent, validate, getSubmitPayload })` würde pro Box-Typ eine `renderContent`-Funktion verlangen — also faktisch denselben Code, nur in eine `BoxConfig` umgehängt. **Kein Lines-Win, +1 Indirektionsebene, +Risiko**.
+
+→ Stattdessen: **B3.1\*** = drei kleine, ehrliche Hook-Extraktionen, die echte Wiederholung beseitigen (Textinput-State, Commit+ManualOverride, Auswahl-State). Box-Komponenten bleiben bestehen, werden schlanker.
+
+Wenn du den vollen `BoxBuilder` willst: ausdrücklich sagen, dann mache ich es. Aber meine Empfehlung als Architekt: **nicht ohne Bedarf**.
+
+---
+
+## B3.2 — `railway-admin` modularisieren
+
+### Ist-Zustand
+`supabase/functions/railway-admin/index.ts` = **599 LOC**, **18 Action-Branches**, vermischt Railway-GraphQL, LangSmith-Debug (8 Actions), Graphiti-Probes, AOL, PromptHub, Diagnose, Mirror-Test, Sync.
+
+### Ziel-Struktur
+```text
+supabase/functions/railway-admin/
+├── index.ts              ~70 LOC  (Router + CORS + Logger)
+├── _helpers.ts           ~50 LOC  (gql shim, prefix, NEO4J_VARS, autoDiscover)
+├── handlers/
+│   ├── railway.ts        list, project, set-vars, redeploy, tune-neo4j, raw,
+│   │                     sync-supabase-to-railway
+│   ├── langsmith.ts      langsmith-raw, -key-info, -auth-matrix,
+│   │                     -create-test-repo, -tenant-resolve,
+│   │                     -list-workspaces, -write-probe, -probe
+│   ├── graphiti.ts       graphiti-probe, test-mirror
+│   ├── aol.ts            test-aol
+│   ├── promptHub.ts      prompt-cache-bust, prompt-state
+│   └── diagnose.ts       diagnose
 ```
 
-**Migrieren (10 Stellen):**
-- `src/lib/project/useProjectData.ts` (project-${id} Channel)
-- `src/lib/project/useProjects.ts` (projects-list Channel)
-- `src/pages/Index.tsx` (3 listener)
-- `src/pages/PipelineHealth.tsx`
-- `src/components/entity/IntakeSessionsPanel.tsx`
-- `src/components/entity/RecentAssets.tsx`
-- `src/lib/voice/useEntityVoice.ts` (5 listener — selber Channel)
-- `src/lib/settings/useNamespace.ts`
+### Vorgehen (strikt)
+1. `_helpers.ts` extrahieren — bestehende Funktionen 1:1 übernehmen, **keine Signaturänderung**.
+2. Pro Domäne `handlers/<domain>.ts`: jede Datei exportiert `export const handlers: Record<string, (body, ctx) => Promise<Response>>`.
+3. `ctx` enthält `{ log, cors }` — kein neuer State, nur Pass-Through.
+4. `index.ts`: Router baut Action-Map zusammen:
+   ```ts
+   const all = { ...railway.handlers, ...langsmith.handlers, ... };
+   const fn = all[action];
+   if (!fn) return ok400("unknown action");
+   return await fn(body, { log, cors });
+   ```
+5. `withErrorBoundary` + `createLogger` bleiben im `index.ts`.
+6. **Verhalten unverändert** — kein Action-Rename, kein Response-Schape ändern, kein Header anders.
 
-**Verify:** Vitest grün, manuell: Asset-Upload triggert Liste, Dialog-Session-Updates kommen live an, Project-View aktualisiert.
+### Verify
+- `bunx vitest run` (Frontend bleibt unbetroffen — Smoke).
+- `supabase--deploy_edge_functions ["railway-admin"]`.
+- Per `supabase--curl_edge_functions` jede gruppe stichprobenartig:
+  - `{action:"list"}` → Workspaces zurück
+  - `{action:"langsmith-key-info"}` → present:true
+  - `{action:"diagnose", projectId, environmentId, aolServiceId}` → wenn Health-Panel nutzt
+  - `{action:"prompt-state"}` → cache state
+  - `{action:"graphiti-probe", project_id:"<bekannte>"}` → status 200
+- 1× Logs prüfen (`supabase--edge_function_logs railway-admin`) → keine neuen Errors.
+- `unknown action` weiter HTTP 400.
+
+### Risiken & Mitigation
+- **Import-Zyklus**: handlers importieren `_helpers`, nicht umgekehrt.
+- **Dynamic imports** (`promptHub.ts` lädt `../_shared/promptHub.ts` lazy) — beibehalten, nicht statisch ziehen, sonst Cold-Start-Kosten.
+- **Keine Action umbenennen** — Health-Panel + Frontend rufen by name.
+
+**Lines saved (real):** ~250 → 70 + 50 + 6×40 ≈ 360 verteilt, aber jede Datei < 80 LOC und einzeln testbar.
 
 ---
 
-## B2.2* — Mapper-Datei aufteilen (Mini)
-`projectViewModel.ts` (467 LOC) in Mapper-Module zerlegen:
-- `mappers/konfliktMapper.ts`, `gapMapper.ts`, `dependencyMapper.ts`, `handlungsbedarfMapper.ts`, `verlaufMapper.ts`
-- `projectViewModel.ts` wird Composition (`buildProjectViewModel`) ~50 LOC.
-- Tests aus `projectViewModel.test.ts` analog splitten.
+## B3.1\* — Box-Hooks (zurückgeschnittene Variante)
 
-**Verify:** 60 Tests bleiben grün, Verhalten identisch.
+Statt eines BoxBuilders drei kleine Hooks in `src/lib/dialog/`:
 
----
-
-## B2.3 — Inspector-Functions zusammenführen
-**Option B (gewählt, weniger Bruch):** Functions bleiben, aber Skelett über `_shared/inspector.ts` standardisieren.
-
-**Neu:** `supabase/functions/_shared/inspector.ts`
+### Hook 1: `useBoxTextField(box, key, opts)`
+Kapselt das Pattern aus `EingabeBox`/`GapBox`/`KonfliktBox` (reason):
 ```ts
-export function runInspector(
-  fn: string,
-  req: Request,
-  probes: Record<string, () => Promise<ProbeResult>>
-): Promise<Response>
+const { value, setValue, submit, canSubmit } = useBoxTextField(box, "antwort", {
+  minLength: 1,
+  onConfirm: (v) => ({ antwort: v }),
+});
 ```
-Übernimmt: CORS, Auth, withErrorBoundary, Logger, einheitliches Response-Format `{ ok, probes: {...}, took_ms }`.
+Intern: `useState`, `updateBoxPayload`, `commitBox`, optional `markManual`.
 
-**Migrieren:** `inspect-pipeline`, `inspect-graphiti`, `inspect-langsmith`, `inspect-railway`. Pro Function bleibt nur die Probe-Map.
+### Hook 2: `useBoxChoice<T>(box, key, opts)`
+Kapselt `AuswahlBox`/`KonfliktBox`-Auswahl-Logik (Selection + Confirm + manual mark).
 
-**Verify:** Health-Panel zeigt alle 4 Inspektoren weiter korrekt (curl + UI-Smoke).
+### Hook 3: `useBoxCommit(box)`
+Wrappt `commitBox` + `markManual` + Session-Context für die Boxes, die nur „confirm/reject" senden.
+
+### Migration
+- `EingabeBox`, `GapBox`: nutzen `useBoxTextField`.
+- `AuswahlBox`: nutzt `useBoxChoice`.
+- `KonfliktBox`: kombiniert beide.
+- `AktionsBox`, `WissensBox`, `KontextBox`: bleiben unverändert (zu klein).
+- `ZuordnungsBox`: bleibt eigenständig (genuin komplex, kein Win durch Hooks).
+
+### Verify
+- `bunx vitest run` (60/60).
+- Manueller Smoke: pro Box-Typ 1× im Dialog-Overlay durchklicken (Preview).
+- Visueller Diff: vorher/nachher Screenshot pro Box-Typ.
+- A2.2-E2E (Dialog-Overlay) bleibt grün.
+
+### Lines saved (real)
+~80–120 (pro betroffene Box 15–25 Zeilen weniger). Ehrlich, nicht 380.
 
 ---
 
-## B2.4 — External-Service-Clients zentralisieren
-**Neu:** `supabase/functions/_shared/clients/`
-- `langsmith.ts` — EU-Region, `x-tenant-id` Header, `query()`, `listPrompts()`, `getRun()`.
-- `railway.ts` — GraphQL-Wrapper um `RAILWAY_API_TOKEN` (`gql(query, vars)`).
-- `graphiti.ts` — bereits teilweise vorhanden in `_shared/graphiti.ts`; konsolidieren mit `post('/messages', …)`, `query()`, einheitlicher Token-/URL-Handling.
+## Reihenfolge & Stop-Bedingungen
 
-**Migrieren:** `inspect-langsmith`, `inspect-railway`, `inspect-graphiti`, `railway-admin` (alle GraphQL-Calls), `commit-fact` (Graphiti-Sync).
+1. **B3.2 implementieren** → vollständig deployen → curl-Verify → erst dann weiter.
+2. Falls bei Schritt 1 *irgendein* Action-Call abweicht: Stop, Diff erklären, kein zweiter Schritt.
+3. **B3.1\* implementieren** → Vitest grün → Preview-Smoke → fertig.
+4. `docs/NOW.md` + `docs/DECISIONS.md` aktualisieren (B3.1 bewusst reduziert, Begründung notiert).
 
-**Verify:** Inspektoren grün, `railway-admin` Aktionen `list`/`diagnose`/`graphiti-probe` erfolgreich (curl), `commit-fact` Happy-Path grün.
+## Out of Scope
+- Voller `BoxBuilder` mit `BoxConfig`-Map (begründet abgelehnt — siehe Realitätscheck).
+- Tier B4.
+- Neue Features.
 
----
-
-## Reihenfolge & Out-of-Scope
-1. B2.1 (Realtime-Hook) — niedrigstes Risiko, größter LOC-Win.
-2. B2.4 (Clients) — Voraussetzung für sauberes B2.3.
-3. B2.3 (Inspector-Skelett) — baut auf B2.4 auf.
-4. B2.2* (Mapper-Split) — abschließend.
-
-**Nicht enthalten:** B3 (Dialog-Box-Builder, railway-admin-Modularisierung), neue Features.
-
-## Doku
-- `docs/NOW.md`: Tier B2 Abschluss + LOC-Bilanz.
-- `docs/DECISIONS.md`: Eintrag „Inspector-Skelett über `_shared/inspector.ts` statt Single-Function" und „Service-Clients in `_shared/clients/`".
+## Entscheidung, die ich brauche
+Nur eine: **OK für B3.1\*** (Hooks statt Builder)? Falls nein und du den vollen Builder willst → kurz „voller Builder" antworten, dann baue ich den.
