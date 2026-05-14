@@ -22,6 +22,41 @@ Stand 2026-05-14, post-Audit:
 3. **Vier-Rollen-Screen User-Smoke** — 5-min Klickpfad nach Welle B.
 4. **Welle-B-Use-Case-Smoke** — 1 Task „blockiert von …" in Sandbox, Dep-Karte verifizieren.
 
+### Welle-B-Detektoren — Heuristiken & Testfälle
+
+Alle vier folgen demselben Vertrag: pure `detectXPure(fresh, projectFacts)` + fail-soft `detectAndPersistX`. Parallel via `Promise.all` nach `mirrorToGraphiti`. Idempotent über fachlichen Schlüssel. Kein Detektor bricht je den Commit.
+
+**B-W1 Linker** (`intake-understand/linker.ts` + `_shared/clients/graphitiSearch.ts`)
+- Reihenfolge: 1) exact title-Match → 2) Graph-Hit-Substring + same-fact_type-Title → 3) add (kein Match).
+- Graphiti-`/search` liefert Edges/Facts als Evidenz; Hits werden nicht als ID-Quelle verwendet, sondern um aus dem bestehenden Set den Title-Treffer zu wählen.
+- Fail-soft: Bei Graphiti-Ausfall → reiner Title-only-Pfad (Backwards-compat).
+- Tests (6 Pure + Bestand 14): exact, no-match, hit-but-no-title-overlap, hit-with-title-overlap-other-type, fail-soft auf throw, leere Hits.
+
+**B-W2 Conflict-Detector** (`commit-fact/conflictDetector.ts`)
+- Vergleicht frischen Canonical-Fakt deterministisch gegen alle Facts gleichen Typs im Projekt.
+- Kinds: gleicher `title` + abweichende Kerngröße (deadline.due_date · decision.outcome/status · task.due_date oder assignee).
+- Idempotent über `contradiction_type` + sortiertes Paar (`fact_a_id`, `fact_b_id`).
+- Tests (6 Pure): deadline-Datums-Konflikt, decision-Outcome-Konflikt, gleiche Werte → kein Konflikt, Self-Match-Ausschluss, Title-Mismatch → kein Konflikt, Idempotenz beim Re-Run.
+
+**B-W3 Gap-Detector** (`commit-fact/gapDetector.ts`)
+- Drei Kinds, alle deterministisch, idempotent über `(project_id, kind, canonical_fact_id)`:
+  - `deadline_without_owner` — fact_type=deadline ohne `assignee` / `owner` / `responsible` im content.
+  - `decision_without_deadline` — fact_type=decision, im selben Projekt keine deadline mit case-insensitive Title-Substring auf den Decision-Title.
+  - `task_without_due_date` — fact_type=task ohne `content.due_date`.
+- Schreibt in `gap_signals` mit `metadata: {source: "commit-fact/gapDetector", kind}`.
+- Tests (8 Pure): jeder Kind positiv + negativ, leerer Content, mehrere Tasks parallel, Title-Match-Variationen (Substring vs. exakt).
+
+**B-W4 Dependency-Detector** (`commit-fact/dependencyDetector.ts`)
+- Zwei Kinds, deterministisch, fail-soft, idempotent über `(source_id, target_id, dependency_type)`:
+  - `blockiert_durch` — fact_type=task, dessen `content.title|description|text|note` eine Trigger-Phrase enthält (`blockiert von`, `blockiert durch`, `wartet auf`, `abhängig von`, `depends on`, `blocked by`) UND danach den Title eines anderen task/decision/deadline im selben Projekt als Substring matcht. Token-Längenfilter ≥ 4, case-insensitive, Whitespace normalisiert.
+  - `wartet_auf` — fact_type=deadline, dessen Title oder Description einen Decision-Title als Substring enthält.
+  - `haengt_ab_von` (für `fact_type=reference`) bleibt im Kernel — Detektor doppelt nicht.
+- Self-Match in beiden Kinds ausgeschlossen.
+- Schreibt in `dependencies` mit `metadata: {source: "commit-fact/dependencyDetector"}`.
+- Tests (8 Pure): Trigger-Hit, kein Trigger, Trigger ohne Match, Deadline→Decision-Hit, Deadline ohne Match, Reference ignoriert, Self-Match-Ausschluss, Token-Länge < 4 ignoriert.
+
+**Bewusst nicht in Wave B:** LLM-Heuristiken (semantische Synonyme, Embedding-Ähnlichkeit, Reasoning über Kausalketten). Erst zünden, wenn Sandbox-Daten zeigen, dass deterministischer Recall zu niedrig ist — dann pro Detektor unabhängig nachziehen, der Vertrag ist bereits darauf zugeschnitten.
+
 
 ### Vorheriger Sprint — Welle B-W3 Gap-Detector live
 
