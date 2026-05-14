@@ -90,7 +90,7 @@ export async function pollAolRun(
     }
 
     if (Date.now() - start >= timeoutMs) {
-      devlog.warn("pollAolRun timeout", `${runId} after ${timeoutMs}ms`);
+      devlog.warn("edge", "pollAolRun timeout", `${runId} after ${timeoutMs}ms`);
       return { status: "timeout", snapshot: lastSnap };
     }
 
