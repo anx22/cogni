@@ -498,7 +498,8 @@ function LogLine({ log, keyword }: { log: RailwayLog; keyword: string }) {
   );
 }
 
+import { fmtDateTimeShort } from "@/lib/format/dateFormatters";
+
 function shortDate(iso: string): string {
-  const d = new Date(iso);
-  return `${d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" })} ${d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}`;
+  return fmtDateTimeShort(iso);
 }

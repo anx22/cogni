@@ -2,6 +2,8 @@ import { useState } from "react";
 import { ChevronRight, User, CalendarClock, Ban } from "lucide-react";
 import ObjectToken from "./shared/ObjectToken";
 import SourceMarker from "./shared/SourceMarker";
+import SectionLabel from "./shared/SectionLabel";
+import CardSurface from "./shared/CardSurface";
 import { useDialog } from "@/components/dialog/DialogProvider";
 import { buildHandlungsbedarfSession } from "@/lib/dialog/sessionFactories";
 import type { Arbeitsmodus, HandlungsbedarfVM } from "@/lib/project/types";
@@ -28,7 +30,7 @@ const HandlungsbedarfList = ({ items }: { items: Item[] }) => {
       <div>
         <header className="mb-6 flex items-baseline justify-between">
           <div>
-            <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground/70 mb-2">Operatives Zentrum</p>
+            <SectionLabel className="mb-2">Operatives Zentrum</SectionLabel>
             <h2 className="text-2xl font-light tracking-tight text-foreground">Handlungsbedarf</h2>
           </div>
           <span className="text-xs text-muted-foreground">
@@ -50,11 +52,11 @@ const HandlungsbedarfList = ({ items }: { items: Item[] }) => {
                   <span className="text-[11px] text-muted-foreground/60">{meta.hint}</span>
                   <span className="text-[11px] text-muted-foreground/60 ml-auto">{items.length}</span>
                 </div>
-                <div className="rounded-xl border border-border-subtle bg-surface-2 shadow-card-glow divide-y divide-border-subtle overflow-hidden">
+                <CardSurface divideRows overflowHidden>
                   {items.map((it) => (
                     <ActionRow key={it.id} item={it} barClass={meta.bar} />
                   ))}
-                </div>
+                </CardSurface>
               </div>
             );
           })}

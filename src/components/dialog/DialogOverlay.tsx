@@ -5,20 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { useDialog } from "./DialogProvider";
 import BoxRenderer from "./BoxRenderer";
 import { END_STATES } from "@/lib/dialog/types";
-
-const formatDate = (iso?: string | null) => {
-  if (!iso) return null;
-  try {
-    return new Date(iso).toLocaleDateString("de-DE", {
-      day: "2-digit",
-      month: "long",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return null;
-  }
-};
+import { fmtDateTimeLong } from "@/lib/format/dateFormatters";
 
 const DialogOverlay = () => {
   const { session, closeDialog, readonly } = useDialog();
@@ -38,7 +25,7 @@ const DialogOverlay = () => {
   const decisionBoxes = session.boxes.filter((b) => b.type !== "kontext");
   const decided = decisionBoxes.filter((b) => END_STATES.includes(b.state)).length;
   const total = decisionBoxes.length;
-  const closedAt = formatDate(session.closedAt);
+  const closedAt = fmtDateTimeLong(session.closedAt);
 
   return createPortal(
     <div

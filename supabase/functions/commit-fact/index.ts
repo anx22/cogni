@@ -22,12 +22,8 @@ import {
 } from "../_shared/graphiti.ts";
 import { createLogger, type Logger } from "../_shared/logger.ts";
 import { withErrorBoundary } from "../_shared/withErrorBoundary.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+import { corsHeaders, handleOptions } from "../_shared/http.ts";
+import { getAuthenticatedUser } from "../_shared/auth.ts";
 
 interface Payload {
   review_case_id: string;
@@ -39,20 +35,17 @@ interface Payload {
 // HTTP-Adapter (Deno.serve) — dünn. Kernlogik in commitFact() unten.
 // ----------------------------------------------------------------------------
 Deno.serve(withErrorBoundary("commit-fact", async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const pre = handleOptions(req);
+  if (pre) return pre;
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   // deno-lint-ignore no-explicit-any
   const admin: any = createClient(supabaseUrl, serviceKey);
 
-  const authHeader = req.headers.get("Authorization") ?? "";
-  const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
-    global: { headers: { Authorization: authHeader } },
-  });
-  const { data: userData } = await userClient.auth.getUser();
-  const user = userData?.user;
-  if (!user) return fail("nicht angemeldet", 401);
+  const auth = await getAuthenticatedUser(req);
+  if (!auth.ok) return fail(auth.error, auth.status);
+  const user = auth.user;
 
   const log = createLogger({ fn: "commit-fact", userId: user.id, client: admin });
   log.stage("start", "request received");

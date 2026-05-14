@@ -11,6 +11,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { formatRelative } from "@/lib/format/relativeTime";
+import { mapById } from "@/lib/utils";
 import type {
   ProjectViewModel,
   KonfliktVM,
@@ -63,18 +64,12 @@ export interface RawProjectData {
 }
 
 // ---------------------------------------------------------------------------
-// Format-Helpers
+// Format-Helpers — re-exportiert aus zentralem dateFormatters-Modul,
+// damit bestehende Importe (`fmtDate`, `fmtShort`, `ageInDays`) weiter funktionieren.
 // ---------------------------------------------------------------------------
-export const fmtDate = (iso: string | null | undefined) =>
-  iso
-    ? new Date(iso).toLocaleDateString("de-DE", { day: "2-digit", month: "long", year: "numeric" })
-    : "—";
-
-export const fmtShort = (iso: string | null | undefined) =>
-  iso ? new Date(iso).toLocaleDateString("de-DE") : "";
-
-export const ageInDays = (iso: string) =>
-  Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 86400000));
+import { fmtLong, fmtShort, ageInDays } from "@/lib/format/dateFormatters";
+const fmtDate = fmtLong;
+export { fmtLong as fmtDate, fmtShort, ageInDays };
 
 // Übersetzt Snapshot-Summaries in lesbare Sprache. Alte Datensätze enthalten
 // noch Maschinen-Codes wie "Snapshot nach commit:stakeholder:add" — die dürfen
@@ -134,7 +129,7 @@ export const numberFromJson = (v: unknown, key: string): number | null => {
 // ---------------------------------------------------------------------------
 // deno-lint-ignore no-explicit-any
 export function toKonflikte(contradictions: any[], canonical: any[]): KonfliktVM[] {
-  const factById = new Map(canonical.map((f) => [f.id, f]));
+  const factById = mapById(canonical);
   return contradictions.map((c) => {
     const a = c.fact_a_id ? factById.get(c.fact_a_id) : null;
     const b = c.fact_b_id ? factById.get(c.fact_b_id) : null;

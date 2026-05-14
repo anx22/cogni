@@ -5,19 +5,33 @@
 
 ---
 
-## Aktueller Sprint — QA-Härtung abgeschlossen
+## Aktueller Sprint — Tier B1 abgeschlossen
 
-Stand 2026-05-14:
+Stand 2026-05-14 (Tier B1 — Quick Wins):
 
-| Phase | Soll | Ist | Status |
-|---|---|---|---|
-| 1 Bestand | Seam-Inventar + Top-10-Risiko | `docs/qa-seam-inventar.md` | ✅ |
-| 2 Instrumentierung | Logger, `pipeline_events`, ErrorBoundary, Health-Panel | deployed | ✅ |
-| 3 Tests | Fixtures, Sweeper, Unit + Edge + E2E-Smokes | 40 Vitest + 18 Deno grün | ✅ |
-| 4 Automatisierung | ESLint scharf, Prettier, Husky, CI, withErrorBoundary, console.log-Smoke | alle 16 Edge Functions gewrappt, CI blockt | ✅ |
+- **B1.1 Date-Formatter konsolidiert** → neues Modul `src/lib/format/dateFormatters.ts`
+  (`fmtLong`, `fmtShort`, `fmtTime`, `fmtDateTimeShort`, `fmtDateTimeLong`,
+  `ageInDays`, `toTimestamp`). Migriert: `projectViewModel`, `DialogOverlay`,
+  `InspectorPanel`. Re-Export von `formatRelative` für Abwärtskompat.
+- **B1.2 Map-Utilities** → `mapById`, `countBy` in `src/lib/utils.ts`. Genutzt
+  in `useProjects` (entfernt manuelles `inc`-Pattern) und `projectViewModel`.
+- **B1.3 HTTP-Wrapper** → `supabase/functions/_shared/http.ts`
+  (`corsHeaders`, `ok`, `fail`, `handleOptions`). 6 Functions migriert,
+  `withErrorBoundary` + `inspect-auth` re-exportieren von dort (kein Drift).
+- **B1.4 Project-Shared-Components** → `SectionLabel`, `CardSurface`.
+  `HandlungsbedarfList` und `VerlaufFeed` migriert (visuell identisch).
+- **B1.5 Auth-Helper** → `supabase/functions/_shared/auth.ts`
+  (`getAuthenticatedUser` → `{ok, userId, user, client, token}`). Migriert:
+  `commit-fact`, `asset-delete`, `project-delete`. (`intake-trigger`,
+  `voice-transcribe`, `aol-callback` nutzen jetzt zumindest geteilte
+  CORS/OPTIONS — eigene Auth-Spezialfälle bewusst belassen.)
 
-Endmetriken: Vitest 9 Files / 40 Tests · Deno 19 Tests · ESLint 0 Errors ·
-Logger-Abdeckung **16/16** (inkl. Inspector + railway-admin) · Graphiti-Mirror wieder ~100 %.
+Verify: Vitest 60/60 grün. Edge-Functions deployed. Smoketests:
+OPTIONS-Preflights + ungültige/leere Auth-Token → korrekte 401-Antworten.
+
+### Vorher/jetzt-Endmetriken
+Vitest 10 Files / 60 Tests · Deno 19 Tests · ESLint 0 Errors ·
+Logger-Abdeckung 16/16 · Graphiti-Mirror ~100 %.
 
 ---
 

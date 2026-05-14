@@ -3,41 +3,27 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { withErrorBoundary } from "../_shared/withErrorBoundary.ts";
 import { createLogger } from "../_shared/logger.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
-
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
+import { handleOptions, ok, fail } from "../_shared/http.ts";
+import { getAuthenticatedUser } from "../_shared/auth.ts";
 
 Deno.serve(withErrorBoundary("project-delete", async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
-  if (req.method !== "POST") return json({ error: "method" }, 405);
+  const pre = handleOptions(req);
+  if (pre) return pre;
+  if (req.method !== "POST") return fail("method", 405);
 
-  const url = Deno.env.get("SUPABASE_URL")!;
-  const anon = Deno.env.get("SUPABASE_ANON_KEY")!;
-  const service = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-  const auth = req.headers.get("Authorization") ?? "";
-  if (!auth.startsWith("Bearer ")) return json({ error: "auth" }, 401);
-
-  const userClient = createClient(url, anon, { global: { headers: { Authorization: auth } } });
-  const { data: u } = await userClient.auth.getUser();
-  const userId = u?.user?.id;
-  if (!userId) return json({ error: "auth" }, 401);
+  const auth = await getAuthenticatedUser(req);
+  if (!auth.ok) return fail(auth.error, auth.status);
+  const userId = auth.userId;
 
   let project_id = "";
   try {
     const body = await req.json();
     project_id = String(body?.project_id ?? "");
   } catch { /* */ }
-  if (!project_id) return json({ error: "project_id" }, 400);
+  if (!project_id) return fail("project_id", 400);
 
+  const url = Deno.env.get("SUPABASE_URL")!;
+  const service = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const admin = createClient(url, service);
   const log = createLogger({ fn: "project-delete", userId, client: admin });
   log.stage("enter", "deleting project", { project_id });
@@ -50,7 +36,7 @@ Deno.serve(withErrorBoundary("project-delete", async (req) => {
   if (!project || project.user_id !== userId) {
     log.warn("forbidden", "project not owned", { project_id });
     await log.flush();
-    return json({ error: "forbidden" }, 403);
+    return fail("forbidden", 403);
   }
 
   const { data: assets } = await admin
@@ -92,7 +78,7 @@ Deno.serve(withErrorBoundary("project-delete", async (req) => {
   if (pErr) {
     log.error("delete", "projects.delete failed", pErr);
     await log.flush();
-    return json({ error: pErr.message }, 500);
+    return fail(pErr.message, 500);
   }
 
   if (paths.length > 0) {
@@ -105,5 +91,5 @@ Deno.serve(withErrorBoundary("project-delete", async (req) => {
 
   log.stage("exit", "project deleted", { deleted_assets: assetIds.length });
   await log.flush();
-  return json({ ok: true, deleted_assets: assetIds.length });
+  return ok({ ok: true, deleted_assets: assetIds.length });
 }));
