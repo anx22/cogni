@@ -3,7 +3,12 @@
 // -----------------------------------------------------------------------------
 //  Nimmt rohe DB-Rows (RawProjectData), gibt fertiges ProjectViewModel zurück.
 //  Keine Hooks, keine Side-Effects, keine Supabase-Calls. → Unit-testbar.
+//
+//  `any` ist hier bewusst — DB-Rows sind dynamische JSONB-Strukturen, deren
+//  Pflichtfelder durch den DB-Trigger validate_fact_content() (A3.3) garantiert
+//  werden. Strikteres Typing kommt mit A3.1 (strictNullChecks).
 // =============================================================================
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { formatRelative } from "@/lib/format/relativeTime";
 import type {
