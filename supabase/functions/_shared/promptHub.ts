@@ -24,6 +24,7 @@ const HUB_BASE = (Deno.env.get("LANGSMITH_ENDPOINT") ??
   "https://eu.api.smith.langchain.com").replace(/\/$/, "");
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const FETCH_TIMEOUT_MS = 2_000;
+const PROJECT_WORKSPACE_ID = "df8bba60-9dc7-4c0a-8f0b-696d09baac58";
 
 interface CachedPrompt {
   template: string;
@@ -53,7 +54,7 @@ function authHeaders(): Record<string, string> {
   const key = Deno.env.get("LANGSMITH_API_KEY");
   if (!key) return {};
   const headers: Record<string, string> = { "x-api-key": key };
-  const workspaceId = Deno.env.get("LANGSMITH_WORKSPACE_ID") ?? Deno.env.get("LANGSMITH_PROMPT_OWNER");
+  const workspaceId = Deno.env.get("LANGSMITH_WORKSPACE_ID") ?? PROJECT_WORKSPACE_ID;
   if (workspaceId) headers["x-tenant-id"] = workspaceId;
   return headers;
 }
@@ -266,7 +267,7 @@ export function promptCacheState(): {
   const now = Date.now();
   return {
     endpoint: HUB_BASE,
-    workspaceConfigured: !!(Deno.env.get("LANGSMITH_WORKSPACE_ID") ?? Deno.env.get("LANGSMITH_PROMPT_OWNER")),
+    workspaceConfigured: !!(Deno.env.get("LANGSMITH_WORKSPACE_ID") ?? PROJECT_WORKSPACE_ID),
     entries: Array.from(cache.entries()).map(([name, v]) => ({
       name,
       version: v.version,
