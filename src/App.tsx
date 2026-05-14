@@ -23,11 +23,12 @@ const App = () => {
   useEffect(() => {
     attachGlobalErrorHandlers();
     attachPipelineSink();
-    // Cogni-Theme: data-theme am <html>, additiv zur shadcn .dark-Klasse.
-    // Default = "day". Theme-Switch folgt in einer späteren Phase.
-    if (!document.documentElement.getAttribute("data-theme")) {
-      document.documentElement.setAttribute("data-theme", "day");
-    }
+    // Cogni-Theme: data-theme am <html>, aus localStorage hydrieren (Default: day).
+    const stored = (() => {
+      try { return window.localStorage.getItem("cogniTheme"); } catch { return null; }
+    })();
+    const theme = stored === "night" || stored === "day" ? stored : "day";
+    document.documentElement.setAttribute("data-theme", theme);
     devlog.ui("App mounted");
   }, []);
 

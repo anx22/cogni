@@ -19,6 +19,9 @@ Stand 2026-05-14. Vorbereitung + Phase 1 abgeschlossen. Master-Quelle: `docs/des
 | 4 | Home-Screen 3-spaltig: Sidebar · Entity+HomePrompt · ImpactPipelinePanel | ✅ Vitest 60/60, tsc clean |
 | 5 | Dialog V2 default: BatchReviewOverlay + FaktDrillOverlay, alte BoxRenderer/BoxFrame/BoxStateBadge + 8 Box-Komponenten gelöscht | ✅ Vitest 60/60 |
 | 6 | AssetOrbit (oberer Bogen 225°, Realtime auf assets+dialog_sessions, Klick auf review-ready öffnet Session) | ✅ |
+| 7a | Tag/Nacht-Toggle im AccountDrawer (`localStorage.cogniTheme`, Hydrate in App.tsx) | ✅ |
+| 7b | Mobile-Audit Projekt-Screen: `100dvh` + Body-Scroll-Lock + `overscroll-contain` auf inneren Container | ✅ |
+| — | Realtime-Channel-Kollision behoben: `useRealtimeTables` h\u00e4ngt automatisch `useId`-Suffix an | ✅ |
 
 **Stopp-Bedingungen:** keine `src/lib/**`-Edits außer Format-Dateien; `ProjectViewModel`-Vertrag unberührt; Schema/Edge Functions tabu; alte Boxen erst nach Phase-5-Verify löschen; `data-theme` darf nicht durch `.dark` ersetzt werden.
 
