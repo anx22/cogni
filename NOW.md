@@ -20,40 +20,19 @@ Status der vier QA-Phasen (Stand 2026-05-14):
 
 ## Backlog (geordnet nach Priorität)
 
-1. **commit-fact Integrationstests** *(aus Phase 3 vertagt)*
-   - Refactor: Kernlogik aus `Deno.serve` in pure `commitFact({ admin, user, payload, log })` ziehen.
-   - Mock-Helfer für Supabase-Client.
-   - 3 Pfade: Happy / Konflikt / Re-Commit (Supersede).
-   - Geschätzt: ~2 h.
+> Alle Items des QA-Audit-Reports vom 2026-05-14 sind abgearbeitet (Stages 1–7).
+> Nächster offener Punkt aus dem QA-Plan ist die echte Browser-E2E-Lane (Playwright/Cypress)
+> — derzeit noch zurückgestellt, da die hookbasierten Smokes die kritischen Pfade
+> abdecken und die Server-Seite per Deno-Tests grün ist.
 
-2. **Phase 4 vollenden**
-   - `.prettierrc` + `eslint-config-prettier` als Letztes im Extends.
-   - Husky installieren, `.husky/pre-commit` → `lint-staged` für `*.{ts,tsx}` (ESLint + `tsc --noEmit`).
-   - ESLint-Regeln von `warn` auf `error` hochziehen, sobald die Bestandsverstöße beseitigt sind:
-     - `@typescript-eslint/no-unused-vars`
-     - `@typescript-eslint/no-floating-promises`
-     - `no-console` (mit `allow: ["warn","error"]`)
-     - `eslint-plugin-import` (`import/order`, `no-unresolved`)
-   - CI-Smoke: `rg "console.log" supabase/functions/` muss leer sein (aktuell 6 Treffer).
-   - Nightly-Cron-Workflow, der `test-data-sweep` triggert.
+1. **Echte Browser-E2E-Lane** *(neu, optional)*
+   - Playwright-Setup, ein Smoke pro Persona-Pfad (Upload, Notiz, Asset-Delete).
+   - Erst sinnvoll, sobald wir Persona-/Auth-Fixtures als Browser-Cookie spiegeln.
+   - Geschätzt: ~4 h.
 
-3. **Restliche Edge Functions instrumentieren**
-   - Logger einziehen in: `inspect-graphiti`, `inspect-langsmith`, `inspect-railway`, `railway-admin`, `voice-transcribe`, `asset-delete`, `project-delete`.
-   - Bisher instrumentiert: `commit-fact`, `intake-understand`, `intake-trigger`, `intake-process`, `aol-callback`, `graphiti-reconcile`, `graphiti-backfill`, `inspect-pipeline`, `test-data-sweep`.
-
-4. **E2E-Smokes (aus Phase 3 noch offen)**
-   - Upload EML → Review → Commit → Fact im Project sichtbar.
-   - Note erfassen → Review → Commit.
-   - Asset löschen → Cascade `aol_runs`.
-
-5. **`commit-fact` testbar machen**
-   - Pure `commitFact()`-Funktion aus `Deno.serve`-Closure ziehen, Mock-Admin-Helper, drei Deno-Tests (Happy/Konflikt/Supersede). Siehe `QA-AUDIT-REPORT.md` Fix 4.
-
-6. **Phase-4-Gate scharf stellen**
-   - `.prettierrc`, Husky, lint-staged, ESLint-Regeln von `warn` → `error`, Nightly-Cron für `test-data-sweep`. Siehe `QA-AUDIT-REPORT.md` Fix 5.
-
-7. **`pollAolRun` testen**
-   - `src/lib/pipeline/pollAolRun.test.ts` mit `vi.mock`-Strategie für Supabase-Client.
+2. **Logger in restliche Inspector-/Admin-Funktionen einziehen** *(low priority)*
+   - `inspect-graphiti`, `inspect-langsmith`, `inspect-railway`, `inspect-pipeline`, `railway-admin`.
+   - Diese laufen read-only & sind durch `withErrorBoundary` abgesichert; ein Logger-Eintrag bringt nur Diagnose-Schärfe.
 
 ---
 
