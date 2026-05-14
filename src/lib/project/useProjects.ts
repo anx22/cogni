@@ -144,12 +144,13 @@ export function useProjects(options?: UseProjectsOptions): UseProjectsResult {
         openCount: openCount > 0 ? openCount : undefined,
         signal,
         signal2,
+        archived: r.status === "archived",
       };
     });
 
     setProjects(mapped);
     setLoading(false);
-  }, [userId]);
+  }, [userId, includeArchived]);
 
   useEffect(() => {
     load();
