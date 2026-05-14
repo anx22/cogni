@@ -52,7 +52,7 @@ const VerlaufFeed = ({ verlauf }: { verlauf: VerlaufVM[] }) => {
           ))}
         </div>
 
-        <div className="rounded-xl border border-border-subtle bg-surface-2 shadow-card-glow p-6 max-h-[720px] overflow-y-auto">
+        <CardSurface className="p-6 max-h-[720px] overflow-y-auto">
           <div className="relative pl-6 border-l border-border-strong space-y-5">
             {filtered.map((e) => {
               const isConflict = e.ereignisTyp === "konflikt" || e.delta === "widersprochen";
