@@ -258,6 +258,7 @@ Deno.serve(async (req) => {
       await writeProjectSnapshot(admin, user.id, project_id, {
         trigger_event: `commit:${pf.fact_type}:${eventType}`,
         canonical_fact_id: cf!.id,
+        log,
       });
     } else {
       if (pf) {
@@ -407,7 +408,7 @@ async function writeProjectSnapshot(
   admin: any,
   user_id: string,
   project_id: string,
-  opts: { trigger_event: string; canonical_fact_id?: string },
+  opts: { trigger_event: string; canonical_fact_id?: string; log?: Logger },
 ) {
   try {
     const tables = [
