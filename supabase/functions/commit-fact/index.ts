@@ -20,6 +20,7 @@ import {
   GraphitiUnavailableError,
   GraphitiHttpError,
 } from "../_shared/graphiti.ts";
+import { createLogger, type Logger } from "../_shared/logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -48,9 +49,13 @@ Deno.serve(async (req) => {
   const user = userData?.user;
   if (!user) return fail("nicht angemeldet", 401);
 
+  const log = createLogger({ fn: "commit-fact", userId: user.id, client: admin });
+  log.stage("start", "request received");
+
   try {
     const { review_case_id, decision, user_decision } = (await req.json()) as Payload;
     if (!review_case_id || !decision) throw new Error("review_case_id + decision erforderlich");
+    log.stage("input", "payload parsed", { review_case_id, decision });
 
     const { data: rc, error: rcErr } = await admin
       .from("review_cases")
@@ -59,6 +64,8 @@ Deno.serve(async (req) => {
       .single();
     if (rcErr || !rc) throw new Error(`review_case nicht gefunden: ${rcErr?.message}`);
     if (rc.user_id !== user.id) return fail("kein Zugriff", 403);
+    log.bind({ sessionId: rc.session_id, projectId: rc.session?.project_id ?? null });
+    log.stage("review_case.loaded", "case loaded", { box_type: rc.box_type, fact_type: rc.proposed_fact?.fact_type });
 
     // ==== Sonderfall: Zuordnungsbox =====================================
     if (rc.box_type === "assignment") {
@@ -74,7 +81,9 @@ Deno.serve(async (req) => {
       }
       await handleAssignment(admin, user.id, rc, decision, user_decision);
       await updateSessionProgress(admin, rc.session_id);
-      return ok({});
+      log.stage("assignment.done", "project assigned");
+      await log.flush();
+      return ok({ correlation_id: log.correlationId });
     }
 
     // ==== Guard: andere Boxen brauchen erst die Zuordnung ===============
@@ -173,6 +182,8 @@ Deno.serve(async (req) => {
         .select("id")
         .single();
       if (cfErr) throw new Error(`canonical_facts: ${cfErr.message}`);
+      log.bind({ projectId: project_id });
+      log.stage("canonical_fact.inserted", "canonical fact written", { canonical_fact_id: cf!.id, fact_type: pf.fact_type, corrected: wasCorrected });
 
       // Graphiti-Spiegelung: Supabase bleibt Master, Graphiti bekommt das
       // Faktum als Episode (group_id=project_id). Async, daher generieren wir
@@ -183,7 +194,7 @@ Deno.serve(async (req) => {
         project_id,
         fact_type: pf.fact_type,
         content: finalContent,
-      });
+      }, log);
 
       if (wasCorrected) {
         await admin.from("corrections").insert({
@@ -235,6 +246,7 @@ Deno.serve(async (req) => {
         new_value: finalContent,
         previous_value: wasCorrected ? pf.content : null,
       });
+      log.stage("change_event.inserted", "delta logged", { event_type: eventType });
 
       await admin.from("proposed_facts").update({ status: "committed" }).eq("id", pf.id);
       await admin
@@ -515,11 +527,13 @@ async function mirrorToGraphiti(
     fact_type: string;
     content: Record<string, unknown>;
   },
+  log?: Logger,
 ): Promise<void> {
   if (!isGraphitiConfigured()) {
-    console.log("mirrorToGraphiti: GRAPHITI_SERVICE_URL nicht gesetzt — übersprungen.");
+    log?.warn("graphiti.mirror", "GRAPHITI_SERVICE_URL not set — skipped");
     return;
   }
+  log?.stage("graphiti.mirror.start", "preparing episode", { canonical_fact_id: args.canonical_fact_id });
 
   // user_id einmal vorab holen — wird sowohl für sync_log als auch im Catch gebraucht.
   const { data: ownerRow } = await admin
@@ -552,6 +566,7 @@ async function mirrorToGraphiti(
       name: `${args.fact_type}:${args.canonical_fact_id.slice(0, 8)}`,
       source_description: `canonical_fact:${args.canonical_fact_id}`,
     });
+    log?.stage("graphiti.message", "mirror sent", { source_description: `canonical_fact:${args.canonical_fact_id}` });
 
     // Sync-Log: 'queued' direkt nach erfolgreichem POST. Die echte Episode-UUID
     // wird von graphiti-reconcile später nachgeliefert.
@@ -597,7 +612,7 @@ async function mirrorToGraphiti(
       err instanceof GraphitiUnavailableError ? { kind: "unavailable", message: err.message }
       : err instanceof GraphitiHttpError ? { kind: "http", status: err.status, body: err.body.slice(0, 240) }
       : { kind: "unknown", message: err instanceof Error ? err.message : String(err) };
-    console.warn("mirrorToGraphiti fehlgeschlagen:", errInfo);
+    log?.error("graphiti.mirror", "mirror failed", err, errInfo);
 
     // Fehler in provenance festhalten — Read-Modify-Write, weil Supabase
     // kein JSON-merge nativ unterstützt. Best-Effort: niemals werfen.

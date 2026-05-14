@@ -13,37 +13,42 @@ import { DialogProvider } from "./components/dialog/DialogProvider";
 import { ManualOverridesProvider } from "./lib/dialog/manualOverrides";
 import DevLogPanel from "./components/devlog/DevLogPanel";
 import { attachGlobalErrorHandlers, devlog } from "./lib/devlog/devlog";
+import { attachPipelineSink } from "./lib/devlog/pipelineSink";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 
 const queryClient = new QueryClient();
 
 const App = () => {
   useEffect(() => {
     attachGlobalErrorHandlers();
+    attachPipelineSink();
     devlog.ui("App mounted");
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <ManualOverridesProvider>
-            <DialogProvider>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/projekt/:id" element={<Project />} />
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/orb-lab" element={<OrbLab />} />
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </DialogProvider>
-          </ManualOverridesProvider>
-          <DevLogPanel />
-        </BrowserRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <ManualOverridesProvider>
+              <DialogProvider>
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/projekt/:id" element={<Project />} />
+                  <Route path="/auth" element={<Auth />} />
+                  <Route path="/orb-lab" element={<OrbLab />} />
+                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </DialogProvider>
+            </ManualOverridesProvider>
+            <DevLogPanel />
+          </BrowserRouter>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 };
 
