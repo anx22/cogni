@@ -63,18 +63,10 @@ export interface RawProjectData {
 }
 
 // ---------------------------------------------------------------------------
-// Format-Helpers
+// Format-Helpers — re-exportiert aus zentralem dateFormatters-Modul,
+// damit bestehende Importe (`fmtDate`, `fmtShort`, `ageInDays`) weiter funktionieren.
 // ---------------------------------------------------------------------------
-export const fmtDate = (iso: string | null | undefined) =>
-  iso
-    ? new Date(iso).toLocaleDateString("de-DE", { day: "2-digit", month: "long", year: "numeric" })
-    : "—";
-
-export const fmtShort = (iso: string | null | undefined) =>
-  iso ? new Date(iso).toLocaleDateString("de-DE") : "";
-
-export const ageInDays = (iso: string) =>
-  Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 86400000));
+export { fmtLong as fmtDate, fmtShort, ageInDays } from "@/lib/format/dateFormatters";
 
 // Übersetzt Snapshot-Summaries in lesbare Sprache. Alte Datensätze enthalten
 // noch Maschinen-Codes wie "Snapshot nach commit:stakeholder:add" — die dürfen
