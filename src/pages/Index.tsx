@@ -7,6 +7,7 @@ import SideGrid from "@/components/entity/SideGrid";
 import IntakeSessionsPanel from "@/components/entity/IntakeSessionsPanel";
 import HomeDropOverlay from "@/components/entity/HomeDropOverlay";
 import InputOverlay from "@/components/entity/InputOverlay";
+import AccountDrawer from "@/components/entity/AccountDrawer";
 import { useProjects } from "@/lib/project/useProjects";
 import { useIntake } from "@/lib/intake/useIntake";
 import { detectFromDrop } from "@/lib/intake/detectInputType";
