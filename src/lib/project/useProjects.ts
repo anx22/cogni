@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { countBy } from "@/lib/utils";
 import { toTimestamp } from "@/lib/format/dateFormatters";
+import { useRealtimeTables } from "@/lib/realtime/useRealtimeTables";
 import type { DemoProject, ProjectSignal } from "@/data/demoProjects";
 
 const initialOf = (name: string) =>
@@ -154,9 +155,6 @@ export function useProjects(options?: UseProjectsOptions): UseProjectsResult {
   }, [load]);
 
   // Realtime: projects + signaltragende Tabellen → debounced Reload
-  useEffect(() => {
-    if (!userId) return;
-    let timer: ReturnType<typeof setTimeout> | null = null;
   useRealtimeTables(
     userId ? `projects-list-${userId}` : null,
     userId
