@@ -6,19 +6,25 @@
 
 ---
 
-## Aktueller Sprint — UI-Redesign vorbereiten
+## Aktueller Sprint — UI-Overhaul v2 (Master in `./design-implementation-plan.md`)
 
-Stand 2026-05-14, post-Welle-B-Konsolidierung.
+Stand 2026-05-14. Vorbereitung + Phase 1 abgeschlossen. Master-Quelle: `docs/design-implementation-plan.md`. Prototyp-Referenz (Code + Screenshots): `docs/redesign/`.
 
-**Status Core:** A-Tier · B-Tier · Welle B (B-W1…B-W4) alle live, keine offene strukturelle Schuld.
-Verbleibende Arbeit = Loops + UI-Milestone-Vorbereitung.
+| Phase | Inhalt | Status |
+|---|---|---|
+| Vorber. | Prototyp & Screenshots nach `docs/redesign/`, Sprint-Block, History-Backup | ✅ |
+| 1 | Geist-Font, `[data-theme]`-Tokens (Hex), Utility-Klassen, Tailwind-Aliase, `data-theme="day"` am `<html>` | ✅ Tag, Vitest 60/60 |
+| 2 | LageZone Hero (44px Title, 24px Lage, Atmosphären-Stripe + Glow) | ⏳ |
+| 3 | AppSidebar (240px) + Mini-Entity, ProjectScreen-Layout (Handlungsbedarf links / Verlauf rechts) | ⏳ |
+| 4 | Home-Screen 3-spaltig: Sidebar · Entity+HomePrompt · ImpactPipelinePanel | ⏳ |
+| 5 | Dialog-System: BatchReviewOverlay + FaktDrillOverlay (Feature-Flag, danach alte Boxen löschen) | ⏳ |
+| 6 | AssetOrbit (optional) | ⏳ |
 
-### Aufgaben
+**Stopp-Bedingungen:** keine `src/lib/**`-Edits außer Format-Dateien; `ProjectViewModel`-Vertrag unberührt; Schema/Edge Functions tabu; alte Boxen erst nach Phase-5-Verify löschen; `data-theme` darf nicht durch `.dark` ersetzt werden.
 
-1. **Live-Smoke Welle B** in Sandbox (Conflict + Gap + Dependency in „Hase & Söhne Couture") — verifiziert echten Vollpfad.
-2. **UI ↔ Core sauber trennen** — ViewModel als formaler Vertrag, ESLint-Restriktion in `src/components/**`, Page-Hooks ausdünnen, Design-Token-Inventur (Vorbereitung, kein Redesign). [offen]
-   - **2026-05-14:** Welle-B-Use-Case-Smoke ✅ in Sandbox „Hase & Söhne Couture": 1 Conflict + 4 Gap + 2 Dependency wie spezifiziert. Detail in `DECISIONS.md`.
-3. **Loops abarbeiten:** Graphiti-Sync-Diagnose · Vier-Rollen-Screen User-Smoke · `_shared/` console.warn → Logger.
+**Welle B / Loops (parallel):**
+1. Live-Smoke Welle B ✅ in „Hase & Söhne Couture" — siehe DECISIONS.
+2. Loops: Graphiti-Sync-Diagnose · Vier-Rollen-Screen User-Smoke · `_shared/` console.warn → Logger.
 
 ### Master-Checklist (Stand)
 

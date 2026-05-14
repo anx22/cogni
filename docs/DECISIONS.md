@@ -2,6 +2,11 @@
 
 Format: `[YYYY-MM-DD] Problem → Choice → Reason`
 
+## 2026-05-14 — UI-Overhaul v2 Phase 1
+
+- `2026-05-14` Theme-System wechselt von `:root`/`.dark` HSL auf cogni-Hex-Tokens → **dual betrieben**: shadcn-Tokens (`:root`/`.dark`, HSL) bleiben, cogni-Tokens kommen additiv unter `[data-theme="day"|"night"]` (Hex). Vorteil: shadcn-Komponenten unverändert, neuer cogni-Layer überlagert. `data-theme="day"` als Default am `<html>` in `App.tsx` gesetzt. Tailwind-Aliase `c-surface-*`, `c-ink-*`, `sig-*`, `c-accent*` zeigen direkt auf die CSS-Vars (kein `hsl()` Wrapper). Geist + Geist Mono über Google Fonts in `index.html`. Utility-Klassen `.t-*`, `.dot--*`, `.chip*`, `.cogni-btn*`, `.kbd`, `.cogni-card`, `.hairline`, `.atmosphere-stripe`, `cogni-pulse`, `cogni-entity-breathe` in `src/index.css`. Verify: Vitest 60/60.
+
+
 ## 2026-05-14 — Welle B Detektoren
 
 - `2026-05-14` Dependency-Erkennung könnte LLM-basiert im AOL-Service laufen → **deterministisch in `commit-fact/dependencyDetector.ts`** → Trigger-Phrase + Title-Substring (Token-Länge ≥ 4), kinds `blockiert_durch` (task) und `wartet_auf` (deadline → decision); `haengt_ab_von` bleibt im Kernel für `reference`. Idempotent über `(source_id, target_id, type)`, fail-soft, 8 Pure-Tests. Welle B damit komplett.
