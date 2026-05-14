@@ -106,7 +106,6 @@ const ProjectTile = forwardRef<HTMLButtonElement, ProjectTileProps>(
               onBlur={async () => {
                 if (id && draftName.trim() && draftName !== name) {
                   await actions.rename(id, draftName);
-                  onChanged?.();
                 }
                 setRenaming(false);
               }}
@@ -158,7 +157,6 @@ const ProjectTile = forwardRef<HTMLButtonElement, ProjectTileProps>(
                   disabled={actions.pending}
                   onClick={async () => {
                     await actions.unarchive(id);
-                    onChanged?.();
                   }}
                 >
                   Wiederherstellen
@@ -178,7 +176,6 @@ const ProjectTile = forwardRef<HTMLButtonElement, ProjectTileProps>(
                     disabled={actions.pending}
                     onClick={async () => {
                       await actions.archive(id);
-                      onChanged?.();
                     }}
                   >
                     Archivieren
@@ -205,7 +202,6 @@ const ProjectTile = forwardRef<HTMLButtonElement, ProjectTileProps>(
             description="Das Projekt und alle zugehörigen Inputs, Fakten, Verläufe und Konflikte werden unwiderruflich entfernt. Wenn du dir nicht sicher bist, archiviere stattdessen."
             onConfirm={async () => {
               await actions.remove(id);
-              onChanged?.();
             }}
           />
         )}
