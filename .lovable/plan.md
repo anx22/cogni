@@ -1,90 +1,55 @@
-# Plan: LangSmith Prompt Hub als Tuning-Ebene
-
 ## Ziel
 
-Prompts (heute hardcoded in `agentConfig.ts`) leben künftig in **LangSmith Prompt Hub**. Du editierst sie online, versionierst sie dort, und die App zieht die jeweils aktive Version — ohne Deploy. Bei Ausfall fällt der Code auf die eingebaute Default-Version zurück (kein Single Point of Failure).
+Einmal lückenlos validieren, dass die Kern-Innovation **end-to-end** funktioniert: Eingehender Inhalt wird verstanden, in atomare Fakten zerlegt, vom User reviewt, kanonisch geschrieben, in den Knowledge Graph gespiegelt und ist über RAG semantisch auffindbar. Jeder Bruch wird sofort gefixt.
 
-## Was bleibt wie es ist
+## Vorgehen — drei Phasen
 
-- AOL-Service auf Railway, Lovable AI Gateway, Graphiti, Unstructured: **unverändert**.
-- Bestehende Modell-Calls in `agentClient.ts` (Extract / Assignment): Logik bleibt, nur die System-Prompt-Quelle ändert sich.
-- LangSmith-Tracing (Free-Tier): bleibt unverändert.
+### Phase A — Bestandsaufnahme & Pre-Flight (read-only)
 
-## Was sich ändert
+Auf Basis echter Daten den IST-Zustand jeder Schicht messen. Keine Spekulation.
 
-### 1. Zwei Prompts in LangSmith Prompt Hub anlegen
+1. **Service-Health** (Railway API): `aol-service`, `graphiti`, `neo4j` — Deploy-Status, letzte Logs, Restart-Counts.
+2. **Token-Matrix** (`railway-admin diagnose`): Supabase ↔ Railway Sync von `AOL_SERVICE_TOKEN`, `GRAPHITI_SERVICE_TOKEN`, `LANGSMITH_API_KEY`, `OPENAI_API_KEY`, `GRAPHITI_SERVICE_URL`.
+3. **DB-Inventur**: Wie viele assets, parsed_documents, sources, proposed_facts, review_cases, canonical_facts, aol_runs, graphiti_sync_log. Fehlanzeige in `graphiti_sync_log` (0 Zeilen) klären.
+4. **Graph-Inventur** (Neo4j Cypher direkt): Episodic-/Entity-Counts, Edge-Typen, Per-Project-Breakdown.
+5. **Mirror-Konsistenz**: Anzahl `canonical_facts.graphiti_uuid IS NOT NULL` vs. Episodic-Nodes in Neo4j → Drift erkennen.
 
-Manuell einmalig im LangSmith UI (oder automatisiert per API beim ersten Run):  
-AUtomatisiert!
+### Phase B — Synthetischer End-to-End-Smoke
 
-- `produktintelligenz/extract-facts` — Inhalt = aktueller `AGENT_SYSTEM_PROMPT`
-- `produktintelligenz/suggest-assignment` — Inhalt = aktueller `ASSIGNMENT_SYSTEM_PROMPT`
+Ein eigenes, kontrolliertes Asset durch jede Stufe schicken und nach jeder Stufe verifizieren. So weiß ich, **wo** etwas bricht — nicht nur **dass**.
 
-Beide als **Chat-Prompts** mit optionalen Variablen (`{graph_hint}` etc.), damit das Verschmelzen mit Kontext im Hub gepflegt werden kann.
+1. **Test-Projekt** anlegen oder existierendes „smoke" wiederverwenden.
+2. **Test-Asset** als Text/E-Mail injizieren (kontrolliert: bekannte Personen, eine Frist, ein Widerspruch zu einem bestehenden Fakt) → in `assets`-Tabelle und Storage.
+3. **`intake-trigger`** aufrufen → erwarten: `parsed_document` + `source` + AOL-Run gestartet.
+4. **AOL-Lauf abwarten** → erwarten: 5–8 `proposed_facts`, mind. ein `delta_type=contradiction`. LangSmith-Trace prüfen (Prompt-Version sichtbar).
+5. **Review-Cases** → erwarten: korrespondierende Boxen mit `priority` und Kontext.
+6. **`commit-fact`** für ausgewählte Cases → erwarten: `canonical_facts` neu, `change_events` befüllt, alter Fakt `valid_until` gesetzt bei Widerspruch.
+7. **Mirror**: nach Commit erwartet `graphiti_uuid` befüllt, `graphiti_sync_log` Eintrag mit `status=success`. Falls 0 Sync-Log-Einträge: Mirror-Pfad debuggen.
+8. **Graphiti** `/episodes/{project}` → Episode mit `source_description=canonical_fact:<id>` sichtbar.
+9. **Neo4j** Cypher: Entity-Extraction durch (Personen + Organisation als Entity-Knoten, MENTIONS-Edges).
+10. **RAG**: `inspect-graphiti search` mit semantischer Query → Treffer enthalten unsere Test-Entities, Score plausibel.
+11. **Reverse-Lookup**: Aus Graphiti-Treffer zurück zur `canonical_facts.id` (über `source_description`) → Provenance-Kette schließt sich.
 
-### 2. Neuer Shared-Loader: `_shared/promptHub.ts`
+### Phase C — Real-Asset-Lauf (User triggert)
 
-Eine zentrale Funktion:
+Sobald neue User-Assets eintreffen (an Uhrzeit erkennbar), **gleiches Verifikations-Skript** auf die echten Runs anwenden. Findings:
 
-```text
-getPrompt(name, { variables, fallback }) → { system: string, version: string }
-```
+- Wenn AOL Mist extrahiert → Prompt im LangSmith Hub editieren, Cache busten, gleicher Asset re-prozessieren ohne Deploy.
+- Wenn Mirror nicht greift → `test-mirror` mit `wait_ms` zur Isolation.
+- Wenn Entity-Extraction in Neo4j fehlt → Graphiti-LLM-Config & OpenAI-Key prüfen.
+- Inkonsistenzen werden als gap_signals/contradictions in der App sichtbar — auch das wird durchgespielt.
 
-Verhalten:
+## Findings-Loop
 
-- 1. Lookup im **In-Memory-Cache** (TTL 5 Min). Wenn Treffer → zurück.
-- 2. GET `https://api.smith.langchain.com/commits/{owner}/{name}/latest` mit `LANGSMITH_API_KEY`.
-- 3. Variablen (`{graph_hint}`, …) per simplem `String.replace` substituieren.
-- 4. Bei HTTP-Fehler / Timeout (>2s) → `fallback`-String zurückgeben, Warning loggen, **niemals werfen**.
-- 5. `version` (Commit-Hash) zurückgeben → in LangSmith-Trace als Tag mitschicken, damit man im Trace sieht, welche Prompt-Version lief.
+Jeder Bruch wird sofort als Mini-Iteration behandelt: identifizieren → fixen (Code/Prompt/Config) → re-testen → grün abhaken. Liste wird transparent geführt.
 
-### 3. `agentClient.ts` umstellen
+## Erwartetes Ergebnis nach Phase C
 
-- `AGENT_SYSTEM_PROMPT` und `ASSIGNMENT_SYSTEM_PROMPT` bleiben in `agentConfig.ts` als **Fallback-Defaults**.
-- `callExtractFacts` / `callSuggestAssignment` ziehen die System-Message via `getPrompt(...)` und setzen den `version`-Hash als `metadata.prompt_version` im LangSmith-Trace-Header.
+Eine **belegte** Aussage pro Schicht: „funktioniert / funktioniert teilweise / kaputt — und was getan wurde". Plus eine kurze Bewertung, wo die App produktreif ist und wo noch Lücken sind.
 
-### 4. Auch im AOL-Service (Python) nutzbar machen
+## Technische Details (für später)
 
-Der Hub ist für Python (`langchain.hub.pull`) sogar leichter. Damit Welle B später dieselbe Tuning-Ebene hat:
-
-- `aol-service/app/prompts.py` — analoger Loader mit Cache + Fallback
-- Verwendung optional, erst wenn Welle B Prompts schreibt.
-
-### 5. Secret-Check
-
-`LANGSMITH_API_KEY` ist bereits gesetzt (railway-admin nutzt ihn). Kein neuer Secret-Eintrag nötig.
-
-## Was du danach kannst
-
-- Im LangSmith UI Prompts editieren → sofort live (max. 5 Min Cache).
-- Versionsverlauf, Diff, Rollback per Klick.
-- A/B-Tests pro Prompt-Version (LangSmith Native).
-- Im Trace siehst du: welche Prompt-Version + welcher Input + welche Latency + welche Kosten.
-
-## Was es **nicht** kann (Erwartungsmanagement)
-
-- **Tool/Function-Schemas** (z. B. die JSON-Schemas für `extract_facts`) bleiben im Code. Hub managt nur Text. Das ist okay — Schemas ändern sich selten, Prompts ständig.
-- LangSmith Free = 5k Traces/Monat. Prompt-Hub-Pulls zählen **nicht** als Traces. Kein Kostenrisiko.
-
-## Risiken & Mitigation
-
-
-| Risiko                                          | Mitigation                                                                   |
-| ----------------------------------------------- | ---------------------------------------------------------------------------- |
-| LangSmith down → App down                       | Fallback auf Code-Default, nie werfen                                        |
-| Cache zu lang → Edits sichtbar verzögert        | TTL 5 Min; manueller `/cache-bust`-Endpoint im railway-admin                 |
-| Falsche Variable im Hub-Prompt → Runtime-Fehler | `getPrompt` validiert: alle `{var}` müssen substituiert sein, sonst Fallback |
-
-
-## Schritte
-
-1. `_shared/promptHub.ts` schreiben (Loader + Cache + Fallback + Version-Tag).
-2. `agentClient.ts`: System-Prompts via Loader holen, Version in Trace-Metadata.
-3. `agentConfig.ts`: Bestehende Konstanten als `_FALLBACK` umbenennen, exportieren.
-4. Manuell in LangSmith UI: zwei Prompts mit identischem Inhalt anlegen.
-5. Smoke-Test: ein Asset durchschicken, Trace prüfen → `prompt_version` muss auftauchen.
-6. (Optional, Welle B) `aol-service/app/prompts.py` analog.
-
-## Aufwand
-
-~30–60 Min Code + 5 Min UI-Setup. Kein neues Secret. Keine Schema-Migration. Keine neuen Kosten.
+- Tools: `railway-admin` (logs, raw, test-mirror, diagnose, graphiti-probe), `inspect-pipeline`, `inspect-graphiti`, direkter Cypher gegen `neo4j-production-f0d9.up.railway.app`, `supabase--read_query`, `supabase--analytics_query` für Edge-Function-Logs.
+- Kein neues Schema, keine neuen Secrets nötig.
+- Test-Asset wird nach Verifizierung markiert (`metadata.smoke_test=true`), bleibt als Referenz erhalten.
+- LangSmith-Traces werden pro Stufe per `prompt_version`-Tag korreliert.
