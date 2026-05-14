@@ -206,23 +206,24 @@ Deno.serve(async (req) => {
 
     if (action === "langsmith-create-test-repo") {
       const k = Deno.env.get("LANGSMITH_API_KEY") ?? "";
-      const tid = Deno.env.get("LANGSMITH_PROMPT_OWNER") ?? "";
+      const base = body.base ?? Deno.env.get("LANGSMITH_BASE_URL") ?? "https://eu.api.smith.langchain.com";
+      const tid: string = body.tenant ?? Deno.env.get("LANGSMITH_PROMPT_OWNER") ?? "";
       const headers: Record<string, string> = {
         "x-api-key": k,
         "Content-Type": "application/json",
       };
       if (/^[0-9a-f-]{36}$/i.test(tid)) headers["X-Tenant-Id"] = tid;
-      const r = await fetch("https://api.smith.langchain.com/api/v1/repos/", {
+      const r = await fetch(`${base}/api/v1/repos/`, {
         method: "POST",
         headers,
         body: JSON.stringify({
-          repo_handle: "produktintelligenz-probe",
+          repo_handle: body.repo_handle ?? "produktintelligenz-probe",
           description: "Created by Lovable agent to verify write access",
           is_public: false,
         }),
       });
       const text = await r.text();
-      return new Response(JSON.stringify({ ok: true, status: r.status, body: text.slice(0, 600) }), {
+      return new Response(JSON.stringify({ ok: true, base, tenant: tid, status: r.status, body: text.slice(0, 800) }, null, 2), {
         headers: { ...cors, "Content-Type": "application/json" },
       });
     }
