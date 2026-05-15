@@ -229,9 +229,9 @@ Deno.serve(withErrorBoundary("graphiti-reconcile", async (req) => {
       });
     }
 
-    log.stage("done", "reconcile complete", { scanned: pending.length, resolved, missing, failed });
+    log.stage("done", "reconcile complete", { scanned: pending.length, resolved, missing, failed, staleFlipped, errorsCleared });
     await log.flush();
-    return ok({ scanned: pending.length, resolved, missing, failed, projects: perProject, correlation_id: log.correlationId });
+    return ok({ scanned: pending.length, resolved, missing, failed, staleFlipped, errorsCleared, projects: perProject, correlation_id: log.correlationId });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     log.error("error", msg, err);
