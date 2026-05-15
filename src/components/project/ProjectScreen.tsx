@@ -7,13 +7,14 @@ import HandlungsbedarfList from "./HandlungsbedarfList";
 import VerlaufFeed from "./VerlaufFeed";
 import SubstanzSection from "./SubstanzSection";
 import ProjectHeaderActions from "./ProjectHeaderActions";
-import ProjectSwitcher from "./ProjectSwitcher";
 import AppSidebar from "@/components/sidebar/AppSidebar";
 import { useIntake } from "@/lib/intake/useIntake";
 import { detectFromDrop } from "@/lib/intake/detectInputType";
 import { useProject } from "@/lib/project/useProject";
 import { useProjects } from "@/lib/project/useProjects";
 import { useProjectActions } from "@/lib/object-actions/useObjectActions";
+import { useBodyScrollLock } from "@/lib/ui/useBodyScrollLock";
+import { useDropZone } from "@/lib/intake/useDropZone";
 import { Skeleton } from "@/components/ui/skeleton";
 
 
@@ -28,7 +29,6 @@ const isUuid = (v: unknown): v is string =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 
 const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
-  const [dragActive, setDragActive] = useState(false);
   const realProjectId = isUuid(projectId) ? projectId : null;
   const navigate = useNavigate();
   const { intake } = useIntake({ projectId: realProjectId });
@@ -76,51 +76,20 @@ const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
     }
   }, [status, error, vanished]);
 
-  const onDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.dataTransfer.types.includes("Files")) setDragActive(true);
-  }, []);
-
-  const onDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.currentTarget === e.target) setDragActive(false);
-  }, []);
-
-  const onDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      setDragActive(false);
-      const files = Array.from(e.dataTransfer.files ?? []);
-      if (files.length === 0) return;
+  const handleDrop = useCallback(
+    (files: File[]) => {
       intake(detectFromDrop(files));
     },
     [intake],
   );
 
-  // Mobile Safari: nur der innere Container scrollt, Body bleibt fix.
-  // Verhindert Bounce + Address-Bar-Hopping ohne Touch-Funktionen zu blocken.
-  useEffect(() => {
-    const { body, documentElement: html } = document;
-    const prev = {
-      bodyOverflow: body.style.overflow,
-      htmlOverflow: html.style.overflow,
-      bodyOverscroll: body.style.overscrollBehavior,
-    };
-    body.style.overflow = "hidden";
-    html.style.overflow = "hidden";
-    body.style.overscrollBehavior = "none";
-    return () => {
-      body.style.overflow = prev.bodyOverflow;
-      html.style.overflow = prev.htmlOverflow;
-      body.style.overscrollBehavior = prev.bodyOverscroll;
-    };
-  }, []);
+  const { isDragging } = useDropZone({ scope: "window", onDrop: handleDrop });
+
+  // Mobile Safari: Body-Scroll-Lock zentral via Hook (Owner-Set).
+  useBodyScrollLock(true);
 
   return (
-    <div className="flex overflow-hidden" style={{ background: "var(--surface-0)", height: "100dvh" }}>
+    <div className="flex overflow-hidden bg-c-surface-0" style={{ height: "100dvh" }}>
       <AppSidebar
         projects={allProjects}
         activeProjectId={realProjectId ?? undefined}
@@ -132,18 +101,16 @@ const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
       <div
         className="flex-1 min-w-0 animate-[fade-in_0.5s_ease-out] relative overflow-y-auto overscroll-contain"
         style={{ WebkitOverflowScrolling: "touch" }}
-        onDragOver={onDragOver}
-        onDragLeave={onDragLeave}
-        onDrop={onDrop}
       >
         {(status === "ready" || status === "empty") && project && realProjectId && (
-          <div className="sticky top-0 z-30 flex justify-end items-center gap-2 px-6 py-3"
-               style={{ background: "var(--surface-0)", borderBottom: "1px solid var(--hair)" }}>
-            <ProjectSwitcher
-              currentId={realProjectId}
-              currentName={project.name}
-              globalShortcut
-            />
+          <div
+            className="sticky top-0 z-30 flex justify-between items-center gap-3 px-6 py-2.5 bg-c-surface-0"
+            style={{ borderBottom: "1px solid var(--hair)" }}
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="dot dot--calm shrink-0" aria-hidden />
+              <span className="text-sm text-foreground/90 truncate">{project.name}</span>
+            </div>
             <ProjectHeaderActions
               projectId={realProjectId}
               projectName={project.name}
@@ -164,23 +131,14 @@ const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
         )}
 
         {status === "empty" && project && (
-          <>
-            <LageZone
-              project={project}
-              editableName
-              forceEdit={forceRename}
-              onEditDone={() => setForceRename(false)}
-              onNameChange={handleRename}
-            />
-            <section className="px-8 md:px-12 lg:px-16 xl:px-20 py-24 bg-surface-1 border-b border-border-strong">
-              <div className="max-w-3xl mx-auto text-center">
-                <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground/60 mb-3">Noch keine Substanz</p>
-                <p className="text-lg text-foreground/90 font-light leading-relaxed">
-                  Lege eine Datei, einen Link oder eine Notiz ab — ich beginne mit dem Verstehen.
-                </p>
-              </div>
-            </section>
-          </>
+          <LageZone
+            project={project}
+            editableName
+            forceEdit={forceRename}
+            onEditDone={() => setForceRename(false)}
+            onNameChange={handleRename}
+            variant="shell"
+          />
         )}
 
         {status === "ready" && project && (
@@ -208,7 +166,7 @@ const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
           </>
         )}
 
-        {dragActive && (
+        {isDragging && (
           <div
             className="fixed inset-0 z-40 flex items-center justify-center bg-background/60 backdrop-blur-sm pointer-events-none transition-opacity"
             aria-hidden

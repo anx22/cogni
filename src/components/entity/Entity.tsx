@@ -188,15 +188,17 @@ const Entity = ({
     [state],
   );
 
+  // Drop wird global vom useDropZone-Hook (window-Scope) verarbeitet.
+  // Hier nur Hover-State zurücksetzen — keine doppelte Verarbeitung.
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
-      e.stopPropagation();
-      if (busy) return;
-      const files = Array.from(e.dataTransfer.files);
-      if (files.length > 0) onDrop?.(files);
+      setInternal(state);
+      // onDrop bleibt im API-Vertrag, wird aber nicht aufgerufen — single source of truth ist window.
+      void onDrop;
+      void busy;
     },
-    [onDrop, busy],
+    [onDrop, busy, state],
   );
 
   const handleClick = useCallback(() => {
