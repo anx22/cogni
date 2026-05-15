@@ -14,32 +14,35 @@ import {
   type RawProjectData,
 } from "@/lib/project/projectViewModel";
 
+// Tests verwenden bewusst minimale Partials — RawProjectData ist streng typed,
+// daher casten wir hier auf den View-Type. Mapper akzeptieren tolerante Inputs.
 const baseProject = {
   id: "p1",
   name: "Tübingen Tower",
   status: "active",
   description: "Archviz",
   updated_at: "2026-05-14T08:00:00Z",
-};
+} as unknown as RawProjectData["project"];
 
-const emptyRaw = (): RawProjectData => ({
-  project: baseProject,
-  snapshot: null,
-  outcome: null,
-  deadlines: [],
-  canonical: [],
-  contradictions: [],
-  gaps: [],
-  deps: [],
-  decisions: [],
-  tasks: [],
-  openPoints: [],
-  feedbackRows: [],
-  events: [],
-  topics: [],
-  assets: [],
-  stakeholders: [],
-});
+const emptyRaw = (): RawProjectData =>
+  ({
+    project: baseProject,
+    snapshot: null,
+    outcome: null,
+    deadlines: [],
+    canonical: [],
+    contradictions: [],
+    gaps: [],
+    deps: [],
+    decisions: [],
+    tasks: [],
+    openPoints: [],
+    feedbackRows: [],
+    events: [],
+    topics: [],
+    assets: [],
+    stakeholders: [],
+  }) as RawProjectData;
 
 describe("titleFromJson", () => {
   it("zieht title bevorzugt", () => {
