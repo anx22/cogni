@@ -269,14 +269,14 @@ const InputOverlay = ({ open, onClose, onSubmit, className, contextHint }: Input
                 </div>
                 <span className="text-xs tracking-wide">Aufnahme stoppen</span>
               </button>
-              <div className="flex items-center gap-1.5">
-                {[...Array(5)].map((_, i) => (
+              <div className="flex items-end gap-1.5 h-7">
+                {voice.levels.map((lvl, i) => (
                   <div
                     key={i}
-                    className="w-1 bg-primary/60 rounded-full animate-pulse"
+                    className="w-1 bg-primary/70 rounded-full transition-[height] duration-75"
                     style={{
-                      height: `${12 + Math.random() * 16}px`,
-                      animationDelay: `${i * 150}ms`,
+                      height: `${4 + lvl * 24}px`,
+                      opacity: 0.4 + lvl * 0.6,
                     }}
                   />
                 ))}

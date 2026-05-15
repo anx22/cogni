@@ -14,32 +14,35 @@ import {
   type RawProjectData,
 } from "@/lib/project/projectViewModel";
 
+// Tests verwenden bewusst minimale Partials — RawProjectData ist streng typed,
+// daher casten wir hier auf den View-Type. Mapper akzeptieren tolerante Inputs.
 const baseProject = {
   id: "p1",
   name: "Tübingen Tower",
   status: "active",
   description: "Archviz",
   updated_at: "2026-05-14T08:00:00Z",
-};
+} as unknown as RawProjectData["project"];
 
-const emptyRaw = (): RawProjectData => ({
-  project: baseProject,
-  snapshot: null,
-  outcome: null,
-  deadlines: [],
-  canonical: [],
-  contradictions: [],
-  gaps: [],
-  deps: [],
-  decisions: [],
-  tasks: [],
-  openPoints: [],
-  feedbackRows: [],
-  events: [],
-  topics: [],
-  assets: [],
-  stakeholders: [],
-});
+const emptyRaw = (): RawProjectData =>
+  ({
+    project: baseProject,
+    snapshot: null,
+    outcome: null,
+    deadlines: [],
+    canonical: [],
+    contradictions: [],
+    gaps: [],
+    deps: [],
+    decisions: [],
+    tasks: [],
+    openPoints: [],
+    feedbackRows: [],
+    events: [],
+    topics: [],
+    assets: [],
+    stakeholders: [],
+  }) as RawProjectData;
 
 describe("titleFromJson", () => {
   it("zieht title bevorzugt", () => {
@@ -231,13 +234,15 @@ describe("buildProjectViewModel — Composition", () => {
 
   it("baut Lagetext aus Konflikt+Gap-Counts wenn kein Snapshot", () => {
     const raw = emptyRaw();
-    raw.canonical = [{ id: "a", content: { title: "X" }, updated_at: "2026-05-14" }];
+    raw.canonical = [
+      { id: "a", content: { title: "X" }, updated_at: "2026-05-14" },
+    ] as unknown as RawProjectData["canonical"];
     raw.contradictions = [
       { id: "c1", description: "X", fact_a_id: "a", fact_b_id: null, resolved: false },
-    ];
+    ] as unknown as RawProjectData["contradictions"];
     raw.gaps = [
       { id: "g1", title: "G", impact: "", affects: "", detected_at: "2026-05-14" },
-    ];
+    ] as unknown as RawProjectData["gaps"];
     const { vm, isEmpty } = buildProjectViewModel(raw);
     expect(isEmpty).toBe(false);
     expect(vm.lagetext).toMatch(/1 Konflikt/);
@@ -252,15 +257,19 @@ describe("buildProjectViewModel — Composition", () => {
     raw.deadlines = [
       { id: "p", due_date: "2020-01-01", title: "vergangen" },
       { id: "f", due_date: future, title: "zukunft" },
-    ];
+    ] as unknown as RawProjectData["deadlines"];
     const { vm } = buildProjectViewModel(raw);
     expect(vm.stats.naechsterTermin).not.toBe("—");
   });
 
   it("nutzt humanisierten Snapshot-Summary als Lagetext", () => {
     const raw = emptyRaw();
-    raw.snapshot = { summary: "Snapshot nach commit:deadline:add" };
-    raw.canonical = [{ id: "a", content: { title: "X" }, updated_at: "2026-05-14" }];
+    raw.snapshot = {
+      summary: "Snapshot nach commit:deadline:add",
+    } as unknown as RawProjectData["snapshot"];
+    raw.canonical = [
+      { id: "a", content: { title: "X" }, updated_at: "2026-05-14" },
+    ] as unknown as RawProjectData["canonical"];
     const { vm } = buildProjectViewModel(raw);
     expect(vm.lagetext).toBe("Termin ergänzt.");
   });

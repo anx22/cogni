@@ -7,7 +7,35 @@
 
 import { formatRelative } from "@/lib/format/relativeTime";
 import { fmtLong, fmtShort, ageInDays } from "@/lib/format/dateFormatters";
+import type { Tables } from "@/integrations/supabase/types";
 import type { ProjectViewModel } from "./types";
+
+// Geteilte Row-Types — abgeleitet aus generierten Supabase-Types.
+// Schema-Drift fällt jetzt zur Compile-Zeit auf, nicht erst zur Render-Zeit.
+type ProjectRow = Tables<"projects">;
+type SnapshotRow = Pick<Tables<"project_state_snapshots">, "summary" | "created_at" | "snapshot">;
+type OutcomeRow = Tables<"outcome_signals">;
+type DeadlineRow = Tables<"deadlines">;
+type CanonicalFactRow = Tables<"canonical_facts">;
+type ContradictionRow = Tables<"contradictions">;
+type GapSignalRow = Tables<"gap_signals">;
+type DependencyRow = Tables<"dependencies">;
+type DecisionRow = Tables<"decisions">;
+type TaskRow = Tables<"tasks">;
+type OpenPointRow = Tables<"open_points">;
+type FeedbackRow = Tables<"feedback">;
+type ChangeEventRow = Tables<"change_events">;
+type TopicRow = Tables<"topics">;
+type AssetRow = Tables<"assets">;
+// Stakeholder-Links kommen mit Joins (persons/organizations) — nur die in
+// useProjectData selektierten Spalten + Joins.
+type StakeholderLinkRow = Pick<
+  Tables<"project_stakeholder_links">,
+  "id" | "role" | "person_id" | "organization_id"
+> & {
+  persons?: { name: string | null; role: string | null } | null;
+  organizations?: { name: string | null } | null;
+};
 
 import { humanizeSnapshotSummary, titleFromJson } from "./mappers/humanize";
 import { toKonflikte } from "./mappers/konflikte";
@@ -34,22 +62,22 @@ export { fmtLong as fmtDate, fmtShort, ageInDays };
 const fmtDate = fmtLong;
 
 export interface RawProjectData {
-  project: any;
-  snapshot: any | null;
-  outcome: any | null;
-  deadlines: any[];
-  canonical: any[];
-  contradictions: any[];
-  gaps: any[];
-  deps: any[];
-  decisions: any[];
-  tasks: any[];
-  openPoints: any[];
-  feedbackRows: any[];
-  events: any[];
-  topics: any[];
-  assets: any[];
-  stakeholders: any[];
+  project: ProjectRow;
+  snapshot: SnapshotRow | null;
+  outcome: OutcomeRow | null;
+  deadlines: DeadlineRow[];
+  canonical: CanonicalFactRow[];
+  contradictions: ContradictionRow[];
+  gaps: GapSignalRow[];
+  deps: DependencyRow[];
+  decisions: DecisionRow[];
+  tasks: TaskRow[];
+  openPoints: OpenPointRow[];
+  feedbackRows: FeedbackRow[];
+  events: ChangeEventRow[];
+  topics: TopicRow[];
+  assets: AssetRow[];
+  stakeholders: StakeholderLinkRow[];
 }
 
 export interface ComposedProjectVM {
