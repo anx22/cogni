@@ -58,22 +58,22 @@ export { fmtLong as fmtDate, fmtShort, ageInDays };
 const fmtDate = fmtLong;
 
 export interface RawProjectData {
-  project: any;
-  snapshot: any | null;
-  outcome: any | null;
-  deadlines: any[];
-  canonical: any[];
-  contradictions: any[];
-  gaps: any[];
-  deps: any[];
-  decisions: any[];
-  tasks: any[];
-  openPoints: any[];
-  feedbackRows: any[];
-  events: any[];
-  topics: any[];
-  assets: any[];
-  stakeholders: any[];
+  project: ProjectRow;
+  snapshot: SnapshotRow | null;
+  outcome: OutcomeRow | null;
+  deadlines: DeadlineRow[];
+  canonical: CanonicalFactRow[];
+  contradictions: ContradictionRow[];
+  gaps: GapSignalRow[];
+  deps: DependencyRow[];
+  decisions: DecisionRow[];
+  tasks: TaskRow[];
+  openPoints: OpenPointRow[];
+  feedbackRows: FeedbackRow[];
+  events: ChangeEventRow[];
+  topics: TopicRow[];
+  assets: AssetRow[];
+  stakeholders: StakeholderLinkRow[];
 }
 
 export interface ComposedProjectVM {
