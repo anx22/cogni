@@ -7,7 +7,31 @@
 
 import { formatRelative } from "@/lib/format/relativeTime";
 import { fmtLong, fmtShort, ageInDays } from "@/lib/format/dateFormatters";
+import type { Tables } from "@/integrations/supabase/types";
 import type { ProjectViewModel } from "./types";
+
+// Geteilte Row-Types — abgeleitet aus generierten Supabase-Types.
+// Schema-Drift fällt jetzt zur Compile-Zeit auf, nicht erst zur Render-Zeit.
+type ProjectRow = Tables<"projects">;
+type SnapshotRow = Pick<Tables<"project_state_snapshots">, "summary" | "created_at" | "snapshot">;
+type OutcomeRow = Tables<"outcome_signals">;
+type DeadlineRow = Tables<"deadlines">;
+type CanonicalFactRow = Tables<"canonical_facts">;
+type ContradictionRow = Tables<"contradictions">;
+type GapSignalRow = Tables<"gap_signals">;
+type DependencyRow = Tables<"dependencies">;
+type DecisionRow = Tables<"decisions">;
+type TaskRow = Tables<"tasks">;
+type OpenPointRow = Tables<"open_points">;
+type FeedbackRow = Tables<"feedback">;
+type ChangeEventRow = Tables<"change_events">;
+type TopicRow = Tables<"topics">;
+type AssetRow = Tables<"assets">;
+// Stakeholder-Links kommen mit Joins (persons/organizations) — leichter Typ.
+type StakeholderLinkRow = Tables<"project_stakeholder_links"> & {
+  persons?: { name: string | null; role: string | null } | null;
+  organizations?: { name: string | null } | null;
+};
 
 import { humanizeSnapshotSummary, titleFromJson } from "./mappers/humanize";
 import { toKonflikte } from "./mappers/konflikte";
