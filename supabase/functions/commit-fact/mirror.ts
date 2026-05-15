@@ -58,12 +58,15 @@ export async function mirrorToGraphiti(
     });
     log?.stage("graphiti.message", "mirror sent", { source_description: `canonical_fact:${args.canonical_fact_id}` });
 
+    // status='ok' = Mirror-Send erfolgreich (HTTP 2xx). Episode-UUID wird
+    // separat per `graphiti-reconcile` aufgelöst (eigene Log-Zeile).
+    // Früher hier 'queued' — irreführend, da nichts mehr zu tun ist; siehe DECISIONS 2026-05-15.
     await admin.from("graphiti_sync_log").insert({
       user_id: ownerId,
       entity_id: args.canonical_fact_id,
       entity_type: args.fact_type ?? "canonical_fact",
       operation: "mirror",
-      status: "queued",
+      status: "ok",
       payload: { source_description: `canonical_fact:${args.canonical_fact_id}`, project_id: args.project_id },
     });
 
