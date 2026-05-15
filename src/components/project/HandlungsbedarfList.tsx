@@ -66,7 +66,7 @@ const HandlungsbedarfList = ({ items }: { items: Item[] }) => {
   );
 };
 
-const ActionRow = ({ item, barClass }: { item: Item; barClass: string }) => {
+const ActionRow = ({ item, barColor }: { item: Item; barColor: string }) => {
   const [open, setOpen] = useState(false);
   const { openDialog } = useDialog();
   return (
@@ -100,7 +100,7 @@ const ActionRow = ({ item, barClass }: { item: Item; barClass: string }) => {
 
       {open && (
         <div className="relative bg-surface-1 px-4 py-4 pl-11 animate-[fade-in_0.15s_ease-out]">
-          <span className={`absolute left-4 top-3 bottom-3 w-0.5 rounded-full ${barClass}`} />
+          <span className="absolute left-4 top-3 bottom-3 w-0.5 rounded-full" style={{ background: barColor, opacity: 0.7 }} />
           <p className="text-sm text-foreground/90 leading-relaxed mb-3">{item.beschreibung}</p>
           <div className="flex flex-wrap items-center gap-2">
             <SourceMarker quelle={item.quelle} manuell={item.manuell} />
