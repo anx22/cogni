@@ -85,6 +85,7 @@ const SessionHeader = ({ source, summary, current, total, onClose, mode = "batch
       </button>
     </div>
   </header>
-);
+  );
+};
 
 export default SessionHeader;
