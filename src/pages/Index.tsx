@@ -21,6 +21,8 @@ import { devlog } from "@/lib/devlog/devlog";
 import { useDialog } from "@/components/dialog/DialogProvider";
 import { useEntityVoice } from "@/lib/voice/useEntityVoice";
 import { useRealtimeTables, type RealtimeListener } from "@/lib/realtime/useRealtimeTables";
+import { useBodyScrollLock } from "@/lib/ui/useBodyScrollLock";
+import { useDropZone } from "@/lib/intake/useDropZone";
 import { toast } from "sonner";
 import type { EntityState } from "@/components/entity/orbPresets";
 
@@ -33,8 +35,6 @@ const Index = () => {
   const { openSessionFromDB, session: dialogSession } = useDialog();
   const pendingSessionId = useRef<string | null>(null);
   const autoOpenedRef = useRef<Set<string>>(new Set());
-  const [dragActive, setDragActive] = useState(false);
-  const dragCounter = useRef(0);
 
   const { intake } = useIntake({ setEntityState });
   const { characterId } = useSelectedCharacter();
@@ -42,41 +42,10 @@ const Index = () => {
   const { projects: liveProjects, error: projectsError, reload: reloadProjects } = useProjects();
 
   const busy = entityState === "processing" || entityState === "review-ready";
-  const resetDragState = useCallback(() => {
-    dragCounter.current = 0;
-    setDragActive(false);
-  }, []);
 
   useEffect(() => {
     if (!loading && !session) navigate("/auth", { replace: true });
   }, [loading, session, navigate]);
-
-  // Busy darf NIE einen hängen gebliebenen Fullscreen-Drag-Layer stehen lassen.
-  useEffect(() => {
-    if (busy) {
-      resetDragState();
-    }
-  }, [busy, resetDragState]);
-
-  // Sicherheitsnetz für Browser, die nach Drop/Tab-Wechsel keinen sauberen dragleave senden.
-  useEffect(() => {
-    const reset = () => resetDragState();
-    const onVisibility = () => {
-      if (document.visibilityState !== "visible") resetDragState();
-    };
-
-    window.addEventListener("drop", reset);
-    window.addEventListener("dragend", reset);
-    window.addEventListener("blur", reset);
-    document.addEventListener("visibilitychange", onVisibility);
-
-    return () => {
-      window.removeEventListener("drop", reset);
-      window.removeEventListener("dragend", reset);
-      window.removeEventListener("blur", reset);
-      document.removeEventListener("visibilitychange", onVisibility);
-    };
-  }, [resetDragState]);
 
   // Realtime: Asset-Status spiegelt sich auf den Kern + Auto-Open neuer Sessions.
   const userId = session?.user?.id;
@@ -156,56 +125,8 @@ const Index = () => {
     [intake, busy],
   );
 
-  const handleWindowDragEnter = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      if (!e.dataTransfer.types.includes("Files") || busy) {
-        resetDragState();
-        return;
-      }
-      dragCounter.current += 1;
-      setDragActive(true);
-    },
-    [busy, resetDragState],
-  );
-
-  const handleWindowDragOver = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      if (!e.dataTransfer.types.includes("Files") || busy) {
-        e.dataTransfer.dropEffect = "none";
-        resetDragState();
-        return;
-      }
-      e.dataTransfer.dropEffect = "copy";
-      if (!dragActive) setDragActive(true);
-    },
-    [busy, dragActive, resetDragState],
-  );
-
-  const handleWindowDragLeave = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      if (busy) {
-        resetDragState();
-        return;
-      }
-      dragCounter.current = Math.max(0, dragCounter.current - 1);
-      if (dragCounter.current === 0) setDragActive(false);
-    },
-    [busy, resetDragState],
-  );
-
-  const handleWindowDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      resetDragState();
-      const files = Array.from(e.dataTransfer.files ?? []);
-      if (files.length === 0) return;
-      handleDrop(files);
-    },
-    [handleDrop, resetDragState],
-  );
+  // Globale Drop-Zone auf window — eine State-Quelle für HomeDropOverlay + Entity.
+  const { isDragging } = useDropZone({ scope: "window", busy, onDrop: handleDrop });
 
   const handleProjectClick = useCallback((id: string) => {
     navigate(`/projekt/${id}`);
@@ -242,33 +163,14 @@ const Index = () => {
   }, []);
 
   // Lock body scroll on Home — kein Bounce in Safari, voller Touch für die Entität.
-  useEffect(() => {
-    const { body, documentElement: html } = document;
-    const prev = {
-      bodyOverflow: body.style.overflow,
-      htmlOverflow: html.style.overflow,
-      bodyOverscroll: body.style.overscrollBehavior,
-    };
-    body.style.overflow = "hidden";
-    html.style.overflow = "hidden";
-    body.style.overscrollBehavior = "none";
-    return () => {
-      body.style.overflow = prev.bodyOverflow;
-      html.style.overflow = prev.htmlOverflow;
-      body.style.overscrollBehavior = prev.bodyOverscroll;
-    };
-  }, []);
+  useBodyScrollLock(true);
 
   if (loading || !session) return null;
 
   return (
     <div
-      className="relative flex w-full overflow-hidden overscroll-none"
-      style={{ background: "var(--surface-0)", height: "100dvh" }}
-      onDragEnter={handleWindowDragEnter}
-      onDragOver={handleWindowDragOver}
-      onDragLeave={handleWindowDragLeave}
-      onDrop={handleWindowDrop}
+      className="relative flex w-full overflow-hidden overscroll-none bg-c-surface-0"
+      style={{ height: "100dvh" }}
     >
       <AppSidebar
         projects={liveProjects}
@@ -278,49 +180,54 @@ const Index = () => {
         showMiniEntity={false}
       />
 
-      <main className="relative flex-1 flex flex-col items-center justify-center" style={{ minWidth: 0 }}>
-        <AssetOrbit />
-        <Entity
-          state={entityState}
-          onDrop={handleDrop}
-          onReviewClick={handleReviewClick}
-          onClick={handleCoreClick}
-          busy={busy}
-          character={characterId}
-          onPickInputMode={() => setOverlayOpen(true)}
-        />
-
-        {overlayOpen ? (
-          <div className="w-full max-w-xl px-4 mt-8 z-30">
-            <InputOverlay
-              open={overlayOpen}
-              onClose={() => setOverlayOpen(false)}
-              onSubmit={intake}
-              contextHint="Wird global aufgenommen — Zuordnung kommt im Dialog."
-            />
-          </div>
-        ) : (
-          <HomePrompt
-            onUpload={() => setOverlayOpen(true)}
-            onPaste={() => setOverlayOpen(true)}
-            onLink={() => setOverlayOpen(true)}
-            onVoice={() => setOverlayOpen(true)}
-            onNote={() => setOverlayOpen(true)}
+      {/* Home-Stack: Entity oben (flex-1, mittig), Prompt + Voice darunter im Footer */}
+      <main className="relative flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
+        {/* Entität-Bühne — füllt verfügbaren Raum, zentriert */}
+        <div className="relative flex-1 min-h-0 flex items-center justify-center">
+          <AssetOrbit />
+          <Entity
+            state={entityState}
+            onDrop={handleDrop}
+            onReviewClick={handleReviewClick}
+            onClick={handleCoreClick}
+            busy={busy}
+            character={characterId}
+            onPickInputMode={() => setOverlayOpen(true)}
+            size="clamp(220px, 38vh, 320px)"
           />
-        )}
-
-        <div className="absolute bottom-[8%] z-20 pointer-events-auto">
-          <EntityVoice voice={voice} onRetry={handleRetry} />
         </div>
 
-        {!voice.text && !overlayOpen && (
-          <p
-            className="absolute bottom-[3%] t-small opacity-50 animate-float-in"
-            style={{ color: "var(--ink-4)" }}
-          >
-            Klick auf den Kern oder lege etwas hier ab — Datei, Link, Notiz
-          </p>
-        )}
+        {/* Eingabe-Slot (HomePrompt oder InputOverlay) */}
+        <div className="shrink-0 flex justify-center px-4 pb-3">
+          {overlayOpen ? (
+            <div className="w-full max-w-xl z-30">
+              <InputOverlay
+                open={overlayOpen}
+                onClose={() => setOverlayOpen(false)}
+                onSubmit={intake}
+                contextHint="Wird global aufgenommen — Zuordnung kommt im Dialog."
+              />
+            </div>
+          ) : (
+            <HomePrompt
+              onUpload={() => setOverlayOpen(true)}
+              onPaste={() => setOverlayOpen(true)}
+              onLink={() => setOverlayOpen(true)}
+              onVoice={() => setOverlayOpen(true)}
+              onNote={() => setOverlayOpen(true)}
+            />
+          )}
+        </div>
+
+        {/* Voice + Hint — fester Footer-Slot, reserviert Platz */}
+        <div className="shrink-0 flex flex-col items-center justify-end pb-4 px-4 min-h-[64px]">
+          <EntityVoice voice={voice} onRetry={handleRetry} />
+          {!voice.text && !overlayOpen && (
+            <p className="t-small opacity-50 mt-1 ink-4 text-center motion-safe:animate-float-in">
+              Klick auf den Kern oder lege etwas hier ab — Datei, Link, Notiz
+            </p>
+          )}
+        </div>
       </main>
 
       <ImpactPipelinePanel />
@@ -337,7 +244,7 @@ const Index = () => {
         onCreateProject={handleCreateProject}
       />
 
-      <HomeDropOverlay active={dragActive} busy={busy} />
+      <HomeDropOverlay active={isDragging} busy={busy} />
 
       {session?.user && (
         <CreateProjectDialog

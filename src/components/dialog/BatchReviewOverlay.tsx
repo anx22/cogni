@@ -95,6 +95,7 @@ const BatchReviewOverlay = ({ onClose }: { onClose: () => void }) => {
         current={1}
         total={1}
         onClose={onClose}
+        mode="batch"
       />
 
       <div className="dlg2-list">

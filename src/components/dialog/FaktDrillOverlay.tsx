@@ -219,7 +219,7 @@ const FaktDrillOverlay = ({ onClose }: { onClose: () => void }) => {
 
   return (
     <div data-dialog className="dlg2-root dialog-backdrop">
-      <SessionHeader source={box.title} summary={session.projectName ?? undefined} onClose={onClose} />
+      <SessionHeader source={box.title} summary={session.projectName ?? undefined} onClose={onClose} mode="drill" />
       {box.type === "konflikt" ? renderConflict() : renderGap()}
     </div>
   );

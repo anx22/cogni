@@ -16,6 +16,7 @@ import DevLogPanel from "./components/devlog/DevLogPanel";
 import { attachGlobalErrorHandlers, devlog } from "./lib/devlog/devlog";
 import { attachPipelineSink } from "./lib/devlog/pipelineSink";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import GlobalCommandMenu from "./components/shared/GlobalCommandMenu";
 
 const queryClient = new QueryClient();
 
@@ -41,6 +42,7 @@ const App = () => {
           <BrowserRouter>
             <ManualOverridesProvider>
               <DialogProvider>
+                <GlobalCommandMenu />
                 <Routes>
                   <Route path="/" element={<Index />} />
                   <Route path="/projekt/:id" element={<Project />} />

@@ -10,9 +10,14 @@ interface SessionHeaderProps {
   current?: number;
   total?: number;
   onClose: () => void;
+  /** "batch" = Übersicht mehrerer Boxen, "drill" = ein Detail. */
+  mode?: "batch" | "drill";
 }
 
-const SessionHeader = ({ source, summary, current, total, onClose }: SessionHeaderProps) => (
+const SessionHeader = ({ source, summary, current, total, onClose, mode = "batch" }: SessionHeaderProps) => {
+  const dotColor = mode === "drill" ? "var(--c-accent)" : "var(--d-blue)";
+  const modeLabel = mode === "drill" ? "Detail" : "Batch";
+  return (
   <header
     className="flex items-center justify-between"
     style={{
@@ -27,7 +32,7 @@ const SessionHeader = ({ source, summary, current, total, onClose }: SessionHead
           width: 7,
           height: 7,
           borderRadius: 999,
-          background: "var(--d-blue)",
+          background: dotColor,
           position: "relative",
         }}
       >
@@ -36,13 +41,15 @@ const SessionHeader = ({ source, summary, current, total, onClose }: SessionHead
             position: "absolute",
             inset: -3,
             borderRadius: 999,
-            background: "var(--d-blue)",
+            background: dotColor,
             opacity: 0.25,
             animation: "cogni-pulse 1.8s ease-out infinite",
           }}
         />
       </span>
       <span style={{ color: "var(--d-ink)", fontWeight: 500 }}>Review</span>
+      <span style={{ color: "var(--d-ink-3)" }}>·</span>
+      <span style={{ color: "var(--d-ink-3)", fontSize: 12 }}>{modeLabel}</span>
       <span style={{ color: "var(--d-ink-3)" }}>·</span>
       <span className="mono" style={{ color: "var(--d-ink-2)", fontSize: 12 }}>
         {source}
@@ -78,6 +85,7 @@ const SessionHeader = ({ source, summary, current, total, onClose }: SessionHead
       </button>
     </div>
   </header>
-);
+  );
+};
 
 export default SessionHeader;
