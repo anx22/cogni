@@ -3,10 +3,14 @@ import { supabase } from "@/integrations/supabase/client";
 
 export type RecorderStatus = "idle" | "recording" | "transcribing" | "done" | "error";
 
+const VISUALIZER_BINS = 8;
+
 export interface VoiceRecorderState {
   status: RecorderStatus;
   transcript: string | null;
   error: string | null;
+  /** Frequenz-Bins 0..1, Länge = 8. Aktualisiert via rAF während recording. */
+  levels: number[];
   start: () => Promise<void>;
   stop: () => void;
   cancel: () => void;
