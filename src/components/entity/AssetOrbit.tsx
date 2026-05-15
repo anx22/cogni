@@ -79,7 +79,14 @@ const AssetOrbit = () => {
       if (!status) continue;
       const meta = (a.metadata as Record<string, unknown>) ?? {};
       const isUrl = meta.kind === "url";
-      const label = isUrl ? String(meta.url ?? a.file_name) : a.file_name;
+      let label: string;
+      if (isUrl) {
+        const raw = String(meta.url ?? a.file_name);
+        try { label = new URL(raw).hostname.replace(/^www\./, ""); }
+        catch { label = raw; }
+      } else {
+        label = a.file_name;
+      }
       next.push({
         id: a.id,
         assetId: a.id,

@@ -172,6 +172,14 @@ const ReviewRow = ({ box, projectName, onConfirm, onReject }: ReviewRowProps) =>
             </div>
           </div>
         )}
+        <ConfirmDestructive
+          open={rejectOpen}
+          onOpenChange={setRejectOpen}
+          title="Konflikt verwerfen?"
+          description="Die Erkenntnis wird endgültig verworfen und fließt nicht in den Projektzustand. Eine Rücknahme ist nicht möglich."
+          confirmLabel="Endgültig verwerfen"
+          onConfirm={() => onReject()}
+        />
       </>
     );
   }
