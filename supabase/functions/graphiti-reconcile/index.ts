@@ -86,10 +86,51 @@ Deno.serve(withErrorBoundary("graphiti-reconcile", async (req) => {
     const { data: pending, error: pErr } = await q;
     if (pErr) throw new Error(`canonical_facts: ${pErr.message}`);
 
+    // Stale-Cleanup: alte mirror/queued-Zeilen flippen, deren CF inzwischen
+    // einen graphiti_uuid hat. Stale graphiti_error im provenance ebenfalls
+    // entfernen. Nur einmal pro Reconcile-Lauf, idempotent.
+    let staleFlipped = 0;
+    let errorsCleared = 0;
+    try {
+      const { data: stale } = await admin
+        .from("graphiti_sync_log")
+        .select("id, entity_id")
+        .eq("status", "queued")
+        .in("operation", ["mirror", "backfill_mirror"])
+        .limit(500);
+      const staleIds = (stale ?? []).map((r) => r.id);
+      const cfIds = Array.from(new Set((stale ?? []).map((r) => r.entity_id))).filter(Boolean) as string[];
+      if (cfIds.length > 0) {
+        const { data: confirmed } = await admin
+          .from("canonical_facts")
+          .select("id, provenance")
+          .in("id", cfIds)
+          .not("graphiti_uuid", "is", null);
+        const confirmedIds = new Set((confirmed ?? []).map((c) => c.id));
+        const flipIds = (stale ?? []).filter((r) => confirmedIds.has(r.entity_id)).map((r) => r.id);
+        if (flipIds.length > 0) {
+          await admin.from("graphiti_sync_log").update({ status: "ok" }).in("id", flipIds);
+          staleFlipped = flipIds.length;
+        }
+        // Stale graphiti_error im provenance entfernen
+        for (const cf of confirmed ?? []) {
+          const prov = (cf.provenance ?? {}) as Record<string, unknown>;
+          if (prov.graphiti_error) {
+            const { graphiti_error: _drop, ...rest } = prov;
+            await admin.from("canonical_facts").update({ provenance: rest }).eq("id", cf.id);
+            errorsCleared++;
+          }
+        }
+      }
+      log.stage("stale_cleanup", "done", { staleFlipped, errorsCleared, scannedQueued: staleIds.length });
+    } catch (e) {
+      log.warn("stale_cleanup", "failed (non-fatal)", { error: e instanceof Error ? e.message : String(e) });
+    }
+
     if (!pending || pending.length === 0) {
       log.stage("done", "nothing to reconcile");
       await log.flush();
-      return ok({ scanned: 0, resolved: 0, missing: 0, failed: 0, projects: [], correlation_id: log.correlationId });
+      return ok({ scanned: 0, resolved: 0, missing: 0, failed: 0, staleFlipped, errorsCleared, projects: [], correlation_id: log.correlationId });
     }
     log.stage("pending", "found", { count: pending.length });
 
@@ -188,9 +229,9 @@ Deno.serve(withErrorBoundary("graphiti-reconcile", async (req) => {
       });
     }
 
-    log.stage("done", "reconcile complete", { scanned: pending.length, resolved, missing, failed });
+    log.stage("done", "reconcile complete", { scanned: pending.length, resolved, missing, failed, staleFlipped, errorsCleared });
     await log.flush();
-    return ok({ scanned: pending.length, resolved, missing, failed, projects: perProject, correlation_id: log.correlationId });
+    return ok({ scanned: pending.length, resolved, missing, failed, staleFlipped, errorsCleared, projects: perProject, correlation_id: log.correlationId });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     log.error("error", msg, err);

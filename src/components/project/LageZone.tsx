@@ -1,4 +1,6 @@
+import { useEffect, useRef } from "react";
 import { Calendar, Clock, Target } from "lucide-react";
+import { toast } from "sonner";
 import ConflictBanner from "./shared/ConflictBanner";
 import StakeholderPopover from "./shared/StakeholderPopover";
 import FeedbackButton from "./shared/FeedbackButton";
@@ -15,8 +17,33 @@ interface LageZoneProps {
 }
 
 const LageZone = ({ project, editableName, forceEdit, onEditDone, onNameChange }: LageZoneProps) => {
-  void forceEdit;
-  void onEditDone;
+  const titleRef = useRef<HTMLHeadingElement | null>(null);
+
+  // forceEdit von außen → h1 fokussieren + Text selektieren.
+  useEffect(() => {
+    if (!forceEdit || !editableName) return;
+    const el = titleRef.current;
+    if (!el) return;
+    el.focus();
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const sel = window.getSelection();
+    sel?.removeAllRanges();
+    sel?.addRange(range);
+  }, [forceEdit, editableName]);
+
+  const handleNameBlur = (e: React.FocusEvent<HTMLHeadingElement>) => {
+    const text = e.currentTarget.textContent?.trim() ?? "";
+    if (!text) {
+      // Empty → restore + warn
+      e.currentTarget.textContent = project.name;
+      toast.error("Name darf nicht leer sein");
+    } else if (text !== project.name) {
+      onNameChange?.(text);
+    }
+    onEditDone?.();
+  };
+
   return (
     <section className="relative px-8 md:px-12 lg:px-16 xl:px-20 pt-16 pb-12 bg-surface-1 border-b border-border-strong">
       {/* Cogni Atmosphären-Stripe (3px Linie + 60px Glow) */}
@@ -31,16 +58,20 @@ const LageZone = ({ project, editableName, forceEdit, onEditDone, onNameChange }
           <p className="t-micro ink-4 mb-3">Projekt</p>
           {editableName ? (
             <h1
+              ref={titleRef}
               className="text-foreground mb-3 outline-none border-b border-dashed border-primary/30 focus:border-primary/60 transition-colors"
               style={{ fontSize: "44px", fontWeight: 500, letterSpacing: "-0.025em", lineHeight: 1.04 }}
               contentEditable
+              spellCheck={false}
               suppressContentEditableWarning
-              onBlur={(e) => {
-                const text = e.currentTarget.textContent?.trim();
-                if (text && text !== project.name) onNameChange?.(text);
-              }}
+              onBlur={handleNameBlur}
               onKeyDown={(e) => {
                 if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); }
+                if (e.key === "Escape") {
+                  e.preventDefault();
+                  e.currentTarget.textContent = project.name;
+                  e.currentTarget.blur();
+                }
               }}
             >
               {project.name}

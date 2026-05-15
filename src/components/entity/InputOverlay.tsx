@@ -17,6 +17,7 @@ import {
   isUrl,
   type IntakePayload,
 } from "@/lib/intake/detectInputType";
+import { partitionFiles } from "@/lib/intake/supportedFileTypes";
 import { useVoiceRecorder } from "@/lib/voice/useVoiceRecorder";
 
 interface InputOverlayProps {
@@ -78,7 +79,25 @@ const InputOverlay = ({ open, onClose, onSubmit, className, contextHint }: Input
   const submitFiles = useCallback(
     (files: File[]) => {
       if (files.length === 0) return;
-      onSubmit(detectFromDrop(files));
+      const { accepted, blocked, unknown } = partitionFiles(files);
+      if (blocked.length > 0) {
+        toast.error(
+          blocked.length === 1
+            ? `„${blocked[0].name}" wird nicht unterstützt`
+            : `${blocked.length} Dateien nicht unterstützt`,
+          { description: "Archive, Programme und Medien werden nicht verarbeitet." },
+        );
+      }
+      if (unknown.length > 0) {
+        toast.warning(
+          unknown.length === 1
+            ? `„${unknown[0].name}" — Format nicht garantiert`
+            : `${unknown.length} Dateien mit unklarem Format`,
+          { description: "Versuche es — könnte in der Verarbeitung scheitern." },
+        );
+      }
+      if (accepted.length === 0) return;
+      onSubmit(detectFromDrop(accepted));
       onClose();
     },
     [onSubmit, onClose],

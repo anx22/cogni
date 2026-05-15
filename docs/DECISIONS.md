@@ -126,3 +126,15 @@ aber die geteilten `corsHeaders` — Verhalten unverändert.
 [2026-05-14] Dialog V2 (BatchReviewOverlay+FaktDrillOverlay) parallel zur BoxRenderer-Welt → Feature-Flag `?dialogV2=1` / `localStorage.cogniDialogV2` → alte Boxen bleiben Default bis Live-Smoke. `useDialog`-Vertrag (commitBox/gateReason/session) unverändert. Token-Mapping `[data-dialog]` → `--d-blue = var(--accent)` (NICHT sig-action).
 
 [2026-05-14] shadcn ↔ Cogni Theme-Bridge → shadcn-HSL-Tokens in [data-theme="day|night"] neu zugewiesen statt alle ui/* Komponenten umzuschreiben → Reason: Single Source of Truth bleibt Cogni-Hex; ui/*-Komponenten brauchen keine Edits, Day/Night-Toggle wirkt in jeder Schicht.
+
+## 2026-05-15 — Audit-Response (Sync-Semantik + UX-Bugs)
+
+- `2026-05-15` `graphiti_sync_log.status='queued'` war irreführend (Mirror-Send synchron erfolgreich, aber Status implizierte Pending) → **`mirror.ts` schreibt jetzt `status='ok'` direkt**, `graphiti-reconcile` flippt zusätzlich alte `mirror|backfill_mirror`-Zeilen mit `queued` → `ok`, sobald `canonical_facts.graphiti_uuid` gesetzt ist, und entfernt stale `provenance.graphiti_error`. PipelineHealth-Header zeigt nur noch 24h-Fenster.
+- `2026-05-15` „Umbenennen" im Projektmenü war No-Op (`forceEdit`/`onEditDone` als `void` verworfen) → **`LageZone` mit `useRef`-Fokus + Selection auf `forceEdit`**, `Escape` revertiert, leerer Name wird abgefangen + Toast, `spellCheck={false}`.
+- `2026-05-15` Bulk-Confirm war stumm wenn nur Konflikte/Lücken offen → **`canBulk` enger gefasst** (nur `wissen|aktion|zuordnung|kontext`), Disabled-Tooltip, Enter-Shortcut verdrahtet, `BULK_CONFIRM_THRESHOLD=5` öffnet `ConfirmDestructive` (Architektur „Review-First final" bleibt — kein Undo).
+- `2026-05-15` Konflikt-Variante zeigt Varianten A/B jetzt **default expanded**; „offen lassen" → „Verwerfen" mit `ConfirmDestructive` (semantisch korrekt: Reject ist final).
+- `2026-05-15` Datei-Drop hat keine Client-Validierung → **`src/lib/intake/supportedFileTypes.ts`** mit SUPPORTED/BLOCKED-Sets, Archive/Programme/Medien werden früh abgelehnt, Unbekanntes wird als Toast-Warnung markiert aber akzeptiert (Server bleibt Source of Truth).
+- `2026-05-15` `AssetOrbit` schnitt URLs zu „https://exam…" → **Domain-Extraktion via `new URL().hostname`** statt char-cut.
+- `2026-05-15` `aol-service/app/graph.py` Welle-B-Stubs sahen aus wie unvollständige TODOs → **expliziter Header-Kommentar**: kanonische Detektion lebt in `supabase/functions/commit-fact/{conflict,gap,dependency}Detector.ts`, Stubs sind beabsichtigt.
+
+**Bewusst deferred** (zu groß für diese Runde): T1 typisierte `RawProjectData`, U6 echter Voice-Visualizer (RMS-Mapping), B2 Playwright-Smokes — neue Tasks in `docs/NOW.md`.

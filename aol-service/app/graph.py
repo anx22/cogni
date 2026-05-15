@@ -11,6 +11,12 @@ Lovable Cloud mit den dort intern verfügbaren Secrets.
 Welle B (linker, conflict, gap, dependency, case_builder) bleibt vorerst Stub
 und wird erst aktiviert, wenn Welle A produktiv stabile Daten in Graphiti
 abgelegt hat.
+
+WICHTIG (Stand 2026-05-15): Die Welle-B-Detektoren sind **bewusst** No-Op-Stubs.
+Die kanonische Detektion lebt im TS-Edge-Function-Stack
+`supabase/functions/commit-fact/{conflictDetector,gapDetector,dependencyDetector}.ts`
+und läuft auf Lovable Cloud, nicht auf Railway. Diese Stubs hier nicht
+"vervollständigen" — siehe `docs/DECISIONS.md` 2026-05-14 (Welle-B-Detektoren).
 """
 from __future__ import annotations
 

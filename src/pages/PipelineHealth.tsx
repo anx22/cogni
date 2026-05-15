@@ -110,11 +110,19 @@ const PipelineHealth = () => {
     }
   }, []);
 
-  const counts = useMemo(() => ({
-    total: recent.length,
-    errors: recent.filter((c) => c.worst_level === "error").length,
-    warns: recent.filter((c) => c.worst_level === "warn").length,
-  }), [recent]);
+  const counts = useMemo(() => {
+    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+    const last24 = recent.filter((c) => {
+      if (!c.last_ts) return false;
+      return new Date(c.last_ts).getTime() >= cutoff;
+    });
+    return {
+      total: recent.length,
+      total24: last24.length,
+      errors: last24.filter((c) => c.worst_level === "error").length,
+      warns: last24.filter((c) => c.worst_level === "warn").length,
+    };
+  }, [recent]);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -126,8 +134,8 @@ const PipelineHealth = () => {
               <Link to="/" aria-label="Zurück"><ArrowLeft className="h-4 w-4" /></Link>
             </Button>
             <h1 className="text-2xl tracking-tight font-light">Pipeline Health</h1>
-            <Badge variant="outline" className="text-[10px] font-normal text-muted-foreground">
-              {counts.total} Korrelationen · {counts.errors} Fehler · {counts.warns} Warnungen
+            <Badge variant="outline" className="text-[10px] font-normal text-muted-foreground" title="Fehler/Warnungen der letzten 24 h">
+              {counts.total} ges. · 24 h: {counts.errors} Fehler · {counts.warns} Warnungen
             </Badge>
           </div>
           <div className="flex items-center gap-2">
