@@ -414,8 +414,8 @@
   --d-ink-4:     var(--ink-4);
   --d-hair:      var(--hair);
   --d-hair-2:    var(--hair-2);
-  --d-blue:      var(--accent);
-  --d-blue-soft: var(--accent-soft);
+  --d-blue:      var(--c-accent);
+  --d-blue-soft: var(--c-accent-soft);
   --d-ok:        var(--sig-action);
   --d-ok-soft:   var(--sig-action-soft);
   --d-warn:      var(--sig-review);

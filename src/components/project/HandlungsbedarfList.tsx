@@ -10,11 +10,11 @@ import type { Arbeitsmodus, HandlungsbedarfVM } from "@/lib/project/types";
 
 type Item = HandlungsbedarfVM;
 
-const modeMeta: Record<Arbeitsmodus, { label: string; hint: string; accent: string; dot: string; bar: string }> = {
-  entscheiden: { label: "Entscheiden", hint: "Richtung festlegen", accent: "text-violet-300", dot: "bg-violet-400", bar: "bg-violet-400/70" },
-  klaeren: { label: "Klären", hint: "Information beschaffen", accent: "text-amber-300", dot: "bg-amber-400", bar: "bg-amber-400/70" },
-  umsetzen: { label: "Umsetzen", hint: "Arbeit ausführen", accent: "text-emerald-300", dot: "bg-emerald-400", bar: "bg-emerald-400/70" },
-  pruefen: { label: "Prüfen", hint: "Bewerten und antworten", accent: "text-cyan-300", dot: "bg-cyan-400", bar: "bg-cyan-400/70" },
+const modeMeta: Record<Arbeitsmodus, { label: string; hint: string; color: string; soft: string }> = {
+  entscheiden: { label: "Entscheiden", hint: "Richtung festlegen", color: "var(--sig-action)", soft: "var(--sig-action-soft)" },
+  klaeren: { label: "Klären", hint: "Information beschaffen", color: "var(--sig-review)", soft: "var(--sig-review-soft)" },
+  umsetzen: { label: "Umsetzen", hint: "Arbeit ausführen", color: "var(--sig-calm)", soft: "var(--sig-calm-soft)" },
+  pruefen: { label: "Prüfen", hint: "Bewerten und antworten", color: "var(--c-accent)", soft: "var(--c-accent-soft)" },
 };
 
 const order: Arbeitsmodus[] = ["entscheiden", "klaeren", "umsetzen", "pruefen"];
@@ -45,8 +45,8 @@ const HandlungsbedarfList = ({ items }: { items: Item[] }) => {
             return (
               <div key={modus}>
                 <div className="flex items-baseline gap-3 mb-3 px-1">
-                  <span className={`w-2 h-2 rounded-sm ${meta.dot} self-center`} />
-                  <h3 className={`text-xs uppercase tracking-[0.2em] font-medium ${meta.accent}`}>
+                  <span className="w-2 h-2 rounded-sm self-center" style={{ background: meta.color }} />
+                  <h3 className="text-xs uppercase tracking-[0.2em] font-medium" style={{ color: meta.color }}>
                     {meta.label}
                   </h3>
                   <span className="text-[11px] text-muted-foreground/60">{meta.hint}</span>
@@ -54,7 +54,7 @@ const HandlungsbedarfList = ({ items }: { items: Item[] }) => {
                 </div>
                 <CardSurface divideRows overflowHidden>
                   {items.map((it) => (
-                    <ActionRow key={it.id} item={it} barClass={meta.bar} />
+                    <ActionRow key={it.id} item={it} barColor={meta.color} />
                   ))}
                 </CardSurface>
               </div>
@@ -66,7 +66,7 @@ const HandlungsbedarfList = ({ items }: { items: Item[] }) => {
   );
 };
 
-const ActionRow = ({ item, barClass }: { item: Item; barClass: string }) => {
+const ActionRow = ({ item, barColor }: { item: Item; barColor: string }) => {
   const [open, setOpen] = useState(false);
   const { openDialog } = useDialog();
   return (
@@ -100,7 +100,7 @@ const ActionRow = ({ item, barClass }: { item: Item; barClass: string }) => {
 
       {open && (
         <div className="relative bg-surface-1 px-4 py-4 pl-11 animate-[fade-in_0.15s_ease-out]">
-          <span className={`absolute left-4 top-3 bottom-3 w-0.5 rounded-full ${barClass}`} />
+          <span className="absolute left-4 top-3 bottom-3 w-0.5 rounded-full" style={{ background: barColor, opacity: 0.7 }} />
           <p className="text-sm text-foreground/90 leading-relaxed mb-3">{item.beschreibung}</p>
           <div className="flex flex-wrap items-center gap-2">
             <SourceMarker quelle={item.quelle} manuell={item.manuell} />
