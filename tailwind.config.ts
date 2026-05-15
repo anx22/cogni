@@ -95,6 +95,15 @@ export default {
       boxShadow: {
         card: "0 1px 0 rgba(0,0,0,0.4), 0 8px 24px -12px rgba(0,0,0,0.6)",
         "card-glow": "inset 0 1px 0 rgba(255,255,255,0.04), 0 1px 0 rgba(0,0,0,0.4), 0 8px 24px -12px rgba(0,0,0,0.6)",
+        "card-cogni": "var(--shadow-card-cogni)",
+      },
+      fontSize: {
+        // Cogni-Typo-Skala — Single Source of Truth
+        display: ["76px", { lineHeight: "0.96", letterSpacing: "-0.035em", fontWeight: "500" }],
+        "display-2": ["56px", { lineHeight: "0.98", letterSpacing: "-0.03em", fontWeight: "500" }],
+        body: ["15px", { lineHeight: "1.55", letterSpacing: "-0.005em", fontWeight: "400" }],
+        small: ["13px", { lineHeight: "1.45", fontWeight: "400" }],
+        micro: ["11px", { lineHeight: "1.30", letterSpacing: "0.04em", fontWeight: "500" }],
       },
       keyframes: {
         "accordion-down": {
