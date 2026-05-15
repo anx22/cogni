@@ -14,9 +14,21 @@ interface LageZoneProps {
   forceEdit?: boolean;
   onEditDone?: () => void;
   onNameChange?: (name: string) => void;
+  /**
+   * "full"  — komplette Hero (Default)
+   * "shell" — reduziert: Stripe + Name + ein-Zeiler. Für Empty-Projekte.
+   */
+  variant?: "full" | "shell";
 }
 
-const LageZone = ({ project, editableName, forceEdit, onEditDone, onNameChange }: LageZoneProps) => {
+const LageZone = ({
+  project,
+  editableName,
+  forceEdit,
+  onEditDone,
+  onNameChange,
+  variant = "full",
+}: LageZoneProps) => {
   const titleRef = useRef<HTMLHeadingElement | null>(null);
 
   // forceEdit von außen → h1 fokussieren + Text selektieren.
@@ -35,7 +47,6 @@ const LageZone = ({ project, editableName, forceEdit, onEditDone, onNameChange }
   const handleNameBlur = (e: React.FocusEvent<HTMLHeadingElement>) => {
     const text = e.currentTarget.textContent?.trim() ?? "";
     if (!text) {
-      // Empty → restore + warn
       e.currentTarget.textContent = project.name;
       toast.error("Name darf nicht leer sein");
     } else if (text !== project.name) {
@@ -43,6 +54,52 @@ const LageZone = ({ project, editableName, forceEdit, onEditDone, onNameChange }
     }
     onEditDone?.();
   };
+
+  const titleNode = editableName ? (
+    <h1
+      ref={titleRef}
+      className="text-foreground mb-3 outline-none border-b border-dashed border-primary/30 focus:border-primary/60 transition-colors"
+      style={{ fontSize: "44px", fontWeight: 500, letterSpacing: "-0.025em", lineHeight: 1.04 }}
+      contentEditable
+      spellCheck={false}
+      suppressContentEditableWarning
+      onBlur={handleNameBlur}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); }
+        if (e.key === "Escape") {
+          e.preventDefault();
+          e.currentTarget.textContent = project.name;
+          e.currentTarget.blur();
+        }
+      }}
+    >
+      {project.name}
+    </h1>
+  ) : (
+    <h1
+      className="text-foreground mb-3"
+      style={{ fontSize: "44px", fontWeight: 500, letterSpacing: "-0.025em", lineHeight: 1.04 }}
+    >
+      {project.name}
+    </h1>
+  );
+
+  if (variant === "shell") {
+    return (
+      <section className="relative px-8 md:px-12 lg:px-16 xl:px-20 pt-20 pb-32 bg-surface-1">
+        <div className="atmosphere-stripe" aria-hidden />
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.04] via-transparent to-transparent pointer-events-none" />
+        <div className="relative max-w-3xl mx-auto text-center">
+          <p className="t-micro ink-4 mb-3">Projekt</p>
+          {titleNode}
+          <p className="text-base text-foreground/70 font-light leading-relaxed mt-6 max-w-xl mx-auto">
+            Noch keine Substanz. Lege etwas ab — eine Datei, einen Link, eine Notiz —
+            ich beginne mit dem Verstehen.
+          </p>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="relative px-8 md:px-12 lg:px-16 xl:px-20 pt-16 pb-12 bg-surface-1 border-b border-border-strong">
@@ -53,37 +110,9 @@ const LageZone = ({ project, editableName, forceEdit, onEditDone, onNameChange }
       <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.06] via-transparent to-transparent pointer-events-none" />
 
       <div className="relative max-w-7xl mx-auto space-y-8">
-        {/* Title row + meta strip directly underneath */}
         <div>
-          <p className="t-micro ink-4 mb-3">Projekt</p>
-          {editableName ? (
-            <h1
-              ref={titleRef}
-              className="text-foreground mb-3 outline-none border-b border-dashed border-primary/30 focus:border-primary/60 transition-colors"
-              style={{ fontSize: "44px", fontWeight: 500, letterSpacing: "-0.025em", lineHeight: 1.04 }}
-              contentEditable
-              spellCheck={false}
-              suppressContentEditableWarning
-              onBlur={handleNameBlur}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); }
-                if (e.key === "Escape") {
-                  e.preventDefault();
-                  e.currentTarget.textContent = project.name;
-                  e.currentTarget.blur();
-                }
-              }}
-            >
-              {project.name}
-            </h1>
-          ) : (
-            <h1
-              className="text-foreground mb-3"
-              style={{ fontSize: "44px", fontWeight: 500, letterSpacing: "-0.025em", lineHeight: 1.04 }}
-            >
-              {project.name}
-            </h1>
-          )}
+          <p className="t-micro ink-4 mb-3">Status · Projekt</p>
+          {titleNode}
           <p
             className="text-foreground/85 max-w-3xl mb-5"
             style={{ fontSize: "24px", fontWeight: 300, lineHeight: 1.4, letterSpacing: "-0.015em" }}
@@ -96,7 +125,6 @@ const LageZone = ({ project, editableName, forceEdit, onEditDone, onNameChange }
             </p>
           )}
 
-          {/* Meta strip */}
           <div className="flex flex-wrap items-end gap-x-8 gap-y-3 pt-3 border-t border-border-subtle/60">
             <MetaChip icon={<Calendar className="w-3.5 h-3.5" />} label="Nächster Termin" value={project.stats.naechsterTermin} />
             <MetaChip icon={<Clock className="w-3.5 h-3.5" />} label="Letzte Änderung" value={project.stats.letzteAenderung} />
@@ -105,7 +133,6 @@ const LageZone = ({ project, editableName, forceEdit, onEditDone, onNameChange }
           </div>
         </div>
 
-        {/* Konflikt + Zielbild (Lagebild-Card entfernt — Lagetext jetzt im Hero darüber) */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           <div>
             <ConflictBanner konflikte={project.konflikte} />
@@ -113,7 +140,7 @@ const LageZone = ({ project, editableName, forceEdit, onEditDone, onNameChange }
 
           {project.outcome && (
             <div className="rounded-xl border border-border-subtle bg-surface-2 shadow-card-glow px-5 py-4">
-              <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground/70 mb-2">Zielbild</p>
+              <p className="t-micro ink-4 mb-2">Zielbild</p>
               <p className="text-sm text-foreground/90 leading-relaxed mb-2.5">{project.outcome.erfolgskriterium}</p>
               <div className="flex flex-wrap gap-1.5">
                 {project.outcome.nogos.map((n, i) => (
