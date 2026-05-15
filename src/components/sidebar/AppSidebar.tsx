@@ -6,6 +6,7 @@
 
 import { useNavigate } from "react-router-dom";
 import type { DemoProject, ProjectSignal } from "@/data/demoProjects";
+import Entity from "@/components/entity/Entity";
 
 const SIGNAL_TO_DOT: Record<ProjectSignal, string> = {
   conflict: "dot--conflict",
@@ -46,7 +47,7 @@ const AppSidebar = ({
         width: 240,
         minWidth: 240,
         height: "100vh",
-        background: "var(--surface-2)",
+        background: "var(--surface-0)",
         borderRight: "1px solid var(--hair)",
       }}
     >
@@ -64,21 +65,9 @@ const AppSidebar = ({
           }}
           title="Zur Entität"
         >
-          <span
-            aria-hidden
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: "50%",
-              background: `radial-gradient(circle at 35% 35%,
-                var(--entity-aurora-d) 0%,
-                var(--entity-aurora-a) 30%,
-                var(--entity-aurora-b) 65%,
-                var(--entity-aurora-c) 100%)`,
-              flexShrink: 0,
-              animation: "cogni-entity-breathe 6s ease-in-out infinite",
-            }}
-          />
+          <span aria-hidden style={{ width: 40, height: 40, flexShrink: 0, opacity: 0.95, pointerEvents: "none" }}>
+            <Entity size="40px" />
+          </span>
           <span className="flex flex-col">
             <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>cogni</span>
             {pipelineLabel ? (
