@@ -27,8 +27,12 @@ type FeedbackRow = Tables<"feedback">;
 type ChangeEventRow = Tables<"change_events">;
 type TopicRow = Tables<"topics">;
 type AssetRow = Tables<"assets">;
-// Stakeholder-Links kommen mit Joins (persons/organizations) — leichter Typ.
-type StakeholderLinkRow = Tables<"project_stakeholder_links"> & {
+// Stakeholder-Links kommen mit Joins (persons/organizations) — nur die in
+// useProjectData selektierten Spalten + Joins.
+type StakeholderLinkRow = Pick<
+  Tables<"project_stakeholder_links">,
+  "id" | "role" | "person_id" | "organization_id"
+> & {
   persons?: { name: string | null; role: string | null } | null;
   organizations?: { name: string | null } | null;
 };
