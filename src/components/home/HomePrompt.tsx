@@ -77,8 +77,8 @@ const HomePrompt = ({ onNote, onUpload, onPaste, onLink, onVoice }: HomePromptPr
                 borderRadius: "50%",
                 background: "var(--surface-1)",
                 border: "1px solid var(--hair-2)",
-                color: highlight ? "var(--accent)" : "var(--ink-2)",
-                boxShadow: "var(--shadow-card)",
+                color: highlight ? "var(--c-accent)" : "var(--ink-2)",
+                boxShadow: "var(--shadow-card-cogni)",
               }}
             >
               {icon}

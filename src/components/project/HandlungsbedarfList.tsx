@@ -11,10 +11,10 @@ import type { Arbeitsmodus, HandlungsbedarfVM } from "@/lib/project/types";
 type Item = HandlungsbedarfVM;
 
 const modeMeta: Record<Arbeitsmodus, { label: string; hint: string; accent: string; dot: string; bar: string }> = {
-  entscheiden: { label: "Entscheiden", hint: "Richtung festlegen", accent: "text-violet-300", dot: "bg-violet-400", bar: "bg-violet-400/70" },
-  klaeren: { label: "Klären", hint: "Information beschaffen", accent: "text-amber-300", dot: "bg-amber-400", bar: "bg-amber-400/70" },
-  umsetzen: { label: "Umsetzen", hint: "Arbeit ausführen", accent: "text-emerald-300", dot: "bg-emerald-400", bar: "bg-emerald-400/70" },
-  pruefen: { label: "Prüfen", hint: "Bewerten und antworten", accent: "text-cyan-300", dot: "bg-cyan-400", bar: "bg-cyan-400/70" },
+  entscheiden: { label: "Entscheiden", hint: "Richtung festlegen", accent: "text-[hsl(var(--sig-action-h))]", dot: "bg-[hsl(var(--sig-action-h))]", bar: "bg-[hsl(var(--sig-action-h)/0.7)]" },
+  klaeren: { label: "Klären", hint: "Information beschaffen", accent: "text-[hsl(var(--sig-review-h))]", dot: "bg-[hsl(var(--sig-review-h))]", bar: "bg-[hsl(var(--sig-review-h)/0.7)]" },
+  umsetzen: { label: "Umsetzen", hint: "Arbeit ausführen", accent: "text-[hsl(var(--sig-calm-h))]", dot: "bg-[hsl(var(--sig-calm-h))]", bar: "bg-[hsl(var(--sig-calm-h)/0.7)]" },
+  pruefen: { label: "Prüfen", hint: "Bewerten und antworten", accent: "text-[hsl(var(--c-accent-h))]", dot: "bg-[hsl(var(--c-accent-h))]", bar: "bg-[hsl(var(--c-accent-h)/0.7)]" },
 };
 
 const order: Arbeitsmodus[] = ["entscheiden", "klaeren", "umsetzen", "pruefen"];
