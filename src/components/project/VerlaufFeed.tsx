@@ -4,6 +4,7 @@ import SourceMarker from "./shared/SourceMarker";
 import FeedbackButton from "./shared/FeedbackButton";
 import SectionLabel from "./shared/SectionLabel";
 import CardSurface from "./shared/CardSurface";
+import RoleHeader from "./shared/RoleHeader";
 import { useDialog } from "@/components/dialog/DialogProvider";
 import { buildVerlaufSession } from "@/lib/dialog/sessionFactories";
 import type { VerlaufVM } from "@/lib/project/types";
@@ -31,10 +32,7 @@ const VerlaufFeed = ({ verlauf }: { verlauf: VerlaufVM[] }) => {
   return (
     <div>
       <div>
-        <header className="mb-6">
-          <SectionLabel className="mb-2">Chronologie</SectionLabel>
-          <h2 className="text-2xl font-light tracking-tight text-foreground">Verlauf</h2>
-        </header>
+        <RoleHeader role="verlauf" title="Verlauf" />
 
         <div className="flex flex-wrap gap-2 mb-8">
           {filters.map((f) => (

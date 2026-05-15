@@ -4,6 +4,7 @@ import ObjectToken from "./shared/ObjectToken";
 import SourceMarker from "./shared/SourceMarker";
 import SectionLabel from "./shared/SectionLabel";
 import CardSurface from "./shared/CardSurface";
+import RoleHeader from "./shared/RoleHeader";
 import { useDialog } from "@/components/dialog/DialogProvider";
 import { buildHandlungsbedarfSession } from "@/lib/dialog/sessionFactories";
 import type { Arbeitsmodus, HandlungsbedarfVM } from "@/lib/project/types";
@@ -28,15 +29,16 @@ const HandlungsbedarfList = ({ items }: { items: Item[] }) => {
   return (
     <div>
       <div>
-        <header className="mb-6 flex items-baseline justify-between">
-          <div>
-            <SectionLabel className="mb-2">Operatives Zentrum</SectionLabel>
-            <h2 className="text-2xl font-light tracking-tight text-foreground">Handlungsbedarf</h2>
-          </div>
-          <span className="text-xs text-muted-foreground">
-            {items.length} offen · {items.filter((i) => i.blocker).length} Blocker
-          </span>
-        </header>
+        <RoleHeader
+          role="handlung"
+          title="Handlungsbedarf"
+          right={
+            <span>
+              {items.length} offen · {items.filter((i) => i.blocker).length} Blocker
+            </span>
+          }
+        />
+
 
         <div className="space-y-8">
           {grouped.map(({ modus, items }) => {

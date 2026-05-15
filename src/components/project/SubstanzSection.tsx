@@ -1,6 +1,7 @@
 import { FileText, Layers } from "lucide-react";
 import { useDialog } from "@/components/dialog/DialogProvider";
 import { buildThemaSession, buildDokumentSession } from "@/lib/dialog/sessionFactories";
+import RoleHeader from "./shared/RoleHeader";
 import type { ThemaVM, DokumentVM } from "@/lib/project/types";
 
 type Thema = ThemaVM;
@@ -20,10 +21,7 @@ const SubstanzSection = ({ themen, dokumente }: { themen: Thema[]; dokumente: Do
   return (
     <section className="px-8 md:px-12 lg:px-16 xl:px-20 py-16 bg-surface-0">
       <div className="max-w-7xl mx-auto space-y-14">
-        <header>
-          <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground/70 mb-2">Inhalt</p>
-          <h2 className="text-2xl font-light tracking-tight text-foreground">Substanz</h2>
-        </header>
+        <RoleHeader role="substanz" title="Substanz" />
 
         {/* Themen — Drilldown-Einstiege */}
         <div>
