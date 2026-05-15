@@ -5,23 +5,32 @@
 //  eigener Datenfetch. App-Theme wird via [data-dialog] geerbt.
 // =============================================================================
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useDialog } from "./DialogProvider";
 import SessionHeader from "./parts/SessionHeader";
 import ReviewRow from "./parts/ReviewRow";
 import { END_STATES } from "@/lib/dialog/types";
+import ConfirmDestructive from "@/components/shared/ConfirmDestructive";
+import { toast } from "sonner";
+
+/** Schwelle, ab der Bulk-Confirm einen Bestätigungsdialog auslöst. */
+const BULK_CONFIRM_THRESHOLD = 5;
+
+/** Box-Typen, die ohne weitere User-Eingabe automatisch bestätigt werden können. */
+const AUTO_CONFIRMABLE = new Set(["wissen", "aktion", "zuordnung", "kontext"]);
 
 const BatchReviewOverlay = ({ onClose }: { onClose: () => void }) => {
   const { session, commitBox, gateReason } = useDialog();
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const decisionBoxes = useMemo(
     () => session?.boxes.filter((b) => b.type !== "kontext") ?? [],
     [session],
   );
 
-  if (!session) return null;
-
-  const open = decisionBoxes.filter((b) => !END_STATES.includes(b.state)).length;
+  const openBoxes = decisionBoxes.filter((b) => !END_STATES.includes(b.state));
+  const autoConfirmable = openBoxes.filter((b) => AUTO_CONFIRMABLE.has(b.type));
+  const open = openBoxes.length;
   const ready = decisionBoxes.length - open;
   const conflicts = decisionBoxes.filter((b) => b.type === "konflikt" && !END_STATES.includes(b.state)).length;
   const gaps = decisionBoxes.filter((b) => (b.type === "gap" || b.type === "eingabe") && !END_STATES.includes(b.state)).length;
@@ -31,15 +40,52 @@ const BatchReviewOverlay = ({ onClose }: { onClose: () => void }) => {
   if (gaps > 0) summaryParts.push(`${gaps} Lücke${gaps === 1 ? "" : "n"}`);
 
   const allReady = open === 0;
-  const canBulk = !gateReason && open > 0;
+  // Nur enabled, wenn ≥1 Box wirklich auto-bestätigbar ist.
+  const canBulk = !gateReason && autoConfirmable.length > 0;
+  const bulkBlockedReason = gateReason
+    ?? (open === 0 ? null : autoConfirmable.length === 0 ? "Nur manuelle Entscheidungen offen" : null);
 
-  const handleBulkConfirm = async () => {
-    for (const b of decisionBoxes) {
-      if (END_STATES.includes(b.state)) continue;
-      if (b.type === "konflikt" || b.type === "gap" || b.type === "eingabe" || b.type === "auswahl") continue; // brauchen Eingabe
+  const runBulkConfirm = async () => {
+    let count = 0;
+    for (const b of autoConfirmable) {
       await commitBox(b.id, "confirm");
+      count++;
+    }
+    if (count > 0) {
+      toast.success(`${count} Erkenntnis${count === 1 ? "" : "se"} übernommen`);
     }
   };
+
+  const handleBulkConfirm = async () => {
+    if (!canBulk) {
+      if (bulkBlockedReason) toast.message(bulkBlockedReason);
+      return;
+    }
+    if (autoConfirmable.length >= BULK_CONFIRM_THRESHOLD) {
+      setConfirmOpen(true);
+      return;
+    }
+    await runBulkConfirm();
+  };
+
+  // Enter im Overlay → Bulk-Confirm (nur wenn Fokus außerhalb von Inputs).
+  useEffect(() => {
+    if (!session) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Enter") return;
+      const t = e.target as HTMLElement | null;
+      const tag = t?.tagName.toLowerCase();
+      if (tag === "input" || tag === "textarea" || t?.isContentEditable) return;
+      if (!canBulk) return;
+      e.preventDefault();
+      void handleBulkConfirm();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session, canBulk, autoConfirmable.length]);
+
+  if (!session) return null;
 
   return (
     <div data-dialog className="dlg2-root dialog-backdrop">
@@ -83,13 +129,27 @@ const BatchReviewOverlay = ({ onClose }: { onClose: () => void }) => {
             className={`dlg2-btn-commit${allReady ? " ready" : ""}`}
             onClick={handleBulkConfirm}
             disabled={!canBulk}
-            title={gateReason ?? undefined}
+            title={bulkBlockedReason ?? undefined}
           >
-            {open > 0 ? `${open} übernehmen` : "Alles bereit"}
+            {allReady
+              ? "Alles bereit"
+              : autoConfirmable.length > 0
+                ? `${autoConfirmable.length} übernehmen`
+                : `${open} manuell`}
             <span className="mono" style={{ opacity: 0.5, fontSize: 12 }}>↵</span>
           </button>
         </div>
       </div>
+
+      <ConfirmDestructive
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={`${autoConfirmable.length} Erkenntnisse übernehmen?`}
+        description="Bestätigte Erkenntnisse fließen sofort in den Projektzustand. Eine Rücknahme ist nicht möglich — prüfe die Liste vorher kurz."
+        confirmLabel="Alle übernehmen"
+        cancelLabel="Abbrechen"
+        onConfirm={runBulkConfirm}
+      />
     </div>
   );
 };

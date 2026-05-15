@@ -11,6 +11,7 @@
 import { useState } from "react";
 import type { DialogBox } from "@/lib/dialog/types";
 import { END_STATES } from "@/lib/dialog/types";
+import ConfirmDestructive from "@/components/shared/ConfirmDestructive";
 
 const TYPE_LABEL: Record<string, string> = {
   wissen: "Wissen",
@@ -65,7 +66,9 @@ const TypeChip = ({ kind, color }: { kind: string; color?: { bg: string; fg: str
 );
 
 const ReviewRow = ({ box, projectName, onConfirm, onReject }: ReviewRowProps) => {
-  const [expanded, setExpanded] = useState(false);
+  // Konflikte sind kritisch — Varianten default sichtbar, nicht hinter "Details" verstecken.
+  const [expanded, setExpanded] = useState(box.type === "konflikt");
+  const [rejectOpen, setRejectOpen] = useState(false);
   const [gapInput, setGapInput] = useState<string>(
     (box.payload?.antwort as string) ?? (box.payload?.text as string) ?? "",
   );
@@ -109,9 +112,10 @@ const ReviewRow = ({ box, projectName, onConfirm, onReject }: ReviewRowProps) =>
               type="button"
               className="dlg2-chip-opt"
               style={{ color: "var(--d-ink-4)" }}
-              onClick={onReject}
+              onClick={() => setRejectOpen(true)}
+              title="Endgültig verwerfen — keine Wirkung auf den Projektzustand"
             >
-              offen lassen
+              Verwerfen
             </button>
           </div>
           <button
