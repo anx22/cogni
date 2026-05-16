@@ -41,8 +41,9 @@ const EVENT_LABELS: Record<string, string> = {
 
 const labelForEvent = (eventType: string, payload: Record<string, unknown> | null): string => {
   if (payload && typeof payload === "object") {
-    const t = (payload as { title?: string; content?: { title?: string } }).title
-      ?? (payload as { content?: { title?: string } }).content?.title;
+    const t =
+      (payload as { title?: string; content?: { title?: string } }).title ??
+      (payload as { content?: { title?: string } }).content?.title;
     if (t && typeof t === "string") return t;
   }
   return EVENT_LABELS[eventType] ?? eventType.replace(/_/g, " ");
@@ -78,8 +79,11 @@ const ImpactPipelinePanel = () => {
         data.map((row) => ({
           id: row.id,
           when: formatRelative(row.created_at ?? undefined),
-          what: labelForEvent(row.event_type as string, row.new_value as Record<string, unknown> | null),
-          projectName: row.project_id ? projectNameById.get(row.project_id) ?? "—" : "—",
+          what: labelForEvent(
+            row.event_type as string,
+            row.new_value as Record<string, unknown> | null,
+          ),
+          projectName: row.project_id ? (projectNameById.get(row.project_id) ?? "—") : "—",
         })),
       );
     },
@@ -125,28 +129,24 @@ const ImpactPipelinePanel = () => {
     ];
   }, [userId]);
 
-  useRealtimeTables(
-    userId ? `home-impact-${userId}` : null,
-    listeners,
-    {
-      onTrigger: () => {
-        loadImpacts();
-        loadActive();
-      },
-      debounceMs: 350,
+  useRealtimeTables(userId ? `home-impact-${userId}` : null, listeners, {
+    onTrigger: () => {
+      loadImpacts();
+      loadActive();
     },
-  );
+    debounceMs: 350,
+  });
 
   // Pipeline-Aggregat aus useProjects()
   const pipeline = useMemo(() => {
     let conflicts = 0;
     let review = 0;
-    let actionN = 0;
+    let _actionN = 0;
     projects.forEach((p) => {
       const sigs = [p.signal, p.signal2].filter(Boolean) as string[];
       if (sigs.includes("conflict")) conflicts += 1;
       if (sigs.includes("review")) review += 1;
-      if (sigs.includes("action")) actionN += 1;
+      if (sigs.includes("action")) _actionN += 1;
     });
     return {
       intake: active ? 1 : 0,
@@ -182,7 +182,9 @@ const ImpactPipelinePanel = () => {
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {impacts.map((it) => (
               <div key={it.id} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                <div className="t-micro mono" style={{ color: "var(--ink-4)" }}>{it.when}</div>
+                <div className="t-micro mono" style={{ color: "var(--ink-4)" }}>
+                  {it.when}
+                </div>
                 <div className="t-body" style={{ color: "var(--ink)", lineHeight: 1.4 }}>
                   {it.what}
                 </div>

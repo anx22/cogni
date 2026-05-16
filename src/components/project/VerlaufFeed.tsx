@@ -2,7 +2,6 @@ import { useState, useMemo } from "react";
 import DeltaTag from "./shared/DeltaTag";
 import SourceMarker from "./shared/SourceMarker";
 import FeedbackButton from "./shared/FeedbackButton";
-import SectionLabel from "./shared/SectionLabel";
 import CardSurface from "./shared/CardSurface";
 import RoleHeader from "./shared/RoleHeader";
 import { useDialog } from "@/components/dialog/DialogProvider";
@@ -60,13 +59,19 @@ const VerlaufFeed = ({ verlauf }: { verlauf: VerlaufVM[] }) => {
                   className="group relative cursor-pointer"
                   onClick={() => openDialog(buildVerlaufSession(e))}
                 >
-                  <div className={`absolute -left-[27px] top-1.5 w-2 h-2 rounded-full ring-4 ring-surface-2 ${
-                    isConflict ? "bg-destructive/80" : "bg-muted-foreground/60"
-                  }`} />
+                  <div
+                    className={`absolute -left-[27px] top-1.5 w-2 h-2 rounded-full ring-4 ring-surface-2 ${
+                      isConflict ? "bg-destructive/80" : "bg-muted-foreground/60"
+                    }`}
+                  />
                   <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-1">
-                    <span className="text-[11px] text-muted-foreground/70 font-mono">{e.datum}</span>
+                    <span className="text-[11px] text-muted-foreground/70 font-mono">
+                      {e.datum}
+                    </span>
                     <DeltaTag delta={e.delta} />
-                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60">{e.objekt}</span>
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60">
+                      {e.objekt}
+                    </span>
                     <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
                       <FeedbackButton context={e.inhalt} label="" />
                     </div>
@@ -79,7 +84,9 @@ const VerlaufFeed = ({ verlauf }: { verlauf: VerlaufVM[] }) => {
               );
             })}
             {filtered.length === 0 && (
-              <p className="text-sm text-muted-foreground italic">Keine Einträge in diesem Filter.</p>
+              <p className="text-sm text-muted-foreground italic">
+                Keine Einträge in diesem Filter.
+              </p>
             )}
           </div>
         </CardSurface>
