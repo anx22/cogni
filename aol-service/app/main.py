@@ -103,8 +103,13 @@ def run(req: RunRequest) -> dict[str, Any]:
         "retry": req.retry,
     }
     try:
-        # TODO D2: durabler Aufruf mit Checkpointer + Tools.
-        result = COMPILED.invoke(initial)
+        # Checkpointer ist verdrahtet (interim MemorySaver, siehe graph.py).
+        # TODO D2: auf PostgresSaver umstellen, sobald DATABASE_URL gesetzt ist,
+        # und Tools (Lovable AI Gateway / Graphiti-Schreibknoten) ergänzen.
+        result = COMPILED.invoke(
+            initial,
+            config={"configurable": {"thread_id": thread_id}},
+        )
     except Exception as e:
         log.exception("AOL run failed")
         if req.run_id:
@@ -147,5 +152,29 @@ def confirm(req: ConfirmRequest) -> dict[str, Any]:
 
 @app.get("/aol/runs/{run_id}", dependencies=[Depends(require_bearer)])
 def get_run(run_id: str) -> dict[str, Any]:
-    # TODO D2: aus PostgresSaver / aol_runs lesen
-    return {"ok": True, "run_id": run_id, "status": "stub"}
+    # Liest den letzten Checkpoint des LangGraph-Threads. Solange der
+    # Checkpointer in-memory ist (siehe graph.py), kennt jeder Railway-Worker
+    # nur seine eigenen Runs — die kanonische Sicht liegt in `aol_runs`
+    # (Lovable Cloud). Sobald PostgresSaver aktiv ist, deckt diese Route den
+    # vollständigen Trace ab.
+    try:
+        snapshot = COMPILED.get_state({"configurable": {"thread_id": run_id}})
+    except Exception:
+        log.exception("get_run: checkpointer read failed")
+        raise HTTPException(status_code=500, detail="checkpoint read failed")
+
+    values = snapshot.values or {}
+    if not values:
+        raise HTTPException(status_code=404, detail="run not found")
+
+    graph_context = values.get("graph_context") or ""
+    return {
+        "ok": True,
+        "run_id": run_id,
+        "last_node": values.get("last_node"),
+        "next": list(snapshot.next or ()),
+        "asset_id": values.get("asset_id"),
+        "project_id": values.get("project_id"),
+        "graph_context_chars": len(graph_context),
+        "error": values.get("error"),
+    }

@@ -25,6 +25,7 @@ import os
 from typing import Any
 
 import httpx
+from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 
 from .state import AolState
@@ -149,6 +150,13 @@ def n_condenser(state: AolState) -> dict[str, Any]:
 # ---------- Graph -----------------------------------------------------------
 
 
+# Interim: MemorySaver lebt im Prozess. Auf Railway-Restart geht der State
+# verloren — akzeptabel, weil die kanonische Run-Historie ohnehin in
+# `aol_runs` (Lovable Cloud, via aol-callback) liegt. Sobald der Service
+# einen DATABASE_URL bekommt, wird hier auf PostgresSaver umgestellt.
+CHECKPOINTER = MemorySaver()
+
+
 def build_graph():
     g = StateGraph(AolState)
     g.add_node("router", n_router)
@@ -162,7 +170,7 @@ def build_graph():
 
     # Welle B: linker/delta/gap/dependency/conflict/case_builder werden später
     # nach dem context_loader eingefügt, aber DB-Schreiben bleibt Cloud-seitig.
-    return g.compile()
+    return g.compile(checkpointer=CHECKPOINTER)
 
 
 COMPILED = build_graph()
