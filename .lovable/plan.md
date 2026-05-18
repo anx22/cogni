@@ -1,116 +1,130 @@
-## Diagnose
+## Das eigentliche Problem ist nicht „open_point"
 
-Der Freeze ist sehr wahrscheinlich kein Backend-Hänger, sondern ein Overlay-Layering-Bug:
+Der konkrete Fall — eine Bedingung wird als Lücke gerendert — ist nur ein Symptom. Das generalistische Problem dahinter:
 
-- Beim Klick auf `11 übernehmen` öffnet sich wegen `BULK_CONFIRM_THRESHOLD = 5` ein Bestätigungsdialog.
-- Im Session-Replay sieht man: Radix setzt `body[data-scroll-locked]` und `pointer-events: none`.
-- Der Confirm-Dialog liegt aber mit `z-50` unter dem fullscreen `BatchReviewOverlay` mit `z-index: 100`.
-- Ergebnis: Der sichtbare Batch-Screen ist nicht mehr klickbar, der eigentliche Confirm-Dialog ist verdeckt. Das wirkt wie kompletter Freeze.
-- Der einzelne `commit-fact` Request, der sichtbar war, kam erfolgreich mit `200 { ok: true }` zurück; das spricht gegen einen kaputten Backend-Commit als Hauptursache.
+> Die Pipeline modelliert jede Aussage als einen typisierten Fakt. Die UI hat genau eine Default-Reaktion auf alles, was nicht ins Schema passt: „Wert eingeben". Daher entsteht für jede neue Sprechhandlung, die das Schema nicht kennt, ein eigener Bug.
 
-## Zielzustand
+Mit anderen Worten: zwischen „was die KI verstanden hat" und „was die UI dem User vorlegt" fehlt eine semantische Zwischenschicht. Das Schema kennt Fact-Types (`decision`, `task`, `deadline`, `topic`, `stakeholder`, `open_point`, `reference`), aber keine Sprechhandlungs-Modalität.
 
-Batch Review muss zwei Dinge klar machen:
+## Die drei Achsen, die heute kollabiert sind
 
-1. **Bulk-Übernahme darf nie die UI blockieren oder unsichtbar machen.**
-2. **Projektzuordnung ist eine eigene kritische Vorentscheidung**, nicht eine normale Wissenszeile.
+Jede Aussage hat in Wahrheit drei unabhängige Eigenschaften, die das System aktuell in einen einzigen `fact_type` zusammenfaltet:
 
-## Plan
+1. **Modalität** — was für eine Sprechhandlung ist das?
+2. **Bezug** — steht sie alleine oder hängt sie an etwas?
+3. **Erwartung** — was braucht sie vom User?
 
-### 1. Freeze-Hotfix: Confirm-Dialog sicher über BatchReview legen
+Solange diese drei Achsen nicht getrennt sind, wird jeder neue Aussagentyp zu einem neuen Symptom-Bug — wie heute mit „Voraussetzung".
 
-Betroffene Dateien:
+## Modalitäten, die in PM-Inputs real vorkommen
 
-- `src/components/ui/alert-dialog.tsx`
-- optional `src/components/shared/ConfirmDestructive.tsx`
+Nicht erschöpfend, aber so dass die Klassen-Lücke greifbar wird:
 
-Änderung:
 
-- AlertDialog Overlay/Content bekommen eine höhere Layer-Stufe als `dlg2-root`, z. B. Overlay `z-[210]`, Content `z-[220]`.
-- Dadurch bleibt `body` zwar korrekt scroll-locked, aber der aktive Dialog liegt sichtbar und klickbar oben.
-- Optional: `ConfirmDestructive` bekommt eine klare Busy-Anzeige, damit während Bulk-Commit nicht der Eindruck entsteht, die UI sei eingefroren.
+| Modalität    | Beispiel                                               | Heute falsch behandelt als                                       |
+| ------------ | ------------------------------------------------------ | ---------------------------------------------------------------- |
+| `assertion`  | „Liefertermin ist 12.06."                              | ok                                                               |
+| `condition`  | „Angebot gilt nur, wenn Bildrecherche durch LMWA"      | `open_point` → Lücke (heutiger Fall)                             |
+| `exclusion`  | „Nicht enthalten: Postproduktion"                      | `open_point` oder ignoriert                                      |
+| `assumption` | „Wir gehen davon aus, dass der Kunde freigibt"         | `open_point` → Lücke                                             |
+| `suggestion` | „Wir könnten auch 16:9 statt 9:16 liefern"             | `open_point` → Lücke                                             |
+| `question`   | „Kannst du bis Freitag liefern?" (echte Frage an mich) | `open_point` → korrekt, aber ohne Frage-Text                     |
+| `note`       | „Zur Info: Kunde ist im Urlaub bis 03.06."             | erzeugt Box ohne Sinn                                            |
+| `relation`   | „LMWA ist die Agentur von Teinacher"                   | `topic` oder verschluckt                                         |
+| `attribute`  | „Preis: 7.820 €" (gehört an bestehendes Angebot)       | erzeugt eigenständigen `open_point` statt Update am Bezugsobjekt |
+| `risk`       | „Falls Freigabe zu spät, Verschiebung um 2 Wochen"     | `open_point` → Lücke                                             |
+| `dedup`      | Wiederholung eines bereits bekannten Fakts             | erzeugt neue Box                                                 |
 
-### 2. Bulk-Commit robuster und sichtbarer machen
 
-Betroffene Datei:
+Heute landen mindestens 7 dieser 11 Klassen im Mülleimer `open_point` und werden mit dem Lücken-Renderer („Wert eingeben") angezeigt. Das ist der gemeinsame Nenner deiner Verwirrung.
 
-- `src/components/dialog/BatchReviewOverlay.tsx`
+## Generalistischer Plan
 
-Änderung:
+### 1. Modell-Vertrag um Modalität, Bezug und Erwartung erweitern
 
-- Lokalen `isBulkCommitting` State einführen.
-- Commitbar zeigt währenddessen z. B. `Übernehme 3/11…` oder mindestens `Übernehme…`.
-- Der Hauptbutton wird währenddessen deaktiviert, aber nicht stillschweigend ohne Feedback.
-- Bulk-Confirm bleibt sequenziell, damit Backend-Guards und Reihenfolge stabil bleiben.
-- Fehlerfall: Wenn ein Commit blockiert wird, bleibt die Zeile sichtbar offen und es gibt eine Toast-/Statusmeldung statt gefühltem Stillstand.
+Jedes Item, das die Verstehens-Pipeline ausliefert, trägt verpflichtend:
 
-### 3. Zuordnung als kritische Gate-Zeile bauen
+- `modality` (siehe Tabelle oben; `unclear` ist erlaubt)
+- `attaches_to`: optional, Verweis (ID oder Beschreibung) auf das Bezugsobjekt
+- `asks`: optional, exakter Satz, was vom User gewünscht ist. `**null` = nichts gewünscht.**
+- `understood`: 1 Satz Klartext, was die KI verstanden hat
+- `evidence`: das wörtliche Quellfragment + Position
 
-Betroffene Dateien:
+Wenn `modality=unclear` oder `asks` gefordert wäre aber leer ist, wird die Box als **„Verstehe ich das richtig?"** gerendert — niemals als blindes Eingabefeld. Das ist die Verallgemeinerung des heutigen Symptoms.
 
-- `src/components/dialog/parts/ReviewRow.tsx`
-- `src/components/dialog/BatchReviewOverlay.tsx`
+### 2. Box-Renderer-Matrix statt einheitlicher Box
 
-Änderung:
+Eine Tabelle, keine Sonderfälle:
 
-- Eigene `zuordnung`-Variante in `ReviewRow`, nicht mehr Default-Zeile.
-- Visuelle Sprache:
-  - kräftiger Akzent-/Warn-Stripe
-  - Chip `ZUERST ZUORDNEN` oder `PROJEKT`
-  - Titel: `Projektzuordnung erforderlich`
-  - Kontexttext: z. B. empfohlenes Projekt / Grund aus `agent_reason`
-  - prominente Auswahl-/Bestätigungsaktion statt kleinem Häkchen
-- Wenn Kandidaten vorhanden sind: Projektchips anzeigen, z. B. empfohlener Kandidat hervorgehoben.
-- Wenn keine Kandidaten vorhanden sind, aber `suggested_new_name`: Aktion `Neues Projekt: …` anbieten.
-- Keine Reject-Aktion für Zuordnung, weil Backend sie ohnehin ablehnt.
 
-### 4. Gating sichtbar machen: Andere Zeilen sind bewusst gesperrt
+| Modalität  | Default-Aktion          | Eingabefeld? | Sekundäraktionen                                |
+| ---------- | ----------------------- | ------------ | ----------------------------------------------- |
+| assertion  | Übernehmen              | nein         | Korrigieren · Verwerfen                         |
+| condition  | Übernehmen              | nein         | Bezug ändern · Verwerfen                        |
+| exclusion  | Übernehmen              | nein         | Bezug ändern · Verwerfen                        |
+| assumption | Markieren als Annahme   | nein         | Bestätigen · Verwerfen                          |
+| suggestion | In Vorschlagsliste      | nein         | Entscheidung erzwingen · Verwerfen              |
+| question   | Antworten               | **ja**       | Später · Ablehnen                               |
+| note       | Stillschweigend ablegen | nein         | (keine Box, nur Verlauf)                        |
+| relation   | Kante übernehmen        | nein         | Knoten wählen · Verwerfen                       |
+| attribute  | Ziel-Fakt aktualisieren | nein         | Bezug ändern · Verwerfen                        |
+| risk       | Risiko aufnehmen        | nein         | Frist setzen · Verwerfen                        |
+| dedup      | (keine Box)             | nein         | (verschluckt + an existierender Quelle ergänzt) |
 
-Betroffene Dateien:
 
-- `src/components/dialog/BatchReviewOverlay.tsx`
-- `src/components/dialog/parts/ReviewRow.tsx`
-- optional `src/index.css`
+Eingabefelder existieren nur dort, wo es semantisch eine Antwort gibt. Das eliminiert die heutige Sackgasse vollständig.
 
-Änderung:
+### 3. Bezug ist ein eigenes Box-Konzept, kein Anhang
 
-- `ReviewRow` bekommt Props wie `blocked` und `blockedReason`.
-- Solange eine offene Zuordnung existiert:
-  - alle Nicht-Zuordnungs-Zeilen werden optisch gedimmt
-  - Aktionen sind disabled
-  - rechts steht sichtbar `nach Projektzuordnung`
-  - Cursor/Tooltip/Inline-Hinweis machen klar: nicht kaputt, sondern Reihenfolge erforderlich
-- Oben in der Batch-Liste erscheint ein kompakter Hinweisbanner:
-  - `Erst Projekt wählen. Danach kannst du die 11 Erkenntnisse übernehmen.`
-- Bulk-Button zeigt nicht `11 übernehmen`, sondern z. B. `Erst Projekt wählen`, solange Gate aktiv ist.
+Wann immer `attaches_to` gesetzt ist und das Ziel nicht eindeutig auflösbar, ist die Frage an den User **nicht** „Wert eingeben", sondern eine Auswahl: zeige 1–3 wahrscheinliche Bezugsobjekte als Chips, plus „Keines davon". Damit verschwinden auch die Fälle, in denen z. B. ein Preis als freier `open_point` erscheint statt am Angebot zu hängen.
 
-### 5. Typen stärker differenzieren
+### 4. Stille Substanz als Default
 
-Betroffene Datei:
+Items mit `confidence ≥ 0.9`, `asks=null`, kein Konflikt → wandern ohne Box direkt in den Projektzustand. Im Review erscheint nur eine **Sammelzeile** („23 Punkte übernommen — anschauen?"). Damit fällt die heutige Flut wegloser Boxen weg.
 
-- `src/components/dialog/parts/ReviewRow.tsx`
+### 5. Drift-Telemetrie statt Einzel-Diskussionen
 
-Änderung:
+Jedes Item mit `modality=unclear` oder mit User-Korrektur „falsch klassifiziert" wird geloggt. Wenn ein Muster Schwellwert X überschreitet (z. B. >5 ähnliche unclear-Fälle/Woche), generiert das System einen **Schema-Vorschlag** statt eines Hotfixes — z. B. „Neue Modalität `delivery_constraint` erkannt, willst du sie aufnehmen?". So wird aus „immer wieder neue Diskussion" ein Lernprozess.
 
-- Type-Chips bekommen typabhängige Farbe/Form/Semantik:
-  - `WISSEN`: ruhig/blau oder neutral
-  - `LÜCKE`: amber, offener Kreis, Eingabe nötig
-  - `KONFLIKT`: rot/amber, Varianten sichtbar
-  - `ZUORDNUNG`: höchste Priorität, eigene Gate-Sprache
-  - `AKTION`/`AUSWAHL`: handlungsorientiert
-- Zeilenstatus unterscheidet klar zwischen:
-  - bereit übernehmbar
-  - manuell erforderlich
-  - blockiert durch Zuordnung
-  - bereits bestätigt
+### 6. Korrektur als Lern-Signal
 
-### 6. Verifikation
+Verwerfen, „in Notiz verschieben", „Bezug ändern" werden in `corrections` mit Modalität + Originalsatz gespeichert. Diese Daten fließen in den Klassifier zurück. Was du heute manuell korrigierst, wird morgen automatisch richtig einsortiert.
 
-Nach Umsetzung prüfen:
+### 7. Zwei Datenbankfelder, die das tragen können
 
-- Klick auf `11 übernehmen` zeigt den Confirm-Dialog sichtbar über allem.
-- Kein Zustand mehr, in dem die Batch-Liste sichtbar ist, aber keine Mausinteraktion möglich ist.
-- Mit offener Zuordnung zeigt die Commitbar nicht fälschlich `11 übernehmen`.
-- Nicht-Zuordnungs-Zeilen sind sichtbar blockiert und erklären warum.
-- Zuordnung ist als erster kritischer Schritt sofort erkennbar.
-- Ein erfolgreicher Zuordnungs-Commit hebt das Gate auf und macht die übrigen Zeilen übernehmbar.
+Vorhanden: `proposed_facts.content` (jsonb), `review_cases.context` (jsonb), `review_cases.box_type` (enum).
+
+Reicht aus, wenn:
+
+- `content` zusätzlich `modality`, `attaches_to`, `asks`, `understood`, `evidence` führt
+- `box_type` um Werte wie `condition`, `assumption`, `suggestion`, `relation`, `attribute`, `risk`, `note`, `unclear` erweitert wird
+- Der Renderer auf `box_type` und das Vorhandensein von `asks` schaut, nicht mehr auf `fact_type`
+
+Keine zerstörerische Migration nötig.
+
+## Was wir damit konkret verhindern
+
+- Bedingungen, die als Lücken erscheinen (heutiger Fall)
+- Annahmen, die der User fälschlich „beantworten" soll
+- Ausschlüsse („nicht enthalten"), die untergehen
+- Preise/Mengen, die als eigene Boxen erscheinen statt am Angebot
+- Notizen, die zur Klick-Arbeit werden
+- Beziehungen, die zu Topics zerfallen statt als Kante in den Graphen zu gehen
+- Wiederholungen, die als neue Items erscheinen
+- Jeden zukünftigen Fall, bei dem wir heute eine neue Diskussion bräuchten
+
+## Ergebnis für den konkreten Fall
+
+Die Bedingung „Voraussetzung: Bildrecherche und Kauf durch LMWA" erscheint dann als Box mit:
+
+- Chip **BEDINGUNG**, klar abgegrenzt von Lücken
+- „Verstanden: Angebot B gilt nur, wenn LMWA Bildrecherche und Kauf übernimmt."
+- Bezug-Chip → „Angebot B · 7.820 € · 12 Reels"
+- Aktionen: ✓ Übernehmen · Bezug ändern · Verwerfen
+- Kein Eingabefeld, keine erzwungene Antwort
+
+Und das Gleiche gilt automatisch für jede der oben gelisteten Modalitäten — ohne neue Diskussion pro Fall.
+
+&nbsp;
+
+Finde ich gut, bitte so umsetzen. Punkt. Dies ist ein extrem wichtige Erkenntnis, die wir nicht nur im Code und in der App umsetzen sollten, sondern vor allem in der Dokumentation überall, wo wichtig ergänzen oder verändern sollten. Ich vermute, dass unser Ansatz dennoch nicht der Weisheit letzter Schluss ist, aber eine sehr wichtige Richtungsentscheidung. Daher nach Code-Umsetzung bitte gut dokumentieren. Und auch vorhandene Punkte, die das adressieren, umändern
