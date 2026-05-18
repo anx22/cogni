@@ -27,6 +27,12 @@ export interface ExtractedFact {
   title: string;
   content: Record<string, unknown>;
   confidence: number;
+  // Sprechhandlungs-Vertrag (siehe docs/DECISIONS.md "Modalitäts-Vertrag").
+  modality?: import("./agentConfig.ts").Modality;
+  attaches_to?: string | null;
+  asks?: string | null;
+  understood?: string;
+  evidence?: string | null;
 }
 
 export interface AssignmentSuggestion {
@@ -137,14 +143,24 @@ export async function callExtractFacts(
   const facts = parsed.facts;
   if (!Array.isArray(facts)) return [];
 
-  return facts.filter(
-    (f): f is ExtractedFact =>
-      !!f &&
-      typeof (f as ExtractedFact).fact_type === "string" &&
-      typeof (f as ExtractedFact).title === "string" &&
-      typeof (f as ExtractedFact).content === "object" &&
-      typeof (f as ExtractedFact).confidence === "number",
-  );
+  return facts
+    .filter(
+      (f): f is ExtractedFact =>
+        !!f &&
+        typeof (f as ExtractedFact).fact_type === "string" &&
+        typeof (f as ExtractedFact).title === "string" &&
+        typeof (f as ExtractedFact).content === "object" &&
+        typeof (f as ExtractedFact).confidence === "number",
+    )
+    .map((f) => ({
+      // Defaults für Alt-Antworten ohne modality.
+      modality: (f as any).modality ?? "assertion",
+      attaches_to: (f as any).attaches_to ?? null,
+      asks: (f as any).asks ?? null,
+      understood: (f as any).understood ?? f.title,
+      evidence: (f as any).evidence ?? null,
+      ...f,
+    }));
 }
 
 // ----------------------------------------------------------------------------
