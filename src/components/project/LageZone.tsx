@@ -240,22 +240,16 @@ const LageZone = ({
           style={{ gap: 10, marginTop: 26 }}
         >
           {konfliktCount > 0 && (
-            <span className="chip-pill" data-tone="conflict">
-              Konflikt {konfliktCount}
-            </span>
+            <span className="chip chip--conflict">Konflikt {konfliktCount}</span>
           )}
           {blockerCount > 0 && (
-            <span className="chip-pill" data-tone="review">
-              {blockerCount} Blocker
-            </span>
+            <span className="chip chip--review">{blockerCount} Blocker</span>
           )}
           {handlungCount > 0 && (
-            <span className="chip-pill" data-tone="neutral">
-              {handlungCount} offen
-            </span>
+            <span className="chip">{handlungCount} offen</span>
           )}
-          {konfliktCount === 0 && blockerCount === 0 && (
-            <span className="chip-pill" data-tone="ok">on track</span>
+          {konfliktCount === 0 && blockerCount === 0 && handlungCount === 0 && (
+            <span className="chip chip--action">on track</span>
           )}
 
           <div style={{ flex: 1 }} />
