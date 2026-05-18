@@ -1,14 +1,20 @@
 // =============================================================================
-//  ReviewRow — eine Zeile in BatchReviewOverlay.
-//    zuordnung — kritische Gate-Zeile (Projektwahl), eigene laute Variante
-//    konflikt  — amber Stripe + inline Optionen + Details-Toggle
-//    gap/eingabe — amber Stripe + Eingabefeld
-//    auswahl   — blau Stripe + Option-Chips
-//    default   — wissen/aktion/kontext mit Single-Confirm
+//  ReviewRow — Renderer-Matrix für die Batch-Liste.
+// -----------------------------------------------------------------------------
+//  Generalistisches Prinzip (siehe docs/DECISIONS.md "Modalitäts-Vertrag"):
 //
-//  Props `blocked` + `blockedReason`: solange offene Zuordnung existiert, sind
-//  Folge-Zeilen sichtbar gesperrt. Aktionen werden disabled, ein Hinweis steht
-//  rechts. Zuordnungszeile ist nie geblockt.
+//    Jede Aussage hat drei orthogonale Achsen:
+//      1. Modalität     — Sprechhandlung (assertion/condition/question/…)
+//      2. Bezug         — steht alleine oder hängt an Bezugsobjekt
+//      3. Erwartung     — `asks` ist gesetzt = User soll antworten, sonst nicht
+//
+//  Diese Datei rendert für jede Modalität eine eigene Box mit eigener
+//  Default-Aktion und eigener Aktionsleiste. Eingabefeld existiert NUR, wenn
+//  `payload.asks` gesetzt ist — sonst keine "Wert eingeben"-Sackgasse.
+//
+//  Die Aktionsspalte (rechts) wird immer aus 2 Komponenten gebaut:
+//    - Primary  (Default-Aktion, hervorgehoben)
+//    - Bezug ändern / Verwerfen (sekundär, optional)
 // =============================================================================
 
 import { useState } from "react";
@@ -16,6 +22,14 @@ import type { DialogBox } from "@/lib/dialog/types";
 import { END_STATES } from "@/lib/dialog/types";
 import ConfirmDestructive from "@/components/shared/ConfirmDestructive";
 
+// -----------------------------------------------------------------------------
+//  Labels + Farben pro Modalität.
+//  Drei Stimmungs-Klassen:
+//    INFO   = blau (Wissen, Notiz, Kontext, Beziehung, Attribut, stille Substanz)
+//    AKTION = grün (Aktion, Vorschlag)
+//    WARN   = amber (Konflikt, Lücke, Eingabe, Frage, Bedingung, Ausschluss,
+//                    Annahme, Risiko, Unklar — alles was Klärung verlangt)
+// -----------------------------------------------------------------------------
 const TYPE_LABEL: Record<string, string> = {
   wissen: "Wissen",
   zuordnung: "Projekt",
@@ -25,8 +39,48 @@ const TYPE_LABEL: Record<string, string> = {
   eingabe: "Eingabe",
   kontext: "Kontext",
   aktion: "Aktion",
+  bedingung: "Bedingung",
+  ausschluss: "Ausschluss",
+  annahme: "Annahme",
+  vorschlag: "Vorschlag",
+  frage: "Frage",
+  notiz: "Notiz",
+  beziehung: "Beziehung",
+  attribut: "Detail",
+  risiko: "Risiko",
+  unklar: "Unklar",
 };
 
+type Tone = "info" | "warn" | "action";
+const TYPE_TONE: Record<string, Tone> = {
+  wissen: "info",
+  kontext: "info",
+  notiz: "info",
+  beziehung: "info",
+  attribut: "info",
+  auswahl: "info",
+  aktion: "action",
+  vorschlag: "action",
+  konflikt: "warn",
+  gap: "warn",
+  eingabe: "warn",
+  frage: "warn",
+  bedingung: "warn",
+  ausschluss: "warn",
+  annahme: "warn",
+  risiko: "warn",
+  unklar: "warn",
+  zuordnung: "warn",
+};
+
+const toneToColors = (t: Tone) =>
+  t === "warn"
+    ? { stripe: "var(--d-warn)", chipBg: "var(--d-warn-soft)", chipFg: "var(--d-warn)" }
+    : t === "action"
+    ? { stripe: "var(--d-ok)", chipBg: "color-mix(in oklab, var(--d-ok) 18%, transparent)", chipFg: "var(--d-ok)" }
+    : { stripe: "var(--d-blue)", chipBg: "var(--d-blue-soft)", chipFg: "var(--d-blue)" };
+
+// -----------------------------------------------------------------------------
 interface ReviewRowProps {
   box: DialogBox;
   projectName?: string | null;
@@ -37,16 +91,7 @@ interface ReviewRowProps {
 }
 
 const Stripe = ({ color }: { color: string }) => (
-  <div
-    style={{
-      position: "absolute",
-      left: 0,
-      top: 0,
-      bottom: 0,
-      width: 3,
-      background: color,
-    }}
-  />
+  <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: color }} />
 );
 
 const TypeChip = ({ kind, color }: { kind: string; color?: { bg: string; fg: string } }) => (
@@ -70,16 +115,43 @@ const TypeChip = ({ kind, color }: { kind: string; color?: { bg: string; fg: str
   </span>
 );
 
-const ReviewRow = ({ box, projectName, blocked, blockedReason, onConfirm, onReject }: ReviewRowProps) => {
-  const [expanded, setExpanded] = useState(box.type === "konflikt" || box.type === "zuordnung");
+/** Mini-Token: zeigt das Bezugsobjekt, an das diese Modalität anknüpft. */
+const RefToken = ({ to }: { to: string }) => (
+  <span
+    className="mono"
+    style={{
+      fontSize: 10.5,
+      padding: "2px 8px",
+      borderRadius: 999,
+      border: "1px solid var(--d-hair-2)",
+      color: "var(--d-ink-3)",
+      background: "var(--d-surf-3)",
+      flex: "0 0 auto",
+    }}
+    title={`Bezug: ${to}`}
+  >
+    → {to}
+  </span>
+);
+
+// -----------------------------------------------------------------------------
+const ReviewRow = ({ box, projectName, blocked, onConfirm, onReject }: ReviewRowProps) => {
+  const [expanded, setExpanded] = useState(
+    box.type === "konflikt" || box.type === "zuordnung",
+  );
   const [rejectOpen, setRejectOpen] = useState(false);
-  const [gapInput, setGapInput] = useState<string>(
+  const [askInput, setAskInput] = useState<string>(
     (box.payload?.antwort as string) ?? (box.payload?.text as string) ?? "",
   );
 
   const isFinal = END_STATES.includes(box.state);
+  const asks = (box.payload?.asks as string | null) ?? null;
+  const understood = (box.payload?.understood as string | null) ?? null;
+  const attachesTo = (box.payload?.attaches_to as string | null) ?? null;
 
-  // ZUORDNUNG-Variante (Gate-Zeile, höchste Priorität)
+  // -------------------------------------------------------------------------
+  //  ZUORDNUNG (kritisches Gate, eigene laute Variante)
+  // -------------------------------------------------------------------------
   if (box.type === "zuordnung" && !isFinal) {
     const candidates = (box.payload?.candidates ?? []) as Array<{ project_id: string; name: string }>;
     const recommended = box.payload?.recommended_project_id as string | undefined;
@@ -195,13 +267,17 @@ const ReviewRow = ({ box, projectName, blocked, blockedReason, onConfirm, onReje
     );
   }
 
-  // Visuelle Sperre für Nicht-Zuordnungs-Zeilen, solange Gate aktiv ist
+  // -------------------------------------------------------------------------
+  //  Visuelle Sperre, solange Gate aktiv ist
+  // -------------------------------------------------------------------------
   const dim = blocked && !isFinal;
   const dimStyle: React.CSSProperties = dim
     ? { opacity: 0.45, pointerEvents: "none" as const }
     : {};
 
-  // KONFLIKT-Variante
+  // -------------------------------------------------------------------------
+  //  KONFLIKT (existierte schon, hier nur leicht aufgeräumt)
+  // -------------------------------------------------------------------------
   if (box.type === "konflikt" && !isFinal) {
     const faktA = box.payload?.faktA as string | undefined;
     const faktB = box.payload?.faktB as string | undefined;
@@ -264,11 +340,18 @@ const ReviewRow = ({ box, projectName, blocked, blockedReason, onConfirm, onReje
     );
   }
 
-  // GAP / EINGABE
-  if ((box.type === "gap" || box.type === "eingabe") && !isFinal) {
-    const placeholder = box.type === "gap" ? "Information ergänzen…" : "Antwort eingeben…";
+  // -------------------------------------------------------------------------
+  //  GAP / EINGABE / FRAGE — überall, wo der User wirklich antworten soll
+  // -------------------------------------------------------------------------
+  const wantsInput =
+    (box.type === "gap" || box.type === "eingabe" || box.type === "frage") && !isFinal;
+
+  if (wantsInput) {
+    const placeholder =
+      asks ??
+      (box.type === "frage" ? "Antwort eingeben…" : box.type === "gap" ? "Information ergänzen…" : "Antwort eingeben…");
     const submit = () => {
-      const trimmed = gapInput.trim();
+      const trimmed = askInput.trim();
       if (!trimmed) return;
       const key = box.type === "gap" ? "antwort" : "text";
       onConfirm({ [key]: trimmed });
@@ -280,26 +363,30 @@ const ReviewRow = ({ box, projectName, blocked, blockedReason, onConfirm, onReje
           <span style={{ width: 5, height: 5, borderRadius: 999, border: "1px solid var(--d-warn)", background: "transparent" }} />
         </span>
         <TypeChip kind={box.type} color={{ bg: "var(--d-warn-soft)", fg: "var(--d-warn)" }} />
-        <span style={{ flex: 1, fontSize: 13.5, color: "var(--d-ink)", marginLeft: 8 }}>{box.title}</span>
+        <span style={{ flex: 1, fontSize: 13.5, color: "var(--d-ink)", marginLeft: 8 }}>
+          {asks ?? box.title}
+        </span>
         {blocked ? (
           <span className="mono" style={{ fontSize: 10.5, color: "var(--d-ink-3)", marginLeft: 12 }}>nach Projektzuordnung</span>
         ) : (
           <div style={{ display: "flex", gap: 6, alignItems: "center", flex: "0 0 auto" }}>
             <input
-              value={gapInput}
-              onChange={(e) => setGapInput(e.target.value)}
+              value={askInput}
+              onChange={(e) => setAskInput(e.target.value)}
               placeholder={placeholder}
               onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
-              style={{ height: 28, padding: "0 10px", borderRadius: 8, border: "1px solid var(--d-hair-2)", background: "var(--d-surf-2)", color: "var(--d-ink)", fontSize: 12.5, outline: "none", width: 200 }}
+              style={{ height: 28, padding: "0 10px", borderRadius: 8, border: "1px solid var(--d-hair-2)", background: "var(--d-surf-2)", color: "var(--d-ink)", fontSize: 12.5, outline: "none", width: 220 }}
             />
-            <button type="button" className="dlg2-chip-opt" style={{ borderColor: "var(--d-ok)", color: "var(--d-ok)" }} onClick={submit} disabled={!gapInput.trim()}>✓</button>
+            <button type="button" className="dlg2-chip-opt" style={{ borderColor: "var(--d-ok)", color: "var(--d-ok)" }} onClick={submit} disabled={!askInput.trim()}>✓</button>
           </div>
         )}
       </div>
     );
   }
 
-  // AUSWAHL
+  // -------------------------------------------------------------------------
+  //  AUSWAHL
+  // -------------------------------------------------------------------------
   if (box.type === "auswahl" && !isFinal) {
     const opts: string[] = box.payload?.optionen ?? [];
     return (
@@ -323,7 +410,101 @@ const ReviewRow = ({ box, projectName, blocked, blockedReason, onConfirm, onReje
     );
   }
 
-  // Default / accepted (wissen/aktion/kontext)
+  // -------------------------------------------------------------------------
+  //  SPRECHHANDLUNGS-MATRIX (condition/exclusion/assumption/suggestion/
+  //                           note/relation/attribute/risk/unclear)
+  //  Gemeinsamer Renderer: TypeChip, "Verstanden: …", optionaler RefToken,
+  //  passende Primäraktion. KEIN Eingabefeld (Eingabe nur bei wantsInput oben).
+  // -------------------------------------------------------------------------
+  const SPRECHHANDLUNGEN: Record<string, { primaryLabel: string; secondaryLabel?: string } > = {
+    bedingung:   { primaryLabel: "Übernehmen",       secondaryLabel: "Bezug ändern" },
+    ausschluss:  { primaryLabel: "Übernehmen",       secondaryLabel: "Bezug ändern" },
+    annahme:     { primaryLabel: "Als Annahme",      secondaryLabel: "Bestätigen" },
+    vorschlag:   { primaryLabel: "Vormerken",        secondaryLabel: "Jetzt entscheiden" },
+    notiz:       { primaryLabel: "Ablegen" },
+    beziehung:   { primaryLabel: "Kante übernehmen", secondaryLabel: "Knoten wählen" },
+    attribut:    { primaryLabel: "Aktualisieren",    secondaryLabel: "Bezug ändern" },
+    risiko:      { primaryLabel: "Risiko aufnehmen", secondaryLabel: "Frist setzen" },
+    unklar:      { primaryLabel: "Verstehe ich das richtig?" },
+  };
+
+  const spr = SPRECHHANDLUNGEN[box.type];
+  if (spr && !isFinal) {
+    const tone = TYPE_TONE[box.type] ?? "info";
+    const colors = toneToColors(tone);
+    const silentSubstanz = box.payload?.kind === "silent_substanz";
+    return (
+      <>
+        <div className="dlg2-row" style={{ minHeight: 56, position: "relative", ...dimStyle }}>
+          <Stripe color={colors.stripe} />
+          <span className="dlg2-status-dot" style={{ background: colors.chipBg, border: `1.5px solid ${colors.stripe}` }}>
+            <span style={{ width: 5, height: 5, borderRadius: 999, background: colors.stripe }} />
+          </span>
+          <TypeChip kind={box.type} color={{ bg: colors.chipBg, fg: colors.chipFg }} />
+          <div style={{ flex: 1, marginLeft: 8, minWidth: 0 }}>
+            <div style={{ fontSize: 13.5, color: "var(--d-ink)", fontWeight: 500 }}>
+              {box.title}
+            </div>
+            {understood && (
+              <div style={{ fontSize: 12, color: "var(--d-ink-3)", marginTop: 2, lineHeight: 1.4 }}>
+                Verstanden: {understood}
+              </div>
+            )}
+          </div>
+          {attachesTo && <RefToken to={attachesTo} />}
+          {blocked ? (
+            <span className="mono" style={{ fontSize: 10.5, color: "var(--d-ink-3)", marginLeft: 12 }}>
+              nach Projektzuordnung
+            </span>
+          ) : silentSubstanz ? (
+            <span className="mono" style={{ fontSize: 10.5, color: "var(--d-ok)", marginLeft: 12 }}>
+              ✓ {box.payload?.count ?? 0} übernommen
+            </span>
+          ) : (
+            <div style={{ display: "flex", gap: 6, marginLeft: 12, flex: "0 0 auto" }}>
+              <button
+                type="button"
+                className="dlg2-chip-opt"
+                style={{ borderColor: colors.chipFg, color: colors.chipFg }}
+                onClick={() => onConfirm()}
+              >
+                {spr.primaryLabel}
+              </button>
+              {spr.secondaryLabel && (
+                <button
+                  type="button"
+                  className="dlg2-chip-opt"
+                  onClick={() => onConfirm({ secondary: true })}
+                >
+                  {spr.secondaryLabel}
+                </button>
+              )}
+              <button
+                type="button"
+                className="dlg2-chip-opt"
+                style={{ color: "var(--d-ink-4)" }}
+                onClick={() => setRejectOpen(true)}
+              >
+                Verwerfen
+              </button>
+            </div>
+          )}
+        </div>
+        <ConfirmDestructive
+          open={rejectOpen}
+          onOpenChange={setRejectOpen}
+          title="Eintrag verwerfen?"
+          description="Die Aussage wird endgültig verworfen und fließt nicht in den Projektzustand."
+          confirmLabel="Endgültig verwerfen"
+          onConfirm={() => onReject()}
+        />
+      </>
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  //  DEFAULT — wissen / aktion / kontext (Assertion, klassische Single-Confirm)
+  // -------------------------------------------------------------------------
   const needsConfirm = !isFinal && (box.type === "wissen" || box.type === "aktion" || box.type === "kontext");
   return (
     <div className="dlg2-row" style={{ minHeight: 48, position: "relative", ...dimStyle }}>
@@ -344,6 +525,7 @@ const ReviewRow = ({ box, projectName, blocked, blockedReason, onConfirm, onReje
       <span style={{ flex: 1, fontSize: 13.5, color: isFinal ? "var(--d-ink-3)" : "var(--d-ink-2)", marginLeft: 8 }}>
         {box.title}
       </span>
+      {attachesTo && <RefToken to={attachesTo} />}
       {projectName && (
         <span className="mono" style={{ fontSize: 11, color: "var(--d-ink-3)", marginLeft: 12, flex: "0 0 auto" }}>
           {projectName}
