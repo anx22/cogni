@@ -459,39 +459,73 @@ const ReviewRow = ({ box, projectName, blocked, onConfirm, onReject }: ReviewRow
     const placeholder =
       asks ??
       (box.type === "frage" ? "Antwort eingeben…" : box.type === "gap" ? "Information ergänzen…" : "Antwort eingeben…");
-    const submit = () => {
-      const trimmed = askInput.trim();
+    const suggestions: string[] = Array.isArray(box.payload?.suggestions) ? box.payload.suggestions : [];
+    const submit = (value?: string) => {
+      const trimmed = (value ?? askInput).trim();
       if (!trimmed) return;
       const key = box.type === "gap" ? "antwort" : "text";
       onConfirm({ [key]: trimmed });
     };
     return (
-      <div className="dlg2-row" style={{ minHeight: 52, position: "relative", ...dimStyle }}>
-        <Stripe color="var(--d-warn)" />
-        <span className="dlg2-status-dot" style={{ background: "var(--d-warn-soft)", border: "1.5px solid var(--d-warn)" }}>
-          <span style={{ width: 5, height: 5, borderRadius: 999, border: "1px solid var(--d-warn)", background: "transparent" }} />
-        </span>
-        <TypeChip kind={box.type} color={{ bg: "var(--d-warn-soft)", fg: "var(--d-warn)" }} />
-        <span style={{ flex: 1, fontSize: 13.5, color: "var(--d-ink)", marginLeft: 8 }}>
-          {asks ?? box.title}
-        </span>
-        {blocked ? (
-          <span className="mono" style={{ fontSize: 10.5, color: "var(--d-ink-3)", marginLeft: 12 }}>nach Projektzuordnung</span>
-        ) : (
-          <div style={{ display: "flex", gap: 6, alignItems: "center", flex: "0 0 auto" }}>
-            <input
-              value={askInput}
-              onChange={(e) => setAskInput(e.target.value)}
-              placeholder={placeholder}
-              onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
-              style={{ height: 28, padding: "0 10px", borderRadius: 8, border: "1px solid var(--d-hair-2)", background: "var(--d-surf-2)", color: "var(--d-ink)", fontSize: 12.5, outline: "none", width: 220 }}
-            />
-            <button type="button" className="dlg2-chip-opt" style={{ borderColor: "var(--d-ok)", color: "var(--d-ok)" }} onClick={submit} disabled={!askInput.trim()}>✓</button>
+      <>
+        <div className="dlg2-row" style={{ minHeight: 52, position: "relative", ...dimStyle }}>
+          <Stripe color="var(--d-warn)" />
+          <span className="dlg2-status-dot" style={{ background: "var(--d-warn-soft)", border: "1.5px solid var(--d-warn)" }}>
+            <span style={{ width: 5, height: 5, borderRadius: 999, border: "1px solid var(--d-warn)", background: "transparent" }} />
+          </span>
+          <TypeChip kind={box.type} color={{ bg: "var(--d-warn-soft)", fg: "var(--d-warn)" }} />
+          <span style={{ flex: 1, fontSize: 13.5, color: "var(--d-ink)", marginLeft: 8 }}>
+            {asks ?? box.title}
+          </span>
+          {blocked ? (
+            <span className="mono" style={{ fontSize: 10.5, color: "var(--d-ink-3)", marginLeft: 12 }}>nach Projektzuordnung</span>
+          ) : !expanded ? (
+            <button
+              type="button"
+              className="dlg2-chip-opt"
+              style={{ borderColor: "var(--d-warn)", color: "var(--d-warn)", flex: "0 0 auto" }}
+              onClick={() => setExpanded(true)}
+            >
+              Eingeben
+            </button>
+          ) : (
+            <div style={{ display: "flex", gap: 6, alignItems: "center", flex: "0 0 auto" }}>
+              <input
+                value={askInput}
+                onChange={(e) => setAskInput(e.target.value)}
+                placeholder={placeholder}
+                autoFocus
+                onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
+                style={{ height: 28, padding: "0 10px", borderRadius: 8, border: "1px solid var(--d-blue)", background: "var(--d-blue-soft)", color: "var(--d-blue)", fontFamily: "Geist Mono, monospace", fontSize: 12.5, outline: "none", width: 220 }}
+              />
+              <button type="button" className="dlg2-chip-opt" style={{ borderColor: "var(--d-ok)", color: "var(--d-ok)", background: "var(--d-ok-soft)" }} onClick={() => submit()} disabled={!askInput.trim()}>✓</button>
+            </div>
+          )}
+        </div>
+        {expanded && !blocked && suggestions.length > 0 && (
+          <div className="dlg2-expand" style={{ paddingTop: 10, paddingBottom: 14 }}>
+            <div className="t-micro" style={{ color: "var(--d-ink-3)", marginBottom: 8 }}>
+              Vorschläge
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {suggestions.map((s, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  className="dlg2-chip-opt"
+                  onClick={() => submit(s)}
+                  title="Klick zum Übernehmen"
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
           </div>
         )}
-      </div>
+      </>
     );
   }
+
 
   // -------------------------------------------------------------------------
   //  AUSWAHL
