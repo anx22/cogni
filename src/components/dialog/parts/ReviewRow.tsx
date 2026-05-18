@@ -134,6 +134,61 @@ const RefToken = ({ to }: { to: string }) => (
   </span>
 );
 
+/** Source-Card mit Datums-/Wert-Anchor + Mono-Eyebrow + optionalem Metadata-Footer. */
+const SourceCard = ({
+  eyebrow,
+  value,
+  meta,
+  active,
+}: {
+  eyebrow: string;
+  value: string;
+  meta?: string;
+  active?: boolean;
+}) => (
+  <div
+    style={{
+      flex: 1,
+      padding: "14px 18px",
+      borderRadius: 12,
+      background: active ? "var(--d-warn-soft)" : "var(--d-surf-3)",
+      border: `1px solid ${active ? "var(--d-warn)" : "var(--d-hair)"}`,
+    }}
+  >
+    <div
+      className="mono"
+      style={{
+        fontSize: 10,
+        color: "var(--d-ink-3)",
+        letterSpacing: ".06em",
+        textTransform: "uppercase",
+        marginBottom: 6,
+      }}
+    >
+      {eyebrow}
+    </div>
+    <div
+      style={{
+        fontSize: 22,
+        fontWeight: 500,
+        letterSpacing: "-.02em",
+        color: active ? "var(--d-warn)" : "var(--d-ink)",
+        lineHeight: 1.25,
+      }}
+    >
+      {value}
+    </div>
+    {meta && (
+      <div
+        className="mono"
+        style={{ fontSize: 11, color: "var(--d-ink-3)", marginTop: 6 }}
+      >
+        {meta}
+      </div>
+    )}
+  </div>
+);
+
 // -----------------------------------------------------------------------------
 const ReviewRow = ({ box, projectName, blocked, onConfirm, onReject }: ReviewRowProps) => {
   const [expanded, setExpanded] = useState(
