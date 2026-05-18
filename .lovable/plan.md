@@ -1,130 +1,146 @@
-## Das eigentliche Problem ist nicht „open_point"
+## Fokus
 
-Der konkrete Fall — eine Bedingung wird als Lücke gerendert — ist nur ein Symptom. Das generalistische Problem dahinter:
+**Nicht**: Entity, Home, AssetOrbit, Theme-Vehikel, ViewModel-Aufbohrung.
+**Doch**: Sidebar, Projekt-Detail (Hero + Mittelfeld + Substanz), BatchReviewOverlay, FaktDrillOverlay — exakt nach `docs/redesign/REVIEW.md`, `docs/redesign/prototype/*` und `docs/redesign/screenshots/*`.
 
-> Die Pipeline modelliert jede Aussage als einen typisierten Fakt. Die UI hat genau eine Default-Reaktion auf alles, was nicht ins Schema passt: „Wert eingeben". Daher entsteht für jede neue Sprechhandlung, die das Schema nicht kennt, ein eigener Bug.
+Quellen sind konsistent: wo der Code von Prototype/Screenshot abweicht, gewinnt die Logik des Implementation-Plans (REVIEW.md, Teil A). Kein Eingriff in `src/lib/**` oder `ProjectViewModel`.
 
-Mit anderen Worten: zwischen „was die KI verstanden hat" und „was die UI dem User vorlegt" fehlt eine semantische Zwischenschicht. Das Schema kennt Fact-Types (`decision`, `task`, `deadline`, `topic`, `stakeholder`, `open_point`, `reference`), aber keine Sprechhandlungs-Modalität.
+---
 
-## Die drei Achsen, die heute kollabiert sind
+## Pass 1 — Sidebar (Anker, screen-aware)
 
-Jede Aussage hat in Wahrheit drei unabhängige Eigenschaften, die das System aktuell in einen einzigen `fact_type` zusammenfaltet:
+Aktuell: zeigt Mini-Entity nur über `showMiniEntity`, sonst Standard-Liste mit Open-Count zwischen Name und Dot. Soll laut Prototype + Tag.png:
 
-1. **Modalität** — was für eine Sprechhandlung ist das?
-2. **Bezug** — steht sie alleine oder hängt sie an etwas?
-3. **Erwartung** — was braucht sie vom User?
+- **Home**: nur Projektliste + „+ Neues Projekt"-Ghost. Keine Mini-Entity. ✓ entspricht heute.
+- **Projekt-Detail**: oben Mini-Entity-Block (56 px Orb + zwei Zeilen: `cogni` mono 11.5 px / `verstehe · 0:08` mono uppercase 10 px). Hover: Label wechselt zu „öffnen ⌘ ␣" in Accent. Klick = `onEntityClick` (heute schon: `onBack`).
+- **Projektliste-Row**: Initials in fester 28 px Mono-Spalte, Name `t-small`, **Open-Count entfernen**, rechts Signal-Stack (1–2 Dots mit 4 px Gap). Aktive Row: `--surface-3` Hintergrund + Ink auf `--ink`.
+- **„+ Neues Projekt"**: echtes Plus-Glyph + Mini-Abstand nach oben, Ink-4.
+- Tokens nur über `--surface-*`, `--hair`, `--ink-*`, `--accent`, keine Hex.
 
-Solange diese drei Achsen nicht getrennt sind, wird jeder neue Aussagentyp zu einem neuen Symptom-Bug — wie heute mit „Voraussetzung".
+Tasks:
 
-## Modalitäten, die in PM-Inputs real vorkommen
+1. `AppSidebar.tsx` Row-Markup auf Prototype-`ProjectRow`-Komposition (Mono-Initial 28 px / Name / SignalStack rechts), Open-Count raus.
+2. Mini-Entity-Block: Spacing/Typo/Hover-Label aus Prototype 1:1.
+3. `+ Neues Projekt` mit Lucide `Plus`-Icon (12 px) statt Glyph-Text.
 
-Nicht erschöpfend, aber so dass die Klassen-Lücke greifbar wird:
+---
 
+## Pass 2 — Projekt-Detail Hero (LageZone)
 
-| Modalität    | Beispiel                                               | Heute falsch behandelt als                                       |
-| ------------ | ------------------------------------------------------ | ---------------------------------------------------------------- |
-| `assertion`  | „Liefertermin ist 12.06."                              | ok                                                               |
-| `condition`  | „Angebot gilt nur, wenn Bildrecherche durch LMWA"      | `open_point` → Lücke (heutiger Fall)                             |
-| `exclusion`  | „Nicht enthalten: Postproduktion"                      | `open_point` oder ignoriert                                      |
-| `assumption` | „Wir gehen davon aus, dass der Kunde freigibt"         | `open_point` → Lücke                                             |
-| `suggestion` | „Wir könnten auch 16:9 statt 9:16 liefern"             | `open_point` → Lücke                                             |
-| `question`   | „Kannst du bis Freitag liefern?" (echte Frage an mich) | `open_point` → korrekt, aber ohne Frage-Text                     |
-| `note`       | „Zur Info: Kunde ist im Urlaub bis 03.06."             | erzeugt Box ohne Sinn                                            |
-| `relation`   | „LMWA ist die Agentur von Teinacher"                   | `topic` oder verschluckt                                         |
-| `attribute`  | „Preis: 7.820 €" (gehört an bestehendes Angebot)       | erzeugt eigenständigen `open_point` statt Update am Bezugsobjekt |
-| `risk`       | „Falls Freigabe zu spät, Verschiebung um 2 Wochen"     | `open_point` → Lücke                                             |
-| `dedup`      | Wiederholung eines bereits bekannten Fakts             | erzeugt neue Box                                                 |
+Aktuelle `LageZone.tsx` hat Atmosphären-Stripe, 44 px Name, 24 px Lagetext und MetaChips — aber Komposition stimmt nicht. Soll laut Prototype + Tag.png:
 
+- **Top-Row Breadcrumb + Header-Actions**: links Monogram (HN, 28 px) · `customer` mono · `phase` · `N Stakeholder` · `budget` mono — rechts „Material" (ghost) + „Review öffnen" (primary). MetaChip-Reihe „Letzte Änderung / Budget" aus Hero **entfernen** (geht in Key-Facts).
+- **Eyebrow**: `Lage` `t-micro` + Trenner + `· rekonstruiert vor 2 Min` (regular, kein Caps).
+- **Hero-Block**: 44 px Name + 24 px Light-Lagetext (max-w 880 px). Description-Absatz raus (redundant).
+- **Status-Chips inline + Key-Facts rechts** in eine Reihe:
+  - Chips links: `Konflikt {konflikte.length}` (sig-conflict-soft), `{X} Entscheidungen offen` (sig-review-soft), `Review fällig` falls offen (sig-review-soft). Counts aus VM ableiten — keine neuen Felder.
+  - Key-Facts rechts: „Nächster Termin" Label + 18 px Mono-Datum + Topic; „Letzte Änderung" Label + Text + Mono-Relativzeit.
+- **Outcome-Bar** unten als ruhige Zeile (`--surface-2`, 10 px Padding, Flag-Icon + `Outcome` micro-Label + Text). NoGos als Mini-Chips rechts neben dem Outcome-Text, nicht als zweite Karte.
+- **ConflictBanner aus Hero raus** — verschiebt sich in `HandlungsbedarfList` als Empty-Hint, falls überhaupt nötig (heute redundant zu Konflikt-Rows).
+- `variant="shell"` bleibt für Empty-Projekte unverändert.
 
-Heute landen mindestens 7 dieser 11 Klassen im Mülleimer `open_point` und werden mit dem Lücken-Renderer („Wert eingeben") angezeigt. Das ist der gemeinsame Nenner deiner Verwirrung.
+Atmosphären-Stripe: `.atmosphere-stripe` existiert in `index.css` — prüfen, dass sie als `position: absolute; top:0; left:0; right:0; height:3px` über die volle Seitenbreite läuft (heute steckt sie im LageZone-Section-Padding und ist deshalb nicht über die Sidebar hinweg sichtbar). Fix: in `ProjectScreen` als globales Top-Edge-Element rendern, nicht in LageZone.
 
-## Generalistischer Plan
+---
 
-### 1. Modell-Vertrag um Modalität, Bezug und Erwartung erweitern
+## Pass 3 — Handlungsbedarf + Verlauf (Mittelfeld)
 
-Jedes Item, das die Verstehens-Pipeline ausliefert, trägt verpflichtend:
+`ProjectScreen.tsx` Mittelfeld ist bereits zweispaltig (3:2). OK.
 
-- `modality` (siehe Tabelle oben; `unclear` ist erlaubt)
-- `attaches_to`: optional, Verweis (ID oder Beschreibung) auf das Bezugsobjekt
-- `asks`: optional, exakter Satz, was vom User gewünscht ist. `**null` = nichts gewünscht.**
-- `understood`: 1 Satz Klartext, was die KI verstanden hat
-- `evidence`: das wörtliche Quellfragment + Position
+**HandlungsbedarfList**:
 
-Wenn `modality=unclear` oder `asks` gefordert wäre aber leer ist, wird die Box als **„Verstehe ich das richtig?"** gerendert — niemals als blindes Eingabefeld. Das ist die Verallgemeinerung des heutigen Symptoms.
+- Header: `h2` 28 px + Count mono + rechts Filterleiste mit drei Ghost-Buttons `Alle / Nur Blocker / Ohne Frist` (lokaler State, kein VM-Eingriff). Aktive Filter-Button: `--surface-3` + `--ink`.
+- Gruppen-Header pro Modus: bereits da. Hairline rechts vom Label bis Container-Rand ergänzen (Prototype zeigt durchgehende Hair-Line).
+- **Row-Komposition** auf Prototype-Pattern umbauen:
+  - Optional Blocker-Stripe links (3×32 px, conflict).
+  - 26 px Type-Icon-Square (`--surface-2` Hintergrund).
+  - Titel 14.5 px ink + Subline `t-small` ink-3 (heute nur in Expand-Panel — soll inline sein).
+  - Rechts: Owner-Avatar (18 px Mono-Initials in `--surface-3`) + Vorname, Frist Mono, Source `.src`-Klasse als Mini-Mono-Text.
+  - Klick → öffnet `openDialog(buildHandlungsbedarfSession(item))` (heute via Expand+Button — Expand entfällt). Kein Inline-Expand mehr in der Liste. Die „Bühne" ist der Drill.
+- ChevronRight + Expand-Panel komplett entfernen.
 
-### 2. Box-Renderer-Matrix statt einheitlicher Box
+**VerlaufFeed**:
 
-Eine Tabelle, keine Sonderfälle:
+- Schmaler Feed (340 px wie Prototype, heute lg:col-span-2 → ok).
+- Vertikale Timeline-Linie (1 px `--hair`) hinter den Dots.
+- 13 px Dot mit 2 px farbigem Border je Delta-Typ (neu=action, ersetzt=review, widersprochen=conflict, bestaetigt=ink-3).
+- Pro Eintrag: 11 px Mono-Datum + `DeltaTag` + 13.5 px Inhalt + `.src` Source-Marker.
 
+---
 
-| Modalität  | Default-Aktion          | Eingabefeld? | Sekundäraktionen                                |
-| ---------- | ----------------------- | ------------ | ----------------------------------------------- |
-| assertion  | Übernehmen              | nein         | Korrigieren · Verwerfen                         |
-| condition  | Übernehmen              | nein         | Bezug ändern · Verwerfen                        |
-| exclusion  | Übernehmen              | nein         | Bezug ändern · Verwerfen                        |
-| assumption | Markieren als Annahme   | nein         | Bestätigen · Verwerfen                          |
-| suggestion | In Vorschlagsliste      | nein         | Entscheidung erzwingen · Verwerfen              |
-| question   | Antworten               | **ja**       | Später · Ablehnen                               |
-| note       | Stillschweigend ablegen | nein         | (keine Box, nur Verlauf)                        |
-| relation   | Kante übernehmen        | nein         | Knoten wählen · Verwerfen                       |
-| attribute  | Ziel-Fakt aktualisieren | nein         | Bezug ändern · Verwerfen                        |
-| risk       | Risiko aufnehmen        | nein         | Frist setzen · Verwerfen                        |
-| dedup      | (keine Box)             | nein         | (verschluckt + an existierender Quelle ergänzt) |
+## Pass 4 — Substanz
 
+`SubstanzSection` auf Prototype-Grid umstellen:
 
-Eingabefelder existieren nur dort, wo es semantisch eine Antwort gibt. Das eliminiert die heutige Sackgasse vollständig.
+- Grid `1.4fr 1fr` statt 3-Spalten.
+- **Themen** links: 2-spaltiges Sub-Grid, Card mit Name + Mono-Counts `{E}·{P}·{D}` + Chevron rechts.
+- **Dokumente** rechts: Hairline-Liste mit Typ-Badge (`.src`-Stil), Name, Version mono, Datum mono.
+- H2: 18 px ink-2 (kleinste Skala, ruhig).
 
-### 3. Bezug ist ein eigenes Box-Konzept, kein Anhang
+---
 
-Wann immer `attaches_to` gesetzt ist und das Ziel nicht eindeutig auflösbar, ist die Frage an den User **nicht** „Wert eingeben", sondern eine Auswahl: zeige 1–3 wahrscheinliche Bezugsobjekte als Chips, plus „Keines davon". Damit verschwinden auch die Fälle, in denen z. B. ein Preis als freier `open_point` erscheint statt am Angebot zu hängen.
+## Pass 5 — BatchReviewOverlay (10-Sekunden-Diff)
 
-### 4. Stille Substanz als Default
+Heutiger `BatchReviewOverlay` + `ReviewRow` haben Modalitäts-Renderer, aber nicht die Prototype-Mikro-Choreografie. Ziel: exakt Prototype `SceneBatchReview` / `SceneBatchConfliktExpanded`.
 
-Items mit `confidence ≥ 0.9`, `asks=null`, kein Konflikt → wandern ohne Box direkt in den Projektzustand. Im Review erscheint nur eine **Sammelzeile** („23 Punkte übernommen — anschauen?"). Damit fällt die heutige Flut wegloser Boxen weg.
+- **Listen-Container**: 16 px Border-Radius, 1 px Hair, `--surface-1`, margin 28/44 px.
+- **Row**: 48 px min-height (Konflikt/Lücke 52), 3 px Status-Stripe links (review/conflict/ok), 88 px breite Type-Chip-Spalte (Mono 9.5 px uppercase mit soft-Background).
+- **RowAccepted** (Termin / Entscheidung / Stakeholder / Dokument): grüner Outline-Check, Type-Chip neutral, Content ink-2, rechts Projekt-Name Mono.
+- **RowConflict (collapsed)**: amber Stripe + amber Pill-Icon, **3 inhaltliche Chips** aus Konflikt-Payload (`faktA` / `faktB` / „offen lassen") — Vorauswahl amber-aktiv, „Details ▼" rechts.
+- **RowConflict (expanded)**: zwei Source-Cards mit 22 px Datum-Anchor + Quelle Mono-Eyebrow + Metadata-Footer `09.04.2026 · 14:22 · informell`, 36 px `vs` mittig, darunter Zeile „cogni empfiehlt 15. Mai — Begründung. Klick zum Überschreiben.".
+- **RowGap (collapsed)**: nur „Eingeben"-Chip in amber.
+- **RowGap (expanded)**: Input + ✓-Button + Suggestion-Pills aus `box.suggestions[]` falls vorhanden.
+- **CommitBar**: links „Alle verwerfen" (sekundär), rechts „{X} offen · {Y} bereit" + `5 übernehmen ↵`. Bei alles-ready: blauer Glow-Ring um Commit-Button.
 
-### 5. Drift-Telemetrie statt Einzel-Diskussionen
+Begründungstext und Metadata-Footer: aus heute schon vorhandenem Box-Payload mappen (siehe `boxMapping.ts`). Wenn Feld leer → stillschweigend weglassen (REVIEW C1).
 
-Jedes Item mit `modality=unclear` oder mit User-Korrektur „falsch klassifiziert" wird geloggt. Wenn ein Muster Schwellwert X überschreitet (z. B. >5 ähnliche unclear-Fälle/Woche), generiert das System einen **Schema-Vorschlag** statt eines Hotfixes — z. B. „Neue Modalität `delivery_constraint` erkannt, willst du sie aufnehmen?". So wird aus „immer wieder neue Diskussion" ein Lernprozess.
+---
 
-### 6. Korrektur als Lern-Signal
+## Pass 6 — FaktDrillOverlay (Bühne, kein Listenzettel)
 
-Verwerfen, „in Notiz verschieben", „Bezug ändern" werden in `corrections` mit Modalität + Originalsatz gespeichert. Diese Daten fließen in den Klassifier zurück. Was du heute manuell korrigierst, wird morgen automatisch richtig einsortiert.
+`FaktDrillOverlay` heute generische Cards. Ziel: Prototype Drill-Szenen.
 
-### 7. Zwei Datenbankfelder, die das tragen können
+**Drill-Header**: „← Handlungsbedarf · {Item-Titel} · {Projekt} · Konflikt #{id}" links, esc rechts.
 
-Vorhanden: `proposed_facts.content` (jsonb), `review_cases.context` (jsonb), `review_cases.box_type` (enum).
+**Konflikt-Drill**:
 
-Reicht aus, wenn:
+- Roter Soft-Banner oben mit `Ic.warn` + „Zwei Quellen widersprechen sich" + Erläuterungssatz.
+- Zwei großformatige Display-Cards: 38 px Datums-Anchor, Quelle als Sub-Block (`Mail · Thomas Berger` + `09.04.2026 · 14:22 · informell`), Hint-Zeile darunter (`älter · direkter Absender` / `neuer · formelles Protokoll`).
+- 48 px `vs`-Kreis mittig auf der Trennachse.
+- „Was stimmt?" mit **drei Tiles** (Quelle A · Quelle B · Offen lassen), eine amber-vorgewählt als cogni-Empfehlung. Subtext pro Tile.
+- Footer: links „Als Handlungsbedarf markieren" (ghost), rechts „Verwerfen" + „Entscheidung speichern →" (primary, disabled bis Tile gewählt).
 
-- `content` zusätzlich `modality`, `attaches_to`, `asks`, `understood`, `evidence` führt
-- `box_type` um Werte wie `condition`, `assumption`, `suggestion`, `relation`, `attribute`, `risk`, `note`, `unclear` erweitert wird
-- Der Renderer auf `box_type` und das Vorhandensein von `asks` schaut, nicht mehr auf `fact_type`
+**Gap-Drill**: Split 2/5 | 3/5.
 
-Keine zerstörerische Migration nötig.
+- Links: Kontext-Card („Worum es geht") + **„Blockiert"-Liste** aus `project.dependencies` gefiltert auf diese Gap (was hängt an dieser Lücke).
+- Rechts: Lücken-Card amber + Eingabefeld + Suggestion-Pills aus Session-Payload.
 
-## Was wir damit konkret verhindern
+---
 
-- Bedingungen, die als Lücken erscheinen (heutiger Fall)
-- Annahmen, die der User fälschlich „beantworten" soll
-- Ausschlüsse („nicht enthalten"), die untergehen
-- Preise/Mengen, die als eigene Boxen erscheinen statt am Angebot
-- Notizen, die zur Klick-Arbeit werden
-- Beziehungen, die zu Topics zerfallen statt als Kante in den Graphen zu gehen
-- Wiederholungen, die als neue Items erscheinen
-- Jeden zukünftigen Fall, bei dem wir heute eine neue Diskussion bräuchten
+## Reihenfolge & Review-Punkte
 
-## Ergebnis für den konkreten Fall
+1. **Sidebar** (klein, sofort sichtbarer Sprung in Konsistenz).
+2. **Hero / LageZone** (größte visuelle Wirkung im Projekt-Detail).
+3. **Handlungsbedarf-Row + Filter** (Liste wird endlich „Lagekarte" statt „Modul-Stapel").
+4. **Verlauf-Timeline + Substanz-Grid** (Polish).
+5. **BatchReviewOverlay** (Mikro-Choreografie der Diff-Logik).
+6. **FaktDrillOverlay** (Bühne).
 
-Die Bedingung „Voraussetzung: Bildrecherche und Kauf durch LMWA" erscheint dann als Box mit:
+Nach Pass 2, 5 und 6 jeweils **Screenshot-Vergleich Day**  (Browser-Tool) gegen die Mockups, bevor weiter.
 
-- Chip **BEDINGUNG**, klar abgegrenzt von Lücken
-- „Verstanden: Angebot B gilt nur, wenn LMWA Bildrecherche und Kauf übernimmt."
-- Bezug-Chip → „Angebot B · 7.820 € · 12 Reels"
-- Aktionen: ✓ Übernehmen · Bezug ändern · Verwerfen
-- Kein Eingabefeld, keine erzwungene Antwort
+---
 
-Und das Gleiche gilt automatisch für jede der oben gelisteten Modalitäten — ohne neue Diskussion pro Fall.
+## Out of Scope (jetzt nicht)
 
-&nbsp;
+- Entity-Charakter / AssetOrbit / Home-Komposition (anderer Bereich).
+- `ProjectViewModel`-Erweiterungen — fehlende Felder werden stillschweigend weggelassen, kein Skeleton-Hack.
+- Universal-Overlay (⌘+Space) mit Entity-Bühne — separater Pass.
+- Atmosphären-Streifen Pipeline-aktiv-Variante (`is-active`) — kommt mit Realtime-Hook später.
 
-Finde ich gut, bitte so umsetzen. Punkt. Dies ist ein extrem wichtige Erkenntnis, die wir nicht nur im Code und in der App umsetzen sollten, sondern vor allem in der Dokumentation überall, wo wichtig ergänzen oder verändern sollten. Ich vermute, dass unser Ansatz dennoch nicht der Weisheit letzter Schluss ist, aber eine sehr wichtige Richtungsentscheidung. Daher nach Code-Umsetzung bitte gut dokumentieren. Und auch vorhandene Punkte, die das adressieren, umändern
+## Risiken / offene Punkte
+
+- **Konflikt-Payload**: aktuelle `KonfliktVM` hat `faktA`/`faktB` als Strings ohne Source-Metadata-Felder (Datum, Mode, Hint). Für die Source-Cards in Batch + Drill nehme ich, was da ist; Metadata-Footer rendert nur wenn vorhanden — sonst weg (REVIEW C1). in backlog todo markieren
+- `**stats.naechsterTermin**` ist ein einzelner String — Aufspaltung in `date` + `topic` machen wir via Splitter, kein VM-Eingriff.
+- **„cogni empfiehlt"-Begründung**: kommt heute nicht aus dem Backend. Lasse Zeile leer, wenn kein Empfehlungstext vorhanden — keinen Lorem. in backlog todo markieren
+
+Soll ich so loslegen, oder ist eine der 6 Pässe Punktes zu groß / falsche Reihenfolge?
