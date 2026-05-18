@@ -89,7 +89,7 @@ const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
   useBodyScrollLock(true);
 
   return (
-    <div className="flex overflow-hidden bg-c-surface-0" style={{ height: "100dvh" }}>
+    <div className="flex overflow-hidden bg-c-surface-0 relative" style={{ height: "100dvh" }}>
       <AppSidebar
         projects={allProjects}
         activeProjectId={realProjectId ?? undefined}
@@ -97,6 +97,9 @@ const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
         showMiniEntity
         onEntityClick={onBack}
       />
+
+      {/* Globaler Atmosphären-Stripe — über die volle Breite, auch über die Sidebar */}
+      <div className="atmosphere-stripe pointer-events-none" aria-hidden style={{ zIndex: 20 }} />
 
       <div
         className="flex-1 min-w-0 animate-[fade-in_0.5s_ease-out] relative overflow-y-auto overscroll-contain"
