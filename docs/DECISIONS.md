@@ -138,3 +138,18 @@ aber die geteilten `corsHeaders` — Verhalten unverändert.
 - `2026-05-15` `aol-service/app/graph.py` Welle-B-Stubs sahen aus wie unvollständige TODOs → **expliziter Header-Kommentar**: kanonische Detektion lebt in `supabase/functions/commit-fact/{conflict,gap,dependency}Detector.ts`, Stubs sind beabsichtigt.
 
 **Bewusst deferred** (zu groß für diese Runde): T1 typisierte `RawProjectData`, U6 echter Voice-Visualizer (RMS-Mapping), B2 Playwright-Smokes — neue Tasks in `docs/NOW.md`.
+
+## 2026-05-18 — Modalitäts-Vertrag (generalistische Lösung für Falschklassifikation)
+
+- `2026-05-18` **Problem**: Jede Aussage wurde als `fact_type` modelliert. Alles Nicht-Standardisierte landete in `open_point` → Review-UI rendert als `gap_box` mit Eingabefeld. Bedingungen, Annahmen, Ausschlüsse, Notizen, Beziehungen, Risiken — alles erschien als „Wert eingeben"-Lücke. Symptom-Bug pro Sprechhandlung.
+- `2026-05-18` **Entscheidung**: Drei orthogonale Achsen statt einem `fact_type`:
+  1. **Modalität** (Sprechhandlung): `assertion | condition | exclusion | assumption | suggestion | question | note | relation | attribute | risk | unclear`.
+  2. **Bezug**: `attaches_to` (Klartext-Bezugsobjekt, Pflicht bei condition/exclusion/attribute/risk/relation).
+  3. **Erwartung**: `asks` (exakte User-Frage). **`null` = keine Frage = kein Eingabefeld** — goldene Regel gegen die Sackgasse.
+  Zusätzlich `understood` (1-Satz-Klartext „Verstanden: …") und `evidence` (wörtliches Quellfragment).
+- `2026-05-18` **Mapping**: `mapToBoxType(delta, fact, modality)` priorisiert Modalität vor Fact-Type. Konflikt schlägt alles. Legacy-Fakten ohne Modalität fallen aufs alte Verhalten zurück.
+- `2026-05-18` **Stille Substanz**: `confidence ≥ 0.9 && asks=null && !conflict && modality∉{question,unclear}` → kein Review-Click, einzeilige „N Punkte still übernommen"-Sammelzeile. Schwelle in `SILENT_COMMIT_CONFIDENCE`.
+- `2026-05-18` **Drift-Telemetrie**: `modality=unclear` wird in `pipeline_events` als `warn` mit Samples geloggt → Grundlage für künftige Schema-Vorschläge statt Einzelbug-Diskussionen.
+- `2026-05-18` **DB-Migration**: `box_type` um `condition, exclusion, assumption, suggestion, question, note, relation, attribute, risk, unclear` erweitert. Bestehende Werte unverändert, Migration additiv.
+- `2026-05-18` **UI-Renderer-Matrix** (`src/components/dialog/parts/ReviewRow.tsx`): pro Modalität eigene Default-Aktion + Aktionsleiste. `RefToken` zeigt `attaches_to` als Mini-Chip. Eingabefeld nur bei `gap/eingabe/frage` mit `asks`. Sprechhandlungs-Boxen (Bedingung, Annahme, …) bekommen `Übernehmen / Bezug ändern / Verwerfen` ohne Eingabezwang.
+- `2026-05-18` **Kein neues Designsystem** — Modalität ist Daten-/UX-Vertrag, nicht Optik. Architektur (Token-System, ProjectViewModel-Vertrag, Edge-Function-Hülle) unangetastet.
