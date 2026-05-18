@@ -490,16 +490,36 @@ export async function runUnderstand(args: {
 
   const { error: rcErr } = await admin.from("review_cases").insert(caseRows);
   if (rcErr) throw new Error(`review_cases: ${rcErr.message}`);
-  log.stage("review_cases.inserted", "cases written", { count: caseRows.length, session_id: session!.id });
+  log.stage("review_cases.inserted", "cases written", {
+    count: caseRows.length,
+    silent: silentCount,
+    session_id: session!.id,
+  });
+
+  // total_boxes nachziehen: pending Boxen sind caseRows ohne die Silent-Sammelzeile.
+  const pendingBoxes = caseRows.filter((r) => r.box_state === "proposed").length;
+  await admin
+    .from("dialog_sessions")
+    .update({ total_boxes: pendingBoxes, resolved_boxes: silentCount > 0 ? 1 : 0 })
+    .eq("id", session!.id);
 
   // 8. Status: review_ready
   await setStatus(admin, asset_id, "review_ready", null);
-  log.stage("done", "review_ready", { facts: insertedFacts!.length, assignment_mode: assignment.mode });
+  log.stage("done", "review_ready", {
+    facts: insertedFacts!.length,
+    pending: pendingBoxes,
+    silent: silentCount,
+    unclear: unclearSamples.length,
+    assignment_mode: assignment.mode,
+  });
 
   return {
     ok: true,
     body: {
       facts: insertedFacts!.length,
+      pending: pendingBoxes,
+      silent: silentCount,
+      unclear: unclearSamples.length,
       session_id: session!.id,
       assignment_mode: assignment.mode,
     },
