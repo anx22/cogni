@@ -158,7 +158,7 @@ const BatchReviewOverlay = ({ onClose }: { onClose: () => void }) => {
 
       <div className="dlg2-commitbar">
         <button type="button" className="dlg2-btn-secondary" onClick={onClose} disabled={isBulkRunning}>
-          Schließen
+          Alle verwerfen
         </button>
         <div className="flex items-center" style={{ gap: 12 }}>
           <span style={{ fontSize: 12.5, color: "var(--d-ink-3)" }}>

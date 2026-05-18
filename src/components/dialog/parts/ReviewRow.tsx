@@ -134,6 +134,61 @@ const RefToken = ({ to }: { to: string }) => (
   </span>
 );
 
+/** Source-Card mit Datums-/Wert-Anchor + Mono-Eyebrow + optionalem Metadata-Footer. */
+const SourceCard = ({
+  eyebrow,
+  value,
+  meta,
+  active,
+}: {
+  eyebrow: string;
+  value: string;
+  meta?: string;
+  active?: boolean;
+}) => (
+  <div
+    style={{
+      flex: 1,
+      padding: "14px 18px",
+      borderRadius: 12,
+      background: active ? "var(--d-warn-soft)" : "var(--d-surf-3)",
+      border: `1px solid ${active ? "var(--d-warn)" : "var(--d-hair)"}`,
+    }}
+  >
+    <div
+      className="mono"
+      style={{
+        fontSize: 10,
+        color: "var(--d-ink-3)",
+        letterSpacing: ".06em",
+        textTransform: "uppercase",
+        marginBottom: 6,
+      }}
+    >
+      {eyebrow}
+    </div>
+    <div
+      style={{
+        fontSize: 22,
+        fontWeight: 500,
+        letterSpacing: "-.02em",
+        color: active ? "var(--d-warn)" : "var(--d-ink)",
+        lineHeight: 1.25,
+      }}
+    >
+      {value}
+    </div>
+    {meta && (
+      <div
+        className="mono"
+        style={{ fontSize: 11, color: "var(--d-ink-3)", marginTop: 6 }}
+      >
+        {meta}
+      </div>
+    )}
+  </div>
+);
+
 // -----------------------------------------------------------------------------
 const ReviewRow = ({ box, projectName, blocked, onConfirm, onReject }: ReviewRowProps) => {
   const [expanded, setExpanded] = useState(
@@ -279,9 +334,17 @@ const ReviewRow = ({ box, projectName, blocked, onConfirm, onReject }: ReviewRow
   //  KONFLIKT (existierte schon, hier nur leicht aufgeräumt)
   // -------------------------------------------------------------------------
   if (box.type === "konflikt" && !isFinal) {
-    const faktA = box.payload?.faktA as string | undefined;
-    const faktB = box.payload?.faktB as string | undefined;
+    const faktA = (box.payload?.faktA as string | undefined) ?? "Variante A";
+    const faktB = (box.payload?.faktB as string | undefined) ?? "Variante B";
     const beschreibung = box.payload?.beschreibung as string | undefined;
+    const sourceA = box.payload?.sourceA as { label?: string; meta?: string; hint?: string } | undefined;
+    const sourceB = box.payload?.sourceB as { label?: string; meta?: string; hint?: string } | undefined;
+    const recommendation = box.payload?.recommendation as { auswahl?: "A" | "B"; reason?: string } | undefined;
+    const chosen = (box.payload?.auswahl as "A" | "B" | "open" | undefined) ?? recommendation?.auswahl ?? null;
+
+    const labelA = faktA.length > 28 ? faktA.slice(0, 26) + "…" : faktA;
+    const labelB = faktB.length > 28 ? faktB.slice(0, 26) + "…" : faktB;
+
     return (
       <>
         <div className="dlg2-row" style={{ minHeight: 52, position: "relative", ...dimStyle }}>
@@ -292,6 +355,9 @@ const ReviewRow = ({ box, projectName, blocked, onConfirm, onReject }: ReviewRow
           <TypeChip kind="konflikt" color={{ bg: "var(--d-warn-soft)", fg: "var(--d-warn)" }} />
           <span style={{ flex: 1, fontSize: 13.5, color: "var(--d-ink)", marginLeft: 8 }}>
             {box.title}
+            <span style={{ color: "var(--d-ink-4)", marginLeft: 8, fontSize: 12 }}>
+              {labelA} vs {labelB}
+            </span>
           </span>
           {blocked ? (
             <span className="mono" style={{ fontSize: 10.5, color: "var(--d-ink-3)", marginLeft: 12 }}>
@@ -300,11 +366,39 @@ const ReviewRow = ({ box, projectName, blocked, onConfirm, onReject }: ReviewRow
           ) : (
             <>
               <div style={{ display: "flex", gap: 6, marginLeft: 12, flex: "0 0 auto" }}>
-                <button type="button" className="dlg2-chip-opt" onClick={() => onConfirm({ auswahl: "A" })} title={faktA}>Variante A</button>
-                <button type="button" className="dlg2-chip-opt" onClick={() => onConfirm({ auswahl: "B" })} title={faktB}>Variante B</button>
-                <button type="button" className="dlg2-chip-opt" style={{ color: "var(--d-ink-4)" }} onClick={() => setRejectOpen(true)} title="Endgültig verwerfen">Verwerfen</button>
+                <button
+                  type="button"
+                  className={`dlg2-chip-opt${chosen === "A" ? " active" : ""}`}
+                  style={chosen === "A" ? { background: "var(--d-warn-soft)", borderColor: "var(--d-warn)", color: "var(--d-warn)" } : undefined}
+                  onClick={() => onConfirm({ auswahl: "A" })}
+                  title={faktA}
+                >
+                  {labelA}
+                </button>
+                <button
+                  type="button"
+                  className={`dlg2-chip-opt${chosen === "B" ? " active" : ""}`}
+                  style={chosen === "B" ? { background: "var(--d-warn-soft)", borderColor: "var(--d-warn)", color: "var(--d-warn)" } : undefined}
+                  onClick={() => onConfirm({ auswahl: "B" })}
+                  title={faktB}
+                >
+                  {labelB}
+                </button>
+                <button
+                  type="button"
+                  className="dlg2-chip-opt"
+                  style={{ color: "var(--d-ink-4)" }}
+                  onClick={() => onConfirm({ auswahl: "open" })}
+                >
+                  offen lassen
+                </button>
               </div>
-              <button type="button" onClick={() => setExpanded((v) => !v)} className="mono" style={{ marginLeft: 12, background: "transparent", border: "none", color: "var(--d-ink-3)", fontSize: 11.5, cursor: "pointer", flex: "0 0 auto" }}>
+              <button
+                type="button"
+                onClick={() => setExpanded((v) => !v)}
+                className="mono"
+                style={{ marginLeft: 12, background: "transparent", border: "none", color: "var(--d-ink-3)", fontSize: 11.5, cursor: "pointer", flex: "0 0 auto", letterSpacing: ".02em" }}
+              >
                 Details {expanded ? "▲" : "▼"}
               </button>
             </>
@@ -316,23 +410,38 @@ const ReviewRow = ({ box, projectName, blocked, onConfirm, onReject }: ReviewRow
               <p style={{ margin: "0 0 12px", fontSize: 13, color: "var(--d-ink-2)" }}>{beschreibung}</p>
             )}
             <div style={{ display: "flex", gap: 12, alignItems: "stretch" }}>
-              <div style={{ flex: 1, padding: "14px 18px", borderRadius: 12, background: "var(--d-surf-3)", border: "1px solid var(--d-hair)" }}>
-                <div className="mono" style={{ fontSize: 10, color: "var(--d-ink-3)", letterSpacing: ".06em", textTransform: "uppercase", marginBottom: 6 }}>Variante A</div>
-                <div style={{ fontSize: 15, fontWeight: 500, color: "var(--d-ink)", lineHeight: 1.4 }}>{faktA ?? "—"}</div>
-              </div>
-              <div style={{ width: 36, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Geist Mono, monospace", fontSize: 10, color: "var(--d-conf)" }}>vs</div>
-              <div style={{ flex: 1, padding: "14px 18px", borderRadius: 12, background: "var(--d-surf-3)", border: "1px solid var(--d-hair)" }}>
-                <div className="mono" style={{ fontSize: 10, color: "var(--d-ink-3)", letterSpacing: ".06em", textTransform: "uppercase", marginBottom: 6 }}>Variante B</div>
-                <div style={{ fontSize: 15, fontWeight: 500, color: "var(--d-ink)", lineHeight: 1.4 }}>{faktB ?? "—"}</div>
-              </div>
+              <SourceCard
+                eyebrow={sourceA?.label ?? "Quelle A"}
+                value={faktA}
+                meta={sourceA?.meta}
+                active={chosen === "A"}
+              />
+              <div style={{ width: 36, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Geist Mono, monospace", fontSize: 10, color: "var(--d-conf)", letterSpacing: ".04em" }}>vs</div>
+              <SourceCard
+                eyebrow={sourceB?.label ?? "Quelle B"}
+                value={faktB}
+                meta={sourceB?.meta}
+                active={chosen === "B"}
+              />
             </div>
+            {recommendation && (
+              <div style={{ marginTop: 10, fontSize: 12, color: "var(--d-ink-3)" }}>
+                cogni empfiehlt{" "}
+                <span style={{ color: "var(--d-warn)" }}>
+                  {recommendation.auswahl === "A" ? labelA : labelB}
+                </span>
+                {recommendation.reason && (
+                  <> — {recommendation.reason}. Klick zum Überschreiben.</>
+                )}
+              </div>
+            )}
           </div>
         )}
         <ConfirmDestructive
           open={rejectOpen}
           onOpenChange={setRejectOpen}
           title="Konflikt verwerfen?"
-          description="Die Erkenntnis wird endgültig verworfen und fließt nicht in den Projektzustand. Eine Rücknahme ist nicht möglich."
+          description="Die Erkenntnis wird endgültig verworfen und fließt nicht in den Projektzustand."
           confirmLabel="Endgültig verwerfen"
           onConfirm={() => onReject()}
         />
@@ -350,39 +459,73 @@ const ReviewRow = ({ box, projectName, blocked, onConfirm, onReject }: ReviewRow
     const placeholder =
       asks ??
       (box.type === "frage" ? "Antwort eingeben…" : box.type === "gap" ? "Information ergänzen…" : "Antwort eingeben…");
-    const submit = () => {
-      const trimmed = askInput.trim();
+    const suggestions: string[] = Array.isArray(box.payload?.suggestions) ? box.payload.suggestions : [];
+    const submit = (value?: string) => {
+      const trimmed = (value ?? askInput).trim();
       if (!trimmed) return;
       const key = box.type === "gap" ? "antwort" : "text";
       onConfirm({ [key]: trimmed });
     };
     return (
-      <div className="dlg2-row" style={{ minHeight: 52, position: "relative", ...dimStyle }}>
-        <Stripe color="var(--d-warn)" />
-        <span className="dlg2-status-dot" style={{ background: "var(--d-warn-soft)", border: "1.5px solid var(--d-warn)" }}>
-          <span style={{ width: 5, height: 5, borderRadius: 999, border: "1px solid var(--d-warn)", background: "transparent" }} />
-        </span>
-        <TypeChip kind={box.type} color={{ bg: "var(--d-warn-soft)", fg: "var(--d-warn)" }} />
-        <span style={{ flex: 1, fontSize: 13.5, color: "var(--d-ink)", marginLeft: 8 }}>
-          {asks ?? box.title}
-        </span>
-        {blocked ? (
-          <span className="mono" style={{ fontSize: 10.5, color: "var(--d-ink-3)", marginLeft: 12 }}>nach Projektzuordnung</span>
-        ) : (
-          <div style={{ display: "flex", gap: 6, alignItems: "center", flex: "0 0 auto" }}>
-            <input
-              value={askInput}
-              onChange={(e) => setAskInput(e.target.value)}
-              placeholder={placeholder}
-              onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
-              style={{ height: 28, padding: "0 10px", borderRadius: 8, border: "1px solid var(--d-hair-2)", background: "var(--d-surf-2)", color: "var(--d-ink)", fontSize: 12.5, outline: "none", width: 220 }}
-            />
-            <button type="button" className="dlg2-chip-opt" style={{ borderColor: "var(--d-ok)", color: "var(--d-ok)" }} onClick={submit} disabled={!askInput.trim()}>✓</button>
+      <>
+        <div className="dlg2-row" style={{ minHeight: 52, position: "relative", ...dimStyle }}>
+          <Stripe color="var(--d-warn)" />
+          <span className="dlg2-status-dot" style={{ background: "var(--d-warn-soft)", border: "1.5px solid var(--d-warn)" }}>
+            <span style={{ width: 5, height: 5, borderRadius: 999, border: "1px solid var(--d-warn)", background: "transparent" }} />
+          </span>
+          <TypeChip kind={box.type} color={{ bg: "var(--d-warn-soft)", fg: "var(--d-warn)" }} />
+          <span style={{ flex: 1, fontSize: 13.5, color: "var(--d-ink)", marginLeft: 8 }}>
+            {asks ?? box.title}
+          </span>
+          {blocked ? (
+            <span className="mono" style={{ fontSize: 10.5, color: "var(--d-ink-3)", marginLeft: 12 }}>nach Projektzuordnung</span>
+          ) : !expanded ? (
+            <button
+              type="button"
+              className="dlg2-chip-opt"
+              style={{ borderColor: "var(--d-warn)", color: "var(--d-warn)", flex: "0 0 auto" }}
+              onClick={() => setExpanded(true)}
+            >
+              Eingeben
+            </button>
+          ) : (
+            <div style={{ display: "flex", gap: 6, alignItems: "center", flex: "0 0 auto" }}>
+              <input
+                value={askInput}
+                onChange={(e) => setAskInput(e.target.value)}
+                placeholder={placeholder}
+                autoFocus
+                onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
+                style={{ height: 28, padding: "0 10px", borderRadius: 8, border: "1px solid var(--d-blue)", background: "var(--d-blue-soft)", color: "var(--d-blue)", fontFamily: "Geist Mono, monospace", fontSize: 12.5, outline: "none", width: 220 }}
+              />
+              <button type="button" className="dlg2-chip-opt" style={{ borderColor: "var(--d-ok)", color: "var(--d-ok)", background: "var(--d-ok-soft)" }} onClick={() => submit()} disabled={!askInput.trim()}>✓</button>
+            </div>
+          )}
+        </div>
+        {expanded && !blocked && suggestions.length > 0 && (
+          <div className="dlg2-expand" style={{ paddingTop: 10, paddingBottom: 14 }}>
+            <div className="t-micro" style={{ color: "var(--d-ink-3)", marginBottom: 8 }}>
+              Vorschläge
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {suggestions.map((s, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  className="dlg2-chip-opt"
+                  onClick={() => submit(s)}
+                  title="Klick zum Übernehmen"
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
           </div>
         )}
-      </div>
+      </>
     );
   }
+
 
   // -------------------------------------------------------------------------
   //  AUSWAHL

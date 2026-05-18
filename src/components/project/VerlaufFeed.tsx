@@ -1,97 +1,108 @@
-import { useState, useMemo } from "react";
 import DeltaTag from "./shared/DeltaTag";
-import SourceMarker from "./shared/SourceMarker";
-import FeedbackButton from "./shared/FeedbackButton";
-import CardSurface from "./shared/CardSurface";
-import RoleHeader from "./shared/RoleHeader";
 import { useDialog } from "@/components/dialog/DialogProvider";
 import { buildVerlaufSession } from "@/lib/dialog/sessionFactories";
-import type { VerlaufVM } from "@/lib/project/types";
+import type { DeltaTyp, VerlaufVM } from "@/lib/project/types";
 
-type FilterTyp = "alle" | "aenderung" | "entscheidung" | "konflikt" | "upload" | "milestone";
-
-const filters: { id: FilterTyp; label: string }[] = [
-  { id: "alle", label: "Alle" },
-  { id: "aenderung", label: "Änderungen" },
-  { id: "entscheidung", label: "Entscheidungen" },
-  { id: "konflikt", label: "Konflikte" },
-  { id: "upload", label: "Uploads" },
-  { id: "milestone", label: "Milestones" },
-];
+const DOT_COLOR: Record<DeltaTyp, string> = {
+  neu: "var(--sig-action)",
+  ersetzt: "var(--sig-review)",
+  bestaetigt: "var(--ink-3)",
+  widersprochen: "var(--sig-conflict)",
+};
 
 const VerlaufFeed = ({ verlauf }: { verlauf: VerlaufVM[] }) => {
-  const [filter, setFilter] = useState<FilterTyp>("alle");
   const { openDialog } = useDialog();
 
-  const filtered = useMemo(
-    () => (filter === "alle" ? verlauf : verlauf.filter((v) => v.ereignisTyp === filter)),
-    [filter, verlauf],
-  );
-
   return (
-    <div>
-      <div>
-        <RoleHeader role="verlauf" title="Verlauf" />
+    <section
+      style={{
+        padding: "0 0 0 32px",
+        borderLeft: "1px solid var(--hair)",
+      }}
+    >
+      <header
+        className="flex items-baseline"
+        style={{ gap: 10, marginBottom: 22 }}
+      >
+        <h2
+          style={{
+            margin: 0,
+            fontSize: 20,
+            fontWeight: 500,
+            letterSpacing: "-.018em",
+            color: "var(--ink)",
+          }}
+        >
+          Verlauf
+        </h2>
+        <span className="mono tabular" style={{ fontSize: 12, color: "var(--ink-3)" }}>
+          {verlauf.length}
+        </span>
+      </header>
 
-        <div className="flex flex-wrap gap-2 mb-8">
-          {filters.map((f) => (
-            <button
-              key={f.id}
-              onClick={() => setFilter(f.id)}
-              className={`text-[11px] uppercase tracking-wider px-3 py-1.5 rounded-full border transition-colors ${
-                filter === f.id
-                  ? "bg-primary/20 text-primary border-primary/40"
-                  : "border-border-subtle bg-surface-2 text-muted-foreground hover:text-foreground hover:border-border-strong"
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
-
-        <CardSurface className="p-6 max-h-[720px] overflow-y-auto">
-          <div className="relative pl-6 border-l border-border-strong space-y-5">
-            {filtered.map((e) => {
-              const isConflict = e.ereignisTyp === "konflikt" || e.delta === "widersprochen";
-              return (
-                <div
-                  key={e.id}
-                  className="group relative cursor-pointer"
-                  onClick={() => openDialog(buildVerlaufSession(e))}
-                >
-                  <div
-                    className={`absolute -left-[27px] top-1.5 w-2 h-2 rounded-full ring-4 ring-surface-2 ${
-                      isConflict ? "bg-destructive/80" : "bg-muted-foreground/60"
-                    }`}
-                  />
-                  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-1">
-                    <span className="text-[11px] text-muted-foreground/70 font-mono">
-                      {e.datum}
-                    </span>
-                    <DeltaTag delta={e.delta} />
-                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60">
-                      {e.objekt}
-                    </span>
-                    <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
-                      <FeedbackButton context={e.inhalt} label="" />
-                    </div>
-                  </div>
-                  <p className="text-sm text-foreground/95 leading-snug mb-1.5 group-hover:text-foreground transition-colors">
-                    {e.inhalt}
-                  </p>
-                  <SourceMarker quelle={e.quelle} manuell={e.manuell} />
-                </div>
-              );
-            })}
-            {filtered.length === 0 && (
-              <p className="text-sm text-muted-foreground italic">
-                Keine Einträge in diesem Filter.
-              </p>
-            )}
-          </div>
-        </CardSurface>
+      <div
+        className="flex flex-col relative"
+        style={{ gap: 16 }}
+      >
+        <div
+          aria-hidden
+          style={{
+            position: "absolute",
+            left: 6,
+            top: 4,
+            bottom: 4,
+            width: 1,
+            background: "var(--hair)",
+          }}
+        />
+        {verlauf.map((e) => (
+          <button
+            key={e.id}
+            type="button"
+            onClick={() => openDialog(buildVerlaufSession(e))}
+            className="w-full text-left flex relative group"
+            style={{ gap: 14, background: "transparent", border: "none", cursor: "pointer", padding: 0 }}
+          >
+            <span
+              aria-hidden
+              style={{
+                width: 13,
+                height: 13,
+                borderRadius: 999,
+                marginTop: 4,
+                background: "var(--surface-1)",
+                border: `2px solid ${DOT_COLOR[e.delta]}`,
+                flex: "0 0 auto",
+                position: "relative",
+                zIndex: 1,
+              }}
+            />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center" style={{ gap: 8 }}>
+                <span className="mono tabular" style={{ fontSize: 11, color: "var(--ink-3)" }}>
+                  {e.datum}
+                </span>
+                <DeltaTag delta={e.delta} />
+              </div>
+              <div
+                className="group-hover:text-foreground transition-colors"
+                style={{ marginTop: 4, fontSize: 13.5, color: "var(--ink)", lineHeight: 1.4 }}
+              >
+                {e.inhalt}
+              </div>
+              {e.quelle && (
+                <div className="src" style={{ marginTop: 3 }}>{e.quelle}</div>
+              )}
+            </div>
+          </button>
+        ))}
+        {verlauf.length === 0 && (
+          <p style={{ fontSize: 13, color: "var(--ink-3)", fontStyle: "italic" }}>
+            Noch kein Verlauf.
+          </p>
+        )}
       </div>
-    </div>
+    </section>
   );
 };
 

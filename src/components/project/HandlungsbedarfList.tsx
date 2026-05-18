@@ -1,153 +1,280 @@
-import { useState } from "react";
-import { ChevronRight, User, CalendarClock, Ban } from "lucide-react";
-import ObjectToken from "./shared/ObjectToken";
-import SourceMarker from "./shared/SourceMarker";
-import CardSurface from "./shared/CardSurface";
-import RoleHeader from "./shared/RoleHeader";
+import { useMemo, useState } from "react";
+import { Flag, AlertCircle, HelpCircle, Link2, Zap, Ban } from "lucide-react";
 import { useDialog } from "@/components/dialog/DialogProvider";
 import { buildHandlungsbedarfSession } from "@/lib/dialog/sessionFactories";
-import type { Arbeitsmodus, HandlungsbedarfVM } from "@/lib/project/types";
+import type { Arbeitsmodus, HandlungsbedarfVM, ObjektTyp } from "@/lib/project/types";
 
 type Item = HandlungsbedarfVM;
+type Filter = "alle" | "blocker" | "ohne_frist";
 
-const modeMeta: Record<Arbeitsmodus, { label: string; hint: string; color: string; soft: string }> =
-  {
-    entscheiden: {
-      label: "Entscheiden",
-      hint: "Richtung festlegen",
-      color: "var(--sig-action)",
-      soft: "var(--sig-action-soft)",
-    },
-    klaeren: {
-      label: "Klären",
-      hint: "Information beschaffen",
-      color: "var(--sig-review)",
-      soft: "var(--sig-review-soft)",
-    },
-    umsetzen: {
-      label: "Umsetzen",
-      hint: "Arbeit ausführen",
-      color: "var(--sig-calm)",
-      soft: "var(--sig-calm-soft)",
-    },
-    pruefen: {
-      label: "Prüfen",
-      hint: "Bewerten und antworten",
-      color: "var(--c-accent)",
-      soft: "var(--c-accent-soft)",
-    },
-  };
+const MODE_META: Record<
+  Arbeitsmodus,
+  { label: string; color: string }
+> = {
+  entscheiden: { label: "Entscheiden", color: "var(--sig-action)" },
+  klaeren: { label: "Klären", color: "var(--sig-review)" },
+  umsetzen: { label: "Umsetzen", color: "var(--ink-3)" },
+  pruefen: { label: "Prüfen", color: "var(--accent)" },
+};
 
-const order: Arbeitsmodus[] = ["entscheiden", "klaeren", "umsetzen", "pruefen"];
+const ORDER: Arbeitsmodus[] = ["entscheiden", "klaeren", "umsetzen", "pruefen"];
+
+function TypeIcon({ kind }: { kind: ObjektTyp }) {
+  const Icon =
+    kind === "konflikt" ? AlertCircle :
+    kind === "gap" ? HelpCircle :
+    kind === "feedback" ? Zap :
+    kind === "dependency" ? Link2 :
+    Flag;
+  return <Icon className="w-3.5 h-3.5" />;
+}
+
+function initials(name: string | null): string {
+  if (!name) return "?";
+  return name
+    .split(/\s+/)
+    .map((s) => s[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}
+
+function firstName(name: string | null): string {
+  return name?.split(/\s+/)[0] ?? "";
+}
 
 const HandlungsbedarfList = ({ items }: { items: Item[] }) => {
-  const grouped = order.map((m) => ({
+  const [filter, setFilter] = useState<Filter>("alle");
+
+  const filtered = useMemo(() => {
+    if (filter === "blocker") return items.filter((i) => i.blocker);
+    if (filter === "ohne_frist") return items.filter((i) => !i.frist);
+    return items;
+  }, [items, filter]);
+
+  const grouped = ORDER.map((m) => ({
     modus: m,
-    items: items.filter((i) => i.arbeitsmodus === m),
+    list: filtered.filter((i) => i.arbeitsmodus === m),
   }));
 
   return (
-    <div>
-      <div>
-        <RoleHeader
-          role="handlung"
-          title="Handlungsbedarf"
-          right={
-            <span>
-              {items.length} offen · {items.filter((i) => i.blocker).length} Blocker
-            </span>
-          }
-        />
-
-        <div className="space-y-8">
-          {grouped.map(({ modus, items }) => {
-            if (items.length === 0) return null;
-            const meta = modeMeta[modus];
-            return (
-              <div key={modus}>
-                <div className="flex items-baseline gap-3 mb-3 px-1">
-                  <span
-                    className="w-2 h-2 rounded-sm self-center"
-                    style={{ background: meta.color }}
-                  />
-                  <h3
-                    className="text-xs uppercase tracking-[0.2em] font-medium"
-                    style={{ color: meta.color }}
-                  >
-                    {meta.label}
-                  </h3>
-                  <span className="text-[11px] text-muted-foreground/60">{meta.hint}</span>
-                  <span className="text-[11px] text-muted-foreground/60 ml-auto">
-                    {items.length}
-                  </span>
-                </div>
-                <CardSurface divideRows overflowHidden>
-                  {items.map((it) => (
-                    <ActionRow key={it.id} item={it} barColor={meta.color} />
-                  ))}
-                </CardSurface>
-              </div>
-            );
-          })}
+    <section>
+      <header
+        className="flex items-baseline"
+        style={{ gap: 14, marginBottom: 22 }}
+      >
+        <h2
+          style={{
+            margin: 0,
+            fontSize: 28,
+            fontWeight: 500,
+            letterSpacing: "-.02em",
+            color: "var(--ink)",
+          }}
+        >
+          Handlungsbedarf
+        </h2>
+        <span className="mono tabular" style={{ fontSize: 14, color: "var(--ink-3)" }}>
+          {items.length}
+        </span>
+        <div style={{ flex: 1 }} />
+        <div className="flex" style={{ gap: 4 }}>
+          <FilterBtn active={filter === "alle"} onClick={() => setFilter("alle")}>Alle</FilterBtn>
+          <FilterBtn active={filter === "blocker"} onClick={() => setFilter("blocker")}>Nur Blocker</FilterBtn>
+          <FilterBtn active={filter === "ohne_frist"} onClick={() => setFilter("ohne_frist")}>Ohne Frist</FilterBtn>
         </div>
+      </header>
+
+      <div className="flex flex-col" style={{ gap: 24 }}>
+        {grouped.map(({ modus, list }) => {
+          if (!list.length) return null;
+          const meta = MODE_META[modus];
+          return (
+            <div key={modus}>
+              <div
+                className="flex items-center"
+                style={{
+                  gap: 10,
+                  padding: "0 0 8px 0",
+                  fontSize: 12,
+                  color: "var(--ink-3)",
+                }}
+              >
+                <span
+                  style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: 2,
+                    background: meta.color,
+                  }}
+                />
+                <span
+                  className="t-micro"
+                  style={{ color: meta.color, letterSpacing: ".06em" }}
+                >
+                  {meta.label}
+                </span>
+                <span className="mono tabular" style={{ color: "var(--ink-4)" }}>
+                  {list.length}
+                </span>
+                <div
+                  style={{
+                    flex: 1,
+                    marginLeft: 10,
+                    height: 1,
+                    background: "var(--hair)",
+                  }}
+                />
+              </div>
+              <div className="flex flex-col">
+                {list.map((a, i) => (
+                  <ActionRow key={a.id} item={a} last={i === list.length - 1} />
+                ))}
+              </div>
+            </div>
+          );
+        })}
       </div>
-    </div>
+    </section>
   );
 };
 
-const ActionRow = ({ item, barColor }: { item: Item; barColor: string }) => {
-  const [open, setOpen] = useState(false);
+const FilterBtn = ({
+  children,
+  active,
+  onClick,
+}: {
+  children: React.ReactNode;
+  active: boolean;
+  onClick: () => void;
+}) => (
+  <button
+    type="button"
+    onClick={onClick}
+    style={{
+      height: 28,
+      padding: "0 10px",
+      borderRadius: 8,
+      border: "1px solid var(--hair)",
+      background: active ? "var(--surface-3)" : "transparent",
+      color: active ? "var(--ink)" : "var(--ink-3)",
+      fontSize: 12,
+      cursor: "pointer",
+    }}
+  >
+    {children}
+  </button>
+);
+
+const ActionRow = ({ item, last }: { item: Item; last: boolean }) => {
   const { openDialog } = useDialog();
   return (
-    <div>
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-surface-3 transition-colors text-left"
-      >
-        <ChevronRight
-          className={`w-3.5 h-3.5 text-muted-foreground/60 transition-transform shrink-0 ${open ? "rotate-90" : ""}`}
+    <button
+      type="button"
+      onClick={() => openDialog(buildHandlungsbedarfSession(item))}
+      className="w-full flex items-center text-left"
+      style={{
+        gap: 14,
+        padding: "13px 4px",
+        borderBottom: last ? "none" : "1px solid var(--hair)",
+        background: "transparent",
+        border: "none",
+        cursor: "pointer",
+      }}
+    >
+      {item.blocker && (
+        <span
+          aria-hidden
+          title="Blocker"
+          style={{
+            width: 3,
+            height: 32,
+            borderRadius: 2,
+            background: "var(--sig-conflict)",
+            flex: "0 0 auto",
+            marginLeft: -8,
+          }}
         />
-        <ObjectToken typ={item.objektTyp} />
-        <span className="text-sm text-foreground/95 flex-1 min-w-0 truncate">{item.titel}</span>
-
-        {item.blocker && (
-          <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded border border-destructive/50 bg-destructive/15 text-destructive">
-            <Ban className="w-3 h-3" /> Blocker
-          </span>
-        )}
-
-        {item.frist && (
-          <span className="hidden md:inline-flex items-center gap-1 text-[11px] text-muted-foreground">
-            <CalendarClock className="w-3 h-3" /> {item.frist}
-          </span>
-        )}
-        {item.verantwortlich && (
-          <span className="hidden lg:inline-flex items-center gap-1 text-[11px] text-muted-foreground">
-            <User className="w-3 h-3" /> {item.verantwortlich}
-          </span>
-        )}
-      </button>
-
-      {open && (
-        <div className="relative bg-surface-1 px-4 py-4 pl-11 animate-[fade-in_0.15s_ease-out]">
-          <span
-            className="absolute left-4 top-3 bottom-3 w-0.5 rounded-full"
-            style={{ background: barColor, opacity: 0.7 }}
-          />
-          <p className="text-sm text-foreground/90 leading-relaxed mb-3">{item.beschreibung}</p>
-          <div className="flex flex-wrap items-center gap-2">
-            <SourceMarker quelle={item.quelle} manuell={item.manuell} />
-            <button
-              onClick={() => openDialog(buildHandlungsbedarfSession(item))}
-              className="text-[11px] uppercase tracking-wider px-2.5 py-1 rounded-md bg-primary/20 text-primary hover:bg-primary/30 transition-colors"
-            >
-              Antworten
-            </button>
-          </div>
-        </div>
       )}
-    </div>
+      <span
+        title={item.objektTyp}
+        className="inline-flex items-center justify-center shrink-0"
+        style={{
+          width: 26,
+          height: 26,
+          borderRadius: 6,
+          background: "var(--surface-2)",
+          color: "var(--ink-3)",
+        }}
+      >
+        <TypeIcon kind={item.objektTyp} />
+      </span>
+
+      <div className="flex-1 min-w-0">
+        <div
+          className="flex items-center"
+          style={{
+            gap: 8,
+            fontSize: 14.5,
+            color: "var(--ink)",
+            fontWeight: 450,
+            letterSpacing: "-.01em",
+          }}
+        >
+          <span className="truncate">{item.titel}</span>
+          {item.manuell && (
+            <span title="manuell ergänzt" style={{ color: "var(--ink-4)", fontSize: 11 }}>·</span>
+          )}
+        </div>
+        {item.beschreibung && (
+          <div
+            style={{
+              marginTop: 2,
+              fontSize: 12.5,
+              color: "var(--ink-3)",
+              lineHeight: 1.4,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {item.beschreibung}
+          </div>
+        )}
+      </div>
+
+      <div
+        className="flex items-center shrink-0"
+        style={{ gap: 16, fontSize: 12, color: "var(--ink-3)" }}
+      >
+        {item.verantwortlich && (
+          <span className="inline-flex items-center" style={{ gap: 6 }}>
+            <span
+              className="inline-flex items-center justify-center"
+              style={{
+                width: 18,
+                height: 18,
+                borderRadius: 999,
+                background: "var(--surface-3)",
+                fontFamily: "Geist Mono, monospace",
+                fontSize: 9,
+                color: "var(--ink-2)",
+              }}
+            >
+              {initials(item.verantwortlich)}
+            </span>
+            <span style={{ color: "var(--ink-2)" }}>{firstName(item.verantwortlich)}</span>
+          </span>
+        )}
+        {item.frist && (
+          <span className="mono tabular" style={{ color: "var(--ink-2)" }}>
+            {item.frist}
+          </span>
+        )}
+        {item.quelle && <span className="src" title={item.quelle}>{item.quelle}</span>}
+      </div>
+    </button>
   );
 };
 
