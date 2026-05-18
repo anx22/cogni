@@ -279,9 +279,17 @@ const ReviewRow = ({ box, projectName, blocked, onConfirm, onReject }: ReviewRow
   //  KONFLIKT (existierte schon, hier nur leicht aufgeräumt)
   // -------------------------------------------------------------------------
   if (box.type === "konflikt" && !isFinal) {
-    const faktA = box.payload?.faktA as string | undefined;
-    const faktB = box.payload?.faktB as string | undefined;
+    const faktA = (box.payload?.faktA as string | undefined) ?? "Variante A";
+    const faktB = (box.payload?.faktB as string | undefined) ?? "Variante B";
     const beschreibung = box.payload?.beschreibung as string | undefined;
+    const sourceA = box.payload?.sourceA as { label?: string; meta?: string; hint?: string } | undefined;
+    const sourceB = box.payload?.sourceB as { label?: string; meta?: string; hint?: string } | undefined;
+    const recommendation = box.payload?.recommendation as { auswahl?: "A" | "B"; reason?: string } | undefined;
+    const chosen = (box.payload?.auswahl as "A" | "B" | "open" | undefined) ?? recommendation?.auswahl ?? null;
+
+    const labelA = faktA.length > 28 ? faktA.slice(0, 26) + "…" : faktA;
+    const labelB = faktB.length > 28 ? faktB.slice(0, 26) + "…" : faktB;
+
     return (
       <>
         <div className="dlg2-row" style={{ minHeight: 52, position: "relative", ...dimStyle }}>
@@ -292,6 +300,9 @@ const ReviewRow = ({ box, projectName, blocked, onConfirm, onReject }: ReviewRow
           <TypeChip kind="konflikt" color={{ bg: "var(--d-warn-soft)", fg: "var(--d-warn)" }} />
           <span style={{ flex: 1, fontSize: 13.5, color: "var(--d-ink)", marginLeft: 8 }}>
             {box.title}
+            <span style={{ color: "var(--d-ink-4)", marginLeft: 8, fontSize: 12 }}>
+              {labelA} vs {labelB}
+            </span>
           </span>
           {blocked ? (
             <span className="mono" style={{ fontSize: 10.5, color: "var(--d-ink-3)", marginLeft: 12 }}>
@@ -300,11 +311,39 @@ const ReviewRow = ({ box, projectName, blocked, onConfirm, onReject }: ReviewRow
           ) : (
             <>
               <div style={{ display: "flex", gap: 6, marginLeft: 12, flex: "0 0 auto" }}>
-                <button type="button" className="dlg2-chip-opt" onClick={() => onConfirm({ auswahl: "A" })} title={faktA}>Variante A</button>
-                <button type="button" className="dlg2-chip-opt" onClick={() => onConfirm({ auswahl: "B" })} title={faktB}>Variante B</button>
-                <button type="button" className="dlg2-chip-opt" style={{ color: "var(--d-ink-4)" }} onClick={() => setRejectOpen(true)} title="Endgültig verwerfen">Verwerfen</button>
+                <button
+                  type="button"
+                  className={`dlg2-chip-opt${chosen === "A" ? " active" : ""}`}
+                  style={chosen === "A" ? { background: "var(--d-warn-soft)", borderColor: "var(--d-warn)", color: "var(--d-warn)" } : undefined}
+                  onClick={() => onConfirm({ auswahl: "A" })}
+                  title={faktA}
+                >
+                  {labelA}
+                </button>
+                <button
+                  type="button"
+                  className={`dlg2-chip-opt${chosen === "B" ? " active" : ""}`}
+                  style={chosen === "B" ? { background: "var(--d-warn-soft)", borderColor: "var(--d-warn)", color: "var(--d-warn)" } : undefined}
+                  onClick={() => onConfirm({ auswahl: "B" })}
+                  title={faktB}
+                >
+                  {labelB}
+                </button>
+                <button
+                  type="button"
+                  className="dlg2-chip-opt"
+                  style={{ color: "var(--d-ink-4)" }}
+                  onClick={() => onConfirm({ auswahl: "open" })}
+                >
+                  offen lassen
+                </button>
               </div>
-              <button type="button" onClick={() => setExpanded((v) => !v)} className="mono" style={{ marginLeft: 12, background: "transparent", border: "none", color: "var(--d-ink-3)", fontSize: 11.5, cursor: "pointer", flex: "0 0 auto" }}>
+              <button
+                type="button"
+                onClick={() => setExpanded((v) => !v)}
+                className="mono"
+                style={{ marginLeft: 12, background: "transparent", border: "none", color: "var(--d-ink-3)", fontSize: 11.5, cursor: "pointer", flex: "0 0 auto", letterSpacing: ".02em" }}
+              >
                 Details {expanded ? "▲" : "▼"}
               </button>
             </>
@@ -316,23 +355,38 @@ const ReviewRow = ({ box, projectName, blocked, onConfirm, onReject }: ReviewRow
               <p style={{ margin: "0 0 12px", fontSize: 13, color: "var(--d-ink-2)" }}>{beschreibung}</p>
             )}
             <div style={{ display: "flex", gap: 12, alignItems: "stretch" }}>
-              <div style={{ flex: 1, padding: "14px 18px", borderRadius: 12, background: "var(--d-surf-3)", border: "1px solid var(--d-hair)" }}>
-                <div className="mono" style={{ fontSize: 10, color: "var(--d-ink-3)", letterSpacing: ".06em", textTransform: "uppercase", marginBottom: 6 }}>Variante A</div>
-                <div style={{ fontSize: 15, fontWeight: 500, color: "var(--d-ink)", lineHeight: 1.4 }}>{faktA ?? "—"}</div>
-              </div>
-              <div style={{ width: 36, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Geist Mono, monospace", fontSize: 10, color: "var(--d-conf)" }}>vs</div>
-              <div style={{ flex: 1, padding: "14px 18px", borderRadius: 12, background: "var(--d-surf-3)", border: "1px solid var(--d-hair)" }}>
-                <div className="mono" style={{ fontSize: 10, color: "var(--d-ink-3)", letterSpacing: ".06em", textTransform: "uppercase", marginBottom: 6 }}>Variante B</div>
-                <div style={{ fontSize: 15, fontWeight: 500, color: "var(--d-ink)", lineHeight: 1.4 }}>{faktB ?? "—"}</div>
-              </div>
+              <SourceCard
+                eyebrow={sourceA?.label ?? "Quelle A"}
+                value={faktA}
+                meta={sourceA?.meta}
+                active={chosen === "A"}
+              />
+              <div style={{ width: 36, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Geist Mono, monospace", fontSize: 10, color: "var(--d-conf)", letterSpacing: ".04em" }}>vs</div>
+              <SourceCard
+                eyebrow={sourceB?.label ?? "Quelle B"}
+                value={faktB}
+                meta={sourceB?.meta}
+                active={chosen === "B"}
+              />
             </div>
+            {recommendation && (
+              <div style={{ marginTop: 10, fontSize: 12, color: "var(--d-ink-3)" }}>
+                cogni empfiehlt{" "}
+                <span style={{ color: "var(--d-warn)" }}>
+                  {recommendation.auswahl === "A" ? labelA : labelB}
+                </span>
+                {recommendation.reason && (
+                  <> — {recommendation.reason}. Klick zum Überschreiben.</>
+                )}
+              </div>
+            )}
           </div>
         )}
         <ConfirmDestructive
           open={rejectOpen}
           onOpenChange={setRejectOpen}
           title="Konflikt verwerfen?"
-          description="Die Erkenntnis wird endgültig verworfen und fließt nicht in den Projektzustand. Eine Rücknahme ist nicht möglich."
+          description="Die Erkenntnis wird endgültig verworfen und fließt nicht in den Projektzustand."
           confirmLabel="Endgültig verwerfen"
           onConfirm={() => onReject()}
         />
