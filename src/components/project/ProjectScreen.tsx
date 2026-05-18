@@ -154,8 +154,8 @@ const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
               onNameChange={handleRename}
             />
 
-            <section className="px-8 md:px-12 lg:px-16 xl:px-20 py-16 bg-surface-1 border-b border-border-strong">
-              <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-5 gap-6">
+            <section className="bg-surface-1" style={{ padding: "32px 56px 40px" }}>
+              <div className="grid grid-cols-1 lg:grid-cols-5" style={{ gap: 32 }}>
                 <div className="lg:col-span-3 min-w-0">
                   <HandlungsbedarfList items={project.handlungsbedarf} />
                 </div>
