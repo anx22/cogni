@@ -1,8 +1,8 @@
 // =============================================================================
-//  BatchReviewOverlay (Dialog V2) — kompakte Zeilen-Liste statt Box-Stapel.
-//  Hinter Feature-Flag (?dialogV2=1 / localStorage.cogniDialogV2). Nutzt das
-//  bestehende useDialog()-Vertrag (commitBox, gateReason, session). Kein
-//  eigener Datenfetch. App-Theme wird via [data-dialog] geerbt.
+//  BatchReviewOverlay (Dialog V2)
+//  - Bulk-Confirm zeigt sichtbaren Fortschritt (kein gefühlter Freeze).
+//  - Solange offene Zuordnung existiert: Gate-Banner oben, Folge-Zeilen
+//    sind sichtbar gesperrt (`blocked` Prop), Bulk-Button sagt es klar.
 // =============================================================================
 
 import { useEffect, useMemo, useState } from "react";
@@ -13,15 +13,13 @@ import { END_STATES } from "@/lib/dialog/types";
 import ConfirmDestructive from "@/components/shared/ConfirmDestructive";
 import { toast } from "sonner";
 
-/** Schwelle, ab der Bulk-Confirm einen Bestätigungsdialog auslöst. */
 const BULK_CONFIRM_THRESHOLD = 5;
-
-/** Box-Typen, die ohne weitere User-Eingabe automatisch bestätigt werden können. */
-const AUTO_CONFIRMABLE = new Set(["wissen", "aktion", "zuordnung", "kontext"]);
+const AUTO_CONFIRMABLE = new Set(["wissen", "aktion", "kontext"]);
 
 const BatchReviewOverlay = ({ onClose }: { onClose: () => void }) => {
   const { session, commitBox, gateReason } = useDialog();
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number } | null>(null);
 
   const decisionBoxes = useMemo(
     () => session?.boxes.filter((b) => b.type !== "kontext") ?? [],
@@ -39,20 +37,32 @@ const BatchReviewOverlay = ({ onClose }: { onClose: () => void }) => {
   if (conflicts > 0) summaryParts.push(`${conflicts} Konflikt${conflicts === 1 ? "" : "e"}`);
   if (gaps > 0) summaryParts.push(`${gaps} Lücke${gaps === 1 ? "" : "n"}`);
 
+  const isBulkRunning = bulkProgress !== null;
   const allReady = open === 0;
-  // Nur enabled, wenn ≥1 Box wirklich auto-bestätigbar ist.
-  const canBulk = !gateReason && autoConfirmable.length > 0;
+  const canBulk = !gateReason && autoConfirmable.length > 0 && !isBulkRunning;
   const bulkBlockedReason = gateReason
     ?? (open === 0 ? null : autoConfirmable.length === 0 ? "Nur manuelle Entscheidungen offen" : null);
 
+  // Sortierung: Zuordnung immer ganz oben
+  const sortedBoxes = useMemo(() => {
+    const z = decisionBoxes.filter((b) => b.type === "zuordnung");
+    const rest = decisionBoxes.filter((b) => b.type !== "zuordnung");
+    return [...z, ...rest];
+  }, [decisionBoxes]);
+
   const runBulkConfirm = async () => {
-    let count = 0;
-    for (const b of autoConfirmable) {
-      await commitBox(b.id, "confirm");
-      count++;
-    }
-    if (count > 0) {
-      toast.success(`${count} Erkenntnis${count === 1 ? "" : "se"} übernommen`);
+    const total = autoConfirmable.length;
+    setBulkProgress({ done: 0, total });
+    let done = 0;
+    try {
+      for (const b of autoConfirmable) {
+        await commitBox(b.id, "confirm");
+        done++;
+        setBulkProgress({ done, total });
+      }
+      if (done > 0) toast.success(`${done} Erkenntnis${done === 1 ? "" : "se"} übernommen`);
+    } finally {
+      setBulkProgress(null);
     }
   };
 
@@ -68,7 +78,6 @@ const BatchReviewOverlay = ({ onClose }: { onClose: () => void }) => {
     await runBulkConfirm();
   };
 
-  // Enter im Overlay → Bulk-Confirm (nur wenn Fokus außerhalb von Inputs).
   useEffect(() => {
     if (!session) return;
     const onKey = (e: KeyboardEvent) => {
@@ -87,6 +96,16 @@ const BatchReviewOverlay = ({ onClose }: { onClose: () => void }) => {
 
   if (!session) return null;
 
+  const bulkLabel = isBulkRunning
+    ? `Übernehme ${bulkProgress!.done}/${bulkProgress!.total}…`
+    : gateReason
+      ? "Erst Projekt wählen"
+      : allReady
+        ? "Alles bereit"
+        : autoConfirmable.length > 0
+          ? `${autoConfirmable.length} übernehmen`
+          : `${open} manuell`;
+
   return (
     <div data-dialog className="dlg2-root dialog-backdrop">
       <SessionHeader
@@ -98,12 +117,39 @@ const BatchReviewOverlay = ({ onClose }: { onClose: () => void }) => {
         mode="batch"
       />
 
+      {gateReason && (
+        <div
+          style={{
+            margin: "16px 44px 0",
+            padding: "10px 14px",
+            borderRadius: 10,
+            background: "var(--d-warn-soft)",
+            border: "1px solid var(--d-warn)",
+            color: "var(--d-warn)",
+            fontSize: 12.5,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
+          <span style={{ fontSize: 14 }}>⚠</span>
+          <span>
+            <strong style={{ fontWeight: 600 }}>Erst Projekt wählen.</strong>{" "}
+            <span style={{ color: "var(--d-ink-2)" }}>
+              Danach kannst du die {open - 1} weiteren Erkenntnisse übernehmen.
+            </span>
+          </span>
+        </div>
+      )}
+
       <div className="dlg2-list">
-        {decisionBoxes.map((b) => (
+        {sortedBoxes.map((b) => (
           <ReviewRow
             key={b.id}
             box={b}
             projectName={session.projectName ?? null}
+            blocked={!!gateReason && b.type !== "zuordnung"}
+            blockedReason={gateReason}
             onConfirm={(userDecision) => commitBox(b.id, "confirm", userDecision)}
             onReject={() => commitBox(b.id, "reject")}
           />
@@ -111,12 +157,14 @@ const BatchReviewOverlay = ({ onClose }: { onClose: () => void }) => {
       </div>
 
       <div className="dlg2-commitbar">
-        <button type="button" className="dlg2-btn-secondary" onClick={onClose}>
+        <button type="button" className="dlg2-btn-secondary" onClick={onClose} disabled={isBulkRunning}>
           Schließen
         </button>
         <div className="flex items-center" style={{ gap: 12 }}>
           <span style={{ fontSize: 12.5, color: "var(--d-ink-3)" }}>
-            {open > 0 ? (
+            {isBulkRunning ? (
+              <span style={{ color: "var(--d-blue)" }}>läuft…</span>
+            ) : open > 0 ? (
               <>
                 <span style={{ color: "var(--d-warn)", fontWeight: 500 }}>{open} offen</span>
                 {" · "}{ready} bereit
@@ -127,17 +175,15 @@ const BatchReviewOverlay = ({ onClose }: { onClose: () => void }) => {
           </span>
           <button
             type="button"
-            className={`dlg2-btn-commit${allReady ? " ready" : ""}`}
+            className={`dlg2-btn-commit${allReady && !isBulkRunning ? " ready" : ""}`}
             onClick={handleBulkConfirm}
             disabled={!canBulk}
             title={bulkBlockedReason ?? undefined}
           >
-            {allReady
-              ? "Alles bereit"
-              : autoConfirmable.length > 0
-                ? `${autoConfirmable.length} übernehmen`
-                : `${open} manuell`}
-            <span className="mono" style={{ opacity: 0.5, fontSize: 12 }}>↵</span>
+            {bulkLabel}
+            {!isBulkRunning && (
+              <span className="mono" style={{ opacity: 0.5, fontSize: 12 }}>↵</span>
+            )}
           </button>
         </div>
       </div>

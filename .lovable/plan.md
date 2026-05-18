@@ -1,72 +1,116 @@
-# Zwei-Stufen-Vorgehen — Stufe 1: Gesamt-Review & Zielmodell-Inventar
+## Diagnose
 
-Stufe 2 (Umsetzung) folgt erst nach deinen Kommentaren auf Stufe 1.
+Der Freeze ist sehr wahrscheinlich kein Backend-Hänger, sondern ein Overlay-Layering-Bug:
 
-## Leitsatz
+- Beim Klick auf `11 übernehmen` öffnet sich wegen `BULK_CONFIRM_THRESHOLD = 5` ein Bestätigungsdialog.
+- Im Session-Replay sieht man: Radix setzt `body[data-scroll-locked]` und `pointer-events: none`.
+- Der Confirm-Dialog liegt aber mit `z-50` unter dem fullscreen `BatchReviewOverlay` mit `z-index: 100`.
+- Ergebnis: Der sichtbare Batch-Screen ist nicht mehr klickbar, der eigentliche Confirm-Dialog ist verdeckt. Das wirkt wie kompletter Freeze.
+- Der einzelne `commit-fact` Request, der sichtbar war, kam erfolgreich mit `200 { ok: true }` zurück; das spricht gegen einen kaputten Backend-Commit als Hauptursache.
 
-Die Prototype-JSX unter `docs/redesign/prototype/*.jsx` ist **Zielmodell**, nicht Pixel-Wahrheit.
-Sie definiert Blöcke, Hierarchie, UX-Charakter. Sie definiert nicht: exakte Maße, Demo-Daten, finale Mikro-Interaktion.
-Abweichungen dürfen sein — aber nur bewusst und mit kurzer Begründung.
+## Zielzustand
 
-## Was Stufe 1 produziert
+Batch Review muss zwei Dinge klar machen:
 
-Eine einzige Datei: **`docs/redesign/REVIEW.md`**.
-Kompakt, lesbar in einem Durchgang, kein Ticketberg. Aufgebaut in drei Teilen:
+1. **Bulk-Übernahme darf nie die UI blockieren oder unsichtbar machen.**
+2. **Projektzuordnung ist eine eigene kritische Vorentscheidung**, nicht eine normale Wissenszeile.
 
-### Teil A — Sieben High-Level-Entscheidungen
+## Plan
 
-Pro Screen/Modus eine Leitfrage, an der hängt der Rest. Jede mit kurzem Vergleich Ist↔Soll und einer Empfehlung. Keine Tickets, keine Komponentennamen — Produktentscheidungen.
+### 1. Freeze-Hotfix: Confirm-Dialog sicher über BatchReview legen
 
-Geplante Leitfragen:
-1. **Home-Charakter** — Stage mit zentraler Entität vs. Dashboard-mit-Orb. Was soll man in der ersten Sekunde fühlen?
-2. **Sidebar-Rolle** — sekundärer Anker (Prototype) vs. heimliche Hauptnavigation (Ist). Wie viel darf sie?
-3. **Project-Detail-Dramaturgie** — vier Rollen mit Atmosphäre-Streifen vs. Karten-Stapel. Wie liest man den Screen vertikal?
-4. **Project-Hero-Inhalt** — Lagetext + Status-Pills + Outcome-Bar vs. nur Eyebrow+Titel. Was ist „aktueller Stand"?
-5. **Dialog-Paradigma** — Git-Diff-Liste mit inline-Auflösung in 10 Sekunden vs. Box-Stapel. Wie viel Vorentscheidung delegieren wir an cogni?
-6. **Konflikt- & Lücken-Choreografie** — collapsed mit Inline-Chips, expandable mit Quellen-`vs`-Cards und „cogni empfiehlt"-Begründung vs. nur Variantenwahl. Wie sichtbar ist Provenance?
-7. **Drill-vs-Batch-Wechsel** — wann öffnet sich die große Display-Card-Ansicht, wann bleibt es Liste?
+Betroffene Dateien:
 
-### Teil B — Soll-Ist-Inventar je Screen (kompakt)
+- `src/components/ui/alert-dialog.tsx`
+- optional `src/components/shared/ConfirmDestructive.tsx`
 
-Pro Screen eine kurze Tabelle, max. ~12 Zeilen. Keine Code-Pfade, keine Mikro-Pixel. Spalten:
+Änderung:
 
-| Block | Soll-Charakter (1 Zeile) | Ist-Stand | Lücke (visuell / UX-Logik / Daten) |
+- AlertDialog Overlay/Content bekommen eine höhere Layer-Stufe als `dlg2-root`, z. B. Overlay `z-[210]`, Content `z-[220]`.
+- Dadurch bleibt `body` zwar korrekt scroll-locked, aber der aktive Dialog liegt sichtbar und klickbar oben.
+- Optional: `ConfirmDestructive` bekommt eine klare Busy-Anzeige, damit während Bulk-Commit nicht der Eindruck entsteht, die UI sei eingefroren.
 
-Abgedeckte Screens:
-- Home (Entity-Stage, Sidebar mit Mini-Entität, PipelineWidget mit Jetzt+Pipeline+Footer, HomePrompt, Asset-Orbit)
-- Project-Detail (Atmosphäre, Sidebar, Hero, Lage, Handlungsbedarf+Verlauf, Substanz)
-- Dialog-Batch (Header, Row-Varianten, Commitbar, Bulk-Logik)
-- Dialog-Drill (Display-Cards, vs-Trenner, Begründung)
-- Entity-Modi (Idle, Drag-Over, Processing, Review-Ready)
+### 2. Bulk-Commit robuster und sichtbarer machen
 
-Lücken werden in jeder Zeile in drei Dimensionen markiert:
-- **V** = Visuell (Tokens, Spacing, fehlender Block)
-- **UX** = UX-Logik (Verhalten, State-Wechsel, Erwartung)
-- **D** = Daten (ViewModel-Feld fehlt, Pipeline liefert nichts)
+Betroffene Datei:
 
-### Teil C — Querschnitts-Befunde
+- `src/components/dialog/BatchReviewOverlay.tsx`
 
-Drei bis fünf Punkte, die screenübergreifend auffallen. Keine Tickets, sondern Muster:
-- z. B. „Stillschweigendes Weglassen statt Skeleton/Platzhalter"
-- z. B. „Provenance/Quelle nirgends als sichtbare Ebene, nur als Tooltip"
-- z. B. „Atmosphäre-Streifen / Mini-Entität-Anker durchgehend nicht implementiert → Bruch der Botschaft ‚Entität ist immer da'"
+Änderung:
 
-Am Ende: eine kurze **Empfehlungsreihenfolge** für Stufe 2 (Welcher Screen zuerst, welche Querschnittssache vor Screen-Arbeit), 5–8 Zeilen.
+- Lokalen `isBulkCommitting` State einführen.
+- Commitbar zeigt währenddessen z. B. `Übernehme 3/11…` oder mindestens `Übernehme…`.
+- Der Hauptbutton wird währenddessen deaktiviert, aber nicht stillschweigend ohne Feedback.
+- Bulk-Confirm bleibt sequenziell, damit Backend-Guards und Reihenfolge stabil bleiben.
+- Fehlerfall: Wenn ein Commit blockiert wird, bleibt die Zeile sichtbar offen und es gibt eine Toast-/Statusmeldung statt gefühltem Stillstand.
 
-## Vorgehen Stufe 1
+### 3. Zuordnung als kritische Gate-Zeile bauen
 
-1. Alle relevanten Prototype-JSX (`home`, `project-detail`, `project-card`, `dialog-overlay`, `entity`, plus Drill-Szenen in `app.jsx`) und ihre Code-Pendants nebeneinander lesen.
-2. Browser-Screenshots der echten App auf den drei Routen (Home, Projekt-Detail, Dialog-Overlay batch+drill) einholen, um „Ist" nicht aus Erinnerung zu schreiben.
-3. `docs/redesign/REVIEW.md` schreiben — eine Datei, drei Teile, fertig.
-4. Im Chat einen 4–6-Zeilen-Anriss posten und auf deine Kommentare warten.
+Betroffene Dateien:
 
-## Was Stufe 1 NICHT macht
+- `src/components/dialog/parts/ReviewRow.tsx`
+- `src/components/dialog/BatchReviewOverlay.tsx`
 
-- Keine Code-Änderungen.
-- Keine ViewModel-Erweiterung.
-- Keine Tickets, keine Tabellen mit Komponentenpfaden, keine Mikro-Pixel-Notizen.
-- Keine `INVENTORY.md` als Riesenmatrix — bewusst kompakt.
+Änderung:
 
-## Was Stufe 2 später macht (zur Orientierung, nicht jetzt)
+- Eigene `zuordnung`-Variante in `ReviewRow`, nicht mehr Default-Zeile.
+- Visuelle Sprache:
+  - kräftiger Akzent-/Warn-Stripe
+  - Chip `ZUERST ZUORDNEN` oder `PROJEKT`
+  - Titel: `Projektzuordnung erforderlich`
+  - Kontexttext: z. B. empfohlenes Projekt / Grund aus `agent_reason`
+  - prominente Auswahl-/Bestätigungsaktion statt kleinem Häkchen
+- Wenn Kandidaten vorhanden sind: Projektchips anzeigen, z. B. empfohlener Kandidat hervorgehoben.
+- Wenn keine Kandidaten vorhanden sind, aber `suggested_new_name`: Aktion `Neues Projekt: …` anbieten.
+- Keine Reject-Aktion für Zuordnung, weil Backend sie ohnehin ablehnt.
 
-Nach deinen Kommentaren auf das REVIEW: gezielte Implementierung in der von dir freigegebenen Reihenfolge, mit Skeleton/Platzhalter für fehlende Daten, DECISIONS-Einträge für bewusste Abweichungen.
+### 4. Gating sichtbar machen: Andere Zeilen sind bewusst gesperrt
+
+Betroffene Dateien:
+
+- `src/components/dialog/BatchReviewOverlay.tsx`
+- `src/components/dialog/parts/ReviewRow.tsx`
+- optional `src/index.css`
+
+Änderung:
+
+- `ReviewRow` bekommt Props wie `blocked` und `blockedReason`.
+- Solange eine offene Zuordnung existiert:
+  - alle Nicht-Zuordnungs-Zeilen werden optisch gedimmt
+  - Aktionen sind disabled
+  - rechts steht sichtbar `nach Projektzuordnung`
+  - Cursor/Tooltip/Inline-Hinweis machen klar: nicht kaputt, sondern Reihenfolge erforderlich
+- Oben in der Batch-Liste erscheint ein kompakter Hinweisbanner:
+  - `Erst Projekt wählen. Danach kannst du die 11 Erkenntnisse übernehmen.`
+- Bulk-Button zeigt nicht `11 übernehmen`, sondern z. B. `Erst Projekt wählen`, solange Gate aktiv ist.
+
+### 5. Typen stärker differenzieren
+
+Betroffene Datei:
+
+- `src/components/dialog/parts/ReviewRow.tsx`
+
+Änderung:
+
+- Type-Chips bekommen typabhängige Farbe/Form/Semantik:
+  - `WISSEN`: ruhig/blau oder neutral
+  - `LÜCKE`: amber, offener Kreis, Eingabe nötig
+  - `KONFLIKT`: rot/amber, Varianten sichtbar
+  - `ZUORDNUNG`: höchste Priorität, eigene Gate-Sprache
+  - `AKTION`/`AUSWAHL`: handlungsorientiert
+- Zeilenstatus unterscheidet klar zwischen:
+  - bereit übernehmbar
+  - manuell erforderlich
+  - blockiert durch Zuordnung
+  - bereits bestätigt
+
+### 6. Verifikation
+
+Nach Umsetzung prüfen:
+
+- Klick auf `11 übernehmen` zeigt den Confirm-Dialog sichtbar über allem.
+- Kein Zustand mehr, in dem die Batch-Liste sichtbar ist, aber keine Mausinteraktion möglich ist.
+- Mit offener Zuordnung zeigt die Commitbar nicht fälschlich `11 übernehmen`.
+- Nicht-Zuordnungs-Zeilen sind sichtbar blockiert und erklären warum.
+- Zuordnung ist als erster kritischer Schritt sofort erkennbar.
+- Ein erfolgreicher Zuordnungs-Commit hebt das Gate auf und macht die übrigen Zeilen übernehmbar.
