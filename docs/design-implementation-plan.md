@@ -1,4 +1,5 @@
 # cogni — Design Implementation Plan (v2)
+
 > **Adressat:** Lovable Agent
 > **Stand:** 2026-05-14 — korrigiert nach ZIP-Analyse + Screenshot-Review
 > **Quellen:** tokens.css + dialog-overlay.jsx + project-detail.jsx + app.jsx (aus ZIP), Screenshots Home/Detail/BatchReview/FaktDrill
@@ -7,7 +8,7 @@
 
 ## Vorab: Was Lovable bereits erledigt hat ✅
 
-Nicht nochmal anfassen — diese Schicht steht:
+diese Schicht steht vermutlich:
 
 ```
 src/lib/project/mappers/*.ts          — alle VM-Mapper extrahiert
@@ -58,6 +59,7 @@ DARF SICH NICHT ÄNDERN (Logik-Layer):
 ---
 
 ## Phase 1 — Token & Font-System
+
 **Dauer:** 1–2h | **Risiko:** Niedrig | **Blockiert:** Alle anderen Phasen
 
 ### 1.1 Geist-Font einbinden
@@ -361,9 +363,11 @@ colors: {
 ---
 
 ## Phase 2 — LageZone Hero-Upgrade
+
 **Dauer:** 1h | **Risiko:** Niedrig | **Datei:** `src/components/project/LageZone.tsx`
 
 ### Ziel
+
 Größere, luftigere Typografie. Atmosphären-Streifen mit Glow. Struktur unverändert.
 
 ### 2.1 Atmosphären-Streifen
@@ -426,6 +430,7 @@ In `src/index.css` ergänzen:
 Root-`<div>` von LageZone: `position: relative` hinzufügen.
 
 **`is-active`-Logik** in LageZone:
+
 ```tsx
 // Beispiel: aktiv wenn Pipeline läuft
 const isActive = project.pipeline?.isProcessing ?? false;
@@ -481,10 +486,13 @@ Neben den Signal-Chips (Konflikte / Entscheidungen / Review) die beiden Datum-Fe
 ---
 
 ## Phase 3 — Persistente AppSidebar
+
 **Dauer:** 2–3h | **Risiko:** Mittel | **Dateien:** NEU + `Index.tsx` + `ProjectScreen.tsx`
 
 ### Konzept (A+B aus Design-Chat)
+
 Die Sidebar ist auf **beiden** Screens präsent und 240px breit:
+
 - **Home:** Entity ist im Mittelpunkt (groß), Sidebar zeigt nur Projektliste
 - **Projekt-Detail:** Entity schrumpft in die Sidebar (Mini-Entity oben), Projektliste darunter
 
@@ -668,6 +676,7 @@ export const AppSidebar = ({
 ```
 
 CSS-Animation für Mini-Orb in `src/index.css`:
+
 ```css
 @keyframes entity-breathe {
   0%, 100% { transform: scale(1); filter: brightness(1); }
@@ -725,9 +734,11 @@ Falls der aktuelle Code noch VerlaufFeed links hat — korrigieren:
 ---
 
 ## Phase 4 — Home-Screen Layout
+
 **Dauer:** 2–3h | **Risiko:** Mittel | **Dateien:** `src/pages/Index.tsx`, NEU
 
 ### Ziel
+
 Dreispalten-Layout: Sidebar (240px) | Zentrum (Entity + Prompt) | Rechtes Panel (Impact + Pipeline)
 
 ### 4.1 Sidebar auf Home-Screen
@@ -926,6 +937,7 @@ export const ImpactPipelinePanel = () => {
 ---
 
 ## Phase 5 — Dialog-System: BatchReview + FaktDrill
+
 **Dauer:** 4–6h | **Risiko:** Hoch | **Wichtigste Phase**
 
 > ⚠️ **Strategie:** Neue Komponenten parallel zu bestehenden bauen. Erst wenn neue fertig und getestet: alten BoxRenderer + 8 Box-Komponenten entfernen.
@@ -958,6 +970,7 @@ In `src/index.css` ergänzen:
 ```
 
 Dialog-Overlay Background:
+
 ```css
 .dialog-backdrop {
   backdrop-filter: blur(28px) saturate(1.1);
@@ -972,6 +985,7 @@ Dialog-Overlay Background:
 Verwendet **dieselbe `useDialog()`-Infrastruktur** wie DialogOverlay. Kein neuer Context.
 
 **Layout:**
+
 ```
 SessionHeader
   ● Review · [Dateiname] · "N Erkenntnisse · M Konflikte · K Lücken" | N/Total | esc
@@ -985,6 +999,7 @@ CommitBar
 ```
 
 **Type-Chips** (Klassen: `chip`, klein, mono, uppercase):
+
 ```
 TERMIN · ENTSCHEIDUNG · KONFLIKT · STAKEHOLDER · LÜCKE · DOKUMENT
 ```
@@ -1016,6 +1031,7 @@ TERMIN · ENTSCHEIDUNG · KONFLIKT · STAKEHOLDER · LÜCKE · DOKUMENT
 ```
 
 **CommitBar-Logik:**
+
 ```ts
 const { session, commitBox } = useDialog();
 const ready = session.boxes.filter(b => END_STATES.includes(b.state)).length;
@@ -1024,6 +1040,7 @@ const isAllReady = open === 0;
 ```
 
 **CommitButton Glow** wenn alle bereit:
+
 ```css
 .commit-btn-ready {
   box-shadow: 0 0 0 6px rgba(107,148,255,.18),
@@ -1033,6 +1050,7 @@ const isAllReady = open === 0;
 ```
 
 **SessionHeader:**
+
 ```tsx
 <header>
   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -1061,6 +1079,7 @@ const isAllReady = open === 0;
 Öffnet wenn `session.boxes.length === 1`. Vollfläche, App-Theme geerbt (kein forced dark).
 
 **Header:**
+
 ```tsx
 <header>
   <button className="btn btn--ghost">← Handlungsbedarf</button>
@@ -1075,6 +1094,7 @@ const isAllReady = open === 0;
 ```
 
 **Alert-Banner:**
+
 ```tsx
 <div style={{
   padding: '14px 18px',
@@ -1096,6 +1116,7 @@ const isAllReady = open === 0;
 ```
 
 **Zwei-Quellen-Gegenüberstellung:**
+
 ```tsx
 <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 16, marginTop: 24 }}>
   {/* QUELLE A */}
@@ -1157,6 +1178,7 @@ const isAllReady = open === 0;
 ```
 
 **"Was stimmt?" — 3 Entscheidungs-Tiles:**
+
 ```tsx
 <div style={{ marginTop: 28 }}>
   <div className="t-small ink-3" style={{ marginBottom: 12 }}>Was stimmt?</div>
@@ -1202,6 +1224,7 @@ const isAllReady = open === 0;
 ```
 
 **Bottom-Leiste:**
+
 ```tsx
 <footer style={{
   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -1310,6 +1333,7 @@ return null;
 ```
 
 Beide Overlays erhalten `data-dialog` Attribut für Token-Mapping:
+
 ```tsx
 <div data-dialog style={{ ... }}>
 ```
@@ -1329,6 +1353,7 @@ src/components/dialog/boxes/ZuordnungsBox.tsx → löschen
 ```
 
 **Verify Phase 5:**
+
 1. Datei ablegen → BatchReview öffnet sich, erbt App-Theme (Tag = hell, Nacht = dunkel)
 2. Konflikt-Row: amber Stripe, 3 inline Chips, "Details ▲" expandiert zu Quellen-Cards
 3. Lücke-Row: Suggestion-Chips aus Session-Daten sichtbar
@@ -1343,6 +1368,7 @@ src/components/dialog/boxes/ZuordnungsBox.tsx → löschen
 ---
 
 ## Phase 6 — AssetOrbit (Nice-to-have, nach Phase 5)
+
 **Dauer:** 2–3h | **Risiko:** Niedrig | **Datei:** `src/components/entity/AssetOrbit.tsx`
 
 Visualisiert Assets die noch nicht committed sind, als orbitierende Chips um die Entität.
@@ -1351,6 +1377,7 @@ Visualisiert Assets die noch nicht committed sind, als orbitierende Chips um die
 **Daten:** Assets mit `status IN ('parsing', 'understanding', 'review-ready', 'failed')` AND `committed_at IS NULL`.
 
 **Orbit-Spec:**
+
 ```ts
 const ORBIT_ARC   = 1.25 * Math.PI;   // 225°
 const ORBIT_START = -Math.PI / 2 - ORBIT_ARC / 2;
@@ -1364,6 +1391,7 @@ const opacity = 1 - (item.ageRing ?? 0) * 0.45;
 ```
 
 **Chip-Spec:**
+
 ```
 parsing:       Gestrichelter Rand (border-dashed), ink-3
 understanding: Rotierender Ring-Spinner, border-t-transparent
@@ -1380,6 +1408,7 @@ Jeder Chip zeigt: `[TYPE] Name · vor X min ●`
 ## Mapping-Korrekturen: Was stimmt, was nicht
 
 ### ✅ Korrekt implementieren (aus Screenshots + ZIP bestätigt):
+
 ```
 ✓ 240px Sidebar auf BEIDEN Screens — persistent (nicht nur Projekt-Detail)
 ✓ Mini-Entity OBEN in Sidebar auf Projekt-Detail (schrumpfender Orb = Spatial-Continuity)
@@ -1397,6 +1426,7 @@ Jeder Chip zeigt: `[TYPE] Name · vor X min ●`
 ```
 
 ### ❌ Nicht implementieren (war im alten Plan falsch):
+
 ```
 ✗ .dark CSS-Klasse für Themes — stattdessen: data-theme="day"/"night" Attribut
 ✗ HSL-Token-Format — stattdessen: Hex-Werte
@@ -1408,6 +1438,7 @@ Jeder Chip zeigt: `[TYPE] Name · vor X min ●`
 ```
 
 ### ✅ Was BEHALTEN wird:
+
 ```
 ✓ HandlungsbedarfList Mode-Farben (violet/amber/emerald/cyan) — nicht überschreiben
 ✓ VerlaufFeed Filter-Tabs
@@ -1431,6 +1462,7 @@ NIEMALS zwei Phasen gleichzeitig offen lassen.
 ## Stopp-Bedingungen
 
 Agent MUSS stoppen und fragen wenn:
+
 - Eine Datei in `src/lib/` (außer Format-Dateien) geändert werden soll
 - `ProjectViewModel`-Interface geändert werden soll
 - Supabase-Schema oder Edge Functions betroffen wären
