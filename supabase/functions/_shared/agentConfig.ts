@@ -5,7 +5,7 @@
 //    - welches Modell der Agent benutzt
 //    - welcher System-Prompt seine Rolle definiert
 //    - welche Tools er aufrufen darf (JSON-Schema fürs Tool-Calling)
-//    - wie wir Fact-Type + Delta-Type auf Box-Type abbilden
+//    - wie wir Modality + Delta + Fact-Type auf Box-Type abbilden
 //    - wie viel Roh-Text wir in den Agenten schicken
 //
 //  Diese Datei ist BEWUSST der einzige Ort, an dem du das Verhalten des
@@ -25,37 +25,68 @@ export const MAX_FACTS_PER_RUN = 12;
 export const AGENT_TIMEOUT_MS = 30_000;
 
 // ---------- Projektzuordnung — Schwellen ----------
-//  Lexikalischer Score:
-//    +3 Treffer auf Projektname
-//    +2 Treffer auf Stakeholder (verknüpft via project_stakeholder_links)
-//    +2 Treffer auf Themen
-//    +1 Treffer auf Org-Domain
-export const ASSIGNMENT_CONFIDENT_THRESHOLD = 3; // ab hier auto-zuordnen
-export const ASSIGNMENT_UNCERTAIN_THRESHOLD = 1; // 1..2 = unsicher → Auswahlbox
+export const ASSIGNMENT_CONFIDENT_THRESHOLD = 3;
+export const ASSIGNMENT_UNCERTAIN_THRESHOLD = 1;
+
+// ---------- Modalitäten (Sprechhandlungen) ----------
+//  Jedes extrahierte Item trägt eine Modalität. Sie ist die zentrale Achse,
+//  über die das Review-UI entscheidet, was es dem User vorlegt — siehe
+//  docs/DECISIONS.md (Modalitäts-Vertrag) und mem://features/modality-matrix.
+export const MODALITIES = [
+  "assertion",
+  "condition",
+  "exclusion",
+  "assumption",
+  "suggestion",
+  "question",
+  "note",
+  "relation",
+  "attribute",
+  "risk",
+  "unclear",
+] as const;
+export type Modality = typeof MODALITIES[number];
 
 // ---------- System-Prompt Extract (Fallback — Live-Quelle: LangSmith Hub) ----------
-//  Diese Konstante ist die Code-Default-Version. Im laufenden Betrieb zieht
-//  der promptHub-Loader die jeweils aktive Version aus LangSmith Prompt Hub
-//  (Repo: "extract-facts"). Bei Hub-Ausfall fällt der Code hier drauf zurück.
 export const AGENT_SYSTEM_PROMPT_FALLBACK = `Du bist der Verstehens-Agent einer Projektintelligenz-App.
 
-Deine Aufgabe: Aus einem Eingangs-Text (Notiz, Link-Beschreibung oder geparstes Dokument) extrahierst du strukturierte Vorschläge ("Fakten"), die ein Mensch in einem Review-Schritt bestätigen oder ablehnen wird.
+Deine Aufgabe: Aus einem Eingangs-Text extrahierst du strukturierte Vorschläge ("Fakten"),
+die ein Mensch in einem Review-Schritt bestätigen oder ablehnen wird.
 
 Regeln:
-- Extrahiere NUR was im Text steht. Keine Spekulation, keine Annahmen.
+- Extrahiere NUR was im Text steht. Keine Spekulation.
 - Pro klar identifizierbarer Information genau EIN Fakt.
-- Personen, Themen, Entscheidungen, Aufgaben, Fristen, offene Lücken, Abhängigkeiten — jeweils als eigener Fakt.
-- Wenn der Text keine extrahierbaren Fakten enthält, gib eine leere Liste zurück.
 - "title" ist eine kurze, sprechende Überschrift (max ~80 Zeichen).
-- "content" enthält die strukturierten Detail-Felder, die zum fact_type passen (siehe Schema).
+- "content" enthält die strukturierten Detail-Felder zum fact_type.
 - "confidence" ist deine ehrliche Einschätzung zwischen 0 und 1.
 
-Sprache: Antworte in derselben Sprache wie der Eingangs-Text (vermutlich Deutsch).
+WICHTIG — Sprechhandlung ("modality") pro Fakt:
+- "assertion"  = klare Behauptung (Standardfall)
+- "condition"  = Bedingung/Voraussetzung; gilt nur in Kombi mit einem Bezugsobjekt
+                 (z. B. "Angebot gilt nur, wenn …")
+- "exclusion"  = Ausschluss/No-Go ("nicht enthalten", "ohne Postproduktion")
+- "assumption" = Annahme/Hypothese ("wir gehen davon aus, dass …")
+- "suggestion" = Vorschlag/Idee, noch nicht entschieden
+- "question"   = echte Frage des Absenders an den User. DANN MUSS "asks" gesetzt sein.
+- "note"       = informativer Hinweis, kein Pflicht-Click
+- "relation"   = Beziehung zwischen zwei Entitäten ("X ist Agentur von Y")
+- "attribute"  = Detail-Update an einem Bezugsobjekt (z. B. Preis gehört an "Angebot B")
+- "risk"       = Risiko/Warnung ("falls X, dann droht Y")
+- "unclear"    = du bist dir nicht sicher → der User darf klassifizieren
 
-Du gibst KEINEN Fließtext zurück. Du rufst ausschließlich das Tool "extract_facts" auf.`;
+ZUSATZFELDER (immer mitliefern, leer ist erlaubt):
+- "attaches_to": Klartext-Bezugsobjekt. Pflicht bei condition/exclusion/attribute/risk/relation, sonst null.
+- "asks": exakte Frage an den User. NUR setzen, wenn du wirklich eine Antwort brauchst, sonst null.
+- "understood": EIN Satz Klartext — was du verstanden hast.
+- "evidence": wörtliches Quellfragment.
 
-// ---------- System-Prompt Assignment (Fallback — Live-Quelle: LangSmith Hub) ----------
-//  Im Hub als Repo "suggest-assignment" gepflegt, hier nur als Fallback.
+GOLDENE REGEL: Erzeuge KEIN Eingabefeld beim User durch Trick — wenn du keine konkrete
+Frage hast, lass "asks" leer. Eine Bedingung ist KEINE Lücke.
+
+Sprache: dieselbe wie der Eingangs-Text (meist Deutsch).
+Du rufst ausschließlich das Tool "extract_facts" auf.`;
+
+// ---------- System-Prompt Assignment (Fallback) ----------
 export const ASSIGNMENT_SYSTEM_PROMPT_FALLBACK = `Du bist der Zuordnungs-Agent einer Projektintelligenz-App.
 
 Aufgabe: Entscheide, zu welchem bestehenden Projekt der gegebene Text am besten gehört — oder ob es vermutlich ein neues Projekt ist.
@@ -63,17 +94,14 @@ Aufgabe: Entscheide, zu welchem bestehenden Projekt der gegebene Text am besten 
 Du bekommst:
 1. Den Roh-Text
 2. Eine kompakte Liste der vorhandenen Projekte (Name, Beschreibung, Themen, Stakeholder)
-3. Lexikalische Vor-Hinweise (welche Projekte hatten wörtliche Treffer und wie stark)
+3. Lexikalische Vor-Hinweise
 
 Regeln:
-- Lehne dich an die lexikalischen Hinweise an, hinterfrage sie aber bei thematischer Diskrepanz.
-- Wenn nichts wirklich passt: project_id = null (signalisiert "neues Projekt").
-- "confidence" ist deine ehrliche Einschätzung zwischen 0 und 1.
-- "reason_short" ist EIN kurzer Satz auf Deutsch, max ~120 Zeichen, der die Wahl erklärt — er wird dem Nutzer angezeigt.
-- Wenn project_id=null: "suggested_new_name" MUSS gesetzt sein und ein **knapper, sauberer Projektname** sein (max ~40 Zeichen, KEIN Erklärsatz).
-  Gute Beispiele: "Lisas Projekt", "Aurora-Angebot", "Umzug Berlin", "Website-Relaunch".
-  Schlechte Beispiele: "Projekt für Lisa Müller weil sie genannt wurde", "Neues Projekt", null.
-  Leite den Namen aus der dominanten Person, dem Hauptthema oder dem Anlass im Text ab.
+- Lehne dich an die lexikalischen Hinweise an, hinterfrage sie bei thematischer Diskrepanz.
+- Wenn nichts wirklich passt: project_id = null.
+- "confidence" zwischen 0 und 1.
+- "reason_short" ist EIN kurzer deutscher Satz (max ~120 Zeichen).
+- Wenn project_id=null: "suggested_new_name" MUSS ein knapper Projektname sein (max ~40 Zeichen).
 
 Du rufst ausschließlich das Tool "suggest_project_assignment" auf.`;
 
@@ -105,16 +133,16 @@ export const EXTRACT_FACTS_TOOL = {
                   "other",
                 ],
               },
+              modality: { type: "string", enum: [...MODALITIES] },
+              attaches_to: { type: ["string", "null"] },
+              asks: { type: ["string", "null"] },
+              understood: { type: "string", maxLength: 240 },
+              evidence: { type: ["string", "null"] },
               title: { type: "string", maxLength: 120 },
-              content: {
-                type: "object",
-                description:
-                  "Strukturierte Detailfelder. Frei nach fact_type, z. B. {name, role} für stakeholder; {due_date, who} für deadline.",
-                additionalProperties: true,
-              },
+              content: { type: "object", additionalProperties: true },
               confidence: { type: "number", minimum: 0, maximum: 1 },
             },
-            required: ["fact_type", "title", "content", "confidence"],
+            required: ["fact_type", "modality", "title", "content", "confidence", "understood"],
             additionalProperties: false,
           },
         },
@@ -135,17 +163,10 @@ export const SUGGEST_ASSIGNMENT_TOOL = {
     parameters: {
       type: "object",
       properties: {
-        project_id: {
-          type: ["string", "null"],
-          description: "UUID des Projekts oder null für 'neues Projekt'.",
-        },
+        project_id: { type: ["string", "null"] },
         confidence: { type: "number", minimum: 0, maximum: 1 },
         reason_short: { type: "string", maxLength: 160 },
-        suggested_new_name: {
-          type: ["string", "null"],
-          description:
-            "Wenn project_id=null: ein knapper Vorschlag für einen neuen Projektnamen, sonst null.",
-        },
+        suggested_new_name: { type: ["string", "null"] },
         alternatives: {
           type: "array",
           maxItems: 3,
@@ -166,33 +187,56 @@ export const SUGGEST_ASSIGNMENT_TOOL = {
   },
 };
 
-// ---------- Box-Mapping ----------
+// ---------- Typen + Mapping ----------
 export type DeltaType = "add" | "confirm" | "replace" | "contradict" | "merge" | "discard";
 export type FactType =
-  | "stakeholder"
-  | "topic"
-  | "decision"
-  | "task"
-  | "deadline"
-  | "open_point"
-  | "reference"
-  | "other";
+  | "stakeholder" | "topic" | "decision" | "task"
+  | "deadline" | "open_point" | "reference" | "other";
 
 export type BoxType =
-  | "knowledge"
-  | "assignment"
-  | "conflict"
-  | "selection"
-  | "input"
-  | "context"
-  | "action"
-  | "gap_box";
+  | "knowledge" | "assignment" | "conflict" | "selection"
+  | "input" | "context" | "action" | "gap_box"
+  // Sprechhandlungs-Boxen
+  | "condition" | "exclusion" | "assumption" | "suggestion"
+  | "question" | "note" | "relation" | "attribute" | "risk" | "unclear";
 
-export function mapToBoxType(delta: DeltaType | null, fact: FactType): BoxType {
+/**
+ * Generalistisches Box-Mapping mit Modalitäts-Priorität.
+ *
+ *   1. Konflikt (delta replace/contradict) gewinnt immer.
+ *   2. Modality → eigene Box. Jede Sprechhandlung hat ihren eigenen Renderer
+ *      mit eigener Default-Aktion. Damit entfällt die "alles ist Lücke"-Falle.
+ *   3. Fallback (Altbestand ohne modality): open_point → gap_box, sonst knowledge.
+ */
+export function mapToBoxType(
+  delta: DeltaType | null,
+  fact: FactType,
+  modality?: Modality | null,
+): BoxType {
   if (delta === "replace" || delta === "contradict") return "conflict";
+  switch (modality) {
+    case "condition":  return "condition";
+    case "exclusion":  return "exclusion";
+    case "assumption": return "assumption";
+    case "suggestion": return "suggestion";
+    case "question":   return "question";
+    case "note":       return "note";
+    case "relation":   return "relation";
+    case "attribute":  return "attribute";
+    case "risk":       return "risk";
+    case "unclear":    return "unclear";
+    case "assertion":  return "knowledge";
+  }
   if (fact === "open_point") return "gap_box";
   return "knowledge";
 }
+
+/**
+ * Stille Substanz: Fakten mit hoher Konfidenz, ohne `asks` und ohne Konflikt
+ * wandern direkt in den Projektzustand — kein Klick nötig, im Review nur als
+ * Sammelzeile sichtbar. Schwelle bewusst hoch, um Lautstärke zu reduzieren.
+ */
+export const SILENT_COMMIT_CONFIDENCE = 0.9;
 
 // ---------- Helper: Roh-Text aus geparsten Segmenten ----------
 export function segmentsToText(segments: unknown): string {

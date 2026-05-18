@@ -1,12 +1,35 @@
+// =============================================================================
+//  Dialog-Typen — Sprechhandlungen statt Inhaltstypen.
+// -----------------------------------------------------------------------------
+//  Box-Typen sind die UI-Übersetzung der `modality`, die die Verstehens-Pipeline
+//  ausliefert. Jede Modalität hat in der Renderer-Matrix (ReviewRow.tsx) eine
+//  eigene Default-Aktion und Aktionsleiste. Eingabefelder gibt es NUR, wenn die
+//  KI explizit ein `asks` setzt — sonst keine "Wert eingeben"-Sackgasse.
+//
+//  Siehe docs/DECISIONS.md (Modalitäts-Vertrag) und mem://features/modality-matrix.
+// =============================================================================
+
 export type BoxType =
-  | "wissen"
-  | "zuordnung"
-  | "konflikt"
-  | "gap"
-  | "auswahl"
-  | "eingabe"
-  | "kontext"
-  | "aktion";
+  // Klassisch (Inhalt + Steuerung)
+  | "wissen"        // assertion
+  | "zuordnung"     // Projekt-Gate
+  | "konflikt"      // widersprüchlich
+  | "gap"           // Lücke mit Eingabe
+  | "auswahl"       // selection
+  | "eingabe"       // input
+  | "kontext"       // context
+  | "aktion"        // action
+  // Sprechhandlungen (neu, siehe DECISIONS modality-matrix)
+  | "bedingung"     // condition — qualifiziert anderen Fakt
+  | "ausschluss"    // exclusion — "nicht enthalten"
+  | "annahme"       // assumption — Hypothese
+  | "vorschlag"     // suggestion — Option, noch nicht entschieden
+  | "frage"         // question — echte Frage an User (mit asks)
+  | "notiz"         // note — informativ, kein Pflicht-Click
+  | "beziehung"     // relation — Kante zwischen Entitäten
+  | "attribut"      // attribute — Update an Bezugsobjekt
+  | "risiko"        // risk — Warnung
+  | "unklar";       // unclear — KI weiß nicht, fragt User um Klassifikation
 
 export type BoxState =
   | "vorgeschlagen"

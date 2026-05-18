@@ -9,10 +9,12 @@
 import {
   ASSIGNMENT_CONFIDENT_THRESHOLD,
   ASSIGNMENT_UNCERTAIN_THRESHOLD,
+  SILENT_COMMIT_CONFIDENCE,
   mapToBoxType,
   segmentsToText,
   type DeltaType,
   type FactType,
+  type Modality,
 } from "../_shared/agentConfig.ts";
 import {
   callExtractFacts,
@@ -296,7 +298,16 @@ export async function runUnderstand(args: {
       source_id,
       parsed_document_id,
       fact_type: f.fact_type,
-      content: { title: f.title, ...f.content },
+      // Modalitäts-Vertrag wird in content mitgeschrieben — DB-Schema unverändert.
+      content: {
+        title: f.title,
+        modality: f.modality ?? "assertion",
+        attaches_to: f.attaches_to ?? null,
+        asks: f.asks ?? null,
+        understood: f.understood ?? f.title,
+        evidence: f.evidence ?? null,
+        ...f.content,
+      },
       confidence: f.confidence,
       delta_type,
       against_fact_id,
@@ -400,12 +411,39 @@ export async function runUnderstand(args: {
     });
   }
 
+  // Stille Substanz: hochkonfidente, fragelose, konfliktfreie Assertions wandern
+  // direkt als bestätigt rein — keine Pflicht-Box. Drift-Telemetrie sammelt
+  // "unclear"-Items für späteren Schema-Vorschlag.
+  let silentCount = 0;
+  const unclearSamples: Array<{ title: string; understood: string | null }> = [];
+
   insertedFacts!.forEach((pf, idx) => {
     const orig = extracted[idx];
+    const modality: Modality | null = (orig.modality as Modality) ?? null;
     const box_type = mapToBoxType(
       (pf.delta_type ?? null) as DeltaType | null,
       pf.fact_type as FactType,
+      modality,
     );
+
+    const isConflict = box_type === "conflict";
+    const hasAsks = !!(orig.asks && orig.asks.trim().length > 0);
+    const canSilent =
+      !isConflict &&
+      !hasAsks &&
+      (orig.confidence ?? 0) >= SILENT_COMMIT_CONFIDENCE &&
+      modality !== "unclear" &&
+      modality !== "question";
+
+    if (canSilent) {
+      silentCount += 1;
+      return; // keine Box
+    }
+
+    if (modality === "unclear") {
+      unclearSamples.push({ title: orig.title, understood: orig.understood ?? null });
+    }
+
     caseRows.push({
       user_id: asset.user_id,
       session_id: session!.id,
@@ -419,22 +457,69 @@ export async function runUnderstand(args: {
         fact_type: orig.fact_type,
         content: orig.content,
         summary: summarizeFact(orig.fact_type, orig.content),
+        // Modalitäts-Vertrag fürs Frontend.
+        modality: modality ?? "assertion",
+        attaches_to: orig.attaches_to ?? null,
+        asks: orig.asks ?? null,
+        understood: orig.understood ?? null,
+        evidence: orig.evidence ?? null,
       },
     });
   });
 
+  if (silentCount > 0) {
+    caseRows.push({
+      user_id: asset.user_id,
+      session_id: session!.id,
+      proposed_fact_id: null,
+      box_type: "note",
+      box_state: "confirmed",
+      title: `${silentCount} Punkte still übernommen`,
+      description: "Hochkonfidente Aussagen, keine Frage offen — direkt in den Projektzustand.",
+      priority: 0,
+      context: { kind: "silent_substanz", count: silentCount },
+    });
+  }
+
+  if (unclearSamples.length > 0) {
+    log.warn("modality.unclear", "agent lieferte unclear-items", {
+      count: unclearSamples.length,
+      samples: unclearSamples.slice(0, 5),
+    });
+  }
+
   const { error: rcErr } = await admin.from("review_cases").insert(caseRows);
   if (rcErr) throw new Error(`review_cases: ${rcErr.message}`);
-  log.stage("review_cases.inserted", "cases written", { count: caseRows.length, session_id: session!.id });
+  log.stage("review_cases.inserted", "cases written", {
+    count: caseRows.length,
+    silent: silentCount,
+    session_id: session!.id,
+  });
+
+  // total_boxes nachziehen: pending Boxen sind caseRows ohne die Silent-Sammelzeile.
+  const pendingBoxes = caseRows.filter((r) => r.box_state === "proposed").length;
+  await admin
+    .from("dialog_sessions")
+    .update({ total_boxes: pendingBoxes, resolved_boxes: silentCount > 0 ? 1 : 0 })
+    .eq("id", session!.id);
 
   // 8. Status: review_ready
   await setStatus(admin, asset_id, "review_ready", null);
-  log.stage("done", "review_ready", { facts: insertedFacts!.length, assignment_mode: assignment.mode });
+  log.stage("done", "review_ready", {
+    facts: insertedFacts!.length,
+    pending: pendingBoxes,
+    silent: silentCount,
+    unclear: unclearSamples.length,
+    assignment_mode: assignment.mode,
+  });
 
   return {
     ok: true,
     body: {
       facts: insertedFacts!.length,
+      pending: pendingBoxes,
+      silent: silentCount,
+      unclear: unclearSamples.length,
       session_id: session!.id,
       assignment_mode: assignment.mode,
     },

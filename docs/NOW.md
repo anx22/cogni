@@ -100,3 +100,14 @@ Alle vier folgen demselben Vertrag: pure `detectXPure(fresh, projectFacts)` + fa
 - **2026-05-14 — Welle B komplett** B-W1 Linker (Graph-Match) · B-W2 Conflict · B-W3 Gap · B-W4 Dependency live, fail-soft, idempotent, parallel via `Promise.all`. commit-fact-Suite 36/36 grün. Detektor-Footprint Sandbox: Reels-Projekt 1 Dep + 1 Gap, übrige zu klein für Treffer (kein Bug, Datenmangel).
 - **2026-05-14 — Welle C Godfile-Eliminierung** commit-fact (-603 LOC), intake-understand (-505 LOC), projectViewModel (-307 LOC). Vitest 60/60, Deno 14/14.
 - **2026-05-14 — A-Tier + B-Tier abgeschlossen** strictNullChecks, useProject 3-Schichten, JSONB-Trigger, Logger 16/16, withErrorBoundary auf allen 16 Functions, railway-admin modular (Router 72 LOC + 6 Handler). Master-Checklist 8/10 grün, 2 LOC-Budgets dokumentiert akzeptiert.
+
+---
+
+## 2026-05-18 — Modalitäts-Vertrag (siehe DECISIONS)
+
+Pipeline + UI auf Sprechhandlungs-Modalität umgestellt. `box_type`-Enum um 10 Werte erweitert (additiv). `ReviewRow.tsx` rendert pro Modalität eigene Aktion (Übernehmen / Bezug ändern / Verwerfen). Eingabefeld nur bei `asks`. Stille Substanz ab `confidence ≥ 0.9` ohne Pflicht-Click. `modality=unclear` wird telemetriert.
+
+**Backlog-Loops (Modalität):**
+- Korrektur-Schleife: User-Verwerfen/Bezug-Wechsel in `corrections` mit Original-Modalität speichern → in Klassifier zurückspeisen.
+- Reference-Token auflösen: heute Klartext-String, später Mini-Token mit Quell-Fakt-Verknüpfung.
+- LangSmith-Prompt `extract-facts` Live-Version mit Modalitäts-Block neu publishen (Code-Fallback steckt bereits drin).

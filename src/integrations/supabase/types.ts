@@ -1553,6 +1553,16 @@ export type Database = {
         | "context"
         | "action"
         | "gap_box"
+        | "condition"
+        | "exclusion"
+        | "assumption"
+        | "suggestion"
+        | "question"
+        | "note"
+        | "relation"
+        | "attribute"
+        | "risk"
+        | "unclear"
       contradiction_type: "deadline" | "decision" | "version" | "assignment"
       decision_status: "active" | "superseded" | "revoked" | "draft"
       delta_type:
@@ -1729,6 +1739,16 @@ export const Constants = {
         "context",
         "action",
         "gap_box",
+        "condition",
+        "exclusion",
+        "assumption",
+        "suggestion",
+        "question",
+        "note",
+        "relation",
+        "attribute",
+        "risk",
+        "unclear",
       ],
       contradiction_type: ["deadline", "decision", "version", "assignment"],
       decision_status: ["active", "superseded", "revoked", "draft"],

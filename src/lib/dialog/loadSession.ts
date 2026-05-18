@@ -141,14 +141,19 @@ export async function loadDialogSession(sessionId: string): Promise<DialogSessio
     const uiType = c.box_type === "assignment" ? "zuordnung" : dbBoxTypeToUI(c.box_type);
     const state = DB_TO_UI_STATE[c.box_state] ?? "vorgeschlagen";
 
+    // Modalitäts-Vertrag (server geschrieben; bei Alt-Cases leer → defaults)
+    const modality = (ctx.modality as string | undefined) ?? null;
+    const attachesTo = (ctx.attaches_to as string | undefined) ?? null;
+    const asks = (ctx.asks as string | undefined) ?? null;
+    const understood = (ctx.understood as string | undefined) ?? null;
+    const evidence = (ctx.evidence as string | undefined) ?? null;
+
     if (c.box_type === "assignment") {
       const rawCandidates = (ctx.candidates ?? []) as ProjectLite[];
-      // Empfehlung: explizit gesetzt > erster Kandidat (bei mode=auto) > nichts
       const recommended =
         (ctx.recommended_project_id as string | undefined) ??
         ((ctx.assignment_mode as string) === "auto" ? rawCandidates[0]?.project_id : undefined) ??
         null;
-      // Kandidaten mit Namen anreichern (Backend liefert manchmal nur IDs).
       const enrichedCandidates: ProjectLite[] = rawCandidates.map((c) => ({
         ...c,
         name: c.name || allProjects.find((p) => p.project_id === c.project_id)?.name || c.project_id,
@@ -172,10 +177,25 @@ export async function loadDialogSession(sessionId: string): Promise<DialogSessio
       };
     }
 
-    // Klartext-Felder aus Context oder berechnet (kein Roh-JSON ans UI)
     const summary =
       (ctx.summary as string | undefined) ?? buildFactSummary(factType, content);
     const details = buildFactDetails(factType, content);
+
+    // Stille-Substanz Sammelzeile (Backend setzt context.kind = "silent_substanz")
+    if (ctx.kind === "silent_substanz") {
+      return {
+        id: c.id,
+        type: "notiz",
+        state,
+        title: c.title ?? "Still übernommen",
+        payload: {
+          kind: "silent_substanz",
+          count: ctx.count ?? 0,
+          sachverhalt: c.description ?? null,
+          __reviewCaseId: c.id,
+        },
+      };
+    }
 
     if (c.box_type === "conflict") {
       return {
@@ -188,6 +208,10 @@ export async function loadDialogSession(sessionId: string): Promise<DialogSessio
           faktA: (ctx.fact_a as string) ?? (content.fact_a as string) ?? "",
           faktB: (ctx.fact_b as string) ?? (content.fact_b as string) ?? "",
           against_fact_id: (ctx.against_fact_id as string) ?? null,
+          modality,
+          attaches_to: attachesTo,
+          understood,
+          evidence,
           __reviewCaseId: c.id,
         },
       };
@@ -212,12 +236,16 @@ export async function loadDialogSession(sessionId: string): Promise<DialogSessio
             (typeof content.valid_until === "string"
               ? `Gültig bis ${content.valid_until}`
               : undefined),
+          asks,
+          understood,
           __reviewCaseId: c.id,
         },
       };
     }
 
-    // knowledge / context / selection / input / action — gemeinsamer Renderer
+    // Alle anderen Box-Typen (inkl. neue Modalitäts-Boxen) teilen sich diesen
+    // Renderer; ReviewRow entscheidet anhand `type` + payload.asks, ob ein
+    // Eingabefeld nötig ist.
     return {
       id: c.id,
       type: uiType,
@@ -228,9 +256,13 @@ export async function loadDialogSession(sessionId: string): Promise<DialogSessio
         details,
         factType,
         content,
+        // Modalitäts-Vertrag — der Renderer liest direkt davon.
+        modality,
+        attaches_to: attachesTo,
+        asks,
+        understood,
+        evidence,
         quelle: factType ? `vorgeschlagen · ${factType}` : "vorgeschlagen",
-        // Felder für andere Box-Typen (Selection/Input) — Backend setzt sie
-        // bei Bedarf in ctx.options / ctx.placeholder etc.
         optionen: ctx.options,
         hinweis: ctx.hinweis,
         placeholder: ctx.placeholder,
