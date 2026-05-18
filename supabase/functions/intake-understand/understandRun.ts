@@ -9,10 +9,12 @@
 import {
   ASSIGNMENT_CONFIDENT_THRESHOLD,
   ASSIGNMENT_UNCERTAIN_THRESHOLD,
+  SILENT_COMMIT_CONFIDENCE,
   mapToBoxType,
   segmentsToText,
   type DeltaType,
   type FactType,
+  type Modality,
 } from "../_shared/agentConfig.ts";
 import {
   callExtractFacts,
@@ -296,7 +298,16 @@ export async function runUnderstand(args: {
       source_id,
       parsed_document_id,
       fact_type: f.fact_type,
-      content: { title: f.title, ...f.content },
+      // Modalitäts-Vertrag wird in content mitgeschrieben — DB-Schema unverändert.
+      content: {
+        title: f.title,
+        modality: f.modality ?? "assertion",
+        attaches_to: f.attaches_to ?? null,
+        asks: f.asks ?? null,
+        understood: f.understood ?? f.title,
+        evidence: f.evidence ?? null,
+        ...f.content,
+      },
       confidence: f.confidence,
       delta_type,
       against_fact_id,
