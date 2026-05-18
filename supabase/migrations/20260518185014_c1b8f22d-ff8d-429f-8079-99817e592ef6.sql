@@ -1,0 +1,10 @@
+ALTER TYPE public.box_type ADD VALUE IF NOT EXISTS 'condition';
+ALTER TYPE public.box_type ADD VALUE IF NOT EXISTS 'exclusion';
+ALTER TYPE public.box_type ADD VALUE IF NOT EXISTS 'assumption';
+ALTER TYPE public.box_type ADD VALUE IF NOT EXISTS 'suggestion';
+ALTER TYPE public.box_type ADD VALUE IF NOT EXISTS 'question';
+ALTER TYPE public.box_type ADD VALUE IF NOT EXISTS 'note';
+ALTER TYPE public.box_type ADD VALUE IF NOT EXISTS 'relation';
+ALTER TYPE public.box_type ADD VALUE IF NOT EXISTS 'attribute';
+ALTER TYPE public.box_type ADD VALUE IF NOT EXISTS 'risk';
+ALTER TYPE public.box_type ADD VALUE IF NOT EXISTS 'unclear';
