@@ -7,7 +7,7 @@ Updated: heute
 Produktintelligenz: PM-App mit Entität/Projekt/Overlay. Dunkel, glasartig, reduziert. Keine Dashboard-Ästhetik.
 Graphiti für Knowledge Graph (Phase 8). Supabase = kanonische Wahrheit. Unstructured = Parsing. Lovable AI Gateway = aktueller Verstehens-Agent (austauschbar via agentClient.ts).
 Kein Auto-Commit. Alles über Review. Jede Erkenntnis hat Quelle + Delta.
-Keine klassische Sidebar. Orientierung über Zustandswechsel.
+Persistente 240px-AppSidebar (Home + Projekt-Detail). Orientierung über Sidebar + Zustandswechsel.
 Live-Stimme unter dem Kern (EntityVoice) — keine Toasts/Banner für Intelligenz-Feedback.
 
 ## Memories
