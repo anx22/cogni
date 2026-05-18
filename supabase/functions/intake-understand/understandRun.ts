@@ -411,12 +411,39 @@ export async function runUnderstand(args: {
     });
   }
 
+  // Stille Substanz: hochkonfidente, fragelose, konfliktfreie Assertions wandern
+  // direkt als bestätigt rein — keine Pflicht-Box. Drift-Telemetrie sammelt
+  // "unclear"-Items für späteren Schema-Vorschlag.
+  let silentCount = 0;
+  const unclearSamples: Array<{ title: string; understood: string | null }> = [];
+
   insertedFacts!.forEach((pf, idx) => {
     const orig = extracted[idx];
+    const modality: Modality | null = (orig.modality as Modality) ?? null;
     const box_type = mapToBoxType(
       (pf.delta_type ?? null) as DeltaType | null,
       pf.fact_type as FactType,
+      modality,
     );
+
+    const isConflict = box_type === "conflict";
+    const hasAsks = !!(orig.asks && orig.asks.trim().length > 0);
+    const canSilent =
+      !isConflict &&
+      !hasAsks &&
+      (orig.confidence ?? 0) >= SILENT_COMMIT_CONFIDENCE &&
+      modality !== "unclear" &&
+      modality !== "question";
+
+    if (canSilent) {
+      silentCount += 1;
+      return; // keine Box
+    }
+
+    if (modality === "unclear") {
+      unclearSamples.push({ title: orig.title, understood: orig.understood ?? null });
+    }
+
     caseRows.push({
       user_id: asset.user_id,
       session_id: session!.id,
@@ -430,9 +457,36 @@ export async function runUnderstand(args: {
         fact_type: orig.fact_type,
         content: orig.content,
         summary: summarizeFact(orig.fact_type, orig.content),
+        // Modalitäts-Vertrag fürs Frontend.
+        modality: modality ?? "assertion",
+        attaches_to: orig.attaches_to ?? null,
+        asks: orig.asks ?? null,
+        understood: orig.understood ?? null,
+        evidence: orig.evidence ?? null,
       },
     });
   });
+
+  if (silentCount > 0) {
+    caseRows.push({
+      user_id: asset.user_id,
+      session_id: session!.id,
+      proposed_fact_id: null,
+      box_type: "note",
+      box_state: "confirmed",
+      title: `${silentCount} Punkte still übernommen`,
+      description: "Hochkonfidente Aussagen, keine Frage offen — direkt in den Projektzustand.",
+      priority: 0,
+      context: { kind: "silent_substanz", count: silentCount },
+    });
+  }
+
+  if (unclearSamples.length > 0) {
+    log.warn("modality.unclear", "agent lieferte unclear-items", {
+      count: unclearSamples.length,
+      samples: unclearSamples.slice(0, 5),
+    });
+  }
 
   const { error: rcErr } = await admin.from("review_cases").insert(caseRows);
   if (rcErr) throw new Error(`review_cases: ${rcErr.message}`);
