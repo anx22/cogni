@@ -1,15 +1,17 @@
-import { FileText, Layers } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { useDialog } from "@/components/dialog/DialogProvider";
 import { buildThemaSession, buildDokumentSession } from "@/lib/dialog/sessionFactories";
-import RoleHeader from "./shared/RoleHeader";
 import type { ThemaVM, DokumentVM } from "@/lib/project/types";
 
-type Thema = ThemaVM;
-type Dok = DokumentVM;
-
-const SubstanzSection = ({ themen, dokumente }: { themen: Thema[]; dokumente: Dok[] }) => {
+const SubstanzSection = ({
+  themen,
+  dokumente,
+}: {
+  themen: ThemaVM[];
+  dokumente: DokumentVM[];
+}) => {
   const { openDialog } = useDialog();
-  // Sortiert: neueste Dokumente zuerst (datum dd.mm.yyyy)
+
   const sortedDokumente = [...dokumente].sort((a, b) => {
     const toDate = (d: string) => {
       const [dd, mm, yyyy] = d.split(".");
@@ -19,73 +21,145 @@ const SubstanzSection = ({ themen, dokumente }: { themen: Thema[]; dokumente: Do
   });
 
   return (
-    <section className="px-8 md:px-12 lg:px-16 xl:px-20 py-16 bg-surface-0">
-      <div className="max-w-7xl mx-auto" style={{ display: "flex", flexDirection: "column", gap: 96 }}>
-        <RoleHeader role="substanz" title="Substanz" />
+    <section
+      className="bg-surface-0 border-t border-border-strong"
+      style={{ marginTop: 40, padding: "32px 56px 48px" }}
+    >
+      <header
+        className="flex items-baseline justify-between"
+        style={{ marginBottom: 22 }}
+      >
+        <h2
+          style={{
+            margin: 0,
+            fontSize: 18,
+            fontWeight: 500,
+            letterSpacing: "-.015em",
+            color: "var(--ink-2)",
+          }}
+        >
+          Substanz
+        </h2>
+        <span className="t-micro" style={{ color: "var(--ink-4)" }}>
+          Themen · Dokumente
+        </span>
+      </header>
 
-        {/* Dokumente — Quellenliste, kompakt, Hairline-Dividers */}
+      <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 36 }}>
+        {/* Themen */}
         <div>
-          <h3 className="t-micro text-muted-foreground mb-4 flex items-center gap-2">
-            <FileText className="w-3.5 h-3.5" /> Dokumente
-            <span className="ml-2 text-muted-foreground/50">{sortedDokumente.length}</span>
-          </h3>
-          <div className="divide-y divide-border-subtle/40">
-            {sortedDokumente.map((d) => (
+          <div className="t-micro" style={{ color: "var(--ink-3)", marginBottom: 12 }}>
+            Themen{" "}
+            <span className="mono tabular" style={{ marginLeft: 6, color: "var(--ink-4)" }}>
+              {themen.length}
+            </span>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8 }}>
+            {themen.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => openDialog(buildThemaSession(t))}
+                className="text-left group"
+                style={{
+                  padding: "12px 14px",
+                  borderRadius: 10,
+                  background: "var(--surface-2)",
+                  border: "1px solid var(--hair)",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                }}
+              >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontSize: 13.5,
+                      color: "var(--ink)",
+                      fontWeight: 500,
+                      letterSpacing: "-.005em",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {t.name}
+                  </div>
+                  <div
+                    className="mono tabular"
+                    style={{ marginTop: 4, fontSize: 11, color: "var(--ink-3)" }}
+                  >
+                    {t.entscheidungen}·{t.offenePunkte}·{t.dokumente}
+                  </div>
+                </div>
+                <ChevronRight
+                  className="shrink-0 transition-colors"
+                  style={{ width: 14, height: 14, color: "var(--ink-4)" }}
+                />
+              </button>
+            ))}
+            {themen.length === 0 && (
+              <p style={{ fontSize: 13, color: "var(--ink-3)", fontStyle: "italic" }}>
+                Noch keine Themen.
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Dokumente */}
+        <div>
+          <div className="t-micro" style={{ color: "var(--ink-3)", marginBottom: 12 }}>
+            Dokumente{" "}
+            <span className="mono tabular" style={{ marginLeft: 6, color: "var(--ink-4)" }}>
+              {sortedDokumente.length}
+            </span>
+          </div>
+          <div className="flex flex-col">
+            {sortedDokumente.map((d, i) => (
               <button
                 key={d.id}
                 type="button"
                 onClick={() => openDialog(buildDokumentSession(d))}
-                className="w-full flex items-center gap-4 px-1 py-2.5 hover:bg-surface-2/40 transition-colors text-left rounded-sm"
+                className="w-full flex items-center text-left"
+                style={{
+                  gap: 10,
+                  padding: "10px 4px",
+                  borderBottom:
+                    i === sortedDokumente.length - 1 ? "none" : "1px solid var(--hair)",
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                }}
               >
-                <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-mono w-10">{d.typ}</span>
-                <span className="text-sm text-foreground/95 flex-1 min-w-0 truncate">{d.name}</span>
-                {d.thema && (
-                  <span className="hidden md:inline text-[11px] text-muted-foreground">{d.thema}</span>
-                )}
-                <span className="text-[11px] text-muted-foreground">v{d.version}</span>
-                <span className="text-[11px] text-muted-foreground/70 font-mono">{d.datum}</span>
+                <span className="src shrink-0" style={{ width: 36 }}>
+                  {d.typ}
+                </span>
+                <span
+                  className="flex-1 min-w-0 truncate"
+                  style={{ fontSize: 13, color: "var(--ink)" }}
+                >
+                  {d.name}
+                </span>
+                <span
+                  className="mono tabular shrink-0"
+                  style={{ fontSize: 11, color: "var(--ink-3)" }}
+                >
+                  v{d.version}
+                </span>
+                <span
+                  className="mono tabular shrink-0"
+                  style={{ fontSize: 11, color: "var(--ink-3)" }}
+                >
+                  {d.datum}
+                </span>
               </button>
             ))}
-          </div>
-        </div>
-
-        {/* Themen — Drilldown-Einstiege, Karten, Räume zum Reingehen */}
-        <div>
-          <h3 className="t-micro text-muted-foreground mb-5 flex items-center gap-2">
-            <Layers className="w-3.5 h-3.5" /> Themen
-            <span className="ml-2 text-muted-foreground/50">{themen.length}</span>
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {themen.map((t) => {
-              const hasOpen = t.offenePunkte > 0;
-              return (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => openDialog(buildThemaSession(t))}
-                  className="group text-left rounded-xl border border-border-subtle bg-surface-2 shadow-card-glow hover:bg-surface-3 hover:border-border-strong hover:-translate-y-0.5 transition-all px-5 py-5"
-                >
-                  <div className="flex items-start justify-between gap-3 mb-2">
-                    <h4 className="text-base text-foreground font-medium flex items-center gap-2">
-                      {t.name}
-                      {hasOpen && (
-                        <span
-                          className="w-1.5 h-1.5 rounded-full bg-amber-400/80"
-                          title={`${t.offenePunkte} offene Punkte`}
-                        />
-                      )}
-                    </h4>
-                    <span className="text-[11px] text-muted-foreground/60 group-hover:text-foreground/90 transition-colors">→</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground leading-relaxed mb-4">{t.beschreibung}</p>
-                  <div className="flex gap-4 text-[11px] text-muted-foreground/70">
-                    <span>{t.entscheidungen} Entscheidungen</span>
-                    <span>{t.offenePunkte} offen</span>
-                    <span>{t.dokumente} Dokumente</span>
-                  </div>
-                </button>
-              );
-            })}
+            {sortedDokumente.length === 0 && (
+              <p style={{ fontSize: 13, color: "var(--ink-3)", fontStyle: "italic" }}>
+                Noch keine Dokumente.
+              </p>
+            )}
           </div>
         </div>
       </div>
