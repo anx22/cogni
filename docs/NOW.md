@@ -8,58 +8,64 @@
 
 ## Aktueller Sprint — UI-Overhaul v2 (Master in `./design-implementation-plan.md`)
 
+Mach ein Dokumentations Review und doublechecke, was alles umgesetzt ist und was nicht. komprimiere vergangenes und schreibe es in die richtigen doc files. Ziel ist design implementation plan loszuwerden und wieder in unsere standard doc architektur zu kommen mit der wir effizient arbeiten koennen
+
 Stand 2026-05-14. Vorbereitung + Phase 1 abgeschlossen. Master-Quelle: `docs/design-implementation-plan.md`. Prototyp-Referenz (Code + Screenshots): `docs/redesign/`.
 
-| Phase | Inhalt | Status |
-|---|---|---|
-| Vorber. | Prototyp & Screenshots nach `docs/redesign/`, Sprint-Block, History-Backup | ✅ |
-| 1 | Geist-Font, `[data-theme]`-Tokens (Hex), Utility-Klassen, Tailwind-Aliase, `data-theme="day"` am `<html>` | ✅ Tag, Vitest 60/60 |
-| 2 | LageZone Hero (44px Title, 24px Lage, Atmosphären-Stripe + Glow) | ✅ |
-| 3 | AppSidebar (240px) + Mini-Entity, ProjectScreen-Layout (Handlungsbedarf links / Verlauf rechts) | ✅ |
-| 4 | Home-Screen 3-spaltig: Sidebar · Entity+HomePrompt · ImpactPipelinePanel | ✅ Vitest 60/60, tsc clean |
-| 5 | Dialog V2 default: BatchReviewOverlay + FaktDrillOverlay, alte BoxRenderer/BoxFrame/BoxStateBadge + 8 Box-Komponenten gelöscht | ✅ Vitest 60/60 |
-| 6 | AssetOrbit (oberer Bogen 225°, Realtime auf assets+dialog_sessions, Klick auf review-ready öffnet Session) | ✅ |
-| 7a | Tag/Nacht-Toggle im AccountDrawer (`localStorage.cogniTheme`, Hydrate in App.tsx) | ✅ |
-| 7b | Mobile-Audit Projekt-Screen: `100dvh` + Body-Scroll-Lock + `overscroll-contain` auf inneren Container | ✅ |
-| 7c | Theme-Bridge: shadcn-HSL-Tokens (--background, --card, --primary, --border, --sidebar-*, ...) in `[data-theme="day"]` und `[data-theme="night"]` neu zugewiesen → alle ui/* Komponenten erben Day/Night automatisch. Overlay-Tints (`bg-black/80`) in dialog/sheet/drawer/alert-dialog auf `bg-[hsl(var(--background)/0.78)] backdrop-blur-xl`. Restharte Farben (ConfirmDestructive, FacePillCharacter) auf Tokens. | ✅ Vitest 60/60 |
-| — | Realtime-Channel-Kollision behoben: `useRealtimeTables` h\u00e4ngt automatisch `useId`-Suffix an | ✅ |
+| Phase   | Inhalt                                                                                                                                                                                                                                                                                                                                                                                                               | Status                     |
+| ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| Vorber. | Prototyp & Screenshots nach `docs/redesign/`, Sprint-Block, History-Backup                                                                                                                                                                                                                                                                                                                                           | ✅                         |
+| 1       | Geist-Font, `[data-theme]`-Tokens (Hex), Utility-Klassen, Tailwind-Aliase, `data-theme="day"` am `<html>`                                                                                                                                                                                                                                                                                                            | ✅ Tag, Vitest 60/60       |
+| 2       | LageZone Hero (44px Title, 24px Lage, Atmosphären-Stripe + Glow)                                                                                                                                                                                                                                                                                                                                                     | ✅                         |
+| 3       | AppSidebar (240px) + Mini-Entity, ProjectScreen-Layout (Handlungsbedarf links / Verlauf rechts)                                                                                                                                                                                                                                                                                                                      | ✅                         |
+| 4       | Home-Screen 3-spaltig: Sidebar · Entity+HomePrompt · ImpactPipelinePanel                                                                                                                                                                                                                                                                                                                                             | ✅ Vitest 60/60, tsc clean |
+| 5       | Dialog V2 default: BatchReviewOverlay + FaktDrillOverlay, alte BoxRenderer/BoxFrame/BoxStateBadge + 8 Box-Komponenten gelöscht                                                                                                                                                                                                                                                                                       | ✅ Vitest 60/60            |
+| 6       | AssetOrbit (oberer Bogen 225°, Realtime auf assets+dialog_sessions, Klick auf review-ready öffnet Session)                                                                                                                                                                                                                                                                                                           | ✅                         |
+| 7a      | Tag/Nacht-Toggle im AccountDrawer (`localStorage.cogniTheme`, Hydrate in App.tsx)                                                                                                                                                                                                                                                                                                                                    | ✅                         |
+| 7b      | Mobile-Audit Projekt-Screen: `100dvh` + Body-Scroll-Lock + `overscroll-contain` auf inneren Container                                                                                                                                                                                                                                                                                                                | ✅                         |
+| 7c      | Theme-Bridge: shadcn-HSL-Tokens (--background, --card, --primary, --border, --sidebar-_, ...) in `[data-theme="day"]` und `[data-theme="night"]` neu zugewiesen → alle ui/_ Komponenten erben Day/Night automatisch. Overlay-Tints (`bg-black/80`) in dialog/sheet/drawer/alert-dialog auf `bg-[hsl(var(--background)/0.78)] backdrop-blur-xl`. Restharte Farben (ConfirmDestructive, FacePillCharacter) auf Tokens. | ✅ Vitest 60/60            |
+| —       | Realtime-Channel-Kollision behoben: `useRealtimeTables` h\u00e4ngt automatisch `useId`-Suffix an                                                                                                                                                                                                                                                                                                                     | ✅                         |
 
 **Stopp-Bedingungen:** keine `src/lib/**`-Edits außer Format-Dateien; `ProjectViewModel`-Vertrag unberührt; Schema/Edge Functions tabu; alte Boxen erst nach Phase-5-Verify löschen; `data-theme` darf nicht durch `.dark` ersetzt werden.
 
 **Welle B / Loops (parallel):**
+
 1. Live-Smoke Welle B ✅ in „Hase & Söhne Couture" — siehe DECISIONS.
 2. Loops: Graphiti-Sync-Diagnose · Vier-Rollen-Screen User-Smoke · `_shared/` console.warn → Logger.
 
 ### Master-Checklist (Stand)
 
-| # | Check | Ist | Status |
-|---|---|---|---|
-| 1 | Graphiti-Sync 24h | 29 ok / 10 failed / 24 queued (Altlasten + queued) | ⚠ Diagnose-Loop |
-| 2 | Deno-Tests | commit-fact 36/36 + sonstige 14/14 | ✅ |
-| 3 | Vitest | 60/60 grün, 10 Files | ✅ |
-| 4 | E2E-Smokes | 3/3 in `src/test/e2e-smokes.test.ts` | ✅ |
-| 5 | Logger-Coverage | 16/16 Edge Functions | ✅ |
-| 6 | strictNullChecks | aktiv (`tsconfig.app.json`) | ✅ |
-| 7 | LOC-Budget FE/BE | ~17.9k / ~5.5k — überschritten, akzeptiert | ❌ akzeptiert |
-| 8 | UI verhaltensidentisch | nach Welle B nicht final geprüft | ⚠ User-Smoke offen |
-| 9 | Wave-B-Detektoren angebunden | alle 4 live, fail-soft, idempotent | ✅ |
+| #   | Check                        | Ist                                                | Status             |
+| --- | ---------------------------- | -------------------------------------------------- | ------------------ |
+| 1   | Graphiti-Sync 24h            | 29 ok / 10 failed / 24 queued (Altlasten + queued) | ⚠ Diagnose-Loop    |
+| 2   | Deno-Tests                   | commit-fact 36/36 + sonstige 14/14                 | ✅                 |
+| 3   | Vitest                       | 60/60 grün, 10 Files                               | ✅                 |
+| 4   | E2E-Smokes                   | 3/3 in `src/test/e2e-smokes.test.ts`               | ✅                 |
+| 5   | Logger-Coverage              | 16/16 Edge Functions                               | ✅                 |
+| 6   | strictNullChecks             | aktiv (`tsconfig.app.json`)                        | ✅                 |
+| 7   | LOC-Budget FE/BE             | ~17.9k / ~5.5k — überschritten, akzeptiert         | ❌ akzeptiert      |
+| 8   | UI verhaltensidentisch       | nach Welle B nicht final geprüft                   | ⚠ User-Smoke offen |
+| 9   | Wave-B-Detektoren angebunden | alle 4 live, fail-soft, idempotent                 | ✅                 |
 
 ### Welle-B-Detektoren — Heuristiken & Testfälle
 
 Alle vier folgen demselben Vertrag: pure `detectXPure(fresh, projectFacts)` + fail-soft `detectAndPersistX`. Parallel via `Promise.all` nach `mirrorToGraphiti`. Idempotent über fachlichen Schlüssel. Kein Detektor bricht je den Commit.
 
 **B-W1 Linker** (`intake-understand/linker.ts` + `_shared/clients/graphitiSearch.ts`)
+
 - Reihenfolge: 1) exact title-Match → 2) Graph-Hit-Substring + same-fact_type-Title → 3) add (kein Match).
 - Graphiti-`/search` als Evidenz, nicht als ID-Quelle. Fail-soft auf Title-only-Pfad.
 - Tests (6 Pure + 14 Bestand): exact, no-match, hit-but-no-title-overlap, hit-with-title-overlap-other-type, fail-soft auf throw, leere Hits.
 
 **B-W2 Conflict-Detector** (`commit-fact/conflictDetector.ts`)
+
 - Vergleicht frischen Canonical-Fakt deterministisch gegen alle Facts gleichen Typs im Projekt.
 - Kinds: gleicher `title` + abweichende Kerngröße (deadline.due_date · decision.outcome/status · task.due_date oder assignee).
 - Idempotent über `contradiction_type` + sortiertes Paar (`fact_a_id`, `fact_b_id`).
 - Tests (6 Pure): deadline-Datums-Konflikt, decision-Outcome-Konflikt, gleiche Werte → kein Konflikt, Self-Match-Ausschluss, Title-Mismatch → kein Konflikt, Idempotenz beim Re-Run.
 
 **B-W3 Gap-Detector** (`commit-fact/gapDetector.ts`)
+
 - Drei Kinds, deterministisch, idempotent über `(project_id, kind, canonical_fact_id)`:
   - `deadline_without_owner` — fact_type=deadline ohne `assignee`/`owner`/`responsible`.
   - `decision_without_deadline` — fact_type=decision ohne deadline mit Title-Substring im selben Projekt.
@@ -68,6 +74,7 @@ Alle vier folgen demselben Vertrag: pure `detectXPure(fresh, projectFacts)` + fa
 - Tests (8 Pure): jeder Kind positiv + negativ, leerer Content, mehrere Tasks, Title-Match-Variationen.
 
 **B-W4 Dependency-Detector** (`commit-fact/dependencyDetector.ts`)
+
 - Zwei Kinds, deterministisch, fail-soft, idempotent über `(source_id, target_id, dependency_type)`:
   - `blockiert_durch` — task mit Trigger-Phrase + Title-Substring eines anderen task/decision/deadline. Token ≥ 4, case-insensitive.
   - `wartet_auf` — deadline, dessen Title/Description einen Decision-Title als Substring enthält.
@@ -108,6 +115,7 @@ Alle vier folgen demselben Vertrag: pure `detectXPure(fresh, projectFacts)` + fa
 Pipeline + UI auf Sprechhandlungs-Modalität umgestellt. `box_type`-Enum um 10 Werte erweitert (additiv). `ReviewRow.tsx` rendert pro Modalität eigene Aktion (Übernehmen / Bezug ändern / Verwerfen). Eingabefeld nur bei `asks`. Stille Substanz ab `confidence ≥ 0.9` ohne Pflicht-Click. `modality=unclear` wird telemetriert.
 
 **Backlog-Loops (Modalität):**
+
 - Korrektur-Schleife: User-Verwerfen/Bezug-Wechsel in `corrections` mit Original-Modalität speichern → in Klassifier zurückspeisen.
 - Reference-Token auflösen: heute Klartext-String, später Mini-Token mit Quell-Fakt-Verknüpfung.
 - LangSmith-Prompt `extract-facts` Live-Version mit Modalitäts-Block neu publishen (Code-Fallback steckt bereits drin).
