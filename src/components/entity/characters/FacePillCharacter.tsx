@@ -4,6 +4,7 @@
 //  Blur-Bälle (Lissajous). Im offenen Zustand 4 Input-Mode-Buttons in 2×2.
 //  Schließen via Klick auf Pill, Outside-Click, Esc oder Auto-Timeout.
 // =============================================================================
+/* eslint-disable react-refresh/only-export-components */
 
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from "react";
 import { cn } from "@/lib/utils";
@@ -25,12 +26,28 @@ interface Tune {
 }
 
 const STATE_TUNE: Record<EntityState, Tune> = {
-  idle:           { speedMul: 1.0, eyeMode: "normal", ballFilter: "none",                            pulseCard: false },
-  hover:          { speedMul: 1.0, eyeMode: "smile",  ballFilter: "none",                            pulseCard: false },
-  processing:     { speedMul: 0.4, eyeMode: "half",   ballFilter: "brightness(1.1)",                 pulseCard: true },
-  "review-ready": { speedMul: 0.7, eyeMode: "smile",  ballFilter: "brightness(1.15)",                pulseCard: false, glowBurst: true },
-  failed:         { speedMul: 2.4, eyeMode: "sad",    ballFilter: "saturate(0.4) brightness(0.7)",   pulseCard: false },
-  "busy-blocked": { speedMul: 2.0, eyeMode: "closed", ballFilter: "saturate(0.5)",                   pulseCard: false },
+  idle: { speedMul: 1.0, eyeMode: "normal", ballFilter: "none", pulseCard: false },
+  hover: { speedMul: 1.0, eyeMode: "smile", ballFilter: "none", pulseCard: false },
+  processing: { speedMul: 0.4, eyeMode: "half", ballFilter: "brightness(1.1)", pulseCard: true },
+  "review-ready": {
+    speedMul: 0.7,
+    eyeMode: "smile",
+    ballFilter: "brightness(1.15)",
+    pulseCard: false,
+    glowBurst: true,
+  },
+  failed: {
+    speedMul: 2.4,
+    eyeMode: "sad",
+    ballFilter: "saturate(0.4) brightness(0.7)",
+    pulseCard: false,
+  },
+  "busy-blocked": {
+    speedMul: 2.0,
+    eyeMode: "closed",
+    ballFilter: "saturate(0.5)",
+    pulseCard: false,
+  },
 };
 
 export const FacePillCharacter: Character = {
@@ -52,6 +69,10 @@ const FacePill = ({ state, size, sample, onPickInputMode }: FacePillProps) => {
   const cardRef = useRef<HTMLDivElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const closeTimer = useRef<number | null>(null);
+  // Captured at pointerEnter (card is flat, wrapper at rest) — used as stable
+  // reference in handlePointerMove so the tilt calc isn't affected by in-flight
+  // translate3d on the ancestor wrapper or the card's own perspective transform.
+  const restRect = useRef<DOMRect | null>(null);
   const tune = STATE_TUNE[state] ?? STATE_TUNE.idle;
   const { c1, c2, c3, bg } = sample.colors;
 
@@ -87,7 +108,10 @@ const FacePill = ({ state, size, sample, onPickInputMode }: FacePillProps) => {
     if (open) return;
     const card = cardRef.current;
     if (!card) return;
-    const rect = card.getBoundingClientRect();
+    // Use restRect (captured at pointerEnter when card is flat & wrapper at rest).
+    // Calling getBoundingClientRect() here would return the animated position,
+    // causing a feedback loop: tilt → position shift → recalculate → different tilt.
+    const rect = restRect.current ?? card.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width;
     const y = (e.clientY - rect.top) / rect.height;
     const rx = clamp(-(y - 0.5) * 30, -22, 22);
@@ -184,10 +208,46 @@ const FacePill = ({ state, size, sample, onPickInputMode }: FacePillProps) => {
           className="absolute inset-0 overflow-hidden pointer-events-none"
           style={{ borderRadius: radius, ...speedVar }}
         >
-          <Orbit name="a" size={ballSize} blur={ballBlur} color={c1 || "#ec4899"} duration={18} delay={0}    paused={hovering} filter={tune.ballFilter} />
-          <Orbit name="b" size={ballSize} blur={ballBlur} color={c2 || "#9147ff"} duration={22} delay={-7}   paused={hovering} filter={tune.ballFilter} />
-          <Orbit name="c" size={ballSize} blur={ballBlur} color={c3 || "#34d399"} duration={16} delay={-3}   paused={hovering} filter={tune.ballFilter} />
-          <Orbit name="d" size={ballSize} blur={ballBlur} color={bg || "#05e0f5"} duration={20} delay={-11}  paused={hovering} filter={tune.ballFilter} />
+          <Orbit
+            name="a"
+            size={ballSize}
+            blur={ballBlur}
+            color={c1 || "#ec4899"}
+            duration={18}
+            delay={0}
+            paused={hovering}
+            filter={tune.ballFilter}
+          />
+          <Orbit
+            name="b"
+            size={ballSize}
+            blur={ballBlur}
+            color={c2 || "#9147ff"}
+            duration={22}
+            delay={-7}
+            paused={hovering}
+            filter={tune.ballFilter}
+          />
+          <Orbit
+            name="c"
+            size={ballSize}
+            blur={ballBlur}
+            color={c3 || "#34d399"}
+            duration={16}
+            delay={-3}
+            paused={hovering}
+            filter={tune.ballFilter}
+          />
+          <Orbit
+            name="d"
+            size={ballSize}
+            blur={ballBlur}
+            color={bg || "#05e0f5"}
+            duration={20}
+            delay={-11}
+            paused={hovering}
+            filter={tune.ballFilter}
+          />
           <div className="absolute inset-0 bg-[hsl(var(--foreground)/0.05)]" />
         </div>
 
@@ -261,9 +321,14 @@ const FacePill = ({ state, size, sample, onPickInputMode }: FacePillProps) => {
           <div
             className="absolute inset-0"
             style={{ pointerEvents: "auto", cursor: "pointer" }}
-            onPointerEnter={() => setHovering(true)}
+            onPointerEnter={() => {
+              // Capture stable rect before any tilt or wrapper-translation begins.
+              restRect.current = cardRef.current?.getBoundingClientRect() ?? null;
+              setHovering(true);
+            }}
             onPointerMove={handlePointerMove}
             onPointerLeave={() => {
+              restRect.current = null;
               setHovering(false);
               resetTilt();
             }}
@@ -363,9 +428,16 @@ const Orbit = ({
 const Eye = ({ w, h, mode }: { w: number; h: number; mode: EyeMode }) => {
   let scaleY = 1;
   let animate = true;
-  if (mode === "half") { scaleY = 0.45; animate = false; }
-  else if (mode === "sad") { scaleY = 0.25; animate = false; }
-  else if (mode === "closed") { scaleY = 0.06; animate = false; }
+  if (mode === "half") {
+    scaleY = 0.45;
+    animate = false;
+  } else if (mode === "sad") {
+    scaleY = 0.25;
+    animate = false;
+  } else if (mode === "closed") {
+    scaleY = 0.06;
+    animate = false;
+  }
 
   return (
     <span
@@ -393,5 +465,4 @@ const Smiley = ({ size }: { size: number }) => (
   </svg>
 );
 
-const clamp = (v: number, min: number, max: number) =>
-  Math.max(min, Math.min(max, v));
+const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
