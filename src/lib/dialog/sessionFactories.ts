@@ -163,3 +163,121 @@ export const buildSourceSession = (quelle: string): DialogSession =>
       },
     }),
   ]);
+
+// ---------------------- Zuordnung ----------------------
+export const buildZuordnungSession = (params: {
+  titel: string;
+  vorschlag: string;
+  kontext?: string;
+}): DialogSession =>
+  mkSession("Projektzuordnung", params.titel, [
+    mkBox({
+      type: "kontext",
+      title: "Vorgeschlagene Zuordnung",
+      payload: {
+        auszug: params.vorschlag,
+        begruendung: params.kontext ?? "Die Entität hat diese Zuordnung vorgeschlagen.",
+        quelle: params.titel,
+      },
+    }),
+    mkBox({
+      type: "zuordnung",
+      title: params.titel,
+      payload: { vorschlag: params.vorschlag },
+    }),
+  ]);
+
+// ---------------------- Korrektur ----------------------
+export const buildKorrekturSession = (params: {
+  titel: string;
+  aktuell: string;
+  quelle: string;
+}): DialogSession =>
+  mkSession("Korrektur", params.titel, [
+    mkBox({
+      type: "kontext",
+      title: "Aktueller Stand",
+      payload: {
+        auszug: params.aktuell,
+        quelle: params.quelle,
+        begruendung: "Diese Information soll korrigiert werden.",
+      },
+    }),
+    mkBox({
+      type: "eingabe",
+      title: "Korrektur eingeben",
+      payload: { placeholder: "Richtige Information…", intent: "korrektur" },
+    }),
+  ]);
+
+// ---------------------- Dokumentversion ----------------------
+export const buildVersionsSession = (params: {
+  name: string;
+  versionen: Array<{ label: string; datum: string }>;
+  quelle: string;
+}): DialogSession =>
+  mkSession("Dokumentversion klären", params.name, [
+    mkBox({
+      type: "kontext",
+      title: params.name,
+      payload: {
+        auszug: `${params.versionen.length} Version${params.versionen.length === 1 ? "" : "en"} vorhanden`,
+        quelle: params.quelle,
+        begruendung: "Welche Version ist maßgeblich?",
+      },
+    }),
+    mkBox({
+      type: "auswahl",
+      title: "Maßgebliche Version",
+      payload: {
+        optionen: params.versionen.map((v) => `${v.label} (${v.datum})`),
+      },
+    }),
+  ]);
+
+// ---------------------- Thema-Merge ----------------------
+export const buildThemaMergeSession = (params: {
+  titelA: string;
+  beschreibungA: string;
+  titelB: string;
+  beschreibungB: string;
+}): DialogSession =>
+  mkSession("Thema zusammenführen", `${params.titelA} ↔ ${params.titelB}`, [
+    mkBox({
+      type: "kontext",
+      title: params.titelA,
+      payload: { auszug: params.beschreibungA, quelle: `Thema: ${params.titelA}` },
+    }),
+    mkBox({
+      type: "kontext",
+      title: params.titelB,
+      payload: { auszug: params.beschreibungB, quelle: `Thema: ${params.titelB}` },
+    }),
+    mkBox({
+      type: "aktion",
+      title: "Themen zusammenführen?",
+      payload: { aktionen: ["Zusammenführen", "Getrennt lassen"] },
+    }),
+  ]);
+
+// ---------------------- Rückfrage ----------------------
+export const buildRueckfrageSession = (params: {
+  frage: string;
+  kontext?: string;
+}): DialogSession =>
+  mkSession("Rückfrage", params.frage, [
+    mkBox({
+      type: "kontext",
+      title: "Rückfrage der Entität",
+      payload: {
+        auszug: params.frage,
+        begruendung: params.kontext ?? "Diese Information wird für den Projektzustand benötigt.",
+        quelle: "System",
+      },
+    }),
+    mkBox({
+      type: "eingabe",
+      title: "Antwort",
+      payload: { placeholder: "Antwort eingeben…", intent: "rueckfrage" },
+    }),
+  ]);

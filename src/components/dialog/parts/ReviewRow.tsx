@@ -12,6 +12,8 @@ import { useState } from "react";
 import type { DialogBox } from "@/lib/dialog/types";
 import { END_STATES } from "@/lib/dialog/types";
 import ConfirmDestructive from "@/components/shared/ConfirmDestructive";
+import DeltaTag from "@/components/project/shared/DeltaTag";
+import type { DeltaTyp } from "@/lib/project/types";
 
 const TYPE_LABEL: Record<string, string> = {
   wissen: "Wissen",
@@ -84,7 +86,10 @@ const ReviewRow = ({ box, projectName, onConfirm, onReject }: ReviewRowProps) =>
       <>
         <div className="dlg2-row" style={{ minHeight: 52, position: "relative" }}>
           <Stripe color="var(--d-warn)" />
-          <span className="dlg2-status-dot" style={{ background: "var(--d-warn-soft)", border: "1.5px solid var(--d-warn)" }}>
+          <span
+            className="dlg2-status-dot"
+            style={{ background: "var(--d-warn-soft)", border: "1.5px solid var(--d-warn)" }}
+          >
             <span style={{ width: 5, height: 5, borderRadius: 999, background: "var(--d-warn)" }} />
           </span>
           <TypeChip kind="konflikt" color={{ bg: "var(--d-warn-soft)", fg: "var(--d-warn)" }} />
@@ -143,29 +148,70 @@ const ReviewRow = ({ box, projectName, onConfirm, onReject }: ReviewRowProps) =>
               </p>
             )}
             <div style={{ display: "flex", gap: 12, alignItems: "stretch" }}>
-              <div style={{
-                flex: 1, padding: "14px 18px", borderRadius: 12,
-                background: "var(--d-surf-3)", border: "1px solid var(--d-hair)",
-              }}>
-                <div className="mono" style={{ fontSize: 10, color: "var(--d-ink-3)", letterSpacing: ".06em", textTransform: "uppercase", marginBottom: 6 }}>
+              <div
+                style={{
+                  flex: 1,
+                  padding: "14px 18px",
+                  borderRadius: 12,
+                  background: "var(--d-surf-3)",
+                  border: "1px solid var(--d-hair)",
+                }}
+              >
+                <div
+                  className="mono"
+                  style={{
+                    fontSize: 10,
+                    color: "var(--d-ink-3)",
+                    letterSpacing: ".06em",
+                    textTransform: "uppercase",
+                    marginBottom: 6,
+                  }}
+                >
                   Variante A
                 </div>
-                <div style={{ fontSize: 15, fontWeight: 500, color: "var(--d-ink)", lineHeight: 1.4 }}>
+                <div
+                  style={{ fontSize: 15, fontWeight: 500, color: "var(--d-ink)", lineHeight: 1.4 }}
+                >
                   {faktA ?? "—"}
                 </div>
               </div>
-              <div style={{
-                width: 36, display: "flex", alignItems: "center", justifyContent: "center",
-                fontFamily: "Geist Mono, monospace", fontSize: 10, color: "var(--d-conf)",
-              }}>vs</div>
-              <div style={{
-                flex: 1, padding: "14px 18px", borderRadius: 12,
-                background: "var(--d-surf-3)", border: "1px solid var(--d-hair)",
-              }}>
-                <div className="mono" style={{ fontSize: 10, color: "var(--d-ink-3)", letterSpacing: ".06em", textTransform: "uppercase", marginBottom: 6 }}>
+              <div
+                style={{
+                  width: 36,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontFamily: "Geist Mono, monospace",
+                  fontSize: 10,
+                  color: "var(--d-conf)",
+                }}
+              >
+                vs
+              </div>
+              <div
+                style={{
+                  flex: 1,
+                  padding: "14px 18px",
+                  borderRadius: 12,
+                  background: "var(--d-surf-3)",
+                  border: "1px solid var(--d-hair)",
+                }}
+              >
+                <div
+                  className="mono"
+                  style={{
+                    fontSize: 10,
+                    color: "var(--d-ink-3)",
+                    letterSpacing: ".06em",
+                    textTransform: "uppercase",
+                    marginBottom: 6,
+                  }}
+                >
                   Variante B
                 </div>
-                <div style={{ fontSize: 15, fontWeight: 500, color: "var(--d-ink)", lineHeight: 1.4 }}>
+                <div
+                  style={{ fontSize: 15, fontWeight: 500, color: "var(--d-ink)", lineHeight: 1.4 }}
+                >
                   {faktB ?? "—"}
                 </div>
               </div>
@@ -186,8 +232,7 @@ const ReviewRow = ({ box, projectName, onConfirm, onReject }: ReviewRowProps) =>
 
   // GAP / EINGABE-Variante
   if ((box.type === "gap" || box.type === "eingabe") && !isFinal) {
-    const placeholder =
-      box.type === "gap" ? "Information ergänzen…" : "Antwort eingeben…";
+    const placeholder = box.type === "gap" ? "Information ergänzen…" : "Antwort eingeben…";
     const submit = () => {
       const trimmed = gapInput.trim();
       if (!trimmed) return;
@@ -197,8 +242,19 @@ const ReviewRow = ({ box, projectName, onConfirm, onReject }: ReviewRowProps) =>
     return (
       <div className="dlg2-row" style={{ minHeight: 52, position: "relative" }}>
         <Stripe color="var(--d-warn)" />
-        <span className="dlg2-status-dot" style={{ background: "var(--d-warn-soft)", border: "1.5px solid var(--d-warn)" }}>
-          <span style={{ width: 5, height: 5, borderRadius: 999, border: "1px solid var(--d-warn)", background: "transparent" }} />
+        <span
+          className="dlg2-status-dot"
+          style={{ background: "var(--d-warn-soft)", border: "1.5px solid var(--d-warn)" }}
+        >
+          <span
+            style={{
+              width: 5,
+              height: 5,
+              borderRadius: 999,
+              border: "1px solid var(--d-warn)",
+              background: "transparent",
+            }}
+          />
         </span>
         <TypeChip kind={box.type} color={{ bg: "var(--d-warn-soft)", fg: "var(--d-warn)" }} />
         <span style={{ flex: 1, fontSize: 13.5, color: "var(--d-ink)", marginLeft: 8 }}>
@@ -209,11 +265,19 @@ const ReviewRow = ({ box, projectName, onConfirm, onReject }: ReviewRowProps) =>
             value={gapInput}
             onChange={(e) => setGapInput(e.target.value)}
             placeholder={placeholder}
-            onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") submit();
+            }}
             style={{
-              height: 28, padding: "0 10px", borderRadius: 8,
-              border: "1px solid var(--d-hair-2)", background: "var(--d-surf-2)",
-              color: "var(--d-ink)", fontSize: 12.5, outline: "none", width: 200,
+              height: 28,
+              padding: "0 10px",
+              borderRadius: 8,
+              border: "1px solid var(--d-hair-2)",
+              background: "var(--d-surf-2)",
+              color: "var(--d-ink)",
+              fontSize: 12.5,
+              outline: "none",
+              width: 200,
             }}
           />
           <button
@@ -236,14 +300,27 @@ const ReviewRow = ({ box, projectName, onConfirm, onReject }: ReviewRowProps) =>
     return (
       <div className="dlg2-row" style={{ minHeight: 52, position: "relative" }}>
         <Stripe color="var(--d-blue)" />
-        <span className="dlg2-status-dot" style={{ background: "var(--d-blue-soft)", border: "1.5px solid var(--d-blue)" }}>
+        <span
+          className="dlg2-status-dot"
+          style={{ background: "var(--d-blue-soft)", border: "1.5px solid var(--d-blue)" }}
+        >
           <span style={{ width: 5, height: 5, borderRadius: 999, background: "var(--d-blue)" }} />
         </span>
         <TypeChip kind="auswahl" color={{ bg: "var(--d-blue-soft)", fg: "var(--d-blue)" }} />
         <span style={{ flex: 1, fontSize: 13.5, color: "var(--d-ink)", marginLeft: 8 }}>
           {box.title}
         </span>
-        <div style={{ display: "flex", gap: 6, marginLeft: 12, flexWrap: "wrap", flex: "0 0 auto", maxWidth: "60%", justifyContent: "flex-end" }}>
+        <div
+          style={{
+            display: "flex",
+            gap: 6,
+            marginLeft: 12,
+            flexWrap: "wrap",
+            flex: "0 0 auto",
+            maxWidth: "60%",
+            justifyContent: "flex-end",
+          }}
+        >
           {opts.map((opt) => (
             <button
               key={opt}
@@ -259,8 +336,65 @@ const ReviewRow = ({ box, projectName, onConfirm, onReject }: ReviewRowProps) =>
     );
   }
 
-  // Default / accepted (auch wissen/aktion/zuordnung mit Single-Confirm)
-  const needsConfirm = !isFinal && (box.type === "wissen" || box.type === "aktion" || box.type === "zuordnung" || box.type === "kontext");
+  // AKTION-Variante (explizite Aktions-Buttons, z.B. Thema-Merge)
+  if (box.type === "aktion" && !isFinal) {
+    const aktionen: string[] = box.payload?.aktionen ?? [];
+    return (
+      <>
+        <div className="dlg2-row" style={{ minHeight: 52, position: "relative" }}>
+          <Stripe color="var(--d-blue)" />
+          <span
+            className="dlg2-status-dot"
+            style={{ background: "var(--d-blue-soft)", border: "1.5px solid var(--d-blue)" }}
+          >
+            <span style={{ width: 5, height: 5, borderRadius: 999, background: "var(--d-blue)" }} />
+          </span>
+          <TypeChip kind="aktion" color={{ bg: "var(--d-blue-soft)", fg: "var(--d-blue)" }} />
+          <span style={{ flex: 1, fontSize: 13.5, color: "var(--d-ink)", marginLeft: 8 }}>
+            {box.title}
+          </span>
+          <div style={{ display: "flex", gap: 6, marginLeft: 12, flex: "0 0 auto" }}>
+            {aktionen.map((a, i) => (
+              <button
+                key={a}
+                type="button"
+                className="dlg2-chip-opt"
+                style={
+                  i === 0
+                    ? { borderColor: "var(--d-blue)", color: "var(--d-blue)" }
+                    : { color: "var(--d-ink-4)" }
+                }
+                onClick={() => onConfirm({ aktion: a })}
+              >
+                {a}
+              </button>
+            ))}
+            <button
+              type="button"
+              className="dlg2-chip-opt"
+              style={{ color: "var(--d-ink-4)" }}
+              onClick={() => setRejectOpen(true)}
+            >
+              Abbrechen
+            </button>
+          </div>
+        </div>
+        <ConfirmDestructive
+          open={rejectOpen}
+          onOpenChange={setRejectOpen}
+          title="Aktion abbrechen?"
+          description="Die Aktion wird verworfen und hat keine Wirkung auf den Projektzustand."
+          confirmLabel="Abbrechen"
+          onConfirm={() => onReject()}
+        />
+      </>
+    );
+  }
+
+  // Default / accepted (wissen/zuordnung/kontext mit Single-Confirm)
+  const needsConfirm =
+    !isFinal && (box.type === "wissen" || box.type === "zuordnung" || box.type === "kontext");
+  const delta = box.payload?.delta as DeltaTyp | undefined;
   return (
     <div className="dlg2-row" style={{ minHeight: 48, position: "relative" }}>
       <Stripe color={isFinal ? "transparent" : "var(--d-blue)"} />
@@ -272,16 +406,40 @@ const ReviewRow = ({ box, projectName, onConfirm, onReject }: ReviewRowProps) =>
           color: isFinal ? "var(--d-ink-4)" : "var(--d-blue)",
         }}
       >
-        <svg width="9" height="9" viewBox="0 0 10 8" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <svg
+          width="9"
+          height="9"
+          viewBox="0 0 10 8"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
           <path d="M1 4l3 3 5-6" />
         </svg>
       </span>
       <TypeChip kind={box.type} />
-      <span style={{ flex: 1, fontSize: 13.5, color: isFinal ? "var(--d-ink-3)" : "var(--d-ink-2)", marginLeft: 8 }}>
+      <span
+        style={{
+          flex: 1,
+          fontSize: 13.5,
+          color: isFinal ? "var(--d-ink-3)" : "var(--d-ink-2)",
+          marginLeft: 8,
+        }}
+      >
         {box.title}
       </span>
+      {delta && (
+        <span style={{ marginLeft: 8, flex: "0 0 auto" }}>
+          <DeltaTag delta={delta} />
+        </span>
+      )}
       {projectName && (
-        <span className="mono" style={{ fontSize: 11, color: "var(--d-ink-3)", marginLeft: 12, flex: "0 0 auto" }}>
+        <span
+          className="mono"
+          style={{ fontSize: 11, color: "var(--d-ink-3)", marginLeft: 12, flex: "0 0 auto" }}
+        >
           {projectName}
         </span>
       )}

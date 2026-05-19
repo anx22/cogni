@@ -2,6 +2,14 @@
 
 Format: `[YYYY-MM-DD] Problem → Choice → Reason`
 
+## 2026-05-19 — Sprint 1 Produktion: Dialog-Schicht komplettieren
+
+- `2026-05-19` `src/lib/dialog/sessionFactories.ts` stand im Design-Overhaul-Sprint unter "DARF SICH NICHT ÄNDERN" → **Constraint aufgehoben ab Produktions-Sprint**. Design-Sprint (Phasen 1–7) abgeschlossen, Constraint diente dem Schutz vor UI-seitigen Logikbrüchen während der visuellen Überarbeitung. Produktions-Sprint hat explizit Factories als Lieferobjekt. Neue Constraint-Regel: Factories erweitern ist erlaubt, Signaturen bestehender Factories und `types.ts`-Vertrag bleiben unberührt.
+- `2026-05-19` Fünf fehlende Dialog-Anlässe (Produktkern 3.2: Projektzuordnung, Korrektur, Dokumentversion, Thema-Merge, Rückfrage) → **`buildZuordnungSession` / `buildKorrekturSession` / `buildVersionsSession` / `buildThemaMergeSession` / `buildRueckfrageSession` added** in `sessionFactories.ts`. Alle via `mkSession`/`mkBox`-Helfer, kompatibel mit bestehendem `useDialog()`-Vertrag. Tests: 5 neue Unit-Tests, Gesamt 65/65, tsc clean.
+- `2026-05-19` `aktion`-Box hatte keinen expliziten Renderer (fiel in Default-Branch mit Single-Confirm) → **eigener Branch in `ReviewRow.tsx`**: konfigurierbare Buttons aus `box.payload.aktionen[]`, first-button-primary, Rest neutral, immer Abbrechen-Option mit ConfirmDestructive. Aktiviert durch `buildThemaMergeSession`.
+- `2026-05-19` Delta-Information war nur im Verlauf sichtbar, nicht an einzelnen Fakten im Review → **optionales `delta`-Feld in Box-Payload**: wenn `box.payload.delta` gesetzt (DeltaTyp), rendert ReviewRow einen `DeltaTag` inline neben dem Titel. Aufrufcode kann delta mitgeben, kein Pflichtfeld. `types.ts` unberührt.
+- `2026-05-19` Paste in InputOverlay war unsichtbar (Text ging direkt in Textarea ohne Feedback) → **Paste-Preview-Mode** in `InputOverlay.tsx`: bei Paste ≥ 100 Zeichen im Note-Modus erscheint ein Read-only-Preview mit "Direkt übernehmen" / "Bearbeiten". File-Paste-Pfad unberührt.
+
 ## 2026-05-14 — UI-Overhaul v2 Phase 5+6 Abschluss
 
 - `2026-05-14` Dialog V2 hinter Flag oder default? → **Default**. `useDialogV2Flag` und Legacy-Branch in `DialogOverlay.tsx` entfernt, alle 11 alten Dialog-Komponenten gelöscht (`BoxRenderer`, `BoxFrame`, `BoxStateBadge` + 8 Box-Varianten in `boxes/`). `useDialog`/`DialogProvider`/`sessionFactories` unverändert (Vertrag). Single-Box-Sessions → `FaktDrillOverlay`, sonst `BatchReviewOverlay`. Verify: Vitest 60/60, tsc clean.
@@ -11,12 +19,10 @@ Format: `[YYYY-MM-DD] Problem → Choice → Reason`
 
 - `2026-05-14` Theme-System wechselt von `:root`/`.dark` HSL auf cogni-Hex-Tokens → **dual betrieben**: shadcn-Tokens (`:root`/`.dark`, HSL) bleiben, cogni-Tokens kommen additiv unter `[data-theme="day"|"night"]` (Hex). Vorteil: shadcn-Komponenten unverändert, neuer cogni-Layer überlagert. `data-theme="day"` als Default am `<html>` in `App.tsx` gesetzt. Tailwind-Aliase `c-surface-*`, `c-ink-*`, `sig-*`, `c-accent*` zeigen direkt auf die CSS-Vars (kein `hsl()` Wrapper). Geist + Geist Mono über Google Fonts in `index.html`. Utility-Klassen `.t-*`, `.dot--*`, `.chip*`, `.cogni-btn*`, `.kbd`, `.cogni-card`, `.hairline`, `.atmosphere-stripe`, `cogni-pulse`, `cogni-entity-breathe` in `src/index.css`. Verify: Vitest 60/60.
 
-
 ## 2026-05-14 — Welle B Detektoren
 
 - `2026-05-14` Dependency-Erkennung könnte LLM-basiert im AOL-Service laufen → **deterministisch in `commit-fact/dependencyDetector.ts`** → Trigger-Phrase + Title-Substring (Token-Länge ≥ 4), kinds `blockiert_durch` (task) und `wartet_auf` (deadline → decision); `haengt_ab_von` bleibt im Kernel für `reference`. Idempotent über `(source_id, target_id, type)`, fail-soft, 8 Pure-Tests. Welle B damit komplett.
 - `2026-05-14` Gap-Erkennung könnte LLM-basiert im AOL-Service laufen → **deterministisch in `commit-fact/gapDetector.ts`** (analog B-W2) → drei Kinds (deadline_without_owner, decision_without_deadline, task_without_due_date), idempotent über `(canonical_fact_id, metadata.gap_kind)`, fail-soft, 8 Pure-Tests. LLM-Heuristik bleibt Wave 3.
-
 
 ## 2026-05-14 — Tier B4 + Audit
 
@@ -61,6 +67,7 @@ Format: `[YYYY-MM-DD] Problem → Choice → Reason`
 inline Bearer-Token-Auth. Drift bei CORS-Headern und Fehler-Response-Format.
 
 **Choice:** Zwei kanonische Module:
+
 - `_shared/http.ts` → `corsHeaders`, `ok(payload, init?)`, `fail(message, status?, extra?)`,
   `handleOptions(req)`.
 - `_shared/auth.ts` → `getAuthenticatedUser(req)` mit Discriminated Union
@@ -76,7 +83,7 @@ aber die geteilten `corsHeaders` — Verhalten unverändert.
 
 [2026-05-14] Realtime-Subscriptions → Problem: Channel-Boilerplate (subscribe/removeChannel/Debounce) in 8+ Stellen mit Drift-Risiko. → Choice: Zentraler `useRealtimeTables(channelName, listeners, opts)` mit per-Listener-Handlern und optionalem debounced `onTrigger`. → Reason: Eine Quelle für Cleanup, stabile Channel-Namen erzwungen, Debounce nicht mehr ad hoc.
 
-[2026-05-14] Inspector-Skeleton → Problem: 3 inspect-* Functions mit ~95 % identischem Skelett (CORS, Auth, Logger, Body-Parse, Action-Dispatch). → Choice: `_shared/inspector.ts` als Action-Map-Wrapper. `inspect-pipeline` bewusst NICHT migriert (Selektor-API statt Action-Dispatch). → Reason: Wartung an einer Stelle, Inspector wird zu reiner Probe-Map; bricht keine Caller.
+[2026-05-14] Inspector-Skeleton → Problem: 3 inspect-\* Functions mit ~95 % identischem Skelett (CORS, Auth, Logger, Body-Parse, Action-Dispatch). → Choice: `_shared/inspector.ts` als Action-Map-Wrapper. `inspect-pipeline` bewusst NICHT migriert (Selektor-API statt Action-Dispatch). → Reason: Wartung an einer Stelle, Inspector wird zu reiner Probe-Map; bricht keine Caller.
 
 [2026-05-14] External-Service-Clients → Problem: Fetch-Logik für Railway/LangSmith mehrfach dupliziert mit divergentem Token-/Header-Handling. → Choice: `_shared/clients/{railway,langsmith}.ts` als typsichere Mini-Clients. `railway-admin` nutzt sie via dünnem Adapter-Shim ohne Call-Site-Änderungen. → Reason: Ein Token-Pfad pro Service; ermöglicht spätere B3.2-Modularisierung von `railway-admin`.
 
@@ -85,6 +92,7 @@ aber die geteilten `corsHeaders` — Verhalten unverändert.
 [2026-05-14] B3.1 Box-Builder bewusst zurückgeschnitten → Problem: Originalplan B3.1 verlangte konfig-getriebenen `BoxBuilder` mit `BoxConfig.renderContent`. Realitätscheck: 8 Boxen = 558 LOC, Scaffolding bereits in `BoxFrame` extrahiert; ein BoxBuilder hätte denselben Code in `renderContent`-Callbacks umgehängt — kein Lines-Win, +1 Indirektionsschicht, +Risiko. → Choice: Stattdessen ein kleiner Hook `useBoxSubmit(box, opts)` in `src/lib/dialog/`, der das tatsächlich wiederholte Pattern (updateBoxPayload + commitBox + optional markManual) kapselt. Migriert: AuswahlBox, KonfliktBox, GapBox. EingabeBox/ZuordnungsBox bleiben (eigene Pfade). → Reason: Ehrliches Refactor an realer Wiederholung statt Indirektion ohne Substanzgewinn.
 
 [2026-05-15] Welle C — Godfile-Eliminierung nachgezogen
+
 - C1: commit-fact/index.ts 673 → 70 LOC, Logik in kernel.ts/assignment.ts/snapshot.ts/notifications.ts/mirror.ts. Tests grün (4/4 commitFact + 10/10 projectScoring).
 - C2: intake-understand/index.ts 561 → 56 LOC, Orchestrierung in understandRun.ts, Splits agentBridge/linker/helpers. runUnderstand returnt typisiertes Result statt Response.
 - C3: projectViewModel.ts 467 → 160 LOC (Composer + Barrel), 9 Mapper unter src/lib/project/mappers/. Re-Exports erhalten.
@@ -96,15 +104,17 @@ aber die geteilten `corsHeaders` — Verhalten unverändert.
 [2026-05-14] B-W2 Conflict-Detector deterministisch im commit-fact-Pfad. Problem: Widersprüche zwischen Facts wurden bisher nur via `delta_type=contradict` aus dem Linker propagiert; semantische Konflikte (zwei deadlines mit gleichem Titel und unterschiedlichem Datum, zwei decisions mit unterschiedlichem outcome) blieben unerkannt. Choice: Neuer pure Detektor `commit-fact/conflictDetector.ts` läuft nach `mirrorToGraphiti` und vergleicht den frischen Canonical-Fakt deterministisch gegen alle Facts gleichen Typs im Projekt. Schreibt in `contradictions` (idempotent über Typ + sortiertes Paar). Fail-soft: jeder Fehler → `log.warn`, niemals throw, Commit bleibt grün. Reason: Konflikte sind Kern des Produkts; deterministische Regeln (gleicher Titel + abweichende Kerngröße) sind robust und ohne LLM-Roundtrip; Graph-/LLM-Detektion folgt erst, wenn Sandbox-Daten zeigen, dass deterministischer Recall zu niedrig ist. Tests: 6 Pure-Tests, commit-fact-Suite 20/20 grün.
 
 [2026-05-14] B-W3 Gap-Detector deterministisch. Problem: Lückenhafte Fakten (Deadline ohne Owner, Decision ohne Deadline, Task ohne Fälligkeit) blieben unsichtbar bis zum nächsten Review. Choice: `commit-fact/gapDetector.ts` läuft nach Conflict-Detektor parallel via `Promise.all`. Drei Kinds, alle deterministisch + idempotent über (project_id, kind, canonical_fact_id):
-  - `deadline_without_owner`: fact_type=deadline ohne assignee/owner/responsible im content.
-  - `decision_without_deadline`: fact_type=decision, im selben Projekt existiert keine deadline mit case-insensitive Title-Substring auf den Decision-Title.
-  - `task_without_due_date`: fact_type=task ohne content.due_date.
+
+- `deadline_without_owner`: fact_type=deadline ohne assignee/owner/responsible im content.
+- `decision_without_deadline`: fact_type=decision, im selben Projekt existiert keine deadline mit case-insensitive Title-Substring auf den Decision-Title.
+- `task_without_due_date`: fact_type=task ohne content.due_date.
   Fail-soft: log.warn + return, kein throw. Schreibt in `gap_signals` mit metadata `{source: "commit-fact/gapDetector", kind}`. Reason: gleiche Heuristik-Familie wie B-W2; LLM-Verfeinerung ist Wave 3. Tests: 8 Pure-Tests (alle 3 Kinds + Edge-Cases: leerer Content, mehrere Tasks, Title-Match-Variationen). Suite 28/28 grün.
 
 [2026-05-14] B-W4 Dependency-Detector deterministisch. Problem: Abhängigkeiten zwischen Facts (Task wartet auf Decision, Deadline hängt an Decision) wurden nur sichtbar, wenn ein Reference-Fakt explizit committed wurde — Mehrheit der echten Abhängigkeiten blieb unverdrahtet. Choice: `commit-fact/dependencyDetector.ts` läuft im Promise.all neben Conflict + Gap. Zwei Kinds, deterministisch, fail-soft, idempotent über (source_id, target_id, dependency_type):
-  - `blockiert_durch`: fact_type=task, dessen content.title/description/text/note eine Trigger-Phrase enthält (`blockiert von`, `blockiert durch`, `wartet auf`, `abhängig von`, `depends on`, `blocked by`) UND danach den Title eines anderen Facts (task/decision/deadline) im selben Projekt als Substring matcht. Token-Längenfilter ≥ 4, case-insensitive, Whitespace normalisiert. Self-Match ausgeschlossen.
-  - `wartet_auf`: fact_type=deadline, dessen Title oder Description einen Decision-Title als Substring enthält. Self-Match ausgeschlossen.
-  - `haengt_ab_von` (für fact_type=reference) bleibt im Kernel — Detektor doppelt nicht.
+
+- `blockiert_durch`: fact_type=task, dessen content.title/description/text/note eine Trigger-Phrase enthält (`blockiert von`, `blockiert durch`, `wartet auf`, `abhängig von`, `depends on`, `blocked by`) UND danach den Title eines anderen Facts (task/decision/deadline) im selben Projekt als Substring matcht. Token-Längenfilter ≥ 4, case-insensitive, Whitespace normalisiert. Self-Match ausgeschlossen.
+- `wartet_auf`: fact_type=deadline, dessen Title oder Description einen Decision-Title als Substring enthält. Self-Match ausgeschlossen.
+- `haengt_ab_von` (für fact_type=reference) bleibt im Kernel — Detektor doppelt nicht.
   Schreibt in `dependencies` mit metadata `{source: "commit-fact/dependencyDetector"}`. Reason: bewusst eng (Substring + Trigger), keine LLM-Roundtrips in Wave B; semantische Erweiterung folgt in Wave 3 wenn Sandbox False-Negatives liefert. Tests: 8 Pure-Tests (Trigger-Hit, kein Trigger, Trigger ohne Match, Deadline→Decision, Deadline ohne Match, Reference ignoriert, Self-Match-Ausschluss, Token-Länge). Suite commit-fact 36/36 grün.
 
 [2026-05-14] Heuristik-Familie Welle B insgesamt → Choice: alle vier Detektoren (Linker B-W1, Conflict B-W2, Gap B-W3, Dependency B-W4) folgen demselben Vertrag: pure `detectXPure(fresh, projectFacts)` exportiert + `detectAndPersistX(admin, args)` als fail-soft Side-Effect, idempotent über fachlichen Schlüssel, parallel via `Promise.all` nach `mirrorToGraphiti`. Reason: einheitliche Erweiterbarkeit (Wave 3 LLM-Schicht kann pro Detektor unabhängig nachgezogen werden), einheitliche Test-Struktur (Pure-Tests ohne Supabase-Mocks), einheitliche Fehler-Semantik (kein Detektor-Fehler bricht je den Commit).
@@ -125,7 +135,7 @@ aber die geteilten `corsHeaders` — Verhalten unverändert.
 [2026-05-14] Home-Screen 3-Spalten-Layout → AppSidebar (links) · Entity+HomePrompt (Mitte) · ImpactPipelinePanel (rechts) → ersetzt SideGrid+IntakeSessionsPanel im Markup. Alte Komponenten-Dateien bleiben (Cleanup nach Phase-5-Verify).
 [2026-05-14] Dialog V2 (BatchReviewOverlay+FaktDrillOverlay) parallel zur BoxRenderer-Welt → Feature-Flag `?dialogV2=1` / `localStorage.cogniDialogV2` → alte Boxen bleiben Default bis Live-Smoke. `useDialog`-Vertrag (commitBox/gateReason/session) unverändert. Token-Mapping `[data-dialog]` → `--d-blue = var(--accent)` (NICHT sig-action).
 
-[2026-05-14] shadcn ↔ Cogni Theme-Bridge → shadcn-HSL-Tokens in [data-theme="day|night"] neu zugewiesen statt alle ui/* Komponenten umzuschreiben → Reason: Single Source of Truth bleibt Cogni-Hex; ui/*-Komponenten brauchen keine Edits, Day/Night-Toggle wirkt in jeder Schicht.
+[2026-05-14] shadcn ↔ Cogni Theme-Bridge → shadcn-HSL-Tokens in [data-theme="day|night"] neu zugewiesen statt alle ui/_ Komponenten umzuschreiben → Reason: Single Source of Truth bleibt Cogni-Hex; ui/_-Komponenten brauchen keine Edits, Day/Night-Toggle wirkt in jeder Schicht.
 
 ## 2026-05-15 — Audit-Response (Sync-Semantik + UX-Bugs)
 

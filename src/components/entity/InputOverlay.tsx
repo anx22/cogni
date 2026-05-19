@@ -33,6 +33,7 @@ const InputOverlay = ({ open, onClose, onSubmit, className, contextHint }: Input
   const [mode, setMode] = useState<InputMode>("note");
   const [noteText, setNoteText] = useState("");
   const [linkText, setLinkText] = useState("");
+  const [pastePreview, setPastePreview] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const noteRef = useRef<HTMLTextAreaElement>(null);
   const voice = useVoiceRecorder();
@@ -42,6 +43,7 @@ const InputOverlay = ({ open, onClose, onSubmit, className, contextHint }: Input
       setMode("note");
       setNoteText("");
       setLinkText("");
+      setPastePreview(false);
       voice.cancel();
     } else {
       window.setTimeout(() => noteRef.current?.focus(), 50);
@@ -62,6 +64,7 @@ const InputOverlay = ({ open, onClose, onSubmit, className, contextHint }: Input
     const value = noteText.trim();
     if (!value) return;
     onSubmit(detectFromText(value));
+    setPastePreview(false);
     onClose();
   }, [noteText, onSubmit, onClose]);
 
@@ -134,6 +137,16 @@ const InputOverlay = ({ open, onClose, onSubmit, className, contextHint }: Input
     }
   };
 
+  // Intercepts substantial text pastes in note mode to show a preview
+  const handleTextareaPaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const text = e.clipboardData?.getData("text/plain") ?? "";
+    if (text.length >= 100) {
+      e.preventDefault();
+      setNoteText(text);
+      setPastePreview(true);
+    }
+  };
+
   if (!open) return null;
 
   return (
@@ -165,28 +178,56 @@ const InputOverlay = ({ open, onClose, onSubmit, className, contextHint }: Input
 
       {mode === "note" && (
         <div className="space-y-3">
-          <Textarea
-            ref={noteRef}
-            value={noteText}
-            onChange={(e) => setNoteText(e.target.value)}
-            onKeyDown={handleNoteKey}
-            placeholder="Notiz, Gedanke, gepasteter Text…"
-            className="min-h-[140px] resize-none border-border/30 bg-background/40 text-sm leading-relaxed focus-visible:ring-primary/30"
-          />
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] text-muted-foreground/50 tracking-wide">
-              ⌘/Ctrl + Enter zum Übernehmen
-            </span>
-            <Button
-              onClick={submitNote}
-              disabled={!noteText.trim()}
-              variant="outline"
-              size="sm"
-              className="border-primary/30 text-primary hover:bg-primary/10 hover:text-primary"
-            >
-              Übernehmen
-            </Button>
-          </div>
+          {pastePreview ? (
+            <>
+              <div className="rounded-lg border border-border/30 bg-background/40 p-3 max-h-[140px] overflow-y-auto text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">
+                {noteText}
+              </div>
+              <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => setPastePreview(false)}
+                  className="text-[11px] text-muted-foreground/50 hover:text-muted-foreground transition-colors tracking-wide"
+                >
+                  Bearbeiten
+                </button>
+                <Button
+                  onClick={submitNote}
+                  variant="outline"
+                  size="sm"
+                  className="border-primary/30 text-primary hover:bg-primary/10 hover:text-primary"
+                >
+                  Direkt übernehmen
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <Textarea
+                ref={noteRef}
+                value={noteText}
+                onChange={(e) => setNoteText(e.target.value)}
+                onKeyDown={handleNoteKey}
+                onPaste={handleTextareaPaste}
+                placeholder="Notiz, Gedanke, gepasteter Text…"
+                className="min-h-[140px] resize-none border-border/30 bg-background/40 text-sm leading-relaxed focus-visible:ring-primary/30"
+              />
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-muted-foreground/50 tracking-wide">
+                  ⌘/Ctrl + Enter zum Übernehmen
+                </span>
+                <Button
+                  onClick={submitNote}
+                  disabled={!noteText.trim()}
+                  variant="outline"
+                  size="sm"
+                  className="border-primary/30 text-primary hover:bg-primary/10 hover:text-primary"
+                >
+                  Übernehmen
+                </Button>
+              </div>
+            </>
+          )}
         </div>
       )}
 
