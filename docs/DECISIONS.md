@@ -2,6 +2,13 @@
 
 Format: `[YYYY-MM-DD] Problem → Choice → Reason`
 
+## 2026-05-19 — Sprint 1 Produktion: Wissensstand, Drilldown, Delta
+
+- `2026-05-19` `DeltaTyp` hatte keinen `unclear`-Wert; DB-ENUM-Erweiterung ist ein separater Migration-Schritt → **`"unclear"` in `src/lib/project/types.ts` ergänzt**, `DeltaTag.tsx` importiert fortan aus `@/lib/project/types` (kanonische Quelle statt `@/data/demoProject`), neutrales `unklar`-Tag (#muted). DB-Migration folgt in eigenem Sprint, sobald Staging-DB verfügbar.
+- `2026-05-19` `ProjectViewModel` hatte kein `coverage`-Feld → **`CoverageVM { knownFacts, openGaps, conflictsActive, lastIntakeAge }` ergänzt** in `types.ts`, aus `canonical.length`, `gaps.length`, `konflikte.length`, letztem `canonical.created_at` in `buildProjectViewModel`. UI-Anbindung an `LageZone` während des Rebase nicht gelandet: `main` hat `LageZone.tsx` parallel grundlegend umgebaut (RoleHeader-Layout + Konflikt-Chip); VM-Daten stehen bereit, Wissensstand-Chip-Zeile folgt in eigenem Sprint auf die neue Section.
+- `2026-05-19` `SubstanzSection` Themen-Karten Drilldown → Implementierungs-Versuch zur Rebase-Zeit zurückgenommen. `main` hat `SubstanzSection.tsx` parallel auf `RoleHeader` + `ChevronRight`-Pattern umgestellt; lokaler Inline-Expand (`expandedThema`-State) war inkompatibel. Re-Apply in eigenem Sprint auf Basis von main's `ChevronRight`-Affordance.
+- `2026-05-19` Entity-Pointer-Follow jitterte bei langsamer/mittlerer Mausbewegung → **Feedback-Loop in zwei Stellen beseitigt**: (1) `usePointerFollow` (Entity.tsx) kompensiert `getBoundingClientRect()` Translation via `naturalCx/naturalCy = rect.center - current.x/y`; (2) `FacePillCharacter.tsx` `handlePointerMove` nutzt `restRect` (gecaptured bei `onPointerEnter`, wenn Karte flach und Wrapper in Ruhe) statt live `getBoundingClientRect()`.
+
 ## 2026-05-19 — Sprint 1 Produktion: Dialog-Schicht komplettieren
 
 - `2026-05-19` `src/lib/dialog/sessionFactories.ts` stand im Design-Overhaul-Sprint unter "DARF SICH NICHT ÄNDERN" → **Constraint aufgehoben ab Produktions-Sprint**. Design-Sprint (Phasen 1–7) abgeschlossen, Constraint diente dem Schutz vor UI-seitigen Logikbrüchen während der visuellen Überarbeitung. Produktions-Sprint hat explizit Factories als Lieferobjekt. Neue Constraint-Regel: Factories erweitern ist erlaubt, Signaturen bestehender Factories und `types.ts`-Vertrag bleiben unberührt.

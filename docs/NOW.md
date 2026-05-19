@@ -94,14 +94,14 @@ Alle vier folgen demselben Vertrag: pure `detectXPure(fresh, projectFacts)` + fa
 | P1-F2 | `aktion`-Box expliziter Renderer mit konfigurierbaren Buttons                             | ✅ über modality-matrix in main's `ReviewRow.tsx` |
 | P1-F5 | Delta-Tag optional auf Fakt-Ebene in ReviewRow                                            | ⬜ neuer modality-matrix-ReviewRow hat keinen `payload.delta`-Slot — Re-Apply offen |
 | P1-F6 | Paste-Preview-Mode in InputOverlay (≥100 Zeichen)                                         | ✅                        |
-| P1-B1 | `delta_type ENUM` um `unclear` erweitern oder Mapping dokumentieren                       | ⬜                        |
-| P1-B2 | `ProjectViewModel.coverage`-Felder (knownFacts, openGaps, conflictsActive, lastIntakeAge) | ⬜                        |
+| P1-B1 | `delta_type ENUM` um `unclear` erweitern oder Mapping dokumentieren                       | ✅ TS-Typ + DeltaTag (DB-Migration offen; `DialogBox` hat parallel `BoxType "unklar"` aus modality-matrix) |
+| P1-B2 | `ProjectViewModel.coverage`-Felder (knownFacts, openGaps, conflictsActive, lastIntakeAge) | ◐ VM-Daten + Composer ✅; UI-Anbindung offen (main hat LageZone umgebaut) |
 | P1-B4 | Edge Function `topic-merge` + UI-Flow                                                     | ⬜                        |
-| P1-F3 | `SubstanzSection` Themen-Cluster zu echtem Drilldown                                      | ⬜                        |
+| P1-F3 | `SubstanzSection` Themen-Cluster zu echtem Drilldown                                      | ⬜ main hat Section neu strukturiert (ChevronRight) — Re-Apply in eigenem Sprint |
 
 ## Backlog (nach Priorität)
 
-1. **Produktions-Sprint 1 Rest** — B1, B2, B4, F3 (Substanz-Drilldown) aus obiger Tabelle.
+1. **Produktions-Sprint 1 Rest** — F5 (Delta-Tag in neue ReviewRow), B2-UI (Coverage-Chips in neue LageZone), B4 (topic-merge), F3 (Substanz-Drilldown auf ChevronRight-Basis).
 2. **Loops aus Re-Audit**
    - Graphiti-Sync-Diagnose (`inspect-graphiti diagnose`, failed-Reasons gruppieren).
    - Vier-Rollen-Screen User-Smoke nach Welle B.

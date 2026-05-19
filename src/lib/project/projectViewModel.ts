@@ -3,7 +3,6 @@
 // -----------------------------------------------------------------------------
 //  Mapper liegen in ./mappers/*. Hier nur RawProjectData, Composer und Re-Exports.
 // =============================================================================
-/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { formatRelative } from "@/lib/format/relativeTime";
 import { fmtLong, fmtShort, ageInDays } from "@/lib/format/dateFormatters";
@@ -48,7 +47,12 @@ import { toDokumente } from "./mappers/dokumente";
 import { toStakeholder } from "./mappers/stakeholder";
 
 // Re-Exports für bestehende Importe
-export { humanizeSnapshotSummary, titleFromJson, stringFromJson, numberFromJson } from "./mappers/humanize";
+export {
+  humanizeSnapshotSummary,
+  titleFromJson,
+  stringFromJson,
+  numberFromJson,
+} from "./mappers/humanize";
 export { toKonflikte } from "./mappers/konflikte";
 export { toGaps } from "./mappers/gaps";
 export { toDependencies } from "./mappers/dependencies";
@@ -157,6 +161,12 @@ export function buildProjectViewModel(raw: RawProjectData): ComposedProjectVM {
     decisions.length === 0 &&
     tasks.length === 0;
 
+  // Most recent canonical fact creation as proxy for "last intake".
+  const intakeTimes = canonical.map((c) => c.created_at).filter(Boolean);
+  const lastIntake = intakeTimes.length
+    ? intakeTimes.reduce((max, t) => (new Date(t).getTime() > new Date(max).getTime() ? t : max))
+    : lastChange;
+
   const vm: ProjectViewModel = {
     id: p.id,
     name: p.name,
@@ -173,6 +183,12 @@ export function buildProjectViewModel(raw: RawProjectData): ComposedProjectVM {
       letzteAenderung: formatRelative(lastChange) || "—",
       naechsterTermin: nextDeadline ? fmtDate(nextDeadline.due_date) : "—",
       budget: budgetFact ? titleFromJson(budgetFact.content, "—") : "—",
+    },
+    coverage: {
+      knownFacts: canonical.length,
+      openGaps: gaps.length,
+      conflictsActive: konflikte.length,
+      lastIntakeAge: formatRelative(lastIntake) || "—",
     },
     konflikte,
     gaps: gapVMs,

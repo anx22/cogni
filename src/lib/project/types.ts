@@ -15,7 +15,7 @@ export type ObjektTyp =
   | "feedback"
   | "dependency";
 
-export type DeltaTyp = "neu" | "ersetzt" | "bestaetigt" | "widersprochen";
+export type DeltaTyp = "neu" | "ersetzt" | "bestaetigt" | "widersprochen" | "unclear";
 
 export interface KonfliktVM {
   id: string;
@@ -92,6 +92,13 @@ export interface StakeholderVM {
   org: string;
 }
 
+export interface CoverageVM {
+  knownFacts: number;
+  openGaps: number;
+  conflictsActive: number;
+  lastIntakeAge: string;
+}
+
 export interface ProjectViewModel {
   id: string;
   name: string;
@@ -100,6 +107,7 @@ export interface ProjectViewModel {
   lagetext: string;
   outcome: { erfolgskriterium: string; nogos: string[] } | null;
   stats: { letzteAenderung: string; naechsterTermin: string; budget: string };
+  coverage: CoverageVM;
   konflikte: KonfliktVM[];
   gaps: GapVM[];
   dependencies: DependencyVM[];
