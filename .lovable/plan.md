@@ -1,3 +1,7 @@
+## Status
+
+Pass 1–6 umgesetzt. Pass 6 (FaktDrillOverlay): roter Banner mit AlertTriangle, Source-Cards mit 32 px Datums-Anchor + Metadata-Footer + Hint-Zeile, 60 px vs-Achse + 34 px vs-Kreis, drei „Was stimmt?"-Tiles (Empfehlung amber-vorgewählt), Gap-Drill mit 2/3-Split, Kontext-Card + Blockiert-Liste links, Lücke-Card + Eingabe + Suggestion-Pills rechts, Footer mit "Als Handlungsbedarf markieren". Quellen-Metadata/Empfehlung/Blockiert rendern nur, wenn Payload-Felder gesetzt sind.
+
 ## Fokus
 
 **Nicht**: Entity, Home, AssetOrbit, Theme-Vehikel, ViewModel-Aufbohrung.
