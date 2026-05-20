@@ -21,6 +21,7 @@ import { useState } from "react";
 import type { DialogBox } from "@/lib/dialog/types";
 import { END_STATES } from "@/lib/dialog/types";
 import ConfirmDestructive from "@/components/shared/ConfirmDestructive";
+import { useDialog } from "@/components/dialog/dialogContext";
 
 // -----------------------------------------------------------------------------
 //  Labels + Farben pro Modalität.
