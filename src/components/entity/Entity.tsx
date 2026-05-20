@@ -51,7 +51,10 @@ function usePointerFollow(ref: React.RefObject<HTMLElement>) {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    if (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+    ) {
       return;
     }
 
@@ -79,11 +82,14 @@ function usePointerFollow(ref: React.RefObject<HTMLElement>) {
 
     const updateTarget = (clientX: number, clientY: number) => {
       const rect = el.getBoundingClientRect();
-      const cx = rect.left + rect.width / 2;
-      const cy = rect.top + rect.height / 2;
-      const nx = (clientX - cx) / (rect.width / 2);
-      const ny = (clientY - cy) / (rect.height / 2);
-      // Soft clamp via tanh-Approximation (begrenzt natürlich, ohne Knick)
+      // Subtract current translation to get the natural (rest) center.
+      // getBoundingClientRect reflects the painted position including any
+      // in-flight translate3d — without this correction the target shrinks as
+      // the element chases the pointer, creating a feedback oscillation.
+      const naturalCx = rect.left + rect.width / 2 - current.current.x;
+      const naturalCy = rect.top + rect.height / 2 - current.current.y;
+      const nx = (clientX - naturalCx) / (rect.width / 2);
+      const ny = (clientY - naturalCy) / (rect.height / 2);
       const clamp = (v: number) => Math.max(-1, Math.min(1, v));
       target.current.x = clamp(nx) * FOLLOW_MAX_OFFSET;
       target.current.y = clamp(ny) * FOLLOW_MAX_OFFSET;

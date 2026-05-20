@@ -13,9 +13,9 @@ import { useState } from "react";
 import { ArrowLeft, AlertTriangle } from "lucide-react";
 
 type SourceMeta = {
-  label?: string;     // "Mail · Thomas Berger"
-  meta?: string;      // "09.04.2026 · 14:22 · informell"
-  hint?: string;      // "älter · direkter Absender"
+  label?: string; // "Mail · Thomas Berger"
+  meta?: string; // "09.04.2026 · 14:22 · informell"
+  hint?: string; // "älter · direkter Absender"
   recommend?: boolean;
 };
 
@@ -28,6 +28,9 @@ const FaktDrillOverlay = ({ onClose }: { onClose: () => void }) => {
   const [selected, setSelected] = useState<"A" | "B" | "open" | null>(recA ? "A" : null);
   // Gap-Input
   const [gapInput, setGapInput] = useState<string>("");
+  // Inline-Korrektur (Bezug / Frist / Entscheidung) für Modality-Renderer
+  const [editing, setEditing] = useState<"bezug" | "due_date" | "decide" | null>(null);
+  const [editInput, setEditInput] = useState<string>("");
 
   if (!session || !box) return null;
 
@@ -54,7 +57,9 @@ const FaktDrillOverlay = ({ onClose }: { onClose: () => void }) => {
           <ArrowLeft size={12} /> Handlungsbedarf
         </button>
         <span style={{ color: "var(--d-ink-4)" }}>·</span>
-        <span style={{ fontSize: 13.5, color: "var(--d-ink-2)", fontWeight: 450 }}>{box.title}</span>
+        <span style={{ fontSize: 13.5, color: "var(--d-ink-2)", fontWeight: 450 }}>
+          {box.title}
+        </span>
       </div>
       <div className="flex items-center" style={{ gap: 10 }}>
         {drillSource && (
@@ -109,14 +114,16 @@ const FaktDrillOverlay = ({ onClose }: { onClose: () => void }) => {
       const isRec = meta.recommend ?? (side === "A" ? recA : false);
       return (
         <div
-          style={{
-            flex: 1,
-            padding: "22px 28px",
-            borderRadius: side === "A" ? "16px 0 0 16px" : "0 16px 16px 0",
-            background: "var(--d-surf)",
-            border: `1px solid ${isRec ? "var(--d-warn)" : "var(--d-hair-2)"}`,
-            [side === "A" ? "borderRight" : "borderLeft"]: "none",
-          } as React.CSSProperties}
+          style={
+            {
+              flex: 1,
+              padding: "22px 28px",
+              borderRadius: side === "A" ? "16px 0 0 16px" : "0 16px 16px 0",
+              background: "var(--d-surf)",
+              border: `1px solid ${isRec ? "var(--d-warn)" : "var(--d-hair-2)"}`,
+              [side === "A" ? "borderRight" : "borderLeft"]: "none",
+            } as React.CSSProperties
+          }
         >
           <div
             className="mono"
@@ -150,7 +157,9 @@ const FaktDrillOverlay = ({ onClose }: { onClose: () => void }) => {
                 background: "var(--d-surf-3)",
               }}
             >
-              {meta.label && <div style={{ fontSize: 12, color: "var(--d-ink-2)" }}>{meta.label}</div>}
+              {meta.label && (
+                <div style={{ fontSize: 12, color: "var(--d-ink-2)" }}>{meta.label}</div>
+              )}
               {meta.meta && (
                 <div
                   className="mono"
@@ -284,7 +293,9 @@ const FaktDrillOverlay = ({ onClose }: { onClose: () => void }) => {
             flex: "0 0 auto",
           }}
         >
-          <div style={{ fontSize: 12.5, color: "var(--d-ink-3)", marginBottom: 12 }}>Was stimmt?</div>
+          <div style={{ fontSize: 12.5, color: "var(--d-ink-3)", marginBottom: 12 }}>
+            Was stimmt?
+          </div>
           <div style={{ display: "flex", gap: 10 }}>
             {tiles.map((t) => {
               const isSel = selected === t.key;
@@ -319,11 +330,7 @@ const FaktDrillOverlay = ({ onClose }: { onClose: () => void }) => {
                     style={{
                       fontSize: 13.5,
                       fontWeight: 450,
-                      color: isSel
-                        ? isOpen
-                          ? "var(--d-ink)"
-                          : "var(--d-warn)"
-                        : "var(--d-ink-2)",
+                      color: isSel ? (isOpen ? "var(--d-ink)" : "var(--d-warn)") : "var(--d-ink-2)",
                     }}
                   >
                     {t.label}
@@ -380,7 +387,8 @@ const FaktDrillOverlay = ({ onClose }: { onClose: () => void }) => {
     const lebensdauer = box.payload?.lebensdauer as string | undefined;
     const quelle = box.payload?.quelle as string | undefined;
     const suggestions = (box.payload?.suggestions as string[] | undefined) ?? [];
-    const blockiert = (box.payload?.blockiert as Array<{ what: string; strong?: boolean }> | undefined) ?? [];
+    const blockiert =
+      (box.payload?.blockiert as Array<{ what: string; strong?: boolean }> | undefined) ?? [];
 
     const submit = () => {
       const t = gapInput.trim();
@@ -436,7 +444,12 @@ const FaktDrillOverlay = ({ onClose }: { onClose: () => void }) => {
               </div>
               {wirkung && (
                 <div
-                  style={{ marginTop: 10, fontSize: 13.5, color: "var(--d-ink-2)", lineHeight: 1.55 }}
+                  style={{
+                    marginTop: 10,
+                    fontSize: 13.5,
+                    color: "var(--d-ink-2)",
+                    lineHeight: 1.55,
+                  }}
                 >
                   {wirkung}
                 </div>
@@ -536,7 +549,9 @@ const FaktDrillOverlay = ({ onClose }: { onClose: () => void }) => {
               {box.title}
             </div>
             {wirkung && !betrifft && (
-              <div style={{ marginTop: 10, fontSize: 13, color: "var(--d-ink-2)", lineHeight: 1.5 }}>
+              <div
+                style={{ marginTop: 10, fontSize: 13, color: "var(--d-ink-2)", lineHeight: 1.5 }}
+              >
                 {wirkung}
               </div>
             )}
@@ -655,45 +670,353 @@ const FaktDrillOverlay = ({ onClose }: { onClose: () => void }) => {
     );
   };
 
-  // Andere Box-Typen: simple Bestätigung
-  const renderGeneric = () => (
-    <div style={{ flex: 1, padding: "32px 56px", display: "flex", flexDirection: "column", gap: 16 }}>
-      <div
-        className="cogni-card"
-        style={{ padding: 24 }}
-      >
-        <div className="t-micro" style={{ color: "var(--d-ink-4)", marginBottom: 8 }}>
-          {box.type.toUpperCase()}
-        </div>
-        <div style={{ fontSize: 20, fontWeight: 500, color: "var(--d-ink)" }}>{box.title}</div>
-      </div>
+  // ───────────────────────────────────── Modality (alles außer konflikt/gap) ──
+  //  Modality-aware Generic-Renderer für Single-Box-Sessions. Zeigt
+  //  understood/attaches_to und passende Aktion-Buttons pro BoxType.
+  //  Sekundär-Aktionen öffnen Inline-Korrektur (Bezug / Frist / Entscheidung).
+  const TYPE_LABEL: Record<string, string> = {
+    wissen: "Wissen",
+    zuordnung: "Projekt",
+    auswahl: "Auswahl",
+    eingabe: "Eingabe",
+    kontext: "Kontext",
+    aktion: "Aktion",
+    bedingung: "Bedingung",
+    ausschluss: "Ausschluss",
+    annahme: "Annahme",
+    vorschlag: "Vorschlag",
+    frage: "Frage",
+    notiz: "Notiz",
+    beziehung: "Beziehung",
+    attribut: "Detail",
+    risiko: "Risiko",
+    unklar: "Unklar",
+  };
+
+  type ModalityAction = {
+    primaryLabel: string;
+    secondaryLabel?: string;
+    inlineEdit?: "bezug" | "due_date" | "decide";
+  };
+  const MODALITY: Record<string, ModalityAction> = {
+    bedingung: { primaryLabel: "Übernehmen", secondaryLabel: "Bezug ändern", inlineEdit: "bezug" },
+    ausschluss: { primaryLabel: "Übernehmen", secondaryLabel: "Bezug ändern", inlineEdit: "bezug" },
+    annahme: { primaryLabel: "Als Annahme" },
+    vorschlag: {
+      primaryLabel: "Vormerken",
+      secondaryLabel: "Jetzt entscheiden",
+      inlineEdit: "decide",
+    },
+    notiz: { primaryLabel: "Ablegen" },
+    beziehung: {
+      primaryLabel: "Kante übernehmen",
+      secondaryLabel: "Bezug ändern",
+      inlineEdit: "bezug",
+    },
+    attribut: {
+      primaryLabel: "Aktualisieren",
+      secondaryLabel: "Bezug ändern",
+      inlineEdit: "bezug",
+    },
+    risiko: {
+      primaryLabel: "Risiko aufnehmen",
+      secondaryLabel: "Frist setzen",
+      inlineEdit: "due_date",
+    },
+    unklar: { primaryLabel: "Verstehe ich das richtig?" },
+    wissen: { primaryLabel: "Bestätigen" },
+    kontext: { primaryLabel: "Bestätigen" },
+  };
+
+  const renderGeneric = () => {
+    const understood = (box.payload?.understood as string | null) ?? null;
+    const attachesTo = (box.payload?.attaches_to as string | null) ?? null;
+    const evidence = (box.payload?.evidence as string | null) ?? null;
+    // Kontext-Boxen (aus Factory-Sessions) tragen Daten im klassischen
+    // auszug/begruendung/quelle/sachverhalt-Schema — auch rendern.
+    const auszug = (box.payload?.auszug as string | null) ?? null;
+    const begruendung = (box.payload?.begruendung as string | null) ?? null;
+    const sachverhalt = (box.payload?.sachverhalt as string | null) ?? null;
+    const quelle = (box.payload?.quelle as string | null) ?? null;
+    const action = MODALITY[box.type] ?? { primaryLabel: "Bestätigen" };
+    const aktionen: string[] = Array.isArray(box.payload?.aktionen) ? box.payload.aktionen : [];
+
+    const inlineKey =
+      action.inlineEdit === "bezug"
+        ? "attaches_to"
+        : action.inlineEdit === "due_date"
+          ? "due_date"
+          : "";
+    const inlineHint =
+      action.inlineEdit === "bezug"
+        ? "Worauf bezieht sich das?"
+        : action.inlineEdit === "due_date"
+          ? "Frist (z. B. 15.06.2026)"
+          : "";
+
+    return (
       <div
         style={{
+          flex: 1,
+          padding: "32px 56px",
           display: "flex",
-          justifyContent: "flex-end",
-          gap: 10,
-          marginTop: "auto",
-          paddingTop: 20,
-          borderTop: "1px solid var(--d-hair)",
+          flexDirection: "column",
+          gap: 20,
+          overflowY: "auto",
         }}
       >
-        <button type="button" className="dlg2-btn-secondary" onClick={onClose}>
-          Schließen
-        </button>
-        <button
-          type="button"
-          className="dlg2-btn-commit ready"
-          onClick={() => commitBox(box.id, "confirm")}
+        <div className="cogni-card" style={{ padding: 28 }}>
+          <div
+            className="mono"
+            style={{
+              fontSize: 10,
+              color: "var(--d-ink-3)",
+              letterSpacing: ".06em",
+              textTransform: "uppercase",
+              marginBottom: 12,
+            }}
+          >
+            {TYPE_LABEL[box.type] ?? box.type.toUpperCase()}
+          </div>
+          <div
+            style={{
+              fontSize: 24,
+              fontWeight: 500,
+              letterSpacing: "-.018em",
+              color: "var(--d-ink)",
+              lineHeight: 1.25,
+            }}
+          >
+            {box.title}
+          </div>
+          {understood && (
+            <div style={{ marginTop: 14, fontSize: 14, color: "var(--d-ink-2)", lineHeight: 1.5 }}>
+              <span
+                className="mono"
+                style={{ fontSize: 11, color: "var(--d-ink-3)", marginRight: 6 }}
+              >
+                VERSTANDEN:
+              </span>
+              {understood}
+            </div>
+          )}
+          {/* Factory-Session-Felder (Thema/Dokument/Verlauf/Source/Handlungsbedarf) */}
+          {(auszug || sachverhalt) && (
+            <div style={{ marginTop: 14, fontSize: 15, color: "var(--d-ink)", lineHeight: 1.5 }}>
+              {auszug ?? sachverhalt}
+            </div>
+          )}
+          {begruendung && (
+            <div style={{ marginTop: 10, fontSize: 13, color: "var(--d-ink-3)", lineHeight: 1.5 }}>
+              {begruendung}
+            </div>
+          )}
+          {attachesTo && (
+            <div style={{ marginTop: 12, display: "inline-flex", alignItems: "center" }}>
+              <span
+                className="mono"
+                style={{
+                  fontSize: 10.5,
+                  padding: "3px 9px",
+                  borderRadius: 999,
+                  border: "1px solid var(--d-hair-2)",
+                  color: "var(--d-ink-3)",
+                  background: "var(--d-surf-3)",
+                }}
+              >
+                → {attachesTo}
+              </span>
+            </div>
+          )}
+          {evidence && (
+            <div
+              style={{
+                marginTop: 14,
+                padding: "10px 14px",
+                background: "var(--d-surf-3)",
+                borderRadius: 8,
+                fontSize: 12.5,
+                color: "var(--d-ink-3)",
+                fontStyle: "italic",
+                lineHeight: 1.5,
+                borderLeft: "2px solid var(--d-hair-2)",
+              }}
+            >
+              „{evidence}"
+            </div>
+          )}
+          {quelle && (
+            <div className="mono" style={{ marginTop: 14, fontSize: 11, color: "var(--d-ink-3)" }}>
+              {quelle}
+            </div>
+          )}
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            gap: 10,
+            marginTop: "auto",
+            paddingTop: 20,
+            borderTop: "1px solid var(--d-hair)",
+            flexWrap: "wrap",
+          }}
         >
-          Bestätigen →
-        </button>
+          {/* aktion: konfigurierbare Buttons aus payload.aktionen[] */}
+          {box.type === "aktion" && aktionen.length > 0 ? (
+            <>
+              <button
+                type="button"
+                className="dlg2-btn-secondary"
+                onClick={() => commitBox(box.id, "reject")}
+              >
+                Verwerfen
+              </button>
+              {aktionen.map((label, i) => (
+                <button
+                  key={`${label}-${i}`}
+                  type="button"
+                  className={i === 0 ? "dlg2-btn-commit ready" : "dlg2-btn-secondary"}
+                  onClick={() => commitBox(box.id, "confirm", { aktion: label })}
+                >
+                  {label}
+                  {i === 0 && " →"}
+                </button>
+              ))}
+            </>
+          ) : editing && action.inlineEdit ? (
+            // Inline-Korrektur erfasst (Bezug / Frist / Entscheidung)
+            action.inlineEdit === "decide" ? (
+              <>
+                <button
+                  type="button"
+                  className="dlg2-btn-secondary"
+                  onClick={() => setEditing(null)}
+                >
+                  Abbrechen
+                </button>
+                <button
+                  type="button"
+                  className="dlg2-btn-secondary"
+                  onClick={() => {
+                    setEditing(null);
+                    commitBox(box.id, "reject");
+                  }}
+                >
+                  Nein, verwerfen
+                </button>
+                <button
+                  type="button"
+                  className="dlg2-btn-commit ready"
+                  onClick={() => {
+                    setEditing(null);
+                    commitBox(box.id, "confirm", { entscheidung: "ja" });
+                  }}
+                >
+                  Ja, übernehmen →
+                </button>
+              </>
+            ) : (
+              <>
+                <input
+                  value={editInput}
+                  onChange={(e) => setEditInput(e.target.value)}
+                  placeholder={inlineHint}
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && editInput.trim()) {
+                      commitBox(box.id, "confirm", { [inlineKey]: editInput.trim() });
+                      setEditing(null);
+                    }
+                    if (e.key === "Escape") setEditing(null);
+                  }}
+                  style={{
+                    flex: 1,
+                    minWidth: 200,
+                    height: 36,
+                    padding: "0 14px",
+                    borderRadius: 10,
+                    border: "1px solid var(--d-blue)",
+                    background: "var(--d-blue-soft)",
+                    color: "var(--d-blue)",
+                    fontFamily: "Geist Mono, monospace",
+                    fontSize: 14,
+                    outline: "none",
+                  }}
+                />
+                <button
+                  type="button"
+                  className="dlg2-btn-secondary"
+                  onClick={() => setEditing(null)}
+                >
+                  Abbrechen
+                </button>
+                <button
+                  type="button"
+                  className="dlg2-btn-commit ready"
+                  disabled={!editInput.trim()}
+                  onClick={() => {
+                    if (!editInput.trim()) return;
+                    commitBox(box.id, "confirm", { [inlineKey]: editInput.trim() });
+                    setEditing(null);
+                  }}
+                >
+                  Speichern →
+                </button>
+              </>
+            )
+          ) : (
+            // Standard: Primary + optional Secondary + Verwerfen + Schließen
+            <>
+              <button type="button" className="dlg2-btn-secondary" onClick={onClose}>
+                Schließen
+              </button>
+              <button
+                type="button"
+                className="dlg2-btn-secondary"
+                onClick={() => commitBox(box.id, "reject")}
+              >
+                Verwerfen
+              </button>
+              {action.secondaryLabel && action.inlineEdit && (
+                <button
+                  type="button"
+                  className="dlg2-btn-secondary"
+                  onClick={() => {
+                    if (action.inlineEdit === "bezug" && attachesTo) {
+                      setEditInput(attachesTo);
+                    } else {
+                      setEditInput("");
+                    }
+                    setEditing(action.inlineEdit!);
+                  }}
+                >
+                  {action.secondaryLabel}
+                </button>
+              )}
+              <button
+                type="button"
+                className="dlg2-btn-commit ready"
+                onClick={() => commitBox(box.id, "confirm")}
+              >
+                {action.primaryLabel} →
+              </button>
+            </>
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div data-dialog className="dlg2-root dialog-backdrop">
-      <SessionHeader source={session.context ?? ""} summary={projectLabel} onClose={onClose} mode="drill" />
+      <SessionHeader
+        source={session.context ?? ""}
+        summary={projectLabel}
+        onClose={onClose}
+        mode="drill"
+      />
       <DrillHeader />
       {box.type === "konflikt"
         ? renderConflict()
