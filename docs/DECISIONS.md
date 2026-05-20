@@ -2,6 +2,16 @@
 
 Format: `[YYYY-MM-DD] Problem → Choice → Reason`
 
+## 2026-05-20 — Modality-Matrix: tote Pfade glattgezogen
+
+Audit von `ReviewRow.tsx` (Batch-Liste) und `FaktDrillOverlay.tsx` (Single-Box-Drill) gegen den 2026-05-18 Modalitäts-Vertrag. Sieben tote Click-Pfade identifiziert und gefixt; alle 65 Tests grün, tsc clean.
+
+- `2026-05-20` `aktion`-Box fiel in den Default-Renderer mit einzelnem ✓-Button — `payload.aktionen[]` (z. B. aus `buildThemaMergeSession` „Zusammenführen" / „Getrennt lassen") wurde **komplett ignoriert** → **eigener `aktion`-Branch** in `ReviewRow.tsx` und in `FaktDrillOverlay.renderGeneric`: rendert konfigurierbare Buttons aus `payload.aktionen[]`, erster Button primärer Ok-Tone, Rest neutral. Klick sendet `user_decision = { aktion: label }`. Plus eigene Verwerfen-Option mit `ConfirmDestructive`.
+- `2026-05-20` Sechs Sprechhandlungs-Sekundär-Buttons in `ReviewRow.tsx` schickten `onConfirm({ secondary: true })` und flippten die Box bestaetigt **ohne irgendeine User-Eingabe einzusammeln** (Bezug ändern bei bedingung/ausschluss/attribut/beziehung, Frist setzen bei risiko, Jetzt entscheiden bei vorschlag, Bestätigen bei annahme) → **Inline-Edit-Pattern eingeführt**: Klick auf Sekundär öffnet ein Inline-Input/Binär-UI in derselben Zeile, prefilled mit aktuellem `attaches_to` wenn vorhanden. Enter/✓ committed `{ attaches_to: x }` bzw. `{ due_date: x }` bzw. `{ entscheidung: "ja"|"nein" }`. ESC/✕ schließt. `annahme` „Bestätigen" war semantisch identisch zu Primary „Als Annahme" → **entfernt** (Dublette).
+- `2026-05-20` `FaktDrillOverlay.tsx` hatte nur `renderConflict` und `renderGap` — **alle 16 anderen BoxTypes** (bedingung, ausschluss, annahme, vorschlag, frage, notiz, beziehung, attribut, risiko, unklar, aktion, wissen, kontext, eingabe, auswahl, zuordnung) landeten im `renderGeneric` mit nichts als Titel + „Bestätigen" → **modality-aware `renderGeneric`**: zeigt jetzt `understood`, `attaches_to` (als Chip), `evidence` (als Zitat), plus klassische Factory-Session-Felder `auszug`/`sachverhalt`/`begruendung`/`quelle`. Aktion-Buttons aus identischer MODALITY-Map wie ReviewRow. Sekundär-Aktionen mit Inline-Edit (Bezug/Frist/Entscheidung).
+- `2026-05-20` `LageZone.tsx` „Material"- und „Review öffnen"-Buttons hatten **gar keinen `onClick`** — stiller Fehlschlag bei Click → **Props `onMaterialClick` und `onReviewClick`** ergänzt, in `ProjectScreen.tsx` verdrahtet: Material → öffnet `InputOverlay` (Datei/Link/Notiz, projektgebunden); Review öffnen → Supabase-Query auf `dialog_sessions` für offene Reviews dieses Projekts, öffnet die nächste mit `openSessionFromDB`, fallback Toast „Keine offenen Reviews". Buttons sind `disabled` wenn Handler fehlen (sichtbar via opacity-50 + not-allowed).
+- `2026-05-20` Vier Factory-Stubs verwiesen auf „folgt in Phase 6" / „Phase 6 (Dokumenten-Preview)" — Phase 6 war bereits 2026-05-14 abgeschlossen, die Texte waren **6 Tage alte Lügen** → entfernt: `buildDokumentSession.begruendung` und `buildSourceSession.auszug` weg, übrige Daten bleiben. Drill-Inhalt jetzt ehrlich karg statt mit irreführendem Versprechen.
+
 ## 2026-05-19 — Sprint 1 Produktion: Wissensstand, Drilldown, Delta
 
 - `2026-05-19` `DeltaTyp` hatte keinen `unclear`-Wert; DB-ENUM-Erweiterung ist ein separater Migration-Schritt → **`"unclear"` in `src/lib/project/types.ts` ergänzt**, `DeltaTag.tsx` importiert fortan aus `@/lib/project/types` (kanonische Quelle statt `@/data/demoProject`), neutrales `unklar`-Tag (#muted). DB-Migration folgt in eigenem Sprint, sobald Staging-DB verfügbar.
@@ -163,7 +173,7 @@ aber die geteilten `corsHeaders` — Verhalten unverändert.
   1. **Modalität** (Sprechhandlung): `assertion | condition | exclusion | assumption | suggestion | question | note | relation | attribute | risk | unclear`.
   2. **Bezug**: `attaches_to` (Klartext-Bezugsobjekt, Pflicht bei condition/exclusion/attribute/risk/relation).
   3. **Erwartung**: `asks` (exakte User-Frage). **`null` = keine Frage = kein Eingabefeld** — goldene Regel gegen die Sackgasse.
-  Zusätzlich `understood` (1-Satz-Klartext „Verstanden: …") und `evidence` (wörtliches Quellfragment).
+     Zusätzlich `understood` (1-Satz-Klartext „Verstanden: …") und `evidence` (wörtliches Quellfragment).
 - `2026-05-18` **Mapping**: `mapToBoxType(delta, fact, modality)` priorisiert Modalität vor Fact-Type. Konflikt schlägt alles. Legacy-Fakten ohne Modalität fallen aufs alte Verhalten zurück.
 - `2026-05-18` **Stille Substanz**: `confidence ≥ 0.9 && asks=null && !conflict && modality∉{question,unclear}` → kein Review-Click, einzeilige „N Punkte still übernommen"-Sammelzeile. Schwelle in `SILENT_COMMIT_CONFIDENCE`.
 - `2026-05-18` **Drift-Telemetrie**: `modality=unclear` wird in `pipeline_events` als `warn` mit Samples geloggt → Grundlage für künftige Schema-Vorschläge statt Einzelbug-Diskussionen.

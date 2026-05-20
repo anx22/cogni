@@ -88,16 +88,29 @@ Alle vier folgen demselben Vertrag: pure `detectXPure(fresh, projectFacts)` + fa
 
 ## Aktueller Sprint — Produktions-Sprint 1: Dialog-Schicht (ab 2026-05-19)
 
-| #     | Aufgabe                                                                                   | Status                    |
-| ----- | ----------------------------------------------------------------------------------------- | ------------------------- |
-| P1-F1 | 5 neue Session-Factories (Zuordnung/Korrektur/Versionen/ThemaMerge/Rückfrage)             | ✅ 65/65 Tests, tsc clean |
-| P1-F2 | `aktion`-Box expliziter Renderer mit konfigurierbaren Buttons                             | ✅ über modality-matrix in main's `ReviewRow.tsx` |
-| P1-F5 | Delta-Tag optional auf Fakt-Ebene in ReviewRow                                            | ⬜ neuer modality-matrix-ReviewRow hat keinen `payload.delta`-Slot — Re-Apply offen |
-| P1-F6 | Paste-Preview-Mode in InputOverlay (≥100 Zeichen)                                         | ✅                        |
+| #     | Aufgabe                                                                                   | Status                                                                                                     |
+| ----- | ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| P1-F1 | 5 neue Session-Factories (Zuordnung/Korrektur/Versionen/ThemaMerge/Rückfrage)             | ✅ 65/65 Tests, tsc clean                                                                                  |
+| P1-F2 | `aktion`-Box expliziter Renderer mit konfigurierbaren Buttons                             | ✅ über modality-matrix in main's `ReviewRow.tsx`                                                          |
+| P1-F5 | Delta-Tag optional auf Fakt-Ebene in ReviewRow                                            | ⬜ neuer modality-matrix-ReviewRow hat keinen `payload.delta`-Slot — Re-Apply offen                        |
+| P1-F6 | Paste-Preview-Mode in InputOverlay (≥100 Zeichen)                                         | ✅                                                                                                         |
 | P1-B1 | `delta_type ENUM` um `unclear` erweitern oder Mapping dokumentieren                       | ✅ TS-Typ + DeltaTag (DB-Migration offen; `DialogBox` hat parallel `BoxType "unklar"` aus modality-matrix) |
-| P1-B2 | `ProjectViewModel.coverage`-Felder (knownFacts, openGaps, conflictsActive, lastIntakeAge) | ◐ VM-Daten + Composer ✅; UI-Anbindung offen (main hat LageZone umgebaut) |
-| P1-B4 | Edge Function `topic-merge` + UI-Flow                                                     | ⬜                        |
-| P1-F3 | `SubstanzSection` Themen-Cluster zu echtem Drilldown                                      | ⬜ main hat Section neu strukturiert (ChevronRight) — Re-Apply in eigenem Sprint |
+| P1-B2 | `ProjectViewModel.coverage`-Felder (knownFacts, openGaps, conflictsActive, lastIntakeAge) | ◐ VM-Daten + Composer ✅; UI-Anbindung offen (main hat LageZone umgebaut)                                  |
+| P1-B4 | Edge Function `topic-merge` + UI-Flow                                                     | ⬜                                                                                                         |
+| P1-F3 | `SubstanzSection` Themen-Cluster zu echtem Drilldown                                      | ⬜ main hat Section neu strukturiert (ChevronRight) — Re-Apply in eigenem Sprint                           |
+
+### 2026-05-20 — Modality-Matrix Dead-End-Audit
+
+Sieben tote Click-Pfade in Dialog-System glattgezogen (Details in DECISIONS).
+
+| #   | Toter Pfad                                                                | Fix                                                                                                              |
+| --- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| 1   | `aktion` ignorierte `payload.aktionen[]`                                  | Eigener Renderer, konfigurierbare Buttons in beiden Overlays                                                     |
+| 2   | 5× Sekundär-Buttons sendeten `{secondary:true}` ohne Eingabe              | Inline-Edit (Bezug/Frist/Entscheidung) in ReviewRow + FaktDrillOverlay                                           |
+| 3   | `annahme` „Bestätigen" Dublette zu Primary                                | Entfernt                                                                                                         |
+| 4   | FaktDrillOverlay's `renderGeneric` = Title + „Bestätigen" für 16 BoxTypes | Modality-aware mit understood/attaches_to/evidence + Factory-Felder                                              |
+| 5   | `LageZone` „Material" + „Review öffnen" ohne `onClick`                    | Verdrahtet in `ProjectScreen`: Material → `InputOverlay`, Review → Query `dialog_sessions` + `openSessionFromDB` |
+| 6   | 4× Factory-Stubs „folgt in Phase 6" (6 Tage alte Lügen)                   | Entfernt aus `buildDokumentSession`, `buildSourceSession`                                                        |
 
 ## Backlog (nach Priorität)
 
