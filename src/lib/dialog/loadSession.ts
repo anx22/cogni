@@ -32,10 +32,7 @@ interface ProjectLite {
 }
 
 /** Klartext aus einem strukturierten Fact-Content bauen — keine JSON-Strings ans UI. */
-function buildFactSummary(
-  factType: string | undefined,
-  content: Record<string, unknown>,
-): string {
+function buildFactSummary(factType: string | undefined, content: Record<string, unknown>): string {
   const c = content;
   switch (factType) {
     case "stakeholder": {
@@ -147,6 +144,8 @@ export async function loadDialogSession(sessionId: string): Promise<DialogSessio
     const asks = (ctx.asks as string | undefined) ?? null;
     const understood = (ctx.understood as string | undefined) ?? null;
     const evidence = (ctx.evidence as string | undefined) ?? null;
+    // Linker-Ergebnis (add|replace|contradict|merge|confirm), für DeltaTag in ReviewRow.
+    const deltaType = (ctx.delta_type as string | undefined) ?? null;
 
     if (c.box_type === "assignment") {
       const rawCandidates = (ctx.candidates ?? []) as ProjectLite[];
@@ -156,7 +155,8 @@ export async function loadDialogSession(sessionId: string): Promise<DialogSessio
         null;
       const enrichedCandidates: ProjectLite[] = rawCandidates.map((c) => ({
         ...c,
-        name: c.name || allProjects.find((p) => p.project_id === c.project_id)?.name || c.project_id,
+        name:
+          c.name || allProjects.find((p) => p.project_id === c.project_id)?.name || c.project_id,
       }));
       return {
         id: c.id,
@@ -177,8 +177,7 @@ export async function loadDialogSession(sessionId: string): Promise<DialogSessio
       };
     }
 
-    const summary =
-      (ctx.summary as string | undefined) ?? buildFactSummary(factType, content);
+    const summary = (ctx.summary as string | undefined) ?? buildFactSummary(factType, content);
     const details = buildFactDetails(factType, content);
 
     // Stille-Substanz Sammelzeile (Backend setzt context.kind = "silent_substanz")
@@ -262,6 +261,7 @@ export async function loadDialogSession(sessionId: string): Promise<DialogSessio
         asks,
         understood,
         evidence,
+        delta_type: deltaType,
         quelle: factType ? `vorgeschlagen · ${factType}` : "vorgeschlagen",
         optionen: ctx.options,
         hinweis: ctx.hinweis,

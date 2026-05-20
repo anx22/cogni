@@ -5,6 +5,7 @@
 //  Returnt ein typisiertes Ergebnis statt Response.
 // =============================================================================
 // deno-lint-ignore-file no-explicit-any
+/* eslint-disable @typescript-eslint/no-explicit-any -- Edge-Function läuft im Deno-Runtime, Supabase-Client-Typ kommt aus esm.sh und ist in der Host-TS-Konfig nicht aufgelöst. */
 
 import {
   ASSIGNMENT_CONFIDENT_THRESHOLD,
@@ -68,11 +69,10 @@ export async function runUnderstand(args: {
   log.stage("asset.loaded", "asset loaded", { understanding_status: asset.understanding_status });
 
   // 1a. Idempotenz
-  if (
-    !isRetry &&
-    ["running", "review_ready", "empty"].includes(asset.understanding_status)
-  ) {
-    log.stage("idempotent.skip", "asset already in terminal/running state", { status: asset.understanding_status });
+  if (!isRetry && ["running", "review_ready", "empty"].includes(asset.understanding_status)) {
+    log.stage("idempotent.skip", "asset already in terminal/running state", {
+      status: asset.understanding_status,
+    });
     return { ok: true, body: { skipped: true, status: asset.understanding_status } };
   }
 
@@ -141,13 +141,15 @@ export async function runUnderstand(args: {
 
   // Source-Eintrag
   const looksLikeEmail =
-    /^(from:|to:|subject:|date:|sender:)/im.test(text.slice(0, 600)) ||
-    meta.kind === "email";
+    /^(from:|to:|subject:|date:|sender:)/im.test(text.slice(0, 600)) || meta.kind === "email";
   const source_type =
-    meta.kind === "note" ? "note"
-    : meta.kind === "url" ? "link"
-    : looksLikeEmail ? "email"
-    : "upload";
+    meta.kind === "note"
+      ? "note"
+      : meta.kind === "url"
+        ? "link"
+        : looksLikeEmail
+          ? "email"
+          : "upload";
 
   const { data: source } = await admin
     .from("sources")
@@ -211,7 +213,9 @@ export async function runUnderstand(args: {
           lexicalHints: lexical.slice(0, 5),
         });
       } catch (err) {
-        log.warn("suggest_assignment.failed", "suggest_project_assignment failed", { error: err instanceof Error ? err.message : String(err) });
+        log.warn("suggest_assignment.failed", "suggest_project_assignment failed", {
+          error: err instanceof Error ? err.message : String(err),
+        });
       }
     }
 
@@ -244,8 +248,7 @@ export async function runUnderstand(args: {
       const quoted = suggestion?.reason_short?.match(/[„"']([^"„"']{2,40})["""']/);
       const stakeholder = extracted.find((f) => f.fact_type === "stakeholder");
       const stakeholderName =
-        (stakeholder?.content as any)?.name?.toString().trim() ||
-        stakeholder?.title?.trim();
+        (stakeholder?.content as any)?.name?.toString().trim() || stakeholder?.title?.trim();
       const fallbackName =
         suggestion?.suggested_new_name?.trim() ||
         quoted?.[1]?.trim() ||
@@ -368,7 +371,10 @@ export async function runUnderstand(args: {
       .from("dialog_sessions")
       .update({
         status: "cancelled",
-        metadata: { superseded_by_session_id: session!.id, superseded_at: new Date().toISOString() },
+        metadata: {
+          superseded_by_session_id: session!.id,
+          superseded_at: new Date().toISOString(),
+        },
       })
       .in("id", priorIds);
     await admin
@@ -384,7 +390,7 @@ export async function runUnderstand(args: {
   if (needsAssignmentBox) {
     const recommendedProjectId =
       assignment.mode === "auto" || assignment.mode === "uncertain"
-        ? assignment.candidates[0]?.project_id ?? null
+        ? (assignment.candidates[0]?.project_id ?? null)
         : null;
     caseRows.push({
       user_id: asset.user_id,
@@ -396,8 +402,8 @@ export async function runUnderstand(args: {
         assignment.mode === "auto"
           ? `Zuordnung zu „${assignment.candidates[0]?.name ?? "Projekt"}"`
           : assignment.mode === "new"
-          ? "Projekt wählen oder neu anlegen"
-          : "Welches Projekt passt?",
+            ? "Projekt wählen oder neu anlegen"
+            : "Welches Projekt passt?",
       description: assignment.reason_short ?? null,
       priority: 1000,
       context: {
@@ -463,6 +469,9 @@ export async function runUnderstand(args: {
         asks: orig.asks ?? null,
         understood: orig.understood ?? null,
         evidence: orig.evidence ?? null,
+        // Linker-Ergebnis: was hat der Linker zu diesem Fakt entschieden?
+        // (add | replace | contradict | merge | confirm) — UI rendert daraus den DeltaTag.
+        delta_type: pf.delta_type ?? null,
       },
     });
   });

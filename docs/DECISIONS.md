@@ -2,6 +2,15 @@
 
 Format: `[YYYY-MM-DD] Problem → Choice → Reason`
 
+## 2026-05-20 — P1-F5 Delta-Tag in modality-matrix ReviewRow
+
+Linker-Ergebnis (add | replace | contradict | merge) wird jetzt im Review als kleines Delta-Chip neben dem TypeChip gerendert — vorher unsichtbar im Frontend, nur als interne `proposed_facts.delta_type`-Spalte vorhanden.
+
+- `2026-05-20` `intake-understand/understandRun.ts` schreibt `delta_type` jetzt in `review_cases.context.delta_type` → Frontend hat Lesepfad
+- `2026-05-20` `loadSession.ts` liest `ctx.delta_type` und propagiert es als `box.payload.delta_type`
+- `2026-05-20` `ReviewRow.tsx`: Inline `DeltaChip`-Komponente rendert add/replace/contradict/merge mit passendem Tone (blau/amber/amber/muted), `confirm` zeigt nichts (Default-Fall, kein Informations-Mehrwert). Eingebaut in Default-Branch (wissen/kontext) und in Sprechhandlungs-Matrix (für attribut).
+- `2026-05-20` `FaktDrillOverlay.tsx`: gleiche Logik in `renderGeneric` neben dem Type-Label.
+
 ## 2026-05-20 — Antwort-Pipeline: stilles Daten-Loch geschlossen
 
 User-Eingaben in Factory-Sessions (Handlungsbedarf-Antwort, Feedback, Rückfrage, Korrektur) wurden bisher nur lokal als Box-State `bestaetigt` markiert und beim Schließen verworfen. Das war das vermutlich nervigste Dead-End: User tippt eine Antwort, sieht „aufgenommen", aber nichts wird persistiert.

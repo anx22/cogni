@@ -729,6 +729,13 @@ const FaktDrillOverlay = ({ onClose }: { onClose: () => void }) => {
   };
 
   const renderGeneric = () => {
+    const deltaType = (box.payload?.delta_type as string | null) ?? null;
+    const DELTA_LABEL: Record<string, string> = {
+      add: "neu",
+      replace: "ersetzt",
+      contradict: "widersprochen",
+      merge: "verbunden",
+    };
     const understood = (box.payload?.understood as string | null) ?? null;
     const attachesTo = (box.payload?.attaches_to as string | null) ?? null;
     const evidence = (box.payload?.evidence as string | null) ?? null;
@@ -777,6 +784,21 @@ const FaktDrillOverlay = ({ onClose }: { onClose: () => void }) => {
             }}
           >
             {TYPE_LABEL[box.type] ?? box.type.toUpperCase()}
+            {deltaType && DELTA_LABEL[deltaType] && (
+              <span
+                style={{
+                  marginLeft: 10,
+                  padding: "2px 7px",
+                  borderRadius: 5,
+                  background: "var(--d-blue-soft)",
+                  color: "var(--d-blue)",
+                  letterSpacing: ".05em",
+                }}
+                title={`Linker: ${deltaType}`}
+              >
+                {DELTA_LABEL[deltaType]}
+              </span>
+            )}
           </div>
           <div
             style={{

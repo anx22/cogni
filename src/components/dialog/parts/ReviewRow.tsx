@@ -99,6 +99,41 @@ const Stripe = ({ color }: { color: string }) => (
   <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: color }} />
 );
 
+/** Inline-Tag, das zeigt was der Linker mit diesem Fakt gemacht hat
+ *  (add | replace | contradict | merge). `confirm` zeigt nichts, weil
+ *  es der Default-Fall ist und keine zusätzliche Information trägt. */
+const DELTA_TAGS: Record<string, { label: string; bg: string; fg: string }> = {
+  add: { label: "neu", bg: "var(--d-blue-soft)", fg: "var(--d-blue)" },
+  replace: { label: "ersetzt", bg: "var(--d-warn-soft)", fg: "var(--d-warn)" },
+  contradict: { label: "widersprochen", bg: "var(--d-warn-soft)", fg: "var(--d-warn)" },
+  merge: { label: "verbunden", bg: "var(--d-surf-3)", fg: "var(--d-ink-3)" },
+};
+const DeltaChip = ({ delta }: { delta: string | null | undefined }) => {
+  if (!delta) return null;
+  const cfg = DELTA_TAGS[delta];
+  if (!cfg) return null;
+  return (
+    <span
+      className="mono"
+      style={{
+        fontSize: 9.5,
+        fontWeight: 600,
+        letterSpacing: "0.04em",
+        textTransform: "uppercase",
+        padding: "3px 7px",
+        borderRadius: 5,
+        background: cfg.bg,
+        color: cfg.fg,
+        marginLeft: 8,
+        flex: "0 0 auto",
+      }}
+      title={`Linker: ${delta}`}
+    >
+      {cfg.label}
+    </span>
+  );
+};
+
 const TypeChip = ({ kind, color }: { kind: string; color?: { bg: string; fg: string } }) => (
   <span
     className="mono"
@@ -567,7 +602,9 @@ const ReviewRow = ({ box, projectName, blocked, onConfirm, onReject }: ReviewRow
           <span style={{ flex: 1, fontSize: 13.5, color: "var(--d-ink)", marginLeft: 8 }}>
             {asks ?? box.title}
             {(box.payload?.hinweis as string | undefined) && (
-              <span style={{ display: "block", fontSize: 11.5, color: "var(--d-ink-4)", marginTop: 2 }}>
+              <span
+                style={{ display: "block", fontSize: 11.5, color: "var(--d-ink-4)", marginTop: 2 }}
+              >
                 {box.payload.hinweis}
               </span>
             )}
@@ -850,6 +887,7 @@ const ReviewRow = ({ box, projectName, blocked, onConfirm, onReject }: ReviewRow
             <span style={{ width: 5, height: 5, borderRadius: 999, background: colors.stripe }} />
           </span>
           <TypeChip kind={box.type} color={{ bg: colors.chipBg, fg: colors.chipFg }} />
+          <DeltaChip delta={box.payload?.delta_type as string | null | undefined} />
           <div style={{ flex: 1, marginLeft: 8, minWidth: 0 }}>
             <div style={{ fontSize: 13.5, color: "var(--d-ink)", fontWeight: 500 }}>
               {box.title}
@@ -1048,6 +1086,7 @@ const ReviewRow = ({ box, projectName, blocked, onConfirm, onReject }: ReviewRow
         </svg>
       </span>
       <TypeChip kind={box.type} />
+      <DeltaChip delta={box.payload?.delta_type as string | null | undefined} />
       <span
         style={{
           flex: 1,
@@ -1092,7 +1131,10 @@ const ReviewRow = ({ box, projectName, blocked, onConfirm, onReject }: ReviewRow
         )
       )}
       {readonly && !blocked && (
-        <span className="mono" style={{ fontSize: 10.5, color: "var(--d-ink-4)", marginLeft: 12, flex: "0 0 auto" }}>
+        <span
+          className="mono"
+          style={{ fontSize: 10.5, color: "var(--d-ink-4)", marginLeft: 12, flex: "0 0 auto" }}
+        >
           nur lesen
         </span>
       )}
