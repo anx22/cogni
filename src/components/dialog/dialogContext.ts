@@ -13,7 +13,7 @@ export interface DialogContextValue {
   openDialog: (session: DialogSession) => void;
   closeDialog: () => void;
   updateBoxState: (boxId: string, state: BoxState) => void;
-  updateBoxPayload: (boxId: string, patch: Record<string, any>) => void;
+  updateBoxPayload: (boxId: string, patch: Record<string, unknown>) => void;
   /** Lädt eine echte Session aus der Datenbank und öffnet sie. */
   openSessionFromDB: (sessionId: string) => Promise<void>;
   /** Lädt die aktuelle Session erneut aus der Datenbank. */
@@ -24,7 +24,7 @@ export interface DialogContextValue {
   commitBox: (
     boxId: string,
     decision: "confirm" | "reject",
-    userDecision?: Record<string, any>,
+    userDecision?: Record<string, unknown>,
   ) => Promise<void>;
 }
 

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Flag, AlertCircle, HelpCircle, Link2, Zap, Ban } from "lucide-react";
+import { Flag, AlertCircle, HelpCircle, Link2, Zap } from "lucide-react";
 import { useDialog } from "@/components/dialog/DialogProvider";
 import { buildHandlungsbedarfSession } from "@/lib/dialog/sessionFactories";
 import type { Arbeitsmodus, HandlungsbedarfVM, ObjektTyp } from "@/lib/project/types";
@@ -7,10 +7,7 @@ import type { Arbeitsmodus, HandlungsbedarfVM, ObjektTyp } from "@/lib/project/t
 type Item = HandlungsbedarfVM;
 type Filter = "alle" | "blocker" | "ohne_frist";
 
-const MODE_META: Record<
-  Arbeitsmodus,
-  { label: string; color: string }
-> = {
+const MODE_META: Record<Arbeitsmodus, { label: string; color: string }> = {
   entscheiden: { label: "Entscheiden", color: "var(--sig-action)" },
   klaeren: { label: "Klären", color: "var(--sig-review)" },
   umsetzen: { label: "Umsetzen", color: "var(--ink-3)" },
@@ -21,11 +18,15 @@ const ORDER: Arbeitsmodus[] = ["entscheiden", "klaeren", "umsetzen", "pruefen"];
 
 function TypeIcon({ kind }: { kind: ObjektTyp }) {
   const Icon =
-    kind === "konflikt" ? AlertCircle :
-    kind === "gap" ? HelpCircle :
-    kind === "feedback" ? Zap :
-    kind === "dependency" ? Link2 :
-    Flag;
+    kind === "konflikt"
+      ? AlertCircle
+      : kind === "gap"
+        ? HelpCircle
+        : kind === "feedback"
+          ? Zap
+          : kind === "dependency"
+            ? Link2
+            : Flag;
   return <Icon className="w-3.5 h-3.5" />;
 }
 
@@ -44,7 +45,13 @@ function firstName(name: string | null): string {
   return name?.split(/\s+/)[0] ?? "";
 }
 
-const HandlungsbedarfList = ({ items }: { items: Item[] }) => {
+const HandlungsbedarfList = ({
+  items,
+  projectId,
+}: {
+  items: Item[];
+  projectId?: string | null;
+}) => {
   const [filter, setFilter] = useState<Filter>("alle");
 
   const filtered = useMemo(() => {
@@ -60,10 +67,7 @@ const HandlungsbedarfList = ({ items }: { items: Item[] }) => {
 
   return (
     <section>
-      <header
-        className="flex items-baseline"
-        style={{ gap: 14, marginBottom: 22 }}
-      >
+      <header className="flex items-baseline" style={{ gap: 14, marginBottom: 22 }}>
         <h2
           style={{
             margin: 0,
@@ -80,9 +84,15 @@ const HandlungsbedarfList = ({ items }: { items: Item[] }) => {
         </span>
         <div style={{ flex: 1 }} />
         <div className="flex" style={{ gap: 4 }}>
-          <FilterBtn active={filter === "alle"} onClick={() => setFilter("alle")}>Alle</FilterBtn>
-          <FilterBtn active={filter === "blocker"} onClick={() => setFilter("blocker")}>Nur Blocker</FilterBtn>
-          <FilterBtn active={filter === "ohne_frist"} onClick={() => setFilter("ohne_frist")}>Ohne Frist</FilterBtn>
+          <FilterBtn active={filter === "alle"} onClick={() => setFilter("alle")}>
+            Alle
+          </FilterBtn>
+          <FilterBtn active={filter === "blocker"} onClick={() => setFilter("blocker")}>
+            Nur Blocker
+          </FilterBtn>
+          <FilterBtn active={filter === "ohne_frist"} onClick={() => setFilter("ohne_frist")}>
+            Ohne Frist
+          </FilterBtn>
         </div>
       </header>
 
@@ -109,10 +119,7 @@ const HandlungsbedarfList = ({ items }: { items: Item[] }) => {
                     background: meta.color,
                   }}
                 />
-                <span
-                  className="t-micro"
-                  style={{ color: meta.color, letterSpacing: ".06em" }}
-                >
+                <span className="t-micro" style={{ color: meta.color, letterSpacing: ".06em" }}>
                   {meta.label}
                 </span>
                 <span className="mono tabular" style={{ color: "var(--ink-4)" }}>
@@ -129,7 +136,12 @@ const HandlungsbedarfList = ({ items }: { items: Item[] }) => {
               </div>
               <div className="flex flex-col">
                 {list.map((a, i) => (
-                  <ActionRow key={a.id} item={a} last={i === list.length - 1} />
+                  <ActionRow
+                    key={a.id}
+                    item={a}
+                    last={i === list.length - 1}
+                    projectId={projectId}
+                  />
                 ))}
               </div>
             </div>
@@ -167,12 +179,20 @@ const FilterBtn = ({
   </button>
 );
 
-const ActionRow = ({ item, last }: { item: Item; last: boolean }) => {
+const ActionRow = ({
+  item,
+  last,
+  projectId,
+}: {
+  item: Item;
+  last: boolean;
+  projectId?: string | null;
+}) => {
   const { openDialog } = useDialog();
   return (
     <button
       type="button"
-      onClick={() => openDialog(buildHandlungsbedarfSession(item))}
+      onClick={() => openDialog(buildHandlungsbedarfSession(item, projectId ?? null))}
       className="w-full flex items-center text-left"
       style={{
         gap: 14,
@@ -224,7 +244,9 @@ const ActionRow = ({ item, last }: { item: Item; last: boolean }) => {
         >
           <span className="truncate">{item.titel}</span>
           {item.manuell && (
-            <span title="manuell ergänzt" style={{ color: "var(--ink-4)", fontSize: 11 }}>·</span>
+            <span title="manuell ergänzt" style={{ color: "var(--ink-4)", fontSize: 11 }}>
+              ·
+            </span>
           )}
         </div>
         {item.beschreibung && (
@@ -272,7 +294,11 @@ const ActionRow = ({ item, last }: { item: Item; last: boolean }) => {
             {item.frist}
           </span>
         )}
-        {item.quelle && <span className="src" title={item.quelle}>{item.quelle}</span>}
+        {item.quelle && (
+          <span className="src" title={item.quelle}>
+            {item.quelle}
+          </span>
+        )}
       </div>
     </button>
   );

@@ -24,7 +24,6 @@ import { hasOpenSessionForProject } from "@/lib/dialog/loadSession";
 import { useRealtimeTables, type RealtimeListener } from "@/lib/realtime/useRealtimeTables";
 import { deriveSignal, SIGNAL_DOT_CLASS, SIGNAL_LABEL } from "@/lib/project/deriveSignal";
 
-
 interface ProjectScreenProps {
   onBack: () => void;
   /** Echte Projekt-UUID aus der DB. */
@@ -50,10 +49,7 @@ const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
   const [intakeOpen, setIntakeOpen] = useState(false);
   const [openReviewSessionId, setOpenReviewSessionId] = useState<string | null>(null);
 
-  const handleProjectSelect = useCallback(
-    (id: string) => navigate(`/projekt/${id}`),
-    [navigate],
-  );
+  const handleProjectSelect = useCallback((id: string) => navigate(`/projekt/${id}`), [navigate]);
 
   const handleRename = useCallback(
     async (newName: string) => {
@@ -67,7 +63,8 @@ const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
   useEffect(() => {
     if (projectId && !realProjectId) {
       toast.error("Projekt nicht gefunden", {
-        description: "Diese Kachel zeigt noch ein Demo-Projekt — leg ein echtes ab oder wähle ein anderes.",
+        description:
+          "Diese Kachel zeigt noch ein Demo-Projekt — leg ein echtes ab oder wähle ein anderes.",
       });
       onBack();
     }
@@ -217,7 +214,7 @@ const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
             <section className="bg-surface-1" style={{ padding: "32px 56px 40px" }}>
               <div className="grid grid-cols-1 lg:grid-cols-5" style={{ gap: 32 }}>
                 <div className="lg:col-span-3 min-w-0">
-                  <HandlungsbedarfList items={project.handlungsbedarf} />
+                  <HandlungsbedarfList items={project.handlungsbedarf} projectId={realProjectId} />
                 </div>
                 <div className="lg:col-span-2 min-w-0">
                   <VerlaufFeed verlauf={project.verlauf} />

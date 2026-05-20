@@ -48,6 +48,26 @@ describe("sessionFactories", () => {
     expect(s.boxes.map((b) => b.type)).toEqual(["wissen", "eingabe"]);
   });
 
+  it("buildHandlungsbedarfSession setzt __submitIntent mit projectId + sourceRef", () => {
+    const s = buildHandlungsbedarfSession(
+      { id: "h2", titel: "Frist klären", beschreibung: "...", quelle: "Mail #99" },
+      "proj-uuid",
+    );
+    const intent = s.boxes[1].payload.__submitIntent;
+    expect(intent.kind).toBe("intake_note");
+    expect(intent.projectId).toBe("proj-uuid");
+    expect(intent.sourceRef.id).toBe("h2");
+    expect(intent.contextHint).toContain("Frist klären");
+  });
+
+  it("buildFeedbackSession setzt __submitIntent für intake_note", () => {
+    const s = buildFeedbackSession("HomePrompt", "proj-x");
+    const intent = s.boxes[0].payload.__submitIntent;
+    expect(intent.kind).toBe("intake_note");
+    expect(intent.projectId).toBe("proj-x");
+    expect(intent.contextHint).toContain("HomePrompt");
+  });
+
   it("buildFeedbackSession liefert nur Eingabe-Box", () => {
     const s = buildFeedbackSession("Projekt X");
     expect(s.boxes).toHaveLength(1);

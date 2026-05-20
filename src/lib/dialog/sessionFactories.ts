@@ -66,15 +66,13 @@ export const buildGapSession = (g: {
   ]);
 
 // ---------------------- Handlungsbedarf ----------------------
-// Wissens-Box (Sachverhalt) + Eingabe-Box (Antwort). Solange das
-// Antwort-Backend (note-create) noch fehlt, wird die Eingabe lokal akzeptiert
-// und im UI als „vorgemerkt" markiert. Siehe NOW.md Backlog.
-export const buildHandlungsbedarfSession = (item: {
-  id: string;
-  titel: string;
-  beschreibung: string;
-  quelle: string;
-}): DialogSession =>
+// Wissens-Box (Sachverhalt) + Eingabe-Box (Antwort).
+// Antwort fließt über `__submitIntent` durch die Verstehens-Pipeline und wird
+// als Notiz-Asset persistiert (mit Rückreferenz auf den Handlungsbedarf).
+export const buildHandlungsbedarfSession = (
+  item: { id: string; titel: string; beschreibung: string; quelle: string },
+  projectId?: string | null,
+): DialogSession =>
   mkSession("Handlungsbedarf", item.id, [
     mkBox({
       type: "wissen",
@@ -86,7 +84,12 @@ export const buildHandlungsbedarfSession = (item: {
       title: "Antwort",
       payload: {
         placeholder: "Antwort, Notiz oder Korrektur…",
-        hinweis: "Wird vorgemerkt — Persistenz folgt mit der Antwort-Pipeline.",
+        __submitIntent: {
+          kind: "intake_note" as const,
+          projectId: projectId ?? null,
+          contextHint: `Antwort auf Handlungsbedarf: ${item.titel} (${item.quelle})`,
+          sourceRef: { type: "handlungsbedarf", id: item.id, quelle: item.quelle },
+        },
       },
     }),
   ]);
@@ -172,16 +175,21 @@ export const buildVerlaufSession = (e: {
   );
 
 // ---------------------- Feedback ----------------------
-// Eingabe-Box ohne Backend-Anbindung — der Text wird lokal vorgemerkt.
-// Persistenz folgt mit dem Feedback-Endpoint (siehe NOW.md Backlog).
-export const buildFeedbackSession = (context: string): DialogSession =>
+// Eingabe-Box: Feedback fließt als Notiz durch die Verstehens-Pipeline
+// (kontext = woher das Feedback kam, z. B. Screen/Bereich).
+export const buildFeedbackSession = (context: string, projectId?: string | null): DialogSession =>
   mkSession("Feedback", context, [
     mkBox({
       type: "eingabe",
       title: "Was stimmt nicht oder fehlt?",
       payload: {
         placeholder: "Korrektur, Hinweis oder Frage…",
-        hinweis: "Wird vorgemerkt — Persistenz folgt mit dem Feedback-Endpoint.",
+        __submitIntent: {
+          kind: "intake_note" as const,
+          projectId: projectId ?? null,
+          contextHint: `Feedback aus: ${context}`,
+          sourceRef: { type: "feedback", quelle: context },
+        },
       },
     }),
   ]);
@@ -230,11 +238,10 @@ export const buildZuordnungSession = (params: {
   ]);
 
 // ---------------------- Korrektur ----------------------
-export const buildKorrekturSession = (params: {
-  titel: string;
-  aktuell: string;
-  quelle: string;
-}): DialogSession =>
+export const buildKorrekturSession = (
+  params: { titel: string; aktuell: string; quelle: string },
+  projectId?: string | null,
+): DialogSession =>
   mkSession("Korrektur", params.titel, [
     mkBox({
       type: "kontext",
@@ -248,7 +255,16 @@ export const buildKorrekturSession = (params: {
     mkBox({
       type: "eingabe",
       title: "Korrektur eingeben",
-      payload: { placeholder: "Richtige Information…", intent: "korrektur" },
+      payload: {
+        placeholder: "Richtige Information…",
+        intent: "korrektur",
+        __submitIntent: {
+          kind: "intake_note" as const,
+          projectId: projectId ?? null,
+          contextHint: `Korrektur zu: ${params.titel} (${params.quelle})`,
+          sourceRef: { type: "korrektur", quelle: params.quelle },
+        },
+      },
     }),
   ]);
 
@@ -303,10 +319,12 @@ export const buildThemaMergeSession = (params: {
   ]);
 
 // ---------------------- Rückfrage ----------------------
-export const buildRueckfrageSession = (params: {
-  frage: string;
-  kontext?: string;
-}): DialogSession =>
+// Eingabe fließt als Notiz durch die Verstehens-Pipeline mit Hinweis,
+// dass es eine Antwort auf die System-Rückfrage ist.
+export const buildRueckfrageSession = (
+  params: { frage: string; kontext?: string },
+  projectId?: string | null,
+): DialogSession =>
   mkSession("Rückfrage", params.frage, [
     mkBox({
       type: "kontext",
@@ -320,6 +338,15 @@ export const buildRueckfrageSession = (params: {
     mkBox({
       type: "eingabe",
       title: "Antwort",
-      payload: { placeholder: "Antwort eingeben…", intent: "rueckfrage" },
+      payload: {
+        placeholder: "Antwort eingeben…",
+        intent: "rueckfrage",
+        __submitIntent: {
+          kind: "intake_note" as const,
+          projectId: projectId ?? null,
+          contextHint: `Antwort auf Rückfrage: ${params.frage}`,
+          sourceRef: { type: "rueckfrage", quelle: params.frage },
+        },
+      },
     }),
   ]);

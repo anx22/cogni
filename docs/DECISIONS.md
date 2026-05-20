@@ -2,6 +2,16 @@
 
 Format: `[YYYY-MM-DD] Problem → Choice → Reason`
 
+## 2026-05-20 — Antwort-Pipeline: stilles Daten-Loch geschlossen
+
+User-Eingaben in Factory-Sessions (Handlungsbedarf-Antwort, Feedback, Rückfrage, Korrektur) wurden bisher nur lokal als Box-State `bestaetigt` markiert und beim Schließen verworfen. Das war das vermutlich nervigste Dead-End: User tippt eine Antwort, sieht „aufgenommen", aber nichts wird persistiert.
+
+- `2026-05-20` `commitBox` in `DialogProvider` ignorierte Factory-Sessions ohne `__reviewCaseId` → **`__submitIntent`-Pattern** auf Box-Payload-Ebene: Factory-built Eingabe-Boxen können einen Intent-Discriminator (`kind: "intake_note"`, plus `projectId`, `contextHint`, `sourceRef`) anhängen. Bei `confirm` ohne reviewCaseId routet commitBox die Eingabe an `submitNote()` statt silent zu returnen.
+- `2026-05-20` `submitNote(text, options)` als neuer Helper in `src/lib/intake/submitNote.ts` extrahiert: Insert in `assets` (`file_type='note'`, `metadata.kind='note'`, plus `text`/`context_hint`/`source_ref`), Trigger `intake-trigger`. Reused von `useIntake.ts` (Home/Project-Drop) und `DialogProvider.commitBox` (Dialog-Sessions). Eine Quelle der Wahrheit, kein duplizierter Insert.
+- `2026-05-20` Vier Factories um optionalen `projectId`-Parameter erweitert und mit `__submitIntent` versehen: `buildHandlungsbedarfSession` (Antwort), `buildFeedbackSession` (Feedback aus beliebigem Screen), `buildRueckfrageSession` (Antwort auf System-Frage), `buildKorrekturSession` (Korrektur einer bestehenden Information). Caller (HandlungsbedarfList, FeedbackButton) drillen `projectId` durch.
+- `2026-05-20` `hinweis: "Wird vorgemerkt — Persistenz folgt..."` aus Factories entfernt — die Lüge ist obsolet, weil persistiert wird.
+- `2026-05-20` Mit dem Routing über `intake-trigger` fließen die Antworten durch die volle Verstehens-Pipeline: LLM extrahiert ggf. neue Fakten („Frist verschiebt sich auf 15.06" → deadline), Linker hängt sie an existierende Fakten an, Detektoren laufen. Sandbox-Effekt: Antworten werden Teil des Projektzustands.
+
 ## 2026-05-20 — Modality-Matrix: tote Pfade glattgezogen
 
 Audit von `ReviewRow.tsx` (Batch-Liste) und `FaktDrillOverlay.tsx` (Single-Box-Drill) gegen den 2026-05-18 Modalitäts-Vertrag. Sieben tote Click-Pfade identifiziert und gefixt; alle 65 Tests grün, tsc clean.

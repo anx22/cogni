@@ -6,6 +6,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { devlog } from "@/lib/devlog/devlog";
 import { sanitizeStorageName } from "./sanitizeStorageName";
 import { pollAolRun, pollAolRunByAsset, type AolRunSnapshot } from "@/lib/pipeline/pollAolRun";
+import { submitNote } from "./submitNote";
 
 /**
  * Beobachtet einen Pipeline-Lauf (entweder per run_id oder per asset_id) und
@@ -26,8 +27,8 @@ function trackPipeline(
   const promise = source.runId
     ? pollAolRun(source.runId, { onUpdate })
     : source.assetId
-    ? pollAolRunByAsset(source.assetId, { onUpdate })
-    : Promise.resolve({ status: "aborted" as const, snapshot: null });
+      ? pollAolRunByAsset(source.assetId, { onUpdate })
+      : Promise.resolve({ status: "aborted" as const, snapshot: null });
 
   promise.then((res) => {
     devlog.edge("pipeline terminal", { status: res.status, runId: res.snapshot?.id });
@@ -44,7 +45,6 @@ function trackPipeline(
     // zu 'review-ready' — hier nichts zusätzlich tun.
   });
 }
-
 
 type EntityState = "idle" | "hover" | "processing" | "review-ready" | "failed";
 type AssetType = Database["public"]["Enums"]["asset_type"];
@@ -98,11 +98,14 @@ export function useIntake(options: UseIntakeOptions = {}) {
             const assetId = crypto.randomUUID();
             const safeName = sanitizeStorageName(file.name);
             const path = `${user.id}/${assetId}/${safeName}`;
-            devlog.intake(`upload start: ${file.name}`, { assetId, path, safeName, size: file.size });
+            devlog.intake(`upload start: ${file.name}`, {
+              assetId,
+              path,
+              safeName,
+              size: file.size,
+            });
 
-            const { error: upErr } = await supabase.storage
-              .from("intake-files")
-              .upload(path, file);
+            const { error: upErr } = await supabase.storage.from("intake-files").upload(path, file);
             if (upErr) {
               devlog.error(`storage upload failed: ${file.name}`, upErr);
               const msg = /invalid key/i.test(upErr.message)
@@ -178,39 +181,11 @@ export function useIntake(options: UseIntakeOptions = {}) {
               trackPipeline({ runId, assetId: data.id }, setEntityState);
             });
         } else if (payload.type === "text" && payload.text) {
-          const preview = payload.text.slice(0, 60);
-          const { data, error } = await supabase
-            .from("assets")
-            .insert({
-              user_id: user.id,
-              file_name: preview,
-              file_type: "note",
-              processing_status: "completed",
-              understanding_status: "pending",
-              project_id: projectId ?? null,
-              metadata: { kind: "note", text: payload.text },
-            })
-            .select("id")
-            .single();
-          if (error) {
-            devlog.error("note insert failed", error);
-            throw error;
-          }
-          devlog.db("note inserted", { length: payload.text.length, id: data.id });
+          const result = await submitNote(payload.text, { projectId: projectId ?? null });
+          if (!result) throw new Error("Notiz konnte nicht gespeichert werden");
           toast("Notiz aufgenommen", { description: "wird verstanden" });
           setLastImpact?.("Notiz aufgenommen");
-          devlog.edge("invoke intake-trigger (note)", { assetId: data.id });
-          supabase.functions
-            .invoke("intake-trigger", { body: { asset_id: data.id } })
-            .then((res) => {
-              if (res.error) {
-                devlog.error("intake-trigger error", res.error);
-                return;
-              }
-              devlog.edge("intake-trigger responded", res.data);
-              const runId = (res.data as { run_id?: string } | null)?.run_id ?? null;
-              trackPipeline({ runId, assetId: data.id }, setEntityState);
-            });
+          trackPipeline({ runId: result.runId, assetId: result.assetId }, setEntityState);
         }
 
         onIntake?.(payload);

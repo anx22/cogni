@@ -5,9 +5,24 @@ import DialogOverlay from "./DialogOverlay";
 import { DialogContext } from "./dialogContext";
 import { supabase } from "@/integrations/supabase/client";
 import { loadDialogSession } from "@/lib/dialog/loadSession";
+import { submitNote } from "@/lib/intake/submitNote";
 import { devlog } from "@/lib/devlog/devlog";
 import { toast } from "sonner";
 
+/**
+ * `__submitIntent` markiert Eingabe-Boxen in Factory-Sessions, deren Antwort
+ * nicht via commit-fact persistiert wird, sondern als Notiz durch die
+ * Verstehens-Pipeline fließt (Handlungsbedarf-Antwort, Feedback, Rückfrage,
+ * Korrektur). Siehe sessionFactories.ts.
+ */
+type SubmitIntent = {
+  kind: "intake_note";
+  projectId?: string | null;
+  contextHint?: string;
+  sourceRef?: { type: string; id?: string; quelle?: string };
+};
+
+// eslint-disable-next-line react-refresh/only-export-components -- gewollter Hook-Re-Export, alle Caller importieren `useDialog` von hier.
 export { useDialog } from "./dialogContext";
 
 export const DialogProvider = ({ children }: { children: ReactNode }) => {
@@ -35,7 +50,7 @@ export const DialogProvider = ({ children }: { children: ReactNode }) => {
     );
   }, []);
 
-  const updateBoxPayload = useCallback((boxId: string, patch: Record<string, any>) => {
+  const updateBoxPayload = useCallback((boxId: string, patch: Record<string, unknown>) => {
     setSession((prev) =>
       prev
         ? {
@@ -58,7 +73,11 @@ export const DialogProvider = ({ children }: { children: ReactNode }) => {
       : null;
 
   const commitBox = useCallback(
-    async (boxId: string, decision: "confirm" | "reject", userDecision?: Record<string, any>) => {
+    async (
+      boxId: string,
+      decision: "confirm" | "reject",
+      userDecision?: Record<string, unknown>,
+    ) => {
       if (readonly) {
         devlog.warn("ui", "commitBox ignored — session is read-only");
         return;
@@ -70,6 +89,39 @@ export const DialogProvider = ({ children }: { children: ReactNode }) => {
       updateBoxState(boxId, decision === "confirm" ? "bestaetigt" : "verworfen");
 
       if (!reviewCaseId) {
+        // Factory-Sessions ohne Backend-Review-Case. Wenn die Box ein
+        // __submitIntent trägt UND bestätigt wurde, route die User-Eingabe
+        // durch die passende Pipeline (heute: intake_note für Antwort/Feedback/
+        // Rückfrage/Korrektur). Verwerfen oder fehlender Intent → silent.
+        const intent = box?.payload?.__submitIntent as SubmitIntent | undefined;
+        if (decision === "confirm" && intent?.kind === "intake_note") {
+          const text =
+            (userDecision?.text as string | undefined) ??
+            (userDecision?.antwort as string | undefined) ??
+            "";
+          if (!text.trim()) {
+            devlog.warn("ui", "__submitIntent: kein text in userDecision", { boxId });
+            return;
+          }
+          try {
+            const result = await submitNote(text, {
+              projectId: intent.projectId ?? session?.projectId ?? null,
+              contextHint: intent.contextHint,
+              sourceRef: intent.sourceRef,
+            });
+            if (result) {
+              toast.success("Antwort aufgenommen", { description: "wird verstanden" });
+              devlog.edge("submit-intent intake_note ok", { boxId, assetId: result.assetId });
+            } else {
+              if (previousState) updateBoxState(boxId, previousState);
+              toast.error("Konnte Antwort nicht speichern");
+            }
+          } catch (err) {
+            if (previousState) updateBoxState(boxId, previousState);
+            devlog.error("submit-intent intake_note failed", err);
+            toast.error("Konnte Antwort nicht speichern");
+          }
+        }
         return;
       }
       try {

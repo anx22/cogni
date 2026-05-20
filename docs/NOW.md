@@ -99,6 +99,18 @@ Alle vier folgen demselben Vertrag: pure `detectXPure(fresh, projectFacts)` + fa
 | P1-B4 | Edge Function `topic-merge` + UI-Flow                                                     | ⬜                                                                                                         |
 | P1-F3 | `SubstanzSection` Themen-Cluster zu echtem Drilldown                                      | ⬜ main hat Section neu strukturiert (ChevronRight) — Re-Apply in eigenem Sprint                           |
 
+### 2026-05-20 — Antwort-Pipeline (stilles Daten-Loch geschlossen)
+
+User-Eingaben aus Factory-Sessions fließen jetzt durch die Verstehens-Pipeline statt verworfen zu werden:
+
+- `__submitIntent`-Pattern auf Box-Payload-Ebene (`kind: "intake_note"`, projectId, contextHint, sourceRef)
+- `submitNote(text, options)`-Helper in `src/lib/intake/submitNote.ts` — geteilt zwischen `useIntake` und `DialogProvider.commitBox`
+- 4 Factories erweitert: `buildHandlungsbedarfSession`, `buildFeedbackSession`, `buildRueckfrageSession`, `buildKorrekturSession` nehmen optional `projectId` und tragen `__submitIntent`
+- HandlungsbedarfList, FeedbackButton drillen `projectId` durch
+- `hinweis: "Wird vorgemerkt — Persistenz folgt..."` als Lüge aus Factories entfernt
+
+Tests: 67/67 grün (+ 2 neue Unit-Tests für \_\_submitIntent), tsc clean.
+
 ### 2026-05-20 — Modality-Matrix Dead-End-Audit
 
 Sieben tote Click-Pfade in Dialog-System glattgezogen (Details in DECISIONS).

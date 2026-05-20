@@ -4,10 +4,12 @@ import { buildFeedbackSession } from "@/lib/dialog/sessionFactories";
 
 const FeedbackButton = ({
   context,
+  projectId,
   className = "",
   label = "Feedback",
 }: {
   context: string;
+  projectId?: string | null;
   className?: string;
   label?: string;
 }) => {
@@ -17,7 +19,7 @@ const FeedbackButton = ({
       type="button"
       onClick={(e) => {
         e.stopPropagation();
-        openDialog(buildFeedbackSession(context));
+        openDialog(buildFeedbackSession(context, projectId ?? null));
       }}
       className={`inline-flex items-center gap-1 text-[11px] text-muted-foreground/70 hover:text-foreground transition-colors ${className}`}
       title="Feedback oder Korrektur"
