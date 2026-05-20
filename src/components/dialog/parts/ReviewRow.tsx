@@ -192,6 +192,7 @@ const SourceCard = ({
 
 // -----------------------------------------------------------------------------
 const ReviewRow = ({ box, projectName, blocked, onConfirm, onReject }: ReviewRowProps) => {
+  const { readonly } = useDialog();
   const [expanded, setExpanded] = useState(
     box.type === "konflikt" || box.type === "zuordnung",
   );
