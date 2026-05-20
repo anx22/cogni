@@ -478,6 +478,11 @@ const ReviewRow = ({ box, projectName, blocked, onConfirm, onReject }: ReviewRow
           <TypeChip kind={box.type} color={{ bg: "var(--d-warn-soft)", fg: "var(--d-warn)" }} />
           <span style={{ flex: 1, fontSize: 13.5, color: "var(--d-ink)", marginLeft: 8 }}>
             {asks ?? box.title}
+            {(box.payload?.hinweis as string | undefined) && (
+              <span style={{ display: "block", fontSize: 11.5, color: "var(--d-ink-4)", marginTop: 2 }}>
+                {box.payload.hinweis}
+              </span>
+            )}
           </span>
           {blocked ? (
             <span className="mono" style={{ fontSize: 10.5, color: "var(--d-ink-3)", marginLeft: 12 }}>nach Projektzuordnung</span>
