@@ -67,7 +67,7 @@ const AppSidebar = ({
             border: "none",
             cursor: "pointer",
           }}
-          title="Zurück zur Entität · oder ablegen"
+          title="Zurück zur Entität"
         >
           <span
             aria-hidden
@@ -97,19 +97,21 @@ const AppSidebar = ({
             >
               cogni
             </span>
-            <span
-              className="mono"
-              style={{
-                fontSize: 10,
-                marginTop: 2,
-                letterSpacing: ".04em",
-                textTransform: "uppercase",
-                color: entityHover ? "var(--accent)" : "var(--ink-4)",
-                transition: "color .15s",
-              }}
-            >
-              {entityHover ? "öffnen ⌘ ␣" : pipelineLabel ?? "verstehe · 0:08"}
-            </span>
+            {(entityHover || pipelineLabel) && (
+              <span
+                className="mono"
+                style={{
+                  fontSize: 10,
+                  marginTop: 2,
+                  letterSpacing: ".04em",
+                  textTransform: "uppercase",
+                  color: entityHover ? "var(--accent)" : "var(--ink-4)",
+                  transition: "color .15s",
+                }}
+              >
+                {entityHover ? "öffnen" : pipelineLabel}
+              </span>
+            )}
           </span>
         </button>
       )}
