@@ -8,6 +8,8 @@ import VerlaufFeed from "./VerlaufFeed";
 import SubstanzSection from "./SubstanzSection";
 import ProjectHeaderActions from "./ProjectHeaderActions";
 import AppSidebar from "@/components/sidebar/AppSidebar";
+import CreateProjectDialog from "@/components/entity/CreateProjectDialog";
+import InputOverlay from "@/components/entity/InputOverlay";
 import { useIntake } from "@/lib/intake/useIntake";
 import { detectFromDrop } from "@/lib/intake/detectInputType";
 import { useProject } from "@/lib/project/useProject";
@@ -16,6 +18,11 @@ import { useProjectActions } from "@/lib/object-actions/useObjectActions";
 import { useBodyScrollLock } from "@/lib/ui/useBodyScrollLock";
 import { useDropZone } from "@/lib/intake/useDropZone";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/hooks/useAuth";
+import { useDialog } from "@/components/dialog/DialogProvider";
+import { hasOpenSessionForProject } from "@/lib/dialog/loadSession";
+import { useRealtimeTables, type RealtimeListener } from "@/lib/realtime/useRealtimeTables";
+import { deriveSignal, SIGNAL_DOT_CLASS, SIGNAL_LABEL } from "@/lib/project/deriveSignal";
 
 
 interface ProjectScreenProps {
@@ -31,11 +38,17 @@ const isUuid = (v: unknown): v is string =>
 const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
   const realProjectId = isUuid(projectId) ? projectId : null;
   const navigate = useNavigate();
+  const { session: authSession } = useAuth();
+  const userId = authSession?.user?.id;
   const { intake } = useIntake({ projectId: realProjectId });
   const { status, project, error, vanished } = useProject(realProjectId);
   const { projects: allProjects } = useProjects();
   const projectActions = useProjectActions();
+  const { openSessionFromDB } = useDialog();
   const [forceRename, setForceRename] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [intakeOpen, setIntakeOpen] = useState(false);
+  const [openReviewSessionId, setOpenReviewSessionId] = useState<string | null>(null);
 
   const handleProjectSelect = useCallback(
     (id: string) => navigate(`/projekt/${id}`),
@@ -76,6 +89,43 @@ const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
     }
   }, [status, error, vanished]);
 
+  // Offene Review-Session für „Review öffnen"-Button
+  const refreshOpenReview = useCallback(async () => {
+    if (!userId || !realProjectId) {
+      setOpenReviewSessionId(null);
+      return;
+    }
+    const id = await hasOpenSessionForProject(userId, realProjectId);
+    setOpenReviewSessionId(id);
+  }, [userId, realProjectId]);
+
+  useEffect(() => {
+    refreshOpenReview();
+  }, [refreshOpenReview]);
+
+  // Realtime: Status der offenen Session live mitziehen
+  const reviewListeners = useCallback(
+    (): RealtimeListener[] =>
+      userId && realProjectId
+        ? [
+            {
+              table: "dialog_sessions",
+              filter: `user_id=eq.${userId}`,
+              handler: refreshOpenReview,
+            },
+          ]
+        : [],
+    [userId, realProjectId, refreshOpenReview],
+  );
+  useRealtimeTables(
+    userId && realProjectId ? `project-review-${realProjectId}` : null,
+    reviewListeners(),
+  );
+
+  const handleOpenReview = useCallback(() => {
+    if (openReviewSessionId) openSessionFromDB(openReviewSessionId);
+  }, [openReviewSessionId, openSessionFromDB]);
+
   const handleDrop = useCallback(
     (files: File[]) => {
       intake(detectFromDrop(files));
@@ -88,12 +138,15 @@ const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
   // Mobile Safari: Body-Scroll-Lock zentral via Hook (Owner-Set).
   useBodyScrollLock(true);
 
+  const signal = project ? deriveSignal(project) : "calm";
+
   return (
     <div className="flex overflow-hidden bg-c-surface-0 relative" style={{ height: "100dvh" }}>
       <AppSidebar
         projects={allProjects}
         activeProjectId={realProjectId ?? undefined}
         onProjectSelect={handleProjectSelect}
+        onCreateProject={userId ? () => setCreateOpen(true) : undefined}
         showMiniEntity
         onEntityClick={onBack}
       />
@@ -111,7 +164,11 @@ const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
             style={{ borderBottom: "1px solid var(--hair)" }}
           >
             <div className="flex items-center gap-2 min-w-0">
-              <span className="dot dot--calm shrink-0" aria-hidden />
+              <span
+                className={`dot ${SIGNAL_DOT_CLASS[signal]} shrink-0`}
+                aria-hidden
+                title={SIGNAL_LABEL[signal]}
+              />
               <span className="text-sm text-foreground/90 truncate">{project.name}</span>
             </div>
             <ProjectHeaderActions
@@ -152,6 +209,9 @@ const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
               forceEdit={forceRename}
               onEditDone={() => setForceRename(false)}
               onNameChange={handleRename}
+              onOpenIntake={() => setIntakeOpen(true)}
+              onOpenReview={handleOpenReview}
+              hasOpenReview={!!openReviewSessionId}
             />
 
             <section className="bg-surface-1" style={{ padding: "32px 56px 40px" }}>
@@ -188,7 +248,35 @@ const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
             </div>
           </div>
         )}
+
+        {intakeOpen && (
+          <div
+            className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-background/70 backdrop-blur-sm p-4"
+            onClick={() => setIntakeOpen(false)}
+          >
+            <div className="w-full max-w-xl" onClick={(e) => e.stopPropagation()}>
+              <InputOverlay
+                open={intakeOpen}
+                onClose={() => setIntakeOpen(false)}
+                onSubmit={(payload) => {
+                  intake(payload);
+                  setIntakeOpen(false);
+                }}
+                contextHint={`Wird direkt an „${project?.name ?? "dieses Projekt"}" angehängt.`}
+              />
+            </div>
+          </div>
+        )}
       </div>
+
+      {userId && (
+        <CreateProjectDialog
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+          userId={userId}
+          onCreated={(id) => navigate(`/projekt/${id}`)}
+        />
+      )}
     </div>
   );
 };

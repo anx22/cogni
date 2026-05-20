@@ -350,7 +350,8 @@ const FaktDrillOverlay = ({ onClose }: { onClose: () => void }) => {
           <button
             type="button"
             className="dlg2-btn-secondary"
-            onClick={() => commitBox(box.id, "reject")}
+            onClick={() => commitBox(box.id, "reject", { escalate: true })}
+            title="Bleibt in der Pipeline und erscheint als Handlungsbedarf"
           >
             Als Handlungsbedarf markieren
           </button>

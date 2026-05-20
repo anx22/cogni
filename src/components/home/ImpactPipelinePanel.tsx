@@ -11,6 +11,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { ArrowRight } from "lucide-react";
+// Navigate-Hook reserviert für klickbare Impacts/Pipeline-Rows — Backlog NOW.md.
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useProjects } from "@/lib/project/useProjects";

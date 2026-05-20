@@ -11,11 +11,18 @@ const mkBox = (b: Omit<DialogBox, "id" | "state"> & { state?: DialogBox["state"]
 });
 
 // Generic Session-Builder — alle Factories teilen sich diesen Kern.
-const mkSession = (anlass: string, context: string, boxes: DialogBox[]): DialogSession => ({
+// `mode` ist optional: "readonly" für reine Inspektionsdialoge (kein Commit-Backend).
+const mkSession = (
+  anlass: string,
+  context: string,
+  boxes: DialogBox[],
+  mode?: "edit" | "readonly",
+): DialogSession => ({
   id: sessionId(),
   anlass,
   context,
   boxes,
+  mode,
 });
 
 // ---------------------- Konflikt ----------------------
@@ -59,6 +66,9 @@ export const buildGapSession = (g: {
   ]);
 
 // ---------------------- Handlungsbedarf ----------------------
+// Wissens-Box (Sachverhalt) + Eingabe-Box (Antwort). Solange das
+// Antwort-Backend (note-create) noch fehlt, wird die Eingabe lokal akzeptiert
+// und im UI als „vorgemerkt" markiert. Siehe NOW.md Backlog.
 export const buildHandlungsbedarfSession = (item: {
   id: string;
   titel: string;
@@ -74,11 +84,15 @@ export const buildHandlungsbedarfSession = (item: {
     mkBox({
       type: "eingabe",
       title: "Antwort",
-      payload: { placeholder: "Antwort, Notiz oder Korrektur…" },
+      payload: {
+        placeholder: "Antwort, Notiz oder Korrektur…",
+        hinweis: "Wird vorgemerkt — Persistenz folgt mit der Antwort-Pipeline.",
+      },
     }),
   ]);
 
 // ---------------------- Thema ----------------------
+// Reine Inspektion — keine Commit-Pfade.
 export const buildThemaSession = (t: {
   id: string;
   name: string;
@@ -87,19 +101,25 @@ export const buildThemaSession = (t: {
   offenePunkte: number;
   dokumente: number;
 }): DialogSession =>
-  mkSession("Thema", t.name, [
-    mkBox({
-      type: "kontext",
-      title: t.name,
-      payload: {
-        auszug: t.beschreibung,
-        begruendung: `${t.entscheidungen} Entscheidungen · ${t.offenePunkte} offen · ${t.dokumente} Dokumente`,
-        quelle: `Thema #${t.id}`,
-      },
-    }),
-  ]);
+  mkSession(
+    "Thema",
+    t.name,
+    [
+      mkBox({
+        type: "kontext",
+        title: t.name,
+        payload: {
+          auszug: t.beschreibung,
+          begruendung: `${t.entscheidungen} Entscheidungen · ${t.offenePunkte} offen · ${t.dokumente} Dokumente`,
+          quelle: `Thema #${t.id}`,
+        },
+      }),
+    ],
+    "readonly",
+  );
 
 // ---------------------- Dokument ----------------------
+// Reine Inspektion — Preview & Versionshistorie sind geplant.
 export const buildDokumentSession = (d: {
   id: string;
   name: string;
@@ -108,19 +128,25 @@ export const buildDokumentSession = (d: {
   datum: string;
   thema?: string | null;
 }): DialogSession =>
-  mkSession("Dokument", `${d.typ.toUpperCase()} v${d.version}`, [
-    mkBox({
-      type: "kontext",
-      title: d.name,
-      payload: {
-        auszug: `${d.typ.toUpperCase()} · Version ${d.version} · ${d.datum}${d.thema ? ` · Thema: ${d.thema}` : ""}`,
-        begruendung: "Preview & Versionshistorie folgen in Phase 6.",
-        quelle: `Dokument #${d.id}`,
-      },
-    }),
-  ]);
+  mkSession(
+    "Dokument",
+    `${d.typ.toUpperCase()} v${d.version}`,
+    [
+      mkBox({
+        type: "kontext",
+        title: d.name,
+        payload: {
+          auszug: `${d.typ.toUpperCase()} · Version ${d.version} · ${d.datum}${d.thema ? ` · Thema: ${d.thema}` : ""}`,
+          hinweis: "Preview & Versionshistorie sind in Planung.",
+          quelle: `Dokument #${d.id}`,
+        },
+      }),
+    ],
+    "readonly",
+  );
 
 // ---------------------- Verlauf ----------------------
+// Reine Inspektion eines Verlaufseintrags.
 export const buildVerlaufSession = (e: {
   id: string;
   inhalt: string;
@@ -129,37 +155,53 @@ export const buildVerlaufSession = (e: {
   delta: string;
   ereignisTyp: string;
 }): DialogSession =>
-  mkSession("Verlaufseintrag", e.datum, [
-    mkBox({
-      type: "kontext",
-      title: e.inhalt,
-      payload: {
-        auszug: `${e.delta.toUpperCase()} · ${e.datum}`,
-        quelle: e.quelle,
-        begruendung: "Originalereignis aus dem Projektverlauf.",
-      },
-    }),
-  ]);
+  mkSession(
+    "Verlaufseintrag",
+    e.datum,
+    [
+      mkBox({
+        type: "kontext",
+        title: e.inhalt,
+        payload: {
+          auszug: `${e.delta.toUpperCase()} · ${e.datum}`,
+          quelle: e.quelle,
+        },
+      }),
+    ],
+    "readonly",
+  );
 
 // ---------------------- Feedback ----------------------
+// Eingabe-Box ohne Backend-Anbindung — der Text wird lokal vorgemerkt.
+// Persistenz folgt mit dem Feedback-Endpoint (siehe NOW.md Backlog).
 export const buildFeedbackSession = (context: string): DialogSession =>
   mkSession("Feedback", context, [
     mkBox({
       type: "eingabe",
       title: "Was stimmt nicht oder fehlt?",
-      payload: { placeholder: "Korrektur, Hinweis oder Frage…" },
+      payload: {
+        placeholder: "Korrektur, Hinweis oder Frage…",
+        hinweis: "Wird vorgemerkt — Persistenz folgt mit dem Feedback-Endpoint.",
+      },
     }),
   ]);
 
 // ---------------------- Source ----------------------
+// Reine Inspektion. Volle Dokumenten-Preview ist geplant.
 export const buildSourceSession = (quelle: string): DialogSession =>
-  mkSession("Quelle", quelle, [
-    mkBox({
-      type: "kontext",
-      title: quelle,
-      payload: {
-        auszug: "Quellen-Vorschau folgt mit Phase 6 (Dokumenten-Preview).",
-        quelle,
-      },
-    }),
-  ]);
+  mkSession(
+    "Quelle",
+    quelle,
+    [
+      mkBox({
+        type: "kontext",
+        title: quelle,
+        payload: {
+          auszug: "Quellen-Vorschau in Planung.",
+          hinweis: "Direkter Sprung in das Dokument folgt mit der Preview-Schicht.",
+          quelle,
+        },
+      }),
+    ],
+    "readonly",
+  );

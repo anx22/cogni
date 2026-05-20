@@ -13,6 +13,9 @@ interface LageZoneProps {
   onEditDone?: () => void;
   onNameChange?: (name: string) => void;
   variant?: "full" | "shell";
+  onOpenIntake?: () => void;
+  onOpenReview?: () => void;
+  hasOpenReview?: boolean;
 }
 
 // "15. Mai · Steering-Termin" → { date: "15. Mai", topic: "Steering-Termin" }
@@ -41,6 +44,9 @@ const LageZone = ({
   onEditDone,
   onNameChange,
   variant = "full",
+  onOpenIntake,
+  onOpenReview,
+  hasOpenReview = false,
 }: LageZoneProps) => {
   const titleRef = useRef<HTMLHeadingElement | null>(null);
 
@@ -165,6 +171,8 @@ const LageZone = ({
           <div className="flex shrink-0" style={{ gap: 8 }}>
             <button
               type="button"
+              onClick={onOpenIntake}
+              disabled={!onOpenIntake}
               className="inline-flex items-center gap-2"
               style={{
                 height: 32,
@@ -174,30 +182,35 @@ const LageZone = ({
                 border: "1px solid var(--hair-2, var(--hair))",
                 color: "var(--ink-2)",
                 fontSize: 13,
-                cursor: "pointer",
+                cursor: onOpenIntake ? "pointer" : "not-allowed",
+                opacity: onOpenIntake ? 1 : 0.5,
               }}
+              title="Datei, Link oder Notiz an dieses Projekt anhängen"
             >
               <Upload className="w-3.5 h-3.5" />
               Material
             </button>
             <button
               type="button"
+              onClick={onOpenReview}
+              disabled={!hasOpenReview || !onOpenReview}
               className="inline-flex items-center gap-2"
               style={{
                 height: 32,
                 padding: "0 14px",
                 borderRadius: 10,
-                background: "var(--ink)",
-                color: "var(--surface-0)",
+                background: hasOpenReview ? "var(--ink)" : "var(--surface-2)",
+                color: hasOpenReview ? "var(--surface-0)" : "var(--ink-4)",
                 fontSize: 13,
                 fontWeight: 500,
-                cursor: "pointer",
-                border: "none",
+                cursor: hasOpenReview ? "pointer" : "not-allowed",
+                border: hasOpenReview ? "none" : "1px solid var(--hair)",
               }}
+              title={hasOpenReview ? "Offene Review öffnen" : "Keine offene Review"}
             >
               <Sparkles className="w-3.5 h-3.5" />
-              Review öffnen
-              <ArrowRight className="w-3.5 h-3.5" />
+              {hasOpenReview ? "Review öffnen" : "Keine Review"}
+              {hasOpenReview && <ArrowRight className="w-3.5 h-3.5" />}
             </button>
           </div>
         </div>
