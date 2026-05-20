@@ -13,6 +13,9 @@ interface LageZoneProps {
   onEditDone?: () => void;
   onNameChange?: (name: string) => void;
   variant?: "full" | "shell";
+  onOpenIntake?: () => void;
+  onOpenReview?: () => void;
+  hasOpenReview?: boolean;
 }
 
 // "15. Mai · Steering-Termin" → { date: "15. Mai", topic: "Steering-Termin" }
