@@ -650,7 +650,8 @@ const ReviewRow = ({ box, projectName, blocked, onConfirm, onReject }: ReviewRow
   // -------------------------------------------------------------------------
   //  DEFAULT — wissen / aktion / kontext (Assertion, klassische Single-Confirm)
   // -------------------------------------------------------------------------
-  const needsConfirm = !isFinal && (box.type === "wissen" || box.type === "aktion" || box.type === "kontext");
+  const needsConfirm = !isFinal && !readonly && (box.type === "wissen" || box.type === "aktion" || box.type === "kontext");
+  const hinweis = box.payload?.hinweis as string | undefined;
   return (
     <div className="dlg2-row" style={{ minHeight: 48, position: "relative", ...dimStyle }}>
       <Stripe color={isFinal ? "transparent" : "var(--d-blue)"} />
@@ -669,6 +670,11 @@ const ReviewRow = ({ box, projectName, blocked, onConfirm, onReject }: ReviewRow
       <TypeChip kind={box.type} />
       <span style={{ flex: 1, fontSize: 13.5, color: isFinal ? "var(--d-ink-3)" : "var(--d-ink-2)", marginLeft: 8 }}>
         {box.title}
+        {readonly && hinweis && (
+          <span style={{ display: "block", fontSize: 11.5, color: "var(--d-ink-4)", marginTop: 2 }}>
+            {hinweis}
+          </span>
+        )}
       </span>
       {attachesTo && <RefToken to={attachesTo} />}
       {projectName && (
@@ -691,6 +697,11 @@ const ReviewRow = ({ box, projectName, blocked, onConfirm, onReject }: ReviewRow
             ✓
           </button>
         )
+      )}
+      {readonly && !blocked && (
+        <span className="mono" style={{ fontSize: 10.5, color: "var(--d-ink-4)", marginLeft: 12, flex: "0 0 auto" }}>
+          nur lesen
+        </span>
       )}
     </div>
   );
