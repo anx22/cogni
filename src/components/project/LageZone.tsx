@@ -44,6 +44,9 @@ const LageZone = ({
   onEditDone,
   onNameChange,
   variant = "full",
+  onOpenIntake,
+  onOpenReview,
+  hasOpenReview = false,
 }: LageZoneProps) => {
   const titleRef = useRef<HTMLHeadingElement | null>(null);
 
