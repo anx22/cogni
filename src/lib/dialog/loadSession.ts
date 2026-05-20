@@ -301,15 +301,34 @@ export async function loadDialogSession(sessionId: string): Promise<DialogSessio
   };
 }
 
-export async function loadLatestOpenSession(userId: string): Promise<DialogSession | null> {
-  const { data, error } = await supabase
+export async function loadLatestOpenSession(
+  userId: string,
+  projectId?: string,
+): Promise<DialogSession | null> {
+  let q = supabase
     .from("dialog_sessions")
     .select("id")
     .eq("user_id", userId)
+    .in("status", ["open", "in_progress"]);
+  if (projectId) q = q.eq("project_id", projectId);
+  const { data, error } = await q.order("created_at", { ascending: false }).limit(1).maybeSingle();
+  if (error || !data) return null;
+  return loadDialogSession(data.id);
+}
+
+/** Schnelle Existenz-Prüfung für „Review öffnen"-Button im Header. */
+export async function hasOpenSessionForProject(
+  userId: string,
+  projectId: string,
+): Promise<string | null> {
+  const { data } = await supabase
+    .from("dialog_sessions")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("project_id", projectId)
     .in("status", ["open", "in_progress"])
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (error || !data) return null;
-  return loadDialogSession(data.id);
+  return data?.id ?? null;
 }
