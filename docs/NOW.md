@@ -126,13 +126,12 @@ Sieben tote Click-Pfade in Dialog-System glattgezogen (Details in DECISIONS).
 
 ## Backlog (nach Priorität)
 
-1. **Entity-Rotationsreset während Cursor-Bewegung** — `setSample` in `Entity.tsx:171` feuert bei jedem `presets`-Referenzwechsel (nach `useNamespace`-DB-Load von `app_settings`). CSS-Animation `siri-orb-rotate` startet neu → sichtbares Zucken. **Fix**: `presets` aus Effect-Dependencies nehmen, Ref-Pattern: `presetRef.current` immer aktuell halten, aber `setSample` nur auf `[internal]`-Änderung feuern. Datei: `src/components/entity/Entity.tsx` Zeile 171–173.
-2. **Produktions-Sprint 1 Rest** — B4 (topic-merge Edge Function + UI-Flow), F3 (Substanz-Drilldown auf ChevronRight-Basis).
-3. **Loops aus Re-Audit**
+1. **Produktions-Sprint 1 Rest** — B4 (topic-merge Edge Function + UI-Flow), F3 (Substanz-Drilldown auf ChevronRight-Basis).
+2. **Loops aus Re-Audit**
    - Graphiti-Sync-Diagnose (`inspect-graphiti diagnose`, failed-Reasons gruppieren).
    - Vier-Rollen-Screen User-Smoke nach Welle B.
    - `_shared/` console.warn → Logger (12 Stellen, niedrige Priorität).
-4. **Wave 3 — bewusst zurückgestellt**
+3. **Wave 3 — bewusst zurückgestellt**
    - LLM-Heuristiken für Linker/Conflict/Gap/Dep.
    - React Query (Caching/Mutations).
    - Browser-E2E mit Playwright (Persona-Cookies).
@@ -142,6 +141,7 @@ Sieben tote Click-Pfade in Dialog-System glattgezogen (Details in DECISIONS).
 
 ## Recently completed
 
+- **2026-05-21 — Entity-Rotationsreset gefixt** `Entity.tsx`: `presets`-Dependency aus `setSample`-Effect entfernt, Ref-Pattern eingeführt. CSS `siri-orb-rotate` re-startet nicht mehr beim async `useNamespace("orb")`-DB-Load → kein sichtbares Zucken bei Cursor-Bewegung. OrbLab-Preset-Änderungen wirken jetzt erst beim nächsten State-Wechsel (akzeptabel, OrbLab ist Debug-Tool). Vitest 67/67, tsc clean, eslint clean.
 - **2026-05-14 — Doku-Konsolidierung Schritt 3** Historik ausgelagert: `agent-execution-plan.md`, `audit-2026-05-14.md`, `agent_review.md` aufgelöst (Endstand in `NOW.md` Master-Checklist, Heuristik-Detail hier, Tier-Entscheidungen in `DECISIONS.md`). `docs/`-Markdown-Dateien: 7 → 5.
 - **2026-05-14 — Welle B komplett** B-W1 Linker (Graph-Match) · B-W2 Conflict · B-W3 Gap · B-W4 Dependency live, fail-soft, idempotent, parallel via `Promise.all`. commit-fact-Suite 36/36 grün. Detektor-Footprint Sandbox: Reels-Projekt 1 Dep + 1 Gap, übrige zu klein für Treffer (kein Bug, Datenmangel).
 - **2026-05-14 — Welle C Godfile-Eliminierung** commit-fact (-603 LOC), intake-understand (-505 LOC), projectViewModel (-307 LOC). Vitest 60/60, Deno 14/14.

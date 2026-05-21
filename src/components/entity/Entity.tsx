@@ -168,9 +168,18 @@ const Entity = ({
     setInternal(state);
   }, [state]);
 
+  // presets-Referenz wechselt beim async `useNamespace("orb")`-DB-Load nach Mount.
+  // Würden wir presets in die Deps nehmen, re-sampelt der Effect mitten in der
+  // Rotationsanimation → CSS `siri-orb-rotate` startet neu (sichtbares Zucken).
+  // Ref hält presets aktuell für den nächsten State-Wechsel, ohne Re-Sample auszulösen.
+  const presetsRef = useRef(presets);
   useEffect(() => {
-    setSample(samplePreset(presets[internal]));
-  }, [internal, presets]);
+    presetsRef.current = presets;
+  }, [presets]);
+
+  useEffect(() => {
+    setSample(samplePreset(presetsRef.current[internal]));
+  }, [internal]);
 
   const handleDragOver = useCallback(
     (e: React.DragEvent) => {
