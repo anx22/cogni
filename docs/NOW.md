@@ -126,12 +126,13 @@ Sieben tote Click-Pfade in Dialog-System glattgezogen (Details in DECISIONS).
 
 ## Backlog (nach Priorität)
 
-1. **Produktions-Sprint 1 Rest** — F5 (Delta-Tag in neue ReviewRow), B2-UI (Coverage-Chips in neue LageZone), B4 (topic-merge), F3 (Substanz-Drilldown auf ChevronRight-Basis).
-2. **Loops aus Re-Audit**
+1. **Entity-Rotationsreset während Cursor-Bewegung** — `setSample` in `Entity.tsx:171` feuert bei jedem `presets`-Referenzwechsel (nach `useNamespace`-DB-Load von `app_settings`). CSS-Animation `siri-orb-rotate` startet neu → sichtbares Zucken. **Fix**: `presets` aus Effect-Dependencies nehmen, Ref-Pattern: `presetRef.current` immer aktuell halten, aber `setSample` nur auf `[internal]`-Änderung feuern. Datei: `src/components/entity/Entity.tsx` Zeile 171–173.
+2. **Produktions-Sprint 1 Rest** — B4 (topic-merge Edge Function + UI-Flow), F3 (Substanz-Drilldown auf ChevronRight-Basis).
+3. **Loops aus Re-Audit**
    - Graphiti-Sync-Diagnose (`inspect-graphiti diagnose`, failed-Reasons gruppieren).
    - Vier-Rollen-Screen User-Smoke nach Welle B.
    - `_shared/` console.warn → Logger (12 Stellen, niedrige Priorität).
-3. **Wave 3 — bewusst zurückgestellt**
+4. **Wave 3 — bewusst zurückgestellt**
    - LLM-Heuristiken für Linker/Conflict/Gap/Dep.
    - React Query (Caching/Mutations).
    - Browser-E2E mit Playwright (Persona-Cookies).
