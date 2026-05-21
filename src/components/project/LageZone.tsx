@@ -77,13 +77,22 @@ const LageZone = ({
     <h1
       ref={titleRef}
       className="text-foreground outline-none border-b border-dashed border-primary/30 focus:border-primary/60 transition-colors"
-      style={{ fontSize: 44, fontWeight: 500, letterSpacing: "-0.03em", lineHeight: 1.04, margin: 0 }}
+      style={{
+        fontSize: 44,
+        fontWeight: 500,
+        letterSpacing: "-0.03em",
+        lineHeight: 1.04,
+        margin: 0,
+      }}
       contentEditable
       spellCheck={false}
       suppressContentEditableWarning
       onBlur={handleNameBlur}
       onKeyDown={(e) => {
-        if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); }
+        if (e.key === "Enter") {
+          e.preventDefault();
+          e.currentTarget.blur();
+        }
         if (e.key === "Escape") {
           e.preventDefault();
           e.currentTarget.textContent = project.name;
@@ -96,7 +105,13 @@ const LageZone = ({
   ) : (
     <h1
       className="text-foreground"
-      style={{ fontSize: 44, fontWeight: 500, letterSpacing: "-0.03em", lineHeight: 1.04, margin: 0 }}
+      style={{
+        fontSize: 44,
+        fontWeight: 500,
+        letterSpacing: "-0.03em",
+        lineHeight: 1.04,
+        margin: 0,
+      }}
     >
       {project.name}
     </h1>
@@ -110,8 +125,8 @@ const LageZone = ({
           <p className="t-micro ink-4 mb-3">Projekt</p>
           {titleNode}
           <p className="text-base text-foreground/70 font-light leading-relaxed mt-6 max-w-xl mx-auto">
-            Noch keine Substanz. Lege etwas ab — eine Datei, einen Link, eine Notiz —
-            ich beginne mit dem Verstehen.
+            Noch keine Substanz. Lege etwas ab — eine Datei, einen Link, eine Notiz — ich beginne
+            mit dem Verstehen.
           </p>
         </div>
       </section>
@@ -134,10 +149,7 @@ const LageZone = ({
 
       <div className="relative">
         {/* Breadcrumb + Header-Actions */}
-        <div
-          className="flex items-center justify-between gap-4"
-          style={{ marginBottom: 24 }}
-        >
+        <div className="flex items-center justify-between gap-4" style={{ marginBottom: 24 }}>
           <div
             className="flex items-center"
             style={{ gap: 12, fontSize: 12.5, color: "var(--ink-3)" }}
@@ -248,28 +260,31 @@ const LageZone = ({
         </p>
 
         {/* Chips inline + Key-Facts rechts */}
-        <div
-          className="flex items-end flex-wrap"
-          style={{ gap: 10, marginTop: 26 }}
-        >
+        <div className="flex items-end flex-wrap" style={{ gap: 10, marginTop: 26 }}>
           {konfliktCount > 0 && (
             <span className="chip chip--conflict">Konflikt {konfliktCount}</span>
           )}
-          {blockerCount > 0 && (
-            <span className="chip chip--review">{blockerCount} Blocker</span>
-          )}
-          {handlungCount > 0 && (
-            <span className="chip">{handlungCount} offen</span>
-          )}
+          {blockerCount > 0 && <span className="chip chip--review">{blockerCount} Blocker</span>}
+          {handlungCount > 0 && <span className="chip">{handlungCount} offen</span>}
           {konfliktCount === 0 && blockerCount === 0 && handlungCount === 0 && (
             <span className="chip chip--action">on track</span>
+          )}
+          {project.coverage.knownFacts > 0 && (
+            <span className="chip" style={{ color: "var(--ink-3)" }}>
+              {project.coverage.knownFacts} Fakten
+            </span>
+          )}
+          {project.coverage.openGaps > 0 && (
+            <span className="chip chip--review">{project.coverage.openGaps} Lücken</span>
           )}
 
           <div style={{ flex: 1 }} />
 
           <div className="flex" style={{ gap: 28, fontSize: 12.5, color: "var(--ink-3)" }}>
             <div>
-              <div className="t-micro" style={{ marginBottom: 4 }}>Nächster Termin</div>
+              <div className="t-micro" style={{ marginBottom: 4 }}>
+                Nächster Termin
+              </div>
               <div className="flex items-baseline" style={{ gap: 6, color: "var(--ink)" }}>
                 <span
                   className="mono tabular"
@@ -283,9 +298,11 @@ const LageZone = ({
               </div>
             </div>
             <div>
-              <div className="t-micro" style={{ marginBottom: 4 }}>Letzte Änderung</div>
+              <div className="t-micro" style={{ marginBottom: 4 }}>
+                Verstanden
+              </div>
               <div className="mono" style={{ fontSize: 13, color: "var(--ink-2)" }}>
-                {project.stats.letzteAenderung}
+                {project.coverage.lastIntakeAge}
               </div>
             </div>
           </div>
@@ -307,7 +324,9 @@ const LageZone = ({
             }}
           >
             <Flag className="w-3.5 h-3.5" style={{ color: "var(--ink-3)" }} />
-            <span className="t-micro" style={{ color: "var(--ink-3)" }}>Outcome</span>
+            <span className="t-micro" style={{ color: "var(--ink-3)" }}>
+              Outcome
+            </span>
             <span style={{ color: "var(--ink)" }}>{project.outcome.erfolgskriterium}</span>
             {project.outcome.nogos.length > 0 && (
               <span className="flex items-center" style={{ gap: 6, marginLeft: "auto" }}>

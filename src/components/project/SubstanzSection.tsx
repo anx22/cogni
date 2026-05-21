@@ -2,13 +2,16 @@ import { ChevronRight } from "lucide-react";
 import { useDialog } from "@/components/dialog/DialogProvider";
 import { buildThemaSession, buildDokumentSession } from "@/lib/dialog/sessionFactories";
 import type { ThemaVM, DokumentVM } from "@/lib/project/types";
+import FeedbackButton from "./shared/FeedbackButton";
 
 const SubstanzSection = ({
   themen,
   dokumente,
+  projectId,
 }: {
   themen: ThemaVM[];
   dokumente: DokumentVM[];
+  projectId?: string | null;
 }) => {
   const { openDialog } = useDialog();
 
@@ -25,10 +28,7 @@ const SubstanzSection = ({
       className="bg-surface-0 border-t border-border-strong"
       style={{ marginTop: 40, padding: "32px 56px 48px" }}
     >
-      <header
-        className="flex items-baseline justify-between"
-        style={{ marginBottom: 22 }}
-      >
+      <header className="flex items-baseline justify-between" style={{ marginBottom: 22 }}>
         <h2
           style={{
             margin: 0,
@@ -40,8 +40,11 @@ const SubstanzSection = ({
         >
           Substanz
         </h2>
-        <span className="t-micro" style={{ color: "var(--ink-4)" }}>
-          Themen · Dokumente
+        <span className="flex items-center gap-3">
+          <span className="t-micro" style={{ color: "var(--ink-4)" }}>
+            Themen · Dokumente
+          </span>
+          <FeedbackButton context="Substanz" projectId={projectId} />
         </span>
       </header>
 
@@ -125,8 +128,7 @@ const SubstanzSection = ({
                 style={{
                   gap: 10,
                   padding: "10px 4px",
-                  borderBottom:
-                    i === sortedDokumente.length - 1 ? "none" : "1px solid var(--hair)",
+                  borderBottom: i === sortedDokumente.length - 1 ? "none" : "1px solid var(--hair)",
                   background: "transparent",
                   border: "none",
                   cursor: "pointer",

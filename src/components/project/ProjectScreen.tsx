@@ -222,7 +222,11 @@ const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
               </div>
             </section>
 
-            <SubstanzSection themen={project.themen} dokumente={project.dokumente} />
+            <SubstanzSection
+              themen={project.themen}
+              dokumente={project.dokumente}
+              projectId={realProjectId}
+            />
           </>
         )}
 
