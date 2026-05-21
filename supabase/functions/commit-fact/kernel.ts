@@ -12,6 +12,7 @@ import { mirrorToGraphiti } from "./mirror.ts";
 import { detectAndPersistConflicts } from "./conflictDetector.ts";
 import { detectAndPersistGaps } from "./gapDetector.ts";
 import { detectAndPersistDependencies } from "./dependencyDetector.ts";
+import { detectAndPersistTopicMerges } from "./topicMergeDetector.ts";
 
 interface Payload {
   review_case_id: string;
@@ -47,10 +48,18 @@ export async function commitFact(deps: CommitFactDeps): Promise<CommitFactResult
     .select("*, proposed_fact:proposed_facts(*), session:dialog_sessions(*)")
     .eq("id", review_case_id)
     .single();
-  if (rcErr || !rc) return { ok: false, status: 404, error: `review_case nicht gefunden: ${rcErr?.message ?? "n/a"}` };
+  if (rcErr || !rc)
+    return {
+      ok: false,
+      status: 404,
+      error: `review_case nicht gefunden: ${rcErr?.message ?? "n/a"}`,
+    };
   if (rc.user_id !== user.id) return { ok: false, status: 403, error: "kein Zugriff" };
   log.bind({ sessionId: rc.session_id, projectId: rc.session?.project_id ?? null });
-  log.stage("review_case.loaded", "case loaded", { box_type: rc.box_type, fact_type: rc.proposed_fact?.fact_type });
+  log.stage("review_case.loaded", "case loaded", {
+    box_type: rc.box_type,
+    fact_type: rc.proposed_fact?.fact_type,
+  });
 
   // ==== Sonderfall: Zuordnungsbox =====================================
   if (rc.box_type === "assignment") {
@@ -91,23 +100,22 @@ export async function commitFact(deps: CommitFactDeps): Promise<CommitFactResult
     }
   }
 
-  const pf = rc.proposed_fact as
-    | {
-        id: string;
-        fact_type: string;
-        content: Record<string, unknown>;
-        delta_type: string | null;
-        against_fact_id: string | null;
-        source_id: string | null;
-        parsed_document_id: string | null;
-        confidence: number | null;
-        extraction_run_id: string | null;
-        project_id: string | null;
-      }
-    | null;
+  const pf = rc.proposed_fact as {
+    id: string;
+    fact_type: string;
+    content: Record<string, unknown>;
+    delta_type: string | null;
+    against_fact_id: string | null;
+    source_id: string | null;
+    parsed_document_id: string | null;
+    confidence: number | null;
+    extraction_run_id: string | null;
+    project_id: string | null;
+  } | null;
 
   if (decision === "confirm") {
-    if (!pf) return { ok: false, status: 400, error: "proposed_fact fehlt — kann nicht festschreiben" };
+    if (!pf)
+      return { ok: false, status: 400, error: "proposed_fact fehlt — kann nicht festschreiben" };
 
     const sessionMeta = (rc.session?.metadata ?? {}) as Record<string, any>;
     const sessionProjectId =
@@ -129,8 +137,7 @@ export async function commitFact(deps: CommitFactDeps): Promise<CommitFactResult
         ? (ud.content as Record<string, unknown>)
         : null;
     const wasCorrected =
-      !!correctedContent &&
-      JSON.stringify(correctedContent) !== JSON.stringify(pf.content);
+      !!correctedContent && JSON.stringify(correctedContent) !== JSON.stringify(pf.content);
     const finalContent = correctedContent ?? pf.content;
     const correctionReason = typeof ud.reason === "string" ? ud.reason : null;
 
@@ -155,16 +162,25 @@ export async function commitFact(deps: CommitFactDeps): Promise<CommitFactResult
       .single();
     if (cfErr) return { ok: false, status: 500, error: `canonical_facts: ${cfErr.message}` };
     log.bind({ projectId: project_id });
-    log.stage("canonical_fact.inserted", "canonical fact written", { canonical_fact_id: cf!.id, fact_type: pf.fact_type, corrected: wasCorrected });
-
-    await mirrorImpl(admin, {
+    log.stage("canonical_fact.inserted", "canonical fact written", {
       canonical_fact_id: cf!.id,
-      project_id,
       fact_type: pf.fact_type,
-      content: finalContent,
-    }, log);
+      corrected: wasCorrected,
+    });
 
-    // B-W2/B-W3/B-W4: Konflikte + Gaps + Dependencies deterministisch (fail-soft, parallel).
+    await mirrorImpl(
+      admin,
+      {
+        canonical_fact_id: cf!.id,
+        project_id,
+        fact_type: pf.fact_type,
+        content: finalContent,
+      },
+      log,
+    );
+
+    // B-W2/B-W3/B-W4 + P1-B4: Konflikte + Gaps + Dependencies + Topic-Merge-
+    // Kandidaten deterministisch (fail-soft, parallel).
     await Promise.all([
       detectAndPersistConflicts(admin, {
         user_id: user.id,
@@ -188,6 +204,13 @@ export async function commitFact(deps: CommitFactDeps): Promise<CommitFactResult
         canonical_fact_id: cf!.id,
         fact_type: pf.fact_type,
         content: finalContent,
+        log,
+      }),
+      detectAndPersistTopicMerges(admin, {
+        user_id: user.id,
+        project_id,
+        canonical_fact_id: cf!.id,
+        fact_type: pf.fact_type,
         log,
       }),
     ]);
@@ -231,7 +254,12 @@ export async function commitFact(deps: CommitFactDeps): Promise<CommitFactResult
     const eventType = wasCorrected
       ? "replace"
       : ((pf.delta_type ?? "add") as
-          | "confirm" | "add" | "replace" | "contradict" | "merge" | "discard");
+          | "confirm"
+          | "add"
+          | "replace"
+          | "contradict"
+          | "merge"
+          | "discard");
     await admin.from("change_events").insert({
       user_id: user.id,
       project_id,
@@ -256,8 +284,11 @@ export async function commitFact(deps: CommitFactDeps): Promise<CommitFactResult
     });
 
     await updateSessionProgress(admin, rc.session_id);
-    notifyAolImpl({ review_case_id, decision, user_id: user.id })
-      .catch((e) => log.warn("aol.notify_failed", "aol-confirm notify failed", { error: e?.message ?? String(e) }));
+    notifyAolImpl({ review_case_id, decision, user_id: user.id }).catch((e) =>
+      log.warn("aol.notify_failed", "aol-confirm notify failed", {
+        error: e?.message ?? String(e),
+      }),
+    );
 
     return { ok: true, canonical_fact_id: cf!.id };
   } else {
@@ -269,8 +300,11 @@ export async function commitFact(deps: CommitFactDeps): Promise<CommitFactResult
       .update({ box_state: "rejected", user_decision: user_decision ?? { decision: "reject" } })
       .eq("id", review_case_id);
     await updateSessionProgress(admin, rc.session_id);
-    notifyAolImpl({ review_case_id, decision, user_id: user.id })
-      .catch((e) => log.warn("aol.notify_failed", "aol-confirm notify failed", { error: e?.message ?? String(e) }));
+    notifyAolImpl({ review_case_id, decision, user_id: user.id }).catch((e) =>
+      log.warn("aol.notify_failed", "aol-confirm notify failed", {
+        error: e?.message ?? String(e),
+      }),
+    );
     return { ok: true };
   }
 }

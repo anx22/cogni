@@ -98,10 +98,7 @@ describe("toKonflikte", () => {
     expect(out[0].status).toBe("offen");
   });
   it("handhabt fehlende Faktreferenzen", () => {
-    const out = toKonflikte(
-      [{ id: "c", contradiction_type: "version", resolved: true }],
-      [],
-    );
+    const out = toKonflikte([{ id: "c", contradiction_type: "version", resolved: true }], []);
     expect(out[0].faktA).toBe("Fakt A");
     expect(out[0].status).toBe("geloest");
   });
@@ -167,6 +164,40 @@ describe("toHandlungsbedarf", () => {
     expect(out.find((h) => h.objektTyp === "konflikt")?.blocker).toBe(true);
     expect(out.find((h) => h.objektTyp === "dependency")?.blocker).toBe(true);
     expect(out.find((h) => h.objektTyp === "aufgabe")?.titel).toBe("T1");
+  });
+
+  it("P1-B4: Topic-Merge-Kandidaten landen mit objektTyp=topic_merge", () => {
+    const out = toHandlungsbedarf({
+      decisions: [],
+      contradictions: [],
+      gaps: [],
+      openPoints: [],
+      tasks: [],
+      feedbackRows: [],
+      deps: [],
+      topicMergeCandidates: [
+        {
+          id: "cand-1",
+          source_topic_id: "tA",
+          target_topic_id: "tB",
+          source: { id: "tA", name: "Markenarchitektur", description: "Bestand" },
+          target: { id: "tB", name: "Brand Architecture", description: "Neu" },
+        },
+      ],
+    });
+    expect(out).toHaveLength(1);
+    const item = out[0];
+    expect(item.objektTyp).toBe("topic_merge");
+    expect(item.arbeitsmodus).toBe("klaeren");
+    expect(item.topicMerge).toEqual({
+      candidateId: "cand-1",
+      sourceTopicId: "tA",
+      targetTopicId: "tB",
+      titelA: "Markenarchitektur",
+      beschreibungA: "Bestand",
+      titelB: "Brand Architecture",
+      beschreibungB: "Neu",
+    });
   });
 });
 

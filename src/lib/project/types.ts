@@ -13,7 +13,8 @@ export type ObjektTyp =
   | "aufgabe"
   | "offener_punkt"
   | "feedback"
-  | "dependency";
+  | "dependency"
+  | "topic_merge";
 
 export type DeltaTyp = "neu" | "ersetzt" | "bestaetigt" | "widersprochen" | "unclear";
 
@@ -43,6 +44,16 @@ export interface DependencyVM {
   beschreibung: string;
 }
 
+export interface TopicMergePayloadVM {
+  candidateId: string;
+  sourceTopicId: string;
+  targetTopicId: string;
+  titelA: string;
+  beschreibungA: string;
+  titelB: string;
+  beschreibungB: string;
+}
+
 export interface HandlungsbedarfVM {
   id: string;
   arbeitsmodus: Arbeitsmodus;
@@ -54,6 +65,8 @@ export interface HandlungsbedarfVM {
   quelle: string;
   blocker: boolean;
   manuell?: boolean;
+  /** Bei objektTyp='topic_merge' hängt der Render-Pfad daran. */
+  topicMerge?: TopicMergePayloadVM;
 }
 
 export interface VerlaufVM {

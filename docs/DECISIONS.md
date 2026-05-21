@@ -2,6 +2,19 @@
 
 Format: `[YYYY-MM-DD] Problem → Choice → Reason`
 
+## 2026-05-21 — P1-B4 Topic-Merge Full-Stack
+
+Themen-Verschmelzung Ende-zu-Ende verdrahtet: vom commit-fact-Detektor über DB-Status bis zur User-Aktion im Handlungsbedarf-Stream.
+
+- `2026-05-21` `topics`-Tabelle existierte seit 2026-04-15 mit `merged_into`-Spalte, wurde aber **von nichts auto-populated** (vestigial). Topics existierten faktisch nur als `canonical_facts` mit `fact_type='topic'`. → **DB-Trigger `sync_topic_from_canonical_fact`** (AFTER INSERT auf canonical_facts) legt korrespondierende `topics`-Zeile an. Backfill aller historischen Topics in derselben Migration. Idempotent über `canonical_fact_id`-Lookup.
+- `2026-05-21` Neue Tabelle `topic_merge_candidates(id, user_id, project_id, source_topic_id, target_topic_id, status, pair_key GENERATED, ...)` für vom Detector erkannte Merge-Kandidaten. Analog zu `contradictions`/`gap_signals`/`dependencies` (Welle-B-Pattern). Idempotent über `UNIQUE (project_id, pair_key)`, mit `pair_key = LEAST||GREATEST` für ungerichtete Paar-Identifikation. RLS + Realtime-Publikation.
+- `2026-05-21` Detector `commit-fact/topicMergeDetector.ts` mit gewohntem Welle-B-Vertrag: pure `detectTopicMergesPure(fresh, others)` (Token-Substring ≥ 4 Zeichen, case-insensitive, beide Richtungen) + fail-soft `detectAndPersistTopicMerges`. Parallel via `Promise.all` in `kernel.ts` nach `mirrorToGraphiti` — niemals throw, niemals den Commit-Pfad abbrechen. 8 Deno-Tests (Pure).
+- `2026-05-21` Standalone Edge Function `topic-merge` für die User-Aktion: POST `{candidate_id, decision: "merge"|"reject"}` → setzt `topics.merged_into = target_topic_id` (merge) oder markiert candidate als 'rejected'. Ownership-Check über `user_id`. Idempotent (already-merged → ok'es out).
+- `2026-05-21` UI-Flow läuft über Handlungsbedarf-Stream: Mapper-Erweiterung `toHandlungsbedarf` reicht Kandidaten mit neuem `objektTyp: 'topic_merge'` + Payload (`topicMerge: {candidateId, sourceTopicId, targetTopicId, titel/beschreibungA/B}`) durch. `HandlungsbedarfList.ActionRow` öffnet bei `objektTyp='topic_merge'` `buildThemaMergeSession` mit `merge`-Parameter statt der Default-`buildHandlungsbedarfSession`.
+- `2026-05-21` `__submitIntent`-Pattern um `kind: "topic_merge"`-Variante erweitert. `DialogProvider.commitBox` routet bei diesem Intent zur `topic-merge` EF: `aktion === "Zusammenführen"` + confirm → merge; alles andere → reject. Toast-Feedback bei beiden Pfaden. Konsistent zum 2026-05-20 Antwort-Pipeline-Pattern.
+- `2026-05-21` `useProjectData.ts`: topics-Query filtert nun `.is("merged_into", null)`; `topic_merge_candidates` werden parallel geladen (status=open); Realtime auf neuer Tabelle angemeldet.
+- `2026-05-21` `ProjectViewModel.topics`-Mapper unverändert — `merged_into IS NULL` reicht auf Query-Ebene. Beidseitige Sortierung im `pair_key` verhindert "A↔B" + "B↔A"-Doppel-Kandidaten.
+
 ## 2026-05-20 — P1-F5 Delta-Tag in modality-matrix ReviewRow
 
 Linker-Ergebnis (add | replace | contradict | merge) wird jetzt im Review als kleines Delta-Chip neben dem TypeChip gerendert — vorher unsichtbar im Frontend, nur als interne `proposed_facts.delta_type`-Spalte vorhanden.

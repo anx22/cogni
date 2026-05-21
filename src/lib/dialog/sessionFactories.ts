@@ -294,11 +294,20 @@ export const buildVersionsSession = (params: {
   ]);
 
 // ---------------------- Thema-Merge ----------------------
+// `merge` ist optional: wenn vom Detector ein candidate-id übergeben wird,
+// hängt der aktion-Box ein __submitIntent mit dem candidate dran. commitBox
+// routet das in die topic-merge Edge Function. Ohne merge-Param ist die
+// Session rein illustrativ (z. B. für manuell ausgelöste Demos).
 export const buildThemaMergeSession = (params: {
   titelA: string;
   beschreibungA: string;
   titelB: string;
   beschreibungB: string;
+  merge?: {
+    candidateId: string;
+    sourceTopicId: string;
+    targetTopicId: string;
+  };
 }): DialogSession =>
   mkSession("Thema zusammenführen", `${params.titelA} ↔ ${params.titelB}`, [
     mkBox({
@@ -314,7 +323,19 @@ export const buildThemaMergeSession = (params: {
     mkBox({
       type: "aktion",
       title: "Themen zusammenführen?",
-      payload: { aktionen: ["Zusammenführen", "Getrennt lassen"] },
+      payload: {
+        aktionen: ["Zusammenführen", "Getrennt lassen"],
+        ...(params.merge
+          ? {
+              __submitIntent: {
+                kind: "topic_merge" as const,
+                candidateId: params.merge.candidateId,
+                sourceTopicId: params.merge.sourceTopicId,
+                targetTopicId: params.merge.targetTopicId,
+              },
+            }
+          : {}),
+      },
     }),
   ]);
 

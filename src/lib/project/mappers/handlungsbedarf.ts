@@ -10,6 +10,7 @@ export function toHandlungsbedarf(rows: {
   tasks: any[];
   feedbackRows: any[];
   deps: any[];
+  topicMergeCandidates?: any[];
 }): HandlungsbedarfVM[] {
   const out: HandlungsbedarfVM[] = [];
 
@@ -108,6 +109,34 @@ export function toHandlungsbedarf(rows: {
       blocker: d.dependency_type === "blockiert_durch",
     }),
   );
+
+  // P1-B4: Topic-Merge-Kandidaten als Klären-Aufgabe einreihen.
+  (rows.topicMergeCandidates ?? []).forEach((c) => {
+    const srcName = c.source?.name ?? c.source_name ?? "Thema A";
+    const tgtName = c.target?.name ?? c.target_name ?? "Thema B";
+    const srcDesc = c.source?.description ?? "";
+    const tgtDesc = c.target?.description ?? "";
+    out.push({
+      id: `merge-${c.id}`,
+      arbeitsmodus: "klaeren",
+      objektTyp: "topic_merge",
+      titel: `Themen verschmelzen? „${srcName}" ↔ „${tgtName}"`,
+      beschreibung: "Diese beiden Themen klingen ähnlich — sollen sie zusammengeführt werden?",
+      verantwortlich: null,
+      frist: null,
+      quelle: "Thema-Merge",
+      blocker: false,
+      topicMerge: {
+        candidateId: c.id,
+        sourceTopicId: c.source_topic_id,
+        targetTopicId: c.target_topic_id,
+        titelA: srcName,
+        beschreibungA: srcDesc,
+        titelB: tgtName,
+        beschreibungB: tgtDesc,
+      },
+    });
+  });
 
   return out;
 }

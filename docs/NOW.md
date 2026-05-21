@@ -96,7 +96,7 @@ Alle vier folgen demselben Vertrag: pure `detectXPure(fresh, projectFacts)` + fa
 | P1-F6 | Paste-Preview-Mode in InputOverlay (≥100 Zeichen)                                         | ✅                                                                                                                          |
 | P1-B1 | `delta_type ENUM` um `unclear` erweitern oder Mapping dokumentieren                       | ✅ TS-Typ + DeltaTag (DB-Migration offen; `DialogBox` hat parallel `BoxType "unklar"` aus modality-matrix)                  |
 | P1-B2 | `ProjectViewModel.coverage`-Felder (knownFacts, openGaps, conflictsActive, lastIntakeAge) | ◐ VM-Daten + Composer ✅; UI-Anbindung offen (main hat LageZone umgebaut)                                                   |
-| P1-B4 | Edge Function `topic-merge` + UI-Flow                                                     | ⬜                                                                                                                          |
+| P1-B4 | Edge Function `topic-merge` + UI-Flow                                                     | ✅ Detector (commit-fact/topicMergeDetector) + EF + topics-Trigger/Backfill + HandlungsbedarfVM mit topic_merge-Objekttyp   |
 | P1-F3 | `SubstanzSection` Themen-Cluster zu echtem Drilldown                                      | ⬜ main hat Section neu strukturiert (ChevronRight) — Re-Apply in eigenem Sprint                                            |
 
 ### 2026-05-20 — Antwort-Pipeline (stilles Daten-Loch geschlossen)
@@ -126,7 +126,7 @@ Sieben tote Click-Pfade in Dialog-System glattgezogen (Details in DECISIONS).
 
 ## Backlog (nach Priorität)
 
-1. **Produktions-Sprint 1 Rest** — B4 (topic-merge Edge Function + UI-Flow), F3 (Substanz-Drilldown auf ChevronRight-Basis).
+1. **Produktions-Sprint 1 Rest** — F3 (Substanz-Drilldown auf ChevronRight-Basis).
 2. **Loops aus Re-Audit**
    - Graphiti-Sync-Diagnose (`inspect-graphiti diagnose`, failed-Reasons gruppieren).
    - Vier-Rollen-Screen User-Smoke nach Welle B.
@@ -141,6 +141,7 @@ Sieben tote Click-Pfade in Dialog-System glattgezogen (Details in DECISIONS).
 
 ## Recently completed
 
+- **2026-05-21 — P1-B4 Topic-Merge Full-Stack live** Migration mit `topics`-Backfill + AFTER-INSERT-Trigger auf `canonical_facts` (heilt vestigial `topics`-Tabelle, die seit 2026-04-15 leer war). Neue Tabelle `topic_merge_candidates` mit `pair_key`-Unique-Index für idempotente Erkennung. Detector `topicMergeDetector` (Token-Substring ≥ 4 Zeichen) läuft parallel zu Konflikt/Gap/Dep in `commit-fact/kernel.ts`. Standalone EF `topic-merge` für die User-Aktion. UI-Flow: Kandidaten landen über `toHandlungsbedarf` als `objektTyp='topic_merge'` im Handlungsbedarf-Stream, ActionRow öffnet `buildThemaMergeSession` mit `merge`-Param, `__submitIntent.kind="topic_merge"` routet im `DialogProvider.commitBox` zur EF. Vitest 68/68, tsc clean, eslint clean (auf berührten Dateien).
 - **2026-05-21 — Entity-Rotationsreset gefixt** `Entity.tsx`: `presets`-Dependency aus `setSample`-Effect entfernt, Ref-Pattern eingeführt. CSS `siri-orb-rotate` re-startet nicht mehr beim async `useNamespace("orb")`-DB-Load → kein sichtbares Zucken bei Cursor-Bewegung. OrbLab-Preset-Änderungen wirken jetzt erst beim nächsten State-Wechsel (akzeptabel, OrbLab ist Debug-Tool). Vitest 67/67, tsc clean, eslint clean.
 - **2026-05-14 — Doku-Konsolidierung Schritt 3** Historik ausgelagert: `agent-execution-plan.md`, `audit-2026-05-14.md`, `agent_review.md` aufgelöst (Endstand in `NOW.md` Master-Checklist, Heuristik-Detail hier, Tier-Entscheidungen in `DECISIONS.md`). `docs/`-Markdown-Dateien: 7 → 5.
 - **2026-05-14 — Welle B komplett** B-W1 Linker (Graph-Match) · B-W2 Conflict · B-W3 Gap · B-W4 Dependency live, fail-soft, idempotent, parallel via `Promise.all`. commit-fact-Suite 36/36 grün. Detektor-Footprint Sandbox: Reels-Projekt 1 Dep + 1 Gap, übrige zu klein für Treffer (kein Bug, Datenmangel).

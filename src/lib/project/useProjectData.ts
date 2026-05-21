@@ -54,6 +54,7 @@ export function useProjectData(projectId: string | null | undefined): UseProject
         topicsRes,
         assetsRes,
         stakeholderRes,
+        mergeCandidatesRes,
       ] = await Promise.all([
         supabase.from("projects").select("*").eq("id", projectId).maybeSingle(),
         supabase
@@ -91,7 +92,7 @@ export function useProjectData(projectId: string | null | undefined): UseProject
           .eq("project_id", projectId)
           .order("created_at", { ascending: false })
           .limit(100),
-        supabase.from("topics").select("*").eq("project_id", projectId),
+        supabase.from("topics").select("*").eq("project_id", projectId).is("merged_into", null),
         supabase
           .from("assets")
           .select("*")
@@ -99,10 +100,15 @@ export function useProjectData(projectId: string | null | undefined): UseProject
           .order("created_at", { ascending: false }),
         supabase
           .from("project_stakeholder_links")
-          .select(
-            "id, role, person_id, organization_id, persons(name, role), organizations(name)",
-          )
+          .select("id, role, person_id, organization_id, persons(name, role), organizations(name)")
           .eq("project_id", projectId),
+        supabase
+          .from("topic_merge_candidates")
+          .select(
+            "*, source:source_topic_id(id, name, description), target:target_topic_id(id, name, description)",
+          )
+          .eq("project_id", projectId)
+          .eq("status", "open"),
       ]);
 
       if (projectRes.error || !projectRes.data) {
@@ -138,6 +144,7 @@ export function useProjectData(projectId: string | null | undefined): UseProject
         topics: topicsRes.data ?? [],
         assets: assetsRes.data ?? [],
         stakeholders: stakeholderRes.data ?? [],
+        topicMergeCandidates: mergeCandidatesRes.data ?? [],
       });
       setStatus("ready");
     } catch (err) {
@@ -170,6 +177,7 @@ export function useProjectData(projectId: string | null | undefined): UseProject
       "open_points",
       "feedback",
       "project_state_snapshots",
+      "topic_merge_candidates",
     ];
     return [
       ...projectTables.map((table) => ({ table, filter: `project_id=eq.${projectId}` })),
@@ -178,12 +186,10 @@ export function useProjectData(projectId: string | null | undefined): UseProject
     ];
   }, [projectId]);
 
-  useRealtimeTables(
-    projectId && userId ? `project-${projectId}` : null,
-    realtimeListeners,
-    { onTrigger: load, debounceMs: 250 },
-  );
+  useRealtimeTables(projectId && userId ? `project-${projectId}` : null, realtimeListeners, {
+    onTrigger: load,
+    debounceMs: 250,
+  });
 
   return { status, raw, error, vanished, reload: load };
 }
-

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
-import { Flag, AlertCircle, HelpCircle, Link2, Zap } from "lucide-react";
+import { Flag, AlertCircle, HelpCircle, Link2, Zap, GitMerge } from "lucide-react";
 import { useDialog } from "@/components/dialog/DialogProvider";
-import { buildHandlungsbedarfSession } from "@/lib/dialog/sessionFactories";
+import { buildHandlungsbedarfSession, buildThemaMergeSession } from "@/lib/dialog/sessionFactories";
 import type { Arbeitsmodus, HandlungsbedarfVM, ObjektTyp } from "@/lib/project/types";
 
 type Item = HandlungsbedarfVM;
@@ -26,7 +26,9 @@ function TypeIcon({ kind }: { kind: ObjektTyp }) {
           ? Zap
           : kind === "dependency"
             ? Link2
-            : Flag;
+            : kind === "topic_merge"
+              ? GitMerge
+              : Flag;
   return <Icon className="w-3.5 h-3.5" />;
 }
 
@@ -189,10 +191,29 @@ const ActionRow = ({
   projectId?: string | null;
 }) => {
   const { openDialog } = useDialog();
+  const handleClick = () => {
+    if (item.objektTyp === "topic_merge" && item.topicMerge) {
+      openDialog(
+        buildThemaMergeSession({
+          titelA: item.topicMerge.titelA,
+          beschreibungA: item.topicMerge.beschreibungA,
+          titelB: item.topicMerge.titelB,
+          beschreibungB: item.topicMerge.beschreibungB,
+          merge: {
+            candidateId: item.topicMerge.candidateId,
+            sourceTopicId: item.topicMerge.sourceTopicId,
+            targetTopicId: item.topicMerge.targetTopicId,
+          },
+        }),
+      );
+      return;
+    }
+    openDialog(buildHandlungsbedarfSession(item, projectId ?? null));
+  };
   return (
     <button
       type="button"
-      onClick={() => openDialog(buildHandlungsbedarfSession(item, projectId ?? null))}
+      onClick={handleClick}
       className="w-full flex items-center text-left"
       style={{
         gap: 14,

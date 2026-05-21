@@ -82,6 +82,10 @@ export interface RawProjectData {
   topics: TopicRow[];
   assets: AssetRow[];
   stakeholders: StakeholderLinkRow[];
+  /** P1-B4: vom commit-fact-Detector erkannte Merge-Kandidaten. Optional
+   *  (älterer Code/Test-Fixtures setzen das Feld evtl. nicht). */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  topicMergeCandidates?: any[];
 }
 
 export interface ComposedProjectVM {
@@ -107,6 +111,7 @@ export function buildProjectViewModel(raw: RawProjectData): ComposedProjectVM {
     topics,
     assets,
     stakeholders,
+    topicMergeCandidates,
   } = raw;
 
   const konflikte = toKonflikte(contradictions, canonical);
@@ -120,6 +125,7 @@ export function buildProjectViewModel(raw: RawProjectData): ComposedProjectVM {
     tasks,
     feedbackRows,
     deps,
+    topicMergeCandidates: topicMergeCandidates ?? [],
   });
   const verlauf = toVerlauf(events);
   const themen = toThemen(topics, decisions, openPoints);

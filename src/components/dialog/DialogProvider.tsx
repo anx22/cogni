@@ -13,14 +13,22 @@ import { toast } from "sonner";
  * `__submitIntent` markiert Eingabe-Boxen in Factory-Sessions, deren Antwort
  * nicht via commit-fact persistiert wird, sondern als Notiz durch die
  * Verstehens-Pipeline fließt (Handlungsbedarf-Antwort, Feedback, Rückfrage,
- * Korrektur). Siehe sessionFactories.ts.
+ * Korrektur) — oder über eine eigene Edge Function (topic_merge).
+ * Siehe sessionFactories.ts.
  */
-type SubmitIntent = {
-  kind: "intake_note";
-  projectId?: string | null;
-  contextHint?: string;
-  sourceRef?: { type: string; id?: string; quelle?: string };
-};
+type SubmitIntent =
+  | {
+      kind: "intake_note";
+      projectId?: string | null;
+      contextHint?: string;
+      sourceRef?: { type: string; id?: string; quelle?: string };
+    }
+  | {
+      kind: "topic_merge";
+      candidateId: string;
+      sourceTopicId: string;
+      targetTopicId: string;
+    };
 
 // eslint-disable-next-line react-refresh/only-export-components -- gewollter Hook-Re-Export, alle Caller importieren `useDialog` von hier.
 export { useDialog } from "./dialogContext";
@@ -92,8 +100,38 @@ export const DialogProvider = ({ children }: { children: ReactNode }) => {
         // Factory-Sessions ohne Backend-Review-Case. Wenn die Box ein
         // __submitIntent trägt UND bestätigt wurde, route die User-Eingabe
         // durch die passende Pipeline (heute: intake_note für Antwort/Feedback/
-        // Rückfrage/Korrektur). Verwerfen oder fehlender Intent → silent.
+        // Rückfrage/Korrektur, topic_merge für Themen-Merge-Aktion).
+        // Verwerfen oder fehlender Intent → silent.
         const intent = box?.payload?.__submitIntent as SubmitIntent | undefined;
+        if (intent?.kind === "topic_merge") {
+          const aktion = (userDecision?.aktion as string | undefined) ?? null;
+          // confirm + "Zusammenführen" → merge; confirm + "Getrennt lassen"
+          // oder reject → reject. Wir senden in beiden Fällen einen Call,
+          // damit der candidate-status entsprechend gesetzt wird.
+          const efDecision: "merge" | "reject" =
+            decision === "confirm" && aktion === "Zusammenführen" ? "merge" : "reject";
+          try {
+            const { data, error } = await supabase.functions.invoke("topic-merge", {
+              body: { candidate_id: intent.candidateId, decision: efDecision },
+            });
+            if (error) throw error;
+            if (data && data.ok === false) {
+              if (previousState) updateBoxState(boxId, previousState);
+              toast.error(data.error ?? "Konnte Merge nicht ausführen");
+              return;
+            }
+            toast.success(efDecision === "merge" ? "Themen zusammengeführt" : "Getrennt belassen");
+            devlog.edge("topic-merge ok", {
+              candidateId: intent.candidateId,
+              efDecision,
+            });
+          } catch (err) {
+            if (previousState) updateBoxState(boxId, previousState);
+            devlog.error("topic-merge failed", err);
+            toast.error("Konnte Merge nicht ausführen");
+          }
+          return;
+        }
         if (decision === "confirm" && intent?.kind === "intake_note") {
           const text =
             (userDecision?.text as string | undefined) ??
