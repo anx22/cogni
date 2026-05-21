@@ -95,7 +95,8 @@ export const buildHandlungsbedarfSession = (
   ]);
 
 // ---------------------- Thema ----------------------
-// Reine Inspektion — keine Commit-Pfade.
+// P1-F3 Drilldown: rendert Header + je Item (Entscheidung/Offener Punkt) eine
+// eigene kontext-Box. Reine Inspektion — keine Commit-Pfade.
 export const buildThemaSession = (t: {
   id: string;
   name: string;
@@ -103,8 +104,30 @@ export const buildThemaSession = (t: {
   entscheidungen: number;
   offenePunkte: number;
   dokumente: number;
-}): DialogSession =>
-  mkSession(
+  items?: Array<{
+    id: string;
+    kind: "entscheidung" | "offener_punkt";
+    titel: string;
+    beschreibung: string;
+    status?: string;
+  }>;
+}): DialogSession => {
+  const items = t.items ?? [];
+  const itemBoxes: DialogBox[] = items.map((it) =>
+    mkBox({
+      type: "kontext",
+      title: it.titel,
+      payload: {
+        auszug: it.beschreibung,
+        begruendung:
+          it.kind === "entscheidung"
+            ? `Entscheidung${it.status ? ` · ${it.status}` : ""}`
+            : `Offener Punkt${it.status ? ` · ${it.status}` : ""}`,
+        quelle: `Thema #${t.id}`,
+      },
+    }),
+  );
+  return mkSession(
     "Thema",
     t.name,
     [
@@ -113,13 +136,15 @@ export const buildThemaSession = (t: {
         title: t.name,
         payload: {
           auszug: t.beschreibung,
-          begruendung: `${t.entscheidungen} Entscheidungen · ${t.offenePunkte} offen · ${t.dokumente} Dokumente`,
+          begruendung: `${t.entscheidungen} Entscheidung${t.entscheidungen === 1 ? "" : "en"} · ${t.offenePunkte} offen · ${t.dokumente} Dokumente`,
           quelle: `Thema #${t.id}`,
         },
       }),
+      ...itemBoxes,
     ],
     "readonly",
   );
+};
 
 // ---------------------- Dokument ----------------------
 // Reine Inspektion — Preview & Versionshistorie sind geplant.

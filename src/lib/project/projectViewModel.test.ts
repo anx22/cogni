@@ -219,12 +219,44 @@ describe("toThemen", () => {
     const out = toThemen(
       [{ id: "t1", name: "Farbe", canonical_fact_id: "cf1", description: "" }],
       [
-        { id: "d1", canonical_fact_id: "cf1" },
-        { id: "d2", canonical_fact_id: "cf1" },
+        { id: "d1", canonical_fact_id: "cf1", title: "Farbe A" },
+        { id: "d2", canonical_fact_id: "cf1", title: "Farbe B" },
       ],
-      [{ id: "o1", canonical_fact_id: "cf1" }],
+      [{ id: "o1", canonical_fact_id: "cf1", title: "Klären" }],
     );
     expect(out[0]).toMatchObject({ name: "Farbe", entscheidungen: 2, offenePunkte: 1 });
+  });
+
+  it("P1-F3: Drilldown-Items werden aufgesammelt (Decisions + OpenPoints)", () => {
+    const out = toThemen(
+      [{ id: "t1", name: "Farbe", canonical_fact_id: "cf1", description: "Beschr." }],
+      [
+        { id: "d1", canonical_fact_id: "cf1", title: "Farbe Header", status: "active" },
+        { id: "d2", canonical_fact_id: "other", title: "Andere" },
+      ],
+      [{ id: "o1", canonical_fact_id: "cf1", title: "RAL noch offen", description: "Welche?" }],
+    );
+    const items = out[0].items;
+    expect(items).toHaveLength(2);
+    expect(items.find((i) => i.kind === "entscheidung")).toMatchObject({
+      id: "d1",
+      titel: "Farbe Header",
+      status: "active",
+    });
+    expect(items.find((i) => i.kind === "offener_punkt")).toMatchObject({
+      id: "o1",
+      titel: "RAL noch offen",
+      beschreibung: "Welche?",
+    });
+  });
+
+  it("Topic ohne canonical_fact_id → items leer", () => {
+    const out = toThemen(
+      [{ id: "t1", name: "Verwaist", canonical_fact_id: null, description: "" }],
+      [{ id: "d1", canonical_fact_id: "cf1", title: "X" }],
+      [],
+    );
+    expect(out[0].items).toEqual([]);
   });
 });
 

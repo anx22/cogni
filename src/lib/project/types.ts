@@ -80,6 +80,14 @@ export interface VerlaufVM {
   manuell?: boolean;
 }
 
+export interface ThemaItemRef {
+  id: string;
+  kind: "entscheidung" | "offener_punkt";
+  titel: string;
+  beschreibung: string;
+  status?: string;
+}
+
 export interface ThemaVM {
   id: string;
   name: string;
@@ -87,6 +95,8 @@ export interface ThemaVM {
   entscheidungen: number;
   offenePunkte: number;
   dokumente: number;
+  /** P1-F3: verknüpfte Items für Drilldown. Leer wenn topic ohne canonical_fact. */
+  items: ThemaItemRef[];
 }
 
 export interface DokumentVM {

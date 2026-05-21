@@ -2,6 +2,16 @@
 
 Format: `[YYYY-MM-DD] Problem → Choice → Reason`
 
+## 2026-05-21 — P1-F3 SubstanzSection-Drilldown
+
+Themen-Karten waren bisher Click → readonly Dialog mit Beschreibung + Counts (toter Endpunkt). Drilldown re-applied auf main's ChevronRight-Affordance:
+
+- `2026-05-21` `ThemaVM` um `items: ThemaItemRef[]` erweitert (`{id, kind: 'entscheidung'|'offener_punkt', titel, beschreibung, status?}`). Bewusst nur Decisions + OpenPoints in dieser Iteration — Dokument-Verknüpfung bleibt offen, weil Topics → Dokumente bisher kein Datenmodell-Pfad hat.
+- `2026-05-21` `toThemen`-Mapper sammelt Items über die existierende Beziehung `decisions.canonical_fact_id === topics.canonical_fact_id` (analog `open_points`). Topics ohne `canonical_fact_id` haben `items: []` (verwaiste Topics nach Trigger-Insert vor Backfill-Lücke). Counts (`entscheidungen`/`offenePunkte`) bleiben numerisch konsistent mit `items.length`.
+- `2026-05-21` `buildThemaSession` rendert jetzt Header-kontext-Box (Beschreibung + Summary „X Entscheidungen · Y offen · Z Dokumente") + pro Item eine eigene kontext-Box mit `begruendung` als Status-Hint. Session bleibt readonly — Inspect-Modus, keine Commit-Pfade. Multi-Box landet im DialogOverlay (BatchReviewOverlay), das List-Rendering schon kann.
+- `2026-05-21` SubstanzSection unverändert — `buildThemaSession(t)` bekommt `items` automatisch aus dem ViewModel; ChevronRight-UX bleibt, das Drilldown öffnet sich jetzt als reichhaltiger Dialog statt als hohle Beschreibungs-Box.
+- 2 neue Mapper-Tests (Items-Sammlung + verwaiste Topics). Vitest 70/70, tsc clean, eslint clean.
+
 ## 2026-05-21 — P1-B4 Topic-Merge Full-Stack
 
 Themen-Verschmelzung Ende-zu-Ende verdrahtet: vom commit-fact-Detektor über DB-Status bis zur User-Aktion im Handlungsbedarf-Stream.
