@@ -2,6 +2,30 @@
 
 Format: `[YYYY-MM-DD] Problem → Choice → Reason`
 
+## 2026-05-22 — Doku-Konsolidierung: NOW.md als MainCompass
+
+Doku war über drei parallele Sprint-Tracks gewachsen (Master-Checklist, Phasen-Tabelle, handover-Anhang). Jede Session las an zwei bis drei Stellen den Stand und musste sie versöhnen. Konsolidierung:
+
+- `2026-05-22` `docs/NOW.md` → komplett umgeschrieben als sessions-übergreifender **MainCompass** mit drei Achsen: (1) Vision-Säulen aus PRODUCT.md destilliert, langlebig, (2) Status-Säulen mit Ist-Stand (Pipeline 7/7, Detektoren 5/5, Dialog 18 Modalitäten, Tests, Infra, LOC), (3) Pläne kurz/mittel/lang mit konkreten Triggern statt Deadlines. Statt Master-Checklist und Sprint-Phasen-Tabelle nun ein einziger Status-Block, der pro Session aktualisiert wird. 162 → 137 Zeilen.
+- `2026-05-22` `docs/design-implementation-plan.md` gelöscht. War Übergangs-Doku für UI-Overhaul v2 Phasen 1–7. Alle Phasen ✅ (Tokens, LageZone, Sidebar, Home-3-Spalter, Dialog V2 default, AssetOrbit, Theme-Toggle, Mobile-Audit Projekt, shadcn-Bridge). Endstand in NOW.md absorbiert, Tier-Entscheidungen in DECISIONS bereits dokumentiert.
+- `2026-05-22` `docs/handover-2026-05-21.md` gelöscht. Inhalt (Antwort-Pipeline, P1-F5 Delta-Tag, P1-B2 Coverage-Chips, Entity-Rotationsreset, Backlog) ist in NOW.md "Recently completed" + Pläne überführt. Handover-Dateien sind tot, sobald die nächste Session sie konsumiert hat.
+- `2026-05-22` `AGENTS.md` Routing-Tabelle: Verweis auf `design-implementation-plan.md` entfernt. AGENTS bleibt minimal (Karte, kein Handbuch).
+- `2026-05-22` NOW.md Recently-completed bekommt feste Pflege-Regel: Einträge älter als 14 Tage wandern in DECISIONS (chronologische Quelle), NOW behält den aktuellen Stand. Keine Duplikation.
+
+Ergebnis: 7 → 5 Markdown-Dateien in `docs/`. Eintrittspunkt eindeutig (`NOW.md`). Doku-Drift gegen Code wird beim nächsten Standup geringer, weil weniger Stellen synchron gehalten werden müssen.
+
+## 2026-05-22 — Test-Overhaul Vitest 70 → 89
+
+Drei-Pass-Audit (Drift / Obsolet / Lücken) ergab 11 Drift-Items, 1 Obsolet, 12 Lücken. Eindeutige Funde implementiert, ambivalente zurückgestellt:
+
+- `2026-05-22` **Neue Tests für kritische Lücken**: `src/lib/project/deriveSignal.test.ts` (6, pure Priority-Logik), `src/lib/dialog/loadSession.test.ts` (10, mockt Supabase + boxMapping + sessionMode via `vi.mock`, deckt conflict/gap_box/assignment/silent_substanz/fallback ab), `supabase/functions/commit-fact/assignment_test.ts` (7 Deno, alle 4 confirm-Branches + reject + asset/proposed_facts-Side-Effects via `mockAdmin`), `supabase/functions/intake-understand/factRules_test.ts` (16 Deno, `summarizeFact` per fact_type + `LINKABLE_FACT_TYPES`-Set).
+- `2026-05-22` **Drift-Fixes**: `sessionFactories.test.ts` (`buildThemaMergeSession` mit `merge`-Param verifiziert `__submitIntent.kind=topic_merge`), `projectViewModel.test.ts` (Coverage-Felder + `topicMergeCandidates`-Composition-Path), `gapDetector_test.ts` (`owner` + `assigned_to` Owner-Varianten), `projectScoring_test.ts` (Topic-Score-Faktor +2 pro Hit), `commitFact_test.ts` (`box_type=assignment`-Branch + `/* eslint-disable @typescript-eslint/no-explicit-any */`-Header für vorhandene pre-existing `any` in `silentLog()`).
+- `2026-05-22` **Obsolet**: `src/test/example.test.ts` gelöscht (`expect(true).toBe(true)`-Stub, kein Wert).
+- `2026-05-22` `loadSession.test.ts` Mock-Pattern: pro Table-Name eine Queue, `from(table)` baut Chain-Builder mit `chain()` als no-op (alle `.eq/.order/.limit/.in/.filter` reentrant), `maybeSingle()` und `then()` rufen `nextFrom(table)`. Array-Werte werden als List zurückgegeben (für `review_cases`/`projects`-Queries), Objects als Single-Row. Dieses Pattern ist auch für künftige Supabase-Client-Tests übertragbar; nicht aus `_shared/testFixtures.ts` (Deno) holen — der dortige `mockAdmin` ist auf den Service-Role-Builder zugeschnitten, hier brauchen wir die Client-API.
+- `2026-05-22` Zurückgestellt mit Begründung: D6 (`entscheidungen === items.filter(kind=entscheidung).length` als Invariante in `toThemen` — heute funktional konsistent, aber Test würde die Implementierung doppeln statt einen Vertrag prüfen), L3 (`submitNote`-Metadata-Strukturtest — `useIntake.ts` ist eng mit DOM/Storage gekoppelt, lohnt erst mit React-Testing-Library-Setup), L5 (Side-Effect-Pfad in `detectAndPersistTopicMerges` mit Pre-Insert-Pair-Key-Check — Idempotenz hängt am DB-`UNIQUE`-Index, Test wäre Mock-Overfit).
+
+Vitest 70 → 89 (+19), 1 Stub gelöscht. Deno-Suites geschrieben aber lokal nicht ausführbar (kein Deno in dieser Sandbox); werden in CI gegen Supabase-Test-Runner geprüft. ESLint clean nach Hinzufügen des disable-Headers in `commitFact_test.ts`.
+
 ## 2026-05-21 — inspect-graphiti diagnose + agentClient-Logger-Thread
 
 Zwei Handover-Loops in einem Schritt:

@@ -84,12 +84,12 @@ Alle Schritte mit Logger + Boundary, fail-soft, idempotent.
 
 ### Kurzfristig (nächste 1–3 Sessions)
 
-| #   | Aufgabe                                                                                                                     | Begründung                                                |
-| --- | --------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| K1  | **Doku-Konsolidierung** abschließen: `design-implementation-plan.md` + `handover-2026-05-21.md` löschen (Inhalt absorbiert) | Doku-Inflation reduzieren, Compass-Struktur stabilisieren |
-| K2  | **DB-Migration `delta_type ENUM unclear`** ergänzen                                                                         | Closes Drift TS↔DB aus 2026-05-19                         |
-| K3  | **Vier-Rollen-User-Smoke** (manuell, mit Persona „Hase & Söhne")                                                            | Letzter offener Punkt in Master-Checklist seit Welle B    |
-| K4  | **Mobile-Audit Entity-Screen** (Project-Screen ist durch)                                                                   | 100dvh + Body-Scroll-Lock analog Phase 7b                 |
+| #   | Aufgabe                                                             | Begründung                                             |
+| --- | ------------------------------------------------------------------- | ------------------------------------------------------ |
+| K1  | **DB-Migration `delta_type ENUM unclear`** ergänzen                 | Closes Drift TS↔DB aus 2026-05-19                      |
+| K2  | **Vier-Rollen-User-Smoke** (manuell, mit Persona „Hase & Söhne")    | Letzter offener Punkt in Master-Checklist seit Welle B |
+| K3  | **Mobile-Audit Entity-Screen** (Project-Screen ist durch)           | 100dvh + Body-Scroll-Lock analog Phase 7b              |
+| K4  | **Graphiti-Diagnose-Top-Reasons** in konkrete Reconcile-Jobs gießen | Aus `inspect-graphiti diagnose` Loop (siehe unten)     |
 
 ### Mittelfristig (3–6 Sessions)
 
