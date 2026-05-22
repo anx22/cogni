@@ -2,6 +2,14 @@
 
 Format: `[YYYY-MM-DD] Problem → Choice → Reason`
 
+## 2026-05-21 — inspect-graphiti diagnose + agentClient-Logger-Thread
+
+Zwei Handover-Loops in einem Schritt:
+
+- `2026-05-21` `inspect-graphiti` um Action `diagnose` erweitert: aggregiert `graphiti_sync_log` user-scoped zu `{totals, failed_reasons[], recent_failures[]}`. Reason-Normalisierung in separatem Pure-Modul `diagnose.ts` (UUID → `<uuid>`, lange Zahlen → `<n>`, erste Zeile, max 80 Zeichen) — so fallen Request-IDs/Status-Codes in einen gemeinsamen Bucket statt jede failed-Row als Unikat zu zählen. Sort: count desc, dann reason asc. Optionaler `project_id`-Filter über `payload.project_id` (Best-Effort, da Spalte nicht indexed). 7 Deno-Tests für Pure-Aggregation.
+- `2026-05-21` `_shared/agentClient.ts`: `callExtractFacts` und `callSuggestAssignment` nehmen einen optionalen `log?: LogStage`-Parameter (Pick<Logger, "stage">, lockerer Vertrag). Wenn übergeben, schreibt der Client `log.stage("agent.prompt_used", …)` mit `prompt.version` + `prompt.source` statt `console.warn`. Fallback: console.warn — Tests/Setups ohne Logger laufen weiter. `intake-understand/understandRun.ts` reicht `log` durch. Damit landen Prompt-Version-Breadcrumbs im strukturierten Pipeline-Log statt im Console-Stream.
+- `2026-05-21` Restliche console.warn-Stellen in `_shared/` (graphiti.ts:23 Module-Init, promptHub.ts 5× silent fail-soft, testFixtures.ts:143 Test-Util, logger.ts 3× Self-Calls) bewusst belassen — kein Caller-Logger im Scope bzw. der Logger ist selbst gerade am Flushen. Handover-Schätzung "12 Stellen" war zu hoch; reale Zahl ist 9, von denen 2 (agent-Breadcrumbs) tatsächlich Mehrwert im Pipeline-Log haben.
+
 ## 2026-05-21 — P1-F3 SubstanzSection-Drilldown
 
 Themen-Karten waren bisher Click → readonly Dialog mit Beschreibung + Counts (toter Endpunkt). Drilldown re-applied auf main's ChevronRight-Affordance:

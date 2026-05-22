@@ -166,7 +166,7 @@ export async function runUnderstand(args: {
   // 3. Agent: Fakten extrahieren
   let extracted: ExtractedFact[] = [];
   try {
-    extracted = await callExtractFacts(text, graphHint);
+    extracted = await callExtractFacts(text, graphHint, log);
   } catch (err) {
     const outcome = await handleAgentError(admin, asset_id, err);
     return { ok: false, status: outcome.status, error: outcome.error };
@@ -201,17 +201,20 @@ export async function runUnderstand(args: {
     let suggestion: AssignmentSuggestion | null = null;
     if (projectCtxs.length > 0) {
       try {
-        suggestion = await callSuggestAssignment({
-          text,
-          projects: projectCtxs.map((p) => ({
-            id: p.id,
-            name: p.name,
-            description: p.description,
-            topics: p.topics.slice(0, 3),
-            stakeholder_initials: p.stakeholders.slice(0, 5).map(initials),
-          })),
-          lexicalHints: lexical.slice(0, 5),
-        });
+        suggestion = await callSuggestAssignment(
+          {
+            text,
+            projects: projectCtxs.map((p) => ({
+              id: p.id,
+              name: p.name,
+              description: p.description,
+              topics: p.topics.slice(0, 3),
+              stakeholder_initials: p.stakeholders.slice(0, 5).map(initials),
+            })),
+            lexicalHints: lexical.slice(0, 5),
+          },
+          log,
+        );
       } catch (err) {
         log.warn("suggest_assignment.failed", "suggest_project_assignment failed", {
           error: err instanceof Error ? err.message : String(err),

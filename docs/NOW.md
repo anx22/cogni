@@ -127,9 +127,8 @@ Sieben tote Click-Pfade in Dialog-System glattgezogen (Details in DECISIONS).
 ## Backlog (nach Priorität)
 
 1. **Loops aus Re-Audit**
-   - Graphiti-Sync-Diagnose (`inspect-graphiti diagnose`, failed-Reasons gruppieren).
    - Vier-Rollen-Screen User-Smoke nach Welle B.
-   - `_shared/` console.warn → Logger (12 Stellen, niedrige Priorität).
+   - `_shared/` console.warn → Logger Rest (7 Stellen in graphiti.ts, promptHub.ts, testFixtures.ts — bewusst belassen: Module-Init bzw. silent fail-soft ohne Caller-Logger-Kontext).
 2. **Wave 3 — bewusst zurückgestellt**
    - LLM-Heuristiken für Linker/Conflict/Gap/Dep.
    - React Query (Caching/Mutations).
@@ -140,6 +139,7 @@ Sieben tote Click-Pfade in Dialog-System glattgezogen (Details in DECISIONS).
 
 ## Recently completed
 
+- **2026-05-21 — inspect-graphiti `diagnose` + agentClient-Logger** Neue Action `inspect-graphiti diagnose` aggregiert `graphiti_sync_log` user-scoped: totals (counts pro status), failed_reasons (normalisiert via UUID/Number-Maskierung, sortiert nach count desc), recent_failures (Top-20). Pure-Modul `diagnose.ts` mit 7 Deno-Tests. `_shared/agentClient.ts`: `callExtractFacts` und `callSuggestAssignment` nehmen optional einen Logger und schreiben prompt-version/source via `log.stage("agent.prompt_used", …)` statt `console.warn`; Aufrufer in `intake-understand/understandRun.ts` durchgereicht. Verbleibende 7 console.warn-Stellen in `_shared/` bewusst belassen (Module-Init in `graphiti.ts`, silent fail-soft in `promptHub.ts`/`testFixtures.ts`, Logger-Selbstaufrufe in `logger.ts`). Vitest 70/70, tsc clean.
 - **2026-05-21 — P1-F3 SubstanzSection Drilldown** `ThemaVM` um `items: ThemaItemRef[]` erweitert. `toThemen`-Mapper sammelt jetzt nicht nur Counts, sondern die verknüpften Decisions + OpenPoints (über `decisions.canonical_fact_id === topics.canonical_fact_id`). `buildThemaSession` rendert pro Item eine eigene kontext-Box mit Status-Hint. SubstanzSection bleibt unverändert (`buildThemaSession(t)` bekommt `items` jetzt automatisch via VM). Vitest 70/70 (+2 Mapper-Tests), tsc clean, eslint clean.
 - **2026-05-21 — P1-B4 Topic-Merge Full-Stack live** Migration mit `topics`-Backfill + AFTER-INSERT-Trigger auf `canonical_facts` (heilt vestigial `topics`-Tabelle, die seit 2026-04-15 leer war). Neue Tabelle `topic_merge_candidates` mit `pair_key`-Unique-Index für idempotente Erkennung. Detector `topicMergeDetector` (Token-Substring ≥ 4 Zeichen) läuft parallel zu Konflikt/Gap/Dep in `commit-fact/kernel.ts`. Standalone EF `topic-merge` für die User-Aktion. UI-Flow: Kandidaten landen über `toHandlungsbedarf` als `objektTyp='topic_merge'` im Handlungsbedarf-Stream, ActionRow öffnet `buildThemaMergeSession` mit `merge`-Param, `__submitIntent.kind="topic_merge"` routet im `DialogProvider.commitBox` zur EF. Vitest 68/68, tsc clean, eslint clean (auf berührten Dateien).
 - **2026-05-21 — Entity-Rotationsreset gefixt** `Entity.tsx`: `presets`-Dependency aus `setSample`-Effect entfernt, Ref-Pattern eingeführt. CSS `siri-orb-rotate` re-startet nicht mehr beim async `useNamespace("orb")`-DB-Load → kein sichtbares Zucken bei Cursor-Bewegung. OrbLab-Preset-Änderungen wirken jetzt erst beim nächsten State-Wechsel (akzeptabel, OrbLab ist Debug-Tool). Vitest 67/67, tsc clean, eslint clean.

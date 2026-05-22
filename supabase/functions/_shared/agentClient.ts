@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // =============================================================================
 //  AGENT-CLIENT (Provider-Adapter)
 // -----------------------------------------------------------------------------
@@ -21,6 +22,26 @@ import {
   type FactType,
 } from "./agentConfig.ts";
 import { getPrompt } from "./promptHub.ts";
+import type { Logger } from "./logger.ts";
+
+// Minimal-Logger-Vertrag, damit Aufrufer aus EFs einen Logger durchreichen
+// können, ohne dass agentClient hart davon abhängt. Wenn nicht gesetzt:
+// console.warn als Fallback (Edge-Functions ohne Logger-Kontext, z. B. Tests).
+type LogStage = Pick<Logger, "stage">;
+function logPromptUsed(
+  log: LogStage | undefined,
+  fn: string,
+  prompt: { version: string; source: string },
+) {
+  if (log) {
+    log.stage("agent.prompt_used", `${fn} prompt resolved`, {
+      version: prompt.version,
+      source: prompt.source,
+    });
+  } else {
+    console.warn(`${fn} prompt_version=${prompt.version} source=${prompt.source}`);
+  }
+}
 
 export interface ExtractedFact {
   fact_type: FactType;
@@ -44,13 +65,19 @@ export interface AssignmentSuggestion {
 }
 
 export class AgentRateLimitError extends Error {
-  constructor() { super("rate_limited"); }
+  constructor() {
+    super("rate_limited");
+  }
 }
 export class AgentPaymentError extends Error {
-  constructor() { super("payment_required"); }
+  constructor() {
+    super("payment_required");
+  }
 }
 export class AgentTimeoutError extends Error {
-  constructor() { super("agent_timeout"); }
+  constructor() {
+    super("agent_timeout");
+  }
 }
 
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
@@ -107,6 +134,7 @@ function parseToolArgs(data: any, expectedName: string): unknown {
 export async function callExtractFacts(
   text: string,
   graphHint?: string | null,
+  log?: LogStage,
 ): Promise<ExtractedFact[]> {
   // graphHint: kompakter Kontext aus dem Projekt-Graphen (Graphiti).
   // Wird – falls vorhanden – als zusätzliche System-Notiz vor den User-Text
@@ -124,19 +152,17 @@ export async function callExtractFacts(
       role: "system",
       content:
         "Bekanntes aus dem Projekt-Wissensgraph (nur als Kontext, nicht zitieren, " +
-        "nicht doppelt extrahieren):\n" + trimmed.slice(0, 4000),
+        "nicht doppelt extrahieren):\n" +
+        trimmed.slice(0, 4000),
     });
   }
   const data = await callGateway({
     model: AGENT_MODEL,
-    messages: [
-      ...systemMessages,
-      { role: "user", content: text },
-    ],
+    messages: [...systemMessages, { role: "user", content: text }],
     tools: [EXTRACT_FACTS_TOOL],
     tool_choice: { type: "function", function: { name: "extract_facts" } },
   });
-  console.warn(`agent.extract_facts prompt_version=${prompt.version} source=${prompt.source}`);
+  logPromptUsed(log, "agent.extract_facts", prompt);
 
   const parsed = parseToolArgs(data, "extract_facts") as { facts?: unknown } | null;
   if (!parsed) return [];
@@ -184,6 +210,7 @@ export interface AssignmentInput {
 
 export async function callSuggestAssignment(
   input: AssignmentInput,
+  log?: LogStage,
 ): Promise<AssignmentSuggestion | null> {
   if (input.projects.length === 0) {
     return { project_id: null, confidence: 0.9, reason_short: "Noch keine Projekte vorhanden." };
@@ -194,7 +221,8 @@ export async function callSuggestAssignment(
       const parts = [`- ${p.name} (${p.id})`];
       if (p.description) parts.push(`  Beschreibung: ${p.description.slice(0, 200)}`);
       if (p.topics?.length) parts.push(`  Themen: ${p.topics.join(", ")}`);
-      if (p.stakeholder_initials?.length) parts.push(`  Stakeholder: ${p.stakeholder_initials.join(", ")}`);
+      if (p.stakeholder_initials?.length)
+        parts.push(`  Stakeholder: ${p.stakeholder_initials.join(", ")}`);
       return parts.join("\n");
     })
     .join("\n\n");
@@ -227,11 +255,9 @@ ${hintsBlock}`;
     tools: [SUGGEST_ASSIGNMENT_TOOL],
     tool_choice: { type: "function", function: { name: "suggest_project_assignment" } },
   });
-  console.warn(`agent.suggest_assignment prompt_version=${prompt.version} source=${prompt.source}`);
+  logPromptUsed(log, "agent.suggest_assignment", prompt);
 
-  const parsed = parseToolArgs(data, "suggest_project_assignment") as
-    | AssignmentSuggestion
-    | null;
+  const parsed = parseToolArgs(data, "suggest_project_assignment") as AssignmentSuggestion | null;
   if (!parsed) return null;
 
   // Defensive Validierung
