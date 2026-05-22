@@ -42,7 +42,11 @@ Deno.test("decision ohne passende deadline → 1 gap (decision_without_deadline)
   const out = detectGapsPure(
     { id: "d1", fact_type: "decision", content: { title: "Wechsel zu PostgreSQL" } },
     [
-      { id: "x1", fact_type: "deadline", content: { title: "Andere Sache", due_date: "2026-07-01" } },
+      {
+        id: "x1",
+        fact_type: "deadline",
+        content: { title: "Andere Sache", due_date: "2026-07-01" },
+      },
     ],
   );
   assertEquals(out.length, 1);
@@ -83,6 +87,30 @@ Deno.test("task mit due_date → kein gap", () => {
 Deno.test("topic-Fakt → kein gap (Typ wird ignoriert)", () => {
   const out = detectGapsPure(
     { id: "tp1", fact_type: "topic", content: { title: "Performance" } },
+    [],
+  );
+  assertEquals(out.length, 0);
+});
+
+Deno.test("deadline mit owner-Variante (owner) → kein gap", () => {
+  const out = detectGapsPure(
+    {
+      id: "f4",
+      fact_type: "deadline",
+      content: { title: "Meilenstein", due_date: "2026-09-01", owner: "Clara" },
+    },
+    [],
+  );
+  assertEquals(out.length, 0);
+});
+
+Deno.test("deadline mit owner-Variante (assigned_to) → kein gap", () => {
+  const out = detectGapsPure(
+    {
+      id: "f5",
+      fact_type: "deadline",
+      content: { title: "Abnahme", due_date: "2026-10-01", assigned_to: "Dave" },
+    },
     [],
   );
   assertEquals(out.length, 0);

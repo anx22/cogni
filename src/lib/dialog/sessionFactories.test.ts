@@ -128,4 +128,36 @@ describe("sessionFactories", () => {
     expect(s.boxes[1].payload.intent).toBe("rueckfrage");
     expect(s.boxes[0].payload.auszug).toBe("Was ist der finale Liefertermin?");
   });
+
+  it("buildThemaMergeSession mit merge-Param setzt __submitIntent.kind=topic_merge auf aktion-Box", () => {
+    const s = buildThemaMergeSession({
+      titelA: "Logistik",
+      beschreibungA: "...",
+      titelB: "Lieferkette",
+      beschreibungB: "...",
+      merge: {
+        candidateId: "cand-99",
+        sourceTopicId: "topic-src",
+        targetTopicId: "topic-tgt",
+      },
+    });
+    const aktionBox = s.boxes.find((b) => b.type === "aktion");
+    expect(aktionBox).toBeDefined();
+    const intent = aktionBox!.payload.__submitIntent;
+    expect(intent.kind).toBe("topic_merge");
+    expect(intent.candidateId).toBe("cand-99");
+    expect(intent.sourceTopicId).toBe("topic-src");
+    expect(intent.targetTopicId).toBe("topic-tgt");
+  });
+
+  it("buildThemaMergeSession ohne merge-Param hat kein __submitIntent", () => {
+    const s = buildThemaMergeSession({
+      titelA: "A",
+      beschreibungA: "...",
+      titelB: "B",
+      beschreibungB: "...",
+    });
+    const aktionBox = s.boxes.find((b) => b.type === "aktion");
+    expect(aktionBox!.payload.__submitIntent).toBeUndefined();
+  });
 });

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // =============================================================================
 //  commit-fact — Pure-Function Tests
 // -----------------------------------------------------------------------------
@@ -33,28 +34,30 @@ const noopNotify = async () => {};
 
 Deno.test("commitFact: happy path → canonical_fact + change_event", async () => {
   const admin = mockAdmin({
-    "review_cases.select": [{
-      data: {
-        id: "rc1",
-        user_id: "u1",
-        session_id: "s1",
-        box_type: "fact",
-        proposed_fact: {
-          id: "pf1",
-          fact_type: "stakeholder",
-          content: { name: "Alice", role: "PM" },
-          delta_type: "add",
-          against_fact_id: null,
-          source_id: "src1",
-          parsed_document_id: null,
-          confidence: 0.9,
-          extraction_run_id: "run1",
-          project_id: null,
+    "review_cases.select": [
+      {
+        data: {
+          id: "rc1",
+          user_id: "u1",
+          session_id: "s1",
+          box_type: "fact",
+          proposed_fact: {
+            id: "pf1",
+            fact_type: "stakeholder",
+            content: { name: "Alice", role: "PM" },
+            delta_type: "add",
+            against_fact_id: null,
+            source_id: "src1",
+            parsed_document_id: null,
+            confidence: 0.9,
+            extraction_run_id: "run1",
+            project_id: null,
+          },
+          session: { project_id: "p1", metadata: {} },
         },
-        session: { project_id: "p1", metadata: {} },
+        error: null,
       },
-      error: null,
-    }],
+    ],
     "canonical_facts.insert": [{ data: { id: "cf1" }, error: null }],
   });
 
@@ -81,137 +84,191 @@ Deno.test("commitFact: happy path → canonical_fact + change_event", async () =
   assertEquals(ceInsert!.payload.canonical_fact_id, "cf1");
 });
 
-Deno.test("commitFact: NEEDS_ASSIGNMENT when session has no project + assignment box pending", async () => {
-  const admin = mockAdmin({
-    "review_cases.select": [
-      {
-        data: {
-          id: "rc2",
-          user_id: "u1",
-          session_id: "s2",
-          box_type: "fact",
-          proposed_fact: { id: "pf2", fact_type: "decision", content: {}, delta_type: "add" },
-          session: { project_id: null, metadata: {} },
+Deno.test(
+  "commitFact: NEEDS_ASSIGNMENT when session has no project + assignment box pending",
+  async () => {
+    const admin = mockAdmin({
+      "review_cases.select": [
+        {
+          data: {
+            id: "rc2",
+            user_id: "u1",
+            session_id: "s2",
+            box_type: "fact",
+            proposed_fact: { id: "pf2", fact_type: "decision", content: {}, delta_type: "add" },
+            session: { project_id: null, metadata: {} },
+          },
+          error: null,
         },
-        error: null,
-      },
-      // Zweiter Aufruf: Assignment-Box-Lookup (.maybeSingle)
-      { data: { box_state: "pending" }, error: null },
-    ],
-  });
+        // Zweiter Aufruf: Assignment-Box-Lookup (.maybeSingle)
+        { data: { box_state: "pending" }, error: null },
+      ],
+    });
 
-  const result = await commitFact({
-    admin,
-    user: { id: "u1" },
-    payload: { review_case_id: "rc2", decision: "confirm" },
-    log: silentLog(),
-    mirrorFn: noopMirror,
-    notifyAolFn: noopNotify,
-  });
+    const result = await commitFact({
+      admin,
+      user: { id: "u1" },
+      payload: { review_case_id: "rc2", decision: "confirm" },
+      log: silentLog(),
+      mirrorFn: noopMirror,
+      notifyAolFn: noopNotify,
+    });
 
-  assertEquals(result.ok, false);
-  if (!result.ok) {
-    assertEquals(result.code, "NEEDS_ASSIGNMENT");
-    assertEquals(result.status, 200);
-  }
+    assertEquals(result.ok, false);
+    if (!result.ok) {
+      assertEquals(result.code, "NEEDS_ASSIGNMENT");
+      assertEquals(result.status, 200);
+    }
 
-  const cfInsert = admin._calls.find((c) => c.table === "canonical_facts" && c.op === "insert");
-  assertEquals(cfInsert, undefined, "must not insert canonical_facts when assignment missing");
-});
+    const cfInsert = admin._calls.find((c) => c.table === "canonical_facts" && c.op === "insert");
+    assertEquals(cfInsert, undefined, "must not insert canonical_facts when assignment missing");
+  },
+);
 
-Deno.test("commitFact: reject → proposed_facts + review_cases on rejected, no canonical insert", async () => {
-  const admin = mockAdmin({
-    "review_cases.select": [{
-      data: {
-        id: "rc3",
-        user_id: "u1",
-        session_id: "s3",
-        box_type: "fact",
-        proposed_fact: {
-          id: "pf3",
-          fact_type: "stakeholder",
-          content: { name: "Bob" },
-          delta_type: "add",
+Deno.test(
+  "commitFact: reject → proposed_facts + review_cases on rejected, no canonical insert",
+  async () => {
+    const admin = mockAdmin({
+      "review_cases.select": [
+        {
+          data: {
+            id: "rc3",
+            user_id: "u1",
+            session_id: "s3",
+            box_type: "fact",
+            proposed_fact: {
+              id: "pf3",
+              fact_type: "stakeholder",
+              content: { name: "Bob" },
+              delta_type: "add",
+            },
+            session: { project_id: "p3", metadata: {} },
+          },
+          error: null,
         },
-        session: { project_id: "p3", metadata: {} },
-      },
-      error: null,
-    }],
-  });
+      ],
+    });
 
-  const result = await commitFact({
-    admin,
-    user: { id: "u1" },
-    payload: { review_case_id: "rc3", decision: "reject" },
-    log: silentLog(),
-    mirrorFn: noopMirror,
-    notifyAolFn: noopNotify,
-  });
+    const result = await commitFact({
+      admin,
+      user: { id: "u1" },
+      payload: { review_case_id: "rc3", decision: "reject" },
+      log: silentLog(),
+      mirrorFn: noopMirror,
+      notifyAolFn: noopNotify,
+    });
 
-  assertEquals(result.ok, true);
+    assertEquals(result.ok, true);
 
-  const pfUpdate = admin._calls.find((c) => c.table === "proposed_facts" && c.op === "update");
-  assert(pfUpdate, "proposed_facts.update not called");
-  assertEquals(pfUpdate!.payload.status, "rejected");
+    const pfUpdate = admin._calls.find((c) => c.table === "proposed_facts" && c.op === "update");
+    assert(pfUpdate, "proposed_facts.update not called");
+    assertEquals(pfUpdate!.payload.status, "rejected");
 
-  const rcUpdate = admin._calls.find((c) => c.table === "review_cases" && c.op === "update");
-  assert(rcUpdate, "review_cases.update not called");
-  assertEquals(rcUpdate!.payload.box_state, "rejected");
+    const rcUpdate = admin._calls.find((c) => c.table === "review_cases" && c.op === "update");
+    assert(rcUpdate, "review_cases.update not called");
+    assertEquals(rcUpdate!.payload.box_state, "rejected");
 
-  const cfInsert = admin._calls.find((c) => c.table === "canonical_facts" && c.op === "insert");
-  assertEquals(cfInsert, undefined, "must not insert canonical_facts on reject");
-});
+    const cfInsert = admin._calls.find((c) => c.table === "canonical_facts" && c.op === "insert");
+    assertEquals(cfInsert, undefined, "must not insert canonical_facts on reject");
+  },
+);
 
-Deno.test("commitFact: confirm with corrected content → event_type=replace + corrections row", async () => {
-  const admin = mockAdmin({
-    "review_cases.select": [{
-      data: {
-        id: "rc4",
-        user_id: "u1",
-        session_id: "s4",
-        box_type: "fact",
-        proposed_fact: {
-          id: "pf4",
-          fact_type: "stakeholder",
-          content: { name: "Alice", role: "PM" },
-          delta_type: "add",
-          against_fact_id: null,
-          source_id: "src1",
-          parsed_document_id: null,
-          confidence: 0.8,
-          extraction_run_id: "run4",
-          project_id: null,
+Deno.test(
+  "commitFact: box_type=assignment → routes to handleAssignment, no canonical insert",
+  async () => {
+    const admin = mockAdmin({
+      "review_cases.select": [
+        {
+          data: {
+            id: "rc-a",
+            user_id: "u1",
+            session_id: "s-a",
+            box_type: "assignment",
+            proposed_fact: null,
+            context: { assignment_mode: "auto", candidates: [{ project_id: "p-auto" }] },
+            session: { project_id: null, metadata: {} },
+          },
+          error: null,
         },
-        session: { project_id: "p4", metadata: {} },
+      ],
+    });
+
+    const result = await commitFact({
+      admin,
+      user: { id: "u1" },
+      payload: { review_case_id: "rc-a", decision: "confirm" },
+      log: silentLog(),
+      mirrorFn: noopMirror,
+      notifyAolFn: noopNotify,
+    });
+
+    assertEquals(result.ok, true);
+    const cfInsert = admin._calls.find((c) => c.table === "canonical_facts" && c.op === "insert");
+    assertEquals(cfInsert, undefined, "assignment box must not insert canonical_facts");
+    const dsUpdate = admin._calls.find((c) => c.table === "dialog_sessions" && c.op === "update");
+    assert(dsUpdate, "dialog_sessions.update expected for assignment confirm");
+    assertEquals(dsUpdate!.payload.project_id, "p-auto");
+  },
+);
+
+Deno.test(
+  "commitFact: confirm with corrected content → event_type=replace + corrections row",
+  async () => {
+    const admin = mockAdmin({
+      "review_cases.select": [
+        {
+          data: {
+            id: "rc4",
+            user_id: "u1",
+            session_id: "s4",
+            box_type: "fact",
+            proposed_fact: {
+              id: "pf4",
+              fact_type: "stakeholder",
+              content: { name: "Alice", role: "PM" },
+              delta_type: "add",
+              against_fact_id: null,
+              source_id: "src1",
+              parsed_document_id: null,
+              confidence: 0.8,
+              extraction_run_id: "run4",
+              project_id: null,
+            },
+            session: { project_id: "p4", metadata: {} },
+          },
+          error: null,
+        },
+      ],
+      "canonical_facts.insert": [{ data: { id: "cf4" }, error: null }],
+    });
+
+    const result = await commitFact({
+      admin,
+      user: { id: "u1" },
+      payload: {
+        review_case_id: "rc4",
+        decision: "confirm",
+        user_decision: {
+          content: { name: "Alice Müller", role: "PM" },
+          reason: "Nachname ergänzt",
+        },
       },
-      error: null,
-    }],
-    "canonical_facts.insert": [{ data: { id: "cf4" }, error: null }],
-  });
+      log: silentLog(),
+      mirrorFn: noopMirror,
+      notifyAolFn: noopNotify,
+    });
 
-  const result = await commitFact({
-    admin,
-    user: { id: "u1" },
-    payload: {
-      review_case_id: "rc4",
-      decision: "confirm",
-      user_decision: { content: { name: "Alice Müller", role: "PM" }, reason: "Nachname ergänzt" },
-    },
-    log: silentLog(),
-    mirrorFn: noopMirror,
-    notifyAolFn: noopNotify,
-  });
+    assertEquals(result.ok, true);
 
-  assertEquals(result.ok, true);
+    const cfInsert = admin._calls.find((c) => c.table === "canonical_facts" && c.op === "insert");
+    assertEquals(cfInsert!.payload.content.name, "Alice Müller");
+    assertEquals(cfInsert!.payload.provenance.corrected, true);
 
-  const cfInsert = admin._calls.find((c) => c.table === "canonical_facts" && c.op === "insert");
-  assertEquals(cfInsert!.payload.content.name, "Alice Müller");
-  assertEquals(cfInsert!.payload.provenance.corrected, true);
+    const ceInsert = admin._calls.find((c) => c.table === "change_events" && c.op === "insert");
+    assertEquals(ceInsert!.payload.event_type, "replace");
 
-  const ceInsert = admin._calls.find((c) => c.table === "change_events" && c.op === "insert");
-  assertEquals(ceInsert!.payload.event_type, "replace");
-
-  const corr = admin._calls.find((c) => c.table === "corrections" && c.op === "insert");
-  assert(corr, "corrections.insert not called");
-  assertEquals(corr!.payload.reason, "Nachname ergänzt");
-});
+    const corr = admin._calls.find((c) => c.table === "corrections" && c.op === "insert");
+    assert(corr, "corrections.insert not called");
+    assertEquals(corr!.payload.reason, "Nachname ergänzt");
+  },
+);

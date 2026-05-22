@@ -20,9 +20,7 @@ Deno.test("scoreProjects: Projektname trifft mit +3", () => {
 });
 
 Deno.test("scoreProjects: Stakeholder zählt mit +2 pro Treffer", () => {
-  const r = scoreProjects("Mail von Anna und Bob", [
-    project({ stakeholders: ["Anna", "Bob"] }),
-  ]);
+  const r = scoreProjects("Mail von Anna und Bob", [project({ stakeholders: ["Anna", "Bob"] })]);
   assertEquals(r[0].score, 4);
 });
 
@@ -61,16 +59,20 @@ Deno.test("mapToBoxType: default → knowledge", () => {
 });
 
 Deno.test("segmentsToText: extrahiert Strings + .text-Felder", () => {
-  const t = segmentsToText([
-    "raw",
-    { text: "from-object" },
-    { other: "ignored" },
-    null,
-  ]);
+  const t = segmentsToText(["raw", { text: "from-object" }, { other: "ignored" }, null]);
   assertEquals(t, "raw\nfrom-object");
 });
 
 Deno.test("segmentsToText: leeres Input → leerer String", () => {
   assertEquals(segmentsToText(null), "");
   assertEquals(segmentsToText("nope"), "");
+});
+
+Deno.test("scoreProjects: Thema zählt +2 pro Treffer", () => {
+  const r = scoreProjects("Update zu Farbkonzept und Akustikplanung", [
+    project({ topics: ["Farbkonzept", "Akustikplanung"] }),
+  ]);
+  // 2 topic hits × 2 = 4
+  assertEquals(r[0].score, 4);
+  assert(r[0].reasons.some((reason: string) => reason.includes("Thema")));
 });

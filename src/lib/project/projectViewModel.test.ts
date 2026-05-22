@@ -336,4 +336,41 @@ describe("buildProjectViewModel — Composition", () => {
     const { vm } = buildProjectViewModel(raw);
     expect(vm.lagetext).toBe("Termin ergänzt.");
   });
+
+  it("D7: coverage-Felder werden aus canonical + gaps + konflikte berechnet", () => {
+    const raw = emptyRaw();
+    raw.canonical = [
+      { id: "a", content: { title: "X" }, updated_at: "2026-05-14" },
+      { id: "b", content: { title: "Y" }, updated_at: "2026-05-14" },
+    ] as unknown as RawProjectData["canonical"];
+    raw.gaps = [
+      { id: "g1", title: "G", impact: "", affects: "", detected_at: "2026-05-14" },
+    ] as unknown as RawProjectData["gaps"];
+    raw.contradictions = [
+      { id: "c1", description: "X", fact_a_id: "a", fact_b_id: "b", resolved: false },
+    ] as unknown as RawProjectData["contradictions"];
+    const { vm } = buildProjectViewModel(raw);
+    expect(vm.coverage.knownFacts).toBe(2);
+    expect(vm.coverage.openGaps).toBe(1);
+    expect(vm.coverage.conflictsActive).toBe(1);
+    expect(vm.coverage.lastIntakeAge).toBeDefined();
+  });
+
+  it("D8: topicMergeCandidates fließen als topic_merge-Items in handlungsbedarf", () => {
+    const raw = emptyRaw();
+    raw.topicMergeCandidates = [
+      {
+        id: "cand-1",
+        source_topic_id: "tA",
+        target_topic_id: "tB",
+        source: { id: "tA", name: "Alpha", description: "Desc A" },
+        target: { id: "tB", name: "Beta", description: "Desc B" },
+      },
+    ] as unknown as RawProjectData["topicMergeCandidates"];
+    const { vm } = buildProjectViewModel(raw);
+    const mergeItems = vm.handlungsbedarf.filter((h) => h.objektTyp === "topic_merge");
+    expect(mergeItems).toHaveLength(1);
+    expect(mergeItems[0].topicMerge?.candidateId).toBe("cand-1");
+    expect(mergeItems[0].topicMerge?.titelA).toBe("Alpha");
+  });
 });
