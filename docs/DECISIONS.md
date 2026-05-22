@@ -2,6 +2,20 @@
 
 Format: `[YYYY-MM-DD] Problem → Choice → Reason`
 
+## 2026-05-22 — K1+K2+K4 aus MainCompass abgehakt
+
+Drei kurzfristige Compass-Punkte in derselben Session umgesetzt:
+
+- `2026-05-22` **K1**: Migration `20260522120000_delta_type_unclear.sql` schließt 5-Tage-Drift TS↔DB. ENUM `public.delta_type` bekommt Wert `'unclear'`, der seit 2026-05-19 in `src/lib/project/types.ts:19` lebt. Heute wird der Wert nirgends geschrieben — Migration ist Vorrats-Fix damit künftige Inserts nicht knallen.
+- `2026-05-22` **K2**: Vier-Rollen-User-Smoke als Playwright-E2E `e2e/04-vier-rollen-smoke.spec.ts` + Persona-Helper `e2e/_persona.ts`. Seedet „Hase & Söhne Couture" via Service-Role (Projekt + 2 Stakeholder + Asset + 3 canonical_facts + Konflikt + Gap + TopicMerge-Kandidat + ChangeEvent), Spec navigiert nach Login zu `/projekt/{id}` und prüft alle vier Rollen-Renderer. Sweep über `metadata.test_run_id` kompatibel zu `test-data-sweep`. Graceful skip ohne `SUPABASE_URL`/`SERVICE_ROLE_KEY`. Architekturwahl Node-TS in `e2e/` statt Deno-EF, weil Playwright ohnehin in Node läuft und `@supabase/supabase-js` v2 dort sauberer ist. `package.json:test:e2e` als Script ergänzt.
+- `2026-05-22` **K4**: Graphiti-Diagnose-Loop wird aktiv. Drei Bausteine:
+  - Schema-Migration `20260522121000_graphiti_retry_loop.sql`: `graphiti_sync_log.last_retry_at` ergänzt, Partial-Index für `(status='failed', attempt, last_retry_at)`, Extensions `pg_cron` + `pg_net` in `extensions`-Schema (Supabase-Konvention).
+  - `graphiti-reconcile/retryFilter.ts` als pure Pure-Function `selectRetryCandidates(rows, opts)` extrahiert mit 10 Deno-Tests (attempt-Max, Cooldown, Reason-Substring-Match, kombinierte Skip-Gründe). `now: Date`-Injection als Test-Hook.
+  - `graphiti-reconcile/index.ts` um Retry-Pfad erweitert: vier neue Payload-Felder (`reconcile_failed`, `failed_reason_filter`, `max_attempts`, `retry_cooldown_min`). Wenn `reconcile_failed=true`: failed-Sync-Logs laden → durch `selectRetryCandidates` filtern → zugehörige `canonical_facts` in `pending` mergen → `attempt+1`/`last_retry_at=NOW()` vorab schreiben (Cooldown läuft selbst wenn Episode-Match noch nicht greift, kein Lock-In auf eine Reconcile-Runde). retryStats in done-Stage-Log + Response. `/* eslint-disable @typescript-eslint/no-explicit-any */` als Header-Workaround für pre-existing `logSync(admin: any)` — Cogni-Konvention für Deno-EFs.
+  - Cron-Migration `20260522121500_graphiti_retry_cron.sql`: `cron.schedule('graphiti-reconcile-loop', '*/30 * * * *', ...)` mit `net.http_post` gegen die EF, Vault-Pattern für Service-Role-Auth (`vault.decrypted_secrets`). `DO $$ IF EXISTS cron.unschedule ... $$` macht die Migration re-runnable. Manueller Setup-Schritt für `vault.create_secret('service_role_key')` ist im SQL-Kommentar dokumentiert, NICHT committet.
+- `2026-05-22` **Architektur-Konsistenz**: Persona-Fixture für K2 nicht in `_shared/testFixtures.ts` (das ist Deno-Service-Role-mockAdmin-Gegend), sondern eigene Node-Variante `e2e/_persona.ts`. Mit `auth.admin.listUsers()` wird die `user_id` aus dem Test-User-Email resolvet — Annahme: User existiert in Staging und ist in `PLAYWRIGHT_USER_EMAIL` konfiguriert.
+- `2026-05-22` **Risiken offen**: (a) Migrations sind committed aber nicht applied — manueller Apply-Schritt (mcp-Tool oder CLI) steht noch aus, ebenso Vault-Secret-Einspielung. (b) Wenn Vault-Pattern scheitert, GitHub-Actions-Cron als dokumentierte Alternative im Plan. (c) Playwright-Smoke wurde lokal nicht ausgeführt (kein Staging-Login-User in Sandbox) — erstes echtes Run ist Aufgabe der Session-übergreifenden K3.
+
 ## 2026-05-22 — Doku-Konsolidierung: NOW.md als MainCompass
 
 Doku war über drei parallele Sprint-Tracks gewachsen (Master-Checklist, Phasen-Tabelle, handover-Anhang). Jede Session las an zwei bis drei Stellen den Stand und musste sie versöhnen. Konsolidierung:

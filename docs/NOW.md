@@ -84,12 +84,11 @@ Alle Schritte mit Logger + Boundary, fail-soft, idempotent.
 
 ### Kurzfristig (nächste 1–3 Sessions)
 
-| #   | Aufgabe                                                             | Begründung                                             |
-| --- | ------------------------------------------------------------------- | ------------------------------------------------------ |
-| K1  | **DB-Migration `delta_type ENUM unclear`** ergänzen                 | Closes Drift TS↔DB aus 2026-05-19                      |
-| K2  | **Vier-Rollen-User-Smoke** (manuell, mit Persona „Hase & Söhne")    | Letzter offener Punkt in Master-Checklist seit Welle B |
-| K3  | **Mobile-Audit Entity-Screen** (Project-Screen ist durch)           | 100dvh + Body-Scroll-Lock analog Phase 7b              |
-| K4  | **Graphiti-Diagnose-Top-Reasons** in konkrete Reconcile-Jobs gießen | Aus `inspect-graphiti diagnose` Loop (siehe unten)     |
+| #   | Aufgabe                                                   | Begründung                                                                                                                                                                     |
+| --- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| K1  | **Mobile-Audit Entity-Screen** (Project-Screen ist durch) | 100dvh + Body-Scroll-Lock analog Phase 7b                                                                                                                                      |
+| K2  | **Migrations + Vault-Secret deployen**                    | Migrations 20260522120000 (delta_type) + 20260522121000 (retry_loop) + 20260522121500 (cron) sind committed aber nicht angewendet; Service-Role-Key in Vault muss manuell rein |
+| K3  | **Playwright-Smoke 04 in Staging laufen lassen**          | Erstes echtes Persona-E2E nach Welle B — verifiziert dass 4 Rollen Persona-Daten korrekt zeigen                                                                                |
 
 ### Mittelfristig (3–6 Sessions)
 
@@ -114,13 +113,15 @@ Alle Schritte mit Logger + Boundary, fail-soft, idempotent.
 
 ## Aktive Loops (parallel zu Sprints)
 
-- **Graphiti-Sync-Diagnose** — `inspect-graphiti diagnose` live (2026-05-21). Failed-Reasons werden gruppiert. Nächster Schritt: aus Top-Reasons konkrete Fixes ableiten.
+- **Graphiti-Sync-Retry** — `inspect-graphiti diagnose` (live seit 2026-05-21) + `graphiti-reconcile` mit `reconcile_failed`-Pfad (2026-05-22). Cron-Job `*/30 min` für automatische Retrys, attempt/cooldown via `selectRetryCandidates`. Nächster Schritt: Migrations + Vault-Setup deployen, dann nach 1–2 Tagen `diagnose` erneut ziehen → Top-Reasons sollten geringer werden.
 - **`_shared/` console.warn → Logger** — 7 Stellen verbleiben, bewusst belassen (Module-Init in graphiti.ts/promptHub.ts/testFixtures.ts/logger.ts, kein Caller-Logger im Scope).
 - **Test-Coverage halten** — jede neue Funktion mit Pure-Test (Welle-B-Pattern), jeder Drift-Fund in DECISIONS dokumentieren.
 
 ---
 
 ## Recently completed
+
+- **2026-05-22 — K1+K2+K4 aus MainCompass abgehakt** Migration `delta_type unclear` (K1, schließt 5-Tage-Drift). Persona „Hase & Söhne Couture" als Playwright-E2E `04-vier-rollen-smoke.spec.ts` + `e2e/_persona.ts` Seed/Sweep mit Service-Role (K2). `graphiti-reconcile` um Retry-Pfad erweitert: pure `selectRetryCandidates(rows, opts)` in `retryFilter.ts` + 10 Deno-Tests; neue Payload-Felder `reconcile_failed`/`failed_reason_filter`/`max_attempts`/`retry_cooldown_min`; pg_cron-Job alle 30 min (K4). 4 Commits auf main.
 
 - **2026-05-22 — Test-Overhaul Vitest 70 → 89** Neue Tests: `deriveSignal` (6), `loadSession` (10), `assignment` (7 Deno), `factRules` (16 Deno). Drift-Fixes: `sessionFactories` (merge-Param), `projectViewModel` (Coverage + topicMergeCandidates), `gapDetector` (owner/assigned_to), `projectScoring` (Topic-Score), `commitFact` (assignment-Branch). 1 Stub gelöscht. Vitest 89/89.
 - **2026-05-21 — inspect-graphiti `diagnose` + agentClient-Logger** Action `diagnose` aggregiert `graphiti_sync_log` (totals + failed_reasons gruppiert + recent_failures). Reason-Normalisierung (UUID/Number-Maskierung) in pure `diagnose.ts` + 7 Deno-Tests. `_shared/agentClient.ts` nimmt optionalen Logger und schreibt Prompt-Version via `log.stage("agent.prompt_used", …)` statt `console.warn`.
