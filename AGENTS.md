@@ -31,7 +31,7 @@ AOL-Service auf Railway = LangGraph-Kontext · LangSmith = Prompts/Traces · Lov
 
 ## Aktueller Sprint
 
-Siehe `docs/NOW.md`. A/B-Tier + Welle B (B-W1…B-W4) komplett. Aktiv: UI-Redesign-Vorbereitung (UI ↔ Core trennen, ViewModel als Vertrag).
+Siehe `docs/NOW.md`. Basis + Welle B + UI-Redesign durch. Aktiv: Prototyp-Finalisierung in drei Milestones (Provenance, Entity-Präsenz, Antwort-Loops). Visuelle Quelle: `docs/redesign/prototype/` + `docs/redesign/screenshots/`.
 
 ## Regeln (immer)
 
