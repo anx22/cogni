@@ -2,6 +2,15 @@
 
 Format: `[YYYY-MM-DD] Problem → Choice → Reason`
 
+## 2026-05-24 — Redesign abgeschlossen + Doku-Konsolidierung
+
+- Redesign-Pässe 1–6 + Audit-Fixbatch sind durch (Sidebar, Hero, Mittelfeld, Substanz, BatchReview, FaktDrill, Readonly-Sessions, `deriveSignal`, Material/Review-Buttons, `escalate`-Payload). UI-Sprache deckt sich mit `docs/redesign/prototype/` + `docs/redesign/screenshots/`.
+- `.lovable/plan.md`, `docs/redesign/REVIEW.md` und `docs/redesign/Cogni.zip` gelöscht — waren Übergangs-Tracker. Visuelle Quelle bleibt der Prototyp-Ordner.
+- NOW.md auf drei Milestones zum Prototyp gestrafft (M1 Provenance + Empfehlung, M2 Entity-Präsenz inkl. Universal-Overlay, M3 Antwort-Loops). Kein Klein-Klein-Backlog mehr.
+- Stopp-Linie bestätigt: keine `src/lib/**`-Eingriffe für reine Designwünsche.
+
+
+
 ## 2026-05-22 — K1+K2+K4 aus MainCompass abgehakt
 
 Drei kurzfristige Compass-Punkte in derselben Session umgesetzt:
