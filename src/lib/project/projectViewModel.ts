@@ -153,12 +153,31 @@ export function buildProjectViewModel(raw: RawProjectData): ComposedProjectVM {
 
   const rawSummary = snapshot?.summary as string | undefined;
   const snapshotSummary = humanizeSnapshotSummary(rawSummary);
-  const fallbackLage =
-    konflikte.length || gapVMs.length || handlungsbedarf.length
-      ? `${handlungsbedarf.length} offen, ${konflikte.length} Konflikt${
-          konflikte.length === 1 ? "" : "e"
-        }, ${gapVMs.length} Lücke${gapVMs.length === 1 ? "" : "n"}.`
-      : "Noch keine Erkenntnisse — leg etwas ab und ich fange an zu verstehen.";
+
+  // Lage wird aus aktuellem Zustand zusammengesetzt, nicht aus dem letzten
+  // Commit-Log-Satz. Snapshot-Summary kommt nur durch, wenn sie wirklich
+  // eine Zustandsbeschreibung ist (sonst null aus humanizeSnapshotSummary).
+  const lageFromState = (() => {
+    if (konflikte.length === 0 && gapVMs.length === 0 && handlungsbedarf.length === 0) {
+      if (canonical.length === 0) {
+        return "Projekt ist angelegt. Leg Material ab — eine Datei, einen Link, eine Notiz — damit Lage und offene Punkte sichtbar werden.";
+      }
+      return "Keine offenen Punkte. Material liegt vor, der Stand ist konsistent.";
+    }
+    const parts: string[] = [];
+    if (konflikte.length)
+      parts.push(`${konflikte.length} Widerspr${konflikte.length === 1 ? "uch" : "üche"}`);
+    const blocker = handlungsbedarf.filter((h) => h.blocker).length;
+    if (blocker) parts.push(`${blocker} Blocker`);
+    if (gapVMs.length)
+      parts.push(`${gapVMs.length} offene Frage${gapVMs.length === 1 ? "" : "n"}`);
+    const rest = handlungsbedarf.length - blocker;
+    if (rest > 0) parts.push(`${rest} weitere${rest === 1 ? "r" : ""} Punkt${rest === 1 ? "" : "e"}`);
+    return parts.length
+      ? `Aktuell: ${parts.join(", ")}.`
+      : "Der Stand ist konsistent.";
+  })();
+  const fallbackLage = lageFromState;
 
   const isEmpty =
     canonical.length === 0 &&
