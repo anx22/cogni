@@ -10,8 +10,6 @@ const mkBox = (b: Omit<DialogBox, "id" | "state"> & { state?: DialogBox["state"]
   ...b,
 });
 
-// Generic Session-Builder — alle Factories teilen sich diesen Kern.
-// `mode` ist optional: "readonly" für reine Inspektionsdialoge (kein Commit-Backend).
 const mkSession = (
   anlass: string,
   context: string,
@@ -33,7 +31,7 @@ export const buildKonfliktSession = (k: {
   faktA: string;
   faktB: string;
 }): DialogSession =>
-  mkSession("Konflikt klären", `Konflikt #${k.id}`, [
+  mkSession("Widerspruch klären", k.title, [
     mkBox({
       type: "konflikt",
       title: k.title,
@@ -53,7 +51,7 @@ export const buildGapSession = (g: {
   betrifft: string;
   lebensdauer: string;
 }): DialogSession =>
-  mkSession("Lücke schließen", `Gap #${g.id}`, [
+  mkSession("Offene Frage", g.titel, [
     mkBox({
       type: "gap",
       title: g.titel,
@@ -61,19 +59,19 @@ export const buildGapSession = (g: {
         wirkung: g.wirkung,
         lebensdauer: g.lebensdauer,
         betrifft: g.betrifft,
+        asks: "Was fehlt hier?",
       },
     }),
   ]);
 
 // ---------------------- Handlungsbedarf ----------------------
-// Wissens-Box (Sachverhalt) + Eingabe-Box (Antwort).
-// Antwort fließt über `__submitIntent` durch die Verstehens-Pipeline und wird
-// als Notiz-Asset persistiert (mit Rückreferenz auf den Handlungsbedarf).
+// Default-Renderer für entscheidung/aufgabe/offener_punkt/feedback.
+// Antwort fließt über `__submitIntent` → submitNote → Verstehens-Pipeline.
 export const buildHandlungsbedarfSession = (
   item: { id: string; titel: string; beschreibung: string; quelle: string },
   projectId?: string | null,
 ): DialogSession =>
-  mkSession("Handlungsbedarf", item.id, [
+  mkSession(item.quelle || "Punkt", item.titel, [
     mkBox({
       type: "wissen",
       title: item.titel,
@@ -81,22 +79,57 @@ export const buildHandlungsbedarfSession = (
     }),
     mkBox({
       type: "eingabe",
-      title: "Antwort",
+      title: "Antwort, Kommentar oder Korrektur",
       payload: {
-        placeholder: "Antwort, Notiz oder Korrektur…",
+        placeholder: "Was ergänzt du, was korrigierst du?",
+        asks: "Antwort hinzufügen",
         __submitIntent: {
           kind: "intake_note" as const,
           projectId: projectId ?? null,
-          contextHint: `Antwort auf Handlungsbedarf: ${item.titel} (${item.quelle})`,
+          contextHint: `Antwort auf: ${item.titel} (${item.quelle})`,
           sourceRef: { type: "handlungsbedarf", id: item.id, quelle: item.quelle },
         },
       },
     }),
   ]);
 
+// ---------------------- Dependency ----------------------
+// Eigener Drill, der Quelle/Ziel klar zeigt — keine "Dependency #xyz"-Sprache mehr.
+export const buildDependencySession = (
+  d: {
+    id: string;
+    titel: string;
+    beschreibung: string;
+    quelle: string;
+  },
+  projectId?: string | null,
+): DialogSession =>
+  mkSession("Abhängigkeit klären", d.titel, [
+    mkBox({
+      type: "kontext",
+      title: d.titel,
+      payload: {
+        auszug: d.beschreibung || "Diese Aufgabe hängt an einer anderen.",
+        begruendung: "So lange die Abhängigkeit besteht, lässt sich der Punkt nicht erledigen.",
+      },
+    }),
+    mkBox({
+      type: "eingabe",
+      title: "Auflösen oder korrigieren",
+      payload: {
+        placeholder: "z. B. 'nicht mehr blockiert' oder 'blockiert nun durch …'",
+        asks: "Was stimmt?",
+        __submitIntent: {
+          kind: "intake_note" as const,
+          projectId: projectId ?? null,
+          contextHint: `Klärung Abhängigkeit: ${d.titel}`,
+          sourceRef: { type: "dependency", id: d.id },
+        },
+      },
+    }),
+  ]);
+
 // ---------------------- Thema ----------------------
-// P1-F3 Drilldown: rendert Header + je Item (Entscheidung/Offener Punkt) eine
-// eigene kontext-Box. Reine Inspektion — keine Commit-Pfade.
 export const buildThemaSession = (t: {
   id: string;
   name: string;
@@ -123,7 +156,6 @@ export const buildThemaSession = (t: {
           it.kind === "entscheidung"
             ? `Entscheidung${it.status ? ` · ${it.status}` : ""}`
             : `Offener Punkt${it.status ? ` · ${it.status}` : ""}`,
-        quelle: `Thema #${t.id}`,
       },
     }),
   );
@@ -137,7 +169,6 @@ export const buildThemaSession = (t: {
         payload: {
           auszug: t.beschreibung,
           begruendung: `${t.entscheidungen} Entscheidung${t.entscheidungen === 1 ? "" : "en"} · ${t.offenePunkte} offen · ${t.dokumente} Dokumente`,
-          quelle: `Thema #${t.id}`,
         },
       }),
       ...itemBoxes,
@@ -147,7 +178,6 @@ export const buildThemaSession = (t: {
 };
 
 // ---------------------- Dokument ----------------------
-// Reine Inspektion — Preview & Versionshistorie sind geplant.
 export const buildDokumentSession = (d: {
   id: string;
   name: string;
@@ -158,15 +188,14 @@ export const buildDokumentSession = (d: {
 }): DialogSession =>
   mkSession(
     "Dokument",
-    `${d.typ.toUpperCase()} v${d.version}`,
+    `${d.typ.toUpperCase()} · Version ${d.version}`,
     [
       mkBox({
         type: "kontext",
         title: d.name,
         payload: {
           auszug: `${d.typ.toUpperCase()} · Version ${d.version} · ${d.datum}${d.thema ? ` · Thema: ${d.thema}` : ""}`,
-          hinweis: "Preview & Versionshistorie sind in Planung.",
-          quelle: `Dokument #${d.id}`,
+          hinweis: "Vorschau und Versionshistorie folgen in einem späteren Schritt.",
         },
       }),
     ],
@@ -174,12 +203,10 @@ export const buildDokumentSession = (d: {
   );
 
 // ---------------------- Verlauf ----------------------
-// Reine Inspektion eines Verlaufseintrags.
 export const buildVerlaufSession = (e: {
   id: string;
   inhalt: string;
   datum: string;
-  quelle: string;
   delta: string;
   ereignisTyp: string;
 }): DialogSession =>
@@ -192,7 +219,6 @@ export const buildVerlaufSession = (e: {
         title: e.inhalt,
         payload: {
           auszug: `${e.delta.toUpperCase()} · ${e.datum}`,
-          quelle: e.quelle,
         },
       }),
     ],
@@ -200,19 +226,18 @@ export const buildVerlaufSession = (e: {
   );
 
 // ---------------------- Feedback ----------------------
-// Eingabe-Box: Feedback fließt als Notiz durch die Verstehens-Pipeline
-// (kontext = woher das Feedback kam, z. B. Screen/Bereich).
 export const buildFeedbackSession = (context: string, projectId?: string | null): DialogSession =>
-  mkSession("Feedback", context, [
+  mkSession("Hinweis", context, [
     mkBox({
       type: "eingabe",
       title: "Was stimmt nicht oder fehlt?",
       payload: {
         placeholder: "Korrektur, Hinweis oder Frage…",
+        asks: "Hinweis senden",
         __submitIntent: {
           kind: "intake_note" as const,
           projectId: projectId ?? null,
-          contextHint: `Feedback aus: ${context}`,
+          contextHint: `Hinweis aus: ${context}`,
           sourceRef: { type: "feedback", quelle: context },
         },
       },
@@ -220,7 +245,6 @@ export const buildFeedbackSession = (context: string, projectId?: string | null)
   ]);
 
 // ---------------------- Source ----------------------
-// Reine Inspektion. Volle Dokumenten-Preview ist geplant.
 export const buildSourceSession = (quelle: string): DialogSession =>
   mkSession(
     "Quelle",
@@ -230,9 +254,7 @@ export const buildSourceSession = (quelle: string): DialogSession =>
         type: "kontext",
         title: quelle,
         payload: {
-          auszug: "Quellen-Vorschau in Planung.",
-          hinweis: "Direkter Sprung in das Dokument folgt mit der Preview-Schicht.",
-          quelle,
+          auszug: "Quellen-Vorschau folgt.",
         },
       }),
     ],
@@ -252,7 +274,6 @@ export const buildZuordnungSession = (params: {
       payload: {
         auszug: params.vorschlag,
         begruendung: params.kontext ?? "Die Entität hat diese Zuordnung vorgeschlagen.",
-        quelle: params.titel,
       },
     }),
     mkBox({
@@ -273,7 +294,6 @@ export const buildKorrekturSession = (
       title: "Aktueller Stand",
       payload: {
         auszug: params.aktuell,
-        quelle: params.quelle,
         begruendung: "Diese Information soll korrigiert werden.",
       },
     }),
@@ -283,6 +303,7 @@ export const buildKorrekturSession = (
       payload: {
         placeholder: "Richtige Information…",
         intent: "korrektur",
+        asks: "Korrektur senden",
         __submitIntent: {
           kind: "intake_note" as const,
           projectId: projectId ?? null,
@@ -305,7 +326,6 @@ export const buildVersionsSession = (params: {
       title: params.name,
       payload: {
         auszug: `${params.versionen.length} Version${params.versionen.length === 1 ? "" : "en"} vorhanden`,
-        quelle: params.quelle,
         begruendung: "Welche Version ist maßgeblich?",
       },
     }),
@@ -319,10 +339,6 @@ export const buildVersionsSession = (params: {
   ]);
 
 // ---------------------- Thema-Merge ----------------------
-// `merge` ist optional: wenn vom Detector ein candidate-id übergeben wird,
-// hängt der aktion-Box ein __submitIntent mit dem candidate dran. commitBox
-// routet das in die topic-merge Edge Function. Ohne merge-Param ist die
-// Session rein illustrativ (z. B. für manuell ausgelöste Demos).
 export const buildThemaMergeSession = (params: {
   titelA: string;
   beschreibungA: string;
@@ -334,16 +350,16 @@ export const buildThemaMergeSession = (params: {
     targetTopicId: string;
   };
 }): DialogSession =>
-  mkSession("Thema zusammenführen", `${params.titelA} ↔ ${params.titelB}`, [
+  mkSession("Themen zusammenführen", `${params.titelA} ↔ ${params.titelB}`, [
     mkBox({
       type: "kontext",
       title: params.titelA,
-      payload: { auszug: params.beschreibungA, quelle: `Thema: ${params.titelA}` },
+      payload: { auszug: params.beschreibungA },
     }),
     mkBox({
       type: "kontext",
       title: params.titelB,
-      payload: { auszug: params.beschreibungB, quelle: `Thema: ${params.titelB}` },
+      payload: { auszug: params.beschreibungB },
     }),
     mkBox({
       type: "aktion",
@@ -365,8 +381,6 @@ export const buildThemaMergeSession = (params: {
   ]);
 
 // ---------------------- Rückfrage ----------------------
-// Eingabe fließt als Notiz durch die Verstehens-Pipeline mit Hinweis,
-// dass es eine Antwort auf die System-Rückfrage ist.
 export const buildRueckfrageSession = (
   params: { frage: string; kontext?: string },
   projectId?: string | null,
@@ -378,7 +392,6 @@ export const buildRueckfrageSession = (
       payload: {
         auszug: params.frage,
         begruendung: params.kontext ?? "Diese Information wird für den Projektzustand benötigt.",
-        quelle: "System",
       },
     }),
     mkBox({
@@ -387,6 +400,7 @@ export const buildRueckfrageSession = (
       payload: {
         placeholder: "Antwort eingeben…",
         intent: "rueckfrage",
+        asks: "Antworten",
         __submitIntent: {
           kind: "intake_note" as const,
           projectId: projectId ?? null,

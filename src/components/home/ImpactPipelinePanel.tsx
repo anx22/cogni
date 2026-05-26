@@ -33,11 +33,11 @@ interface ActivePipelineItem {
 }
 
 const EVENT_LABELS: Record<string, string> = {
-  fact_committed: "Erkenntnis übernommen",
-  fact_rejected: "Erkenntnis verworfen",
-  fact_updated: "Erkenntnis aktualisiert",
-  conflict_resolved: "Konflikt gelöst",
-  gap_filled: "Lücke geschlossen",
+  fact_committed: "Punkt übernommen",
+  fact_rejected: "Punkt verworfen",
+  fact_updated: "Punkt aktualisiert",
+  conflict_resolved: "Widerspruch gelöst",
+  gap_filled: "Frage geklärt",
 };
 
 const labelForEvent = (eventType: string, payload: Record<string, unknown> | null): string => {
@@ -235,7 +235,7 @@ const ImpactPipelinePanel = () => {
               />
               <div style={{ minWidth: 0, flex: 1 }}>
                 <div className="t-small" style={{ color: "var(--ink-3)" }}>
-                  verstehe · {formatRelative(active.startedAt)}
+                  wird ausgewertet · {formatRelative(active.startedAt)}
                 </div>
                 <div
                   className="t-small"
@@ -262,10 +262,10 @@ const ImpactPipelinePanel = () => {
           Pipeline
         </div>
         {[
-          { label: "Intake", count: pipeline.intake, dot: "calm" },
-          { label: "Verstehen", count: pipeline.processing, dot: "action" },
-          { label: "Review fällig", count: pipeline.review, dot: "review" },
-          { label: "Konflikt", count: pipeline.conflicts, dot: "conflict" },
+          { label: "Eingang", count: pipeline.intake, dot: "calm" },
+          { label: "Auswertung", count: pipeline.processing, dot: "action" },
+          { label: "Zu klären", count: pipeline.review, dot: "review" },
+          { label: "Widerspruch", count: pipeline.conflicts, dot: "conflict" },
         ].map((row, i) => (
           <div
             key={row.label}

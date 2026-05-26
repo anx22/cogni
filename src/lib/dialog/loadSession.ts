@@ -262,7 +262,7 @@ export async function loadDialogSession(sessionId: string): Promise<DialogSessio
         understood,
         evidence,
         delta_type: deltaType,
-        quelle: factType ? `vorgeschlagen · ${factType}` : "vorgeschlagen",
+        quelle: factType ? factType : "",
         optionen: ctx.options,
         hinweis: ctx.hinweis,
         placeholder: ctx.placeholder,
@@ -291,7 +291,7 @@ export async function loadDialogSession(sessionId: string): Promise<DialogSessio
 
   return {
     id: session.id,
-    anlass: session.summary ?? "Verstehens-Lauf",
+    anlass: session.summary ?? "Klärung",
     context: session.trigger_type,
     boxes,
     mode,

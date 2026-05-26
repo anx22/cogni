@@ -218,10 +218,10 @@ const LageZone = ({
                 cursor: hasOpenReview ? "pointer" : "not-allowed",
                 border: hasOpenReview ? "none" : "1px solid var(--hair)",
               }}
-              title={hasOpenReview ? "Offene Review öffnen" : "Keine offene Review"}
+              title={hasOpenReview ? "Offene Klärung öffnen" : "Keine offenen Punkte"}
             >
               <Sparkles className="w-3.5 h-3.5" />
-              {hasOpenReview ? "Review öffnen" : "Keine Review"}
+              {hasOpenReview ? "Klärung öffnen" : "Alles geklärt"}
               {hasOpenReview && <ArrowRight className="w-3.5 h-3.5" />}
             </button>
           </div>
@@ -239,7 +239,7 @@ const LageZone = ({
               fontWeight: 400,
             }}
           >
-            · rekonstruiert vor 2 Min
+            · zuletzt aktualisiert {project.stats.letzteAenderung}
           </span>
         </div>
 
@@ -262,7 +262,7 @@ const LageZone = ({
         {/* Chips inline + Key-Facts rechts */}
         <div className="flex items-end flex-wrap" style={{ gap: 10, marginTop: 26 }}>
           {konfliktCount > 0 && (
-            <span className="chip chip--conflict">Konflikt {konfliktCount}</span>
+            <span className="chip chip--conflict">{konfliktCount} Widerspruch</span>
           )}
           {blockerCount > 0 && <span className="chip chip--review">{blockerCount} Blocker</span>}
           {handlungCount > 0 && <span className="chip">{handlungCount} offen</span>}
@@ -271,11 +271,11 @@ const LageZone = ({
           )}
           {project.coverage.knownFacts > 0 && (
             <span className="chip" style={{ color: "var(--ink-3)" }}>
-              {project.coverage.knownFacts} Fakten
+              {project.coverage.knownFacts} bekannte Punkte
             </span>
           )}
           {project.coverage.openGaps > 0 && (
-            <span className="chip chip--review">{project.coverage.openGaps} Lücken</span>
+            <span className="chip chip--review">{project.coverage.openGaps} offene Fragen</span>
           )}
 
           <div style={{ flex: 1 }} />
@@ -299,7 +299,7 @@ const LageZone = ({
             </div>
             <div>
               <div className="t-micro" style={{ marginBottom: 4 }}>
-                Verstanden
+                Letztes Material
               </div>
               <div className="mono" style={{ fontSize: 13, color: "var(--ink-2)" }}>
                 {project.coverage.lastIntakeAge}

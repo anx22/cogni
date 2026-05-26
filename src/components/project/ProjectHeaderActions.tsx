@@ -46,7 +46,7 @@ const ProjectHeaderActions = ({ projectId, projectName, status, onRequestRename 
         </DropdownMenuTrigger>
         <DropdownMenuContent
           align="end"
-          className="bg-[hsl(var(--surface-1))] border-border-subtle min-w-[200px]"
+          className="min-w-[200px]"
         >
           <DropdownMenuItem disabled={actions.pending} onClick={() => onRequestRename?.()}>
             Umbenennen

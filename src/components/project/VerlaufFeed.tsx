@@ -8,6 +8,7 @@ const DOT_COLOR: Record<DeltaTyp, string> = {
   ersetzt: "var(--sig-review)",
   bestaetigt: "var(--ink-3)",
   widersprochen: "var(--sig-conflict)",
+  unclear: "var(--sig-review)",
 };
 
 const VerlaufFeed = ({ verlauf }: { verlauf: VerlaufVM[] }) => {
@@ -90,11 +91,6 @@ const VerlaufFeed = ({ verlauf }: { verlauf: VerlaufVM[] }) => {
               >
                 {e.inhalt}
               </div>
-              {e.quelle && (
-                <div className="src" style={{ marginTop: 3 }}>
-                  {e.quelle}
-                </div>
-              )}
             </div>
           </button>
         ))}
