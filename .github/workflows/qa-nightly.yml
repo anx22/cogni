@@ -9,6 +9,9 @@ on:
     - cron: "17 3 * * *"
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   lint-typecheck-test-build:
     name: Lint + Typecheck + Vitest + Build
@@ -30,9 +33,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: denoland/setup-deno@v1
+      - uses: denoland/setup-deno@v2
         with:
-          deno-version: v1.x
+          deno-version: v2.x
       - run: deno test --allow-net --allow-env supabase/functions/
 
   sweep:
