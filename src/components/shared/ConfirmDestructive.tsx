@@ -33,7 +33,7 @@ const ConfirmDestructive = ({
   const [busy, setBusy] = useState(false);
   return (
     <AlertDialog open={open} onOpenChange={(v) => !busy && onOpenChange(v)}>
-      <AlertDialogContent className="bg-[hsl(var(--surface-1))] border-border-subtle backdrop-blur-xl">
+      <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle className="font-light text-foreground">{title}</AlertDialogTitle>
           <AlertDialogDescription className="text-muted-foreground/80 leading-relaxed">
