@@ -30,7 +30,7 @@ export function normalizeReason(err: string | null | undefined): string {
   const firstLine = err.split(/\r?\n/)[0]?.trim() ?? "";
   if (!firstLine) return "(leer)";
   const masked = firstLine.replace(UUID_RE, "<uuid>").replace(LONG_DIGITS_RE, "<n>").trim();
-  return masked.length > 80 ? `${masked.slice(0, 77)}…` : masked;
+  return masked.length > 80 ? `${masked.slice(0, 79)}…` : masked;
 }
 
 export function groupFailedReasons(rows: FailedRow[]): FailedReasonGroup[] {
