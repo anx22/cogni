@@ -117,7 +117,7 @@ export const buildDependencySession = (
       type: "eingabe",
       title: "Auflösen oder korrigieren",
       payload: {
-        placeholder: "z. B. „nicht mehr blockiert" oder „blockiert nun durch …"",
+        placeholder: "z. B. 'nicht mehr blockiert' oder 'blockiert nun durch …'",
         asks: "Was stimmt?",
         __submitIntent: {
           kind: "intake_note" as const,
