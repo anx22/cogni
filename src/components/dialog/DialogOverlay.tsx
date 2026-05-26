@@ -50,8 +50,8 @@ const DialogOverlay = () => {
       <ConfirmDestructive
         open={confirmClose}
         onOpenChange={setConfirmClose}
-        title={`Review schließen mit ${openCount} offenen Punkten?`}
-        description="Offene Erkenntnisse bleiben in der Pipeline und können später bearbeitet werden. Bestätigte Entscheidungen sind bereits gespeichert."
+        title={`Schließen mit ${openCount} offenen Punkten?`}
+        description="Offene Punkte bleiben erhalten und können später bearbeitet werden. Bestätigte Entscheidungen sind bereits gespeichert."
         confirmLabel="Schließen"
         cancelLabel="Weiter prüfen"
         onConfirm={() => {

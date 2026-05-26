@@ -209,7 +209,7 @@ export const DialogProvider = ({ children }: { children: ReactNode }) => {
     const allDone = decisionBoxes.every((b) => END_STATES.includes(b.state));
     if (!allDone) return;
     autoClosedRef.current = session.id;
-    toast.success("Verstanden — abgeschlossen.");
+    toast.success("Gespeichert.");
     const t = setTimeout(() => setSession(null), 1200);
     return () => clearTimeout(t);
   }, [session, readonly]);

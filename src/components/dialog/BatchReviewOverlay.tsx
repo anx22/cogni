@@ -37,7 +37,7 @@ const BatchReviewOverlay = ({ onClose }: { onClose: () => void }) => {
     (b) => (b.type === "gap" || b.type === "eingabe") && !END_STATES.includes(b.state),
   ).length;
 
-  const summaryParts = [`${decisionBoxes.length} Erkenntnisse`];
+  const summaryParts = [`${decisionBoxes.length} Punkte`];
   if (conflicts > 0) summaryParts.push(`${conflicts} Konflikt${conflicts === 1 ? "" : "e"}`);
   if (gaps > 0) summaryParts.push(`${gaps} Lücke${gaps === 1 ? "" : "n"}`);
 
@@ -65,7 +65,7 @@ const BatchReviewOverlay = ({ onClose }: { onClose: () => void }) => {
         done++;
         setBulkProgress({ done, total });
       }
-      if (done > 0) toast.success(`${done} Erkenntnis${done === 1 ? "" : "se"} übernommen`);
+      if (done > 0) toast.success(`${done} Punkt${done === 1 ? "" : "e"} übernommen`);
     } finally {
       setBulkProgress(null);
     }
@@ -141,7 +141,7 @@ const BatchReviewOverlay = ({ onClose }: { onClose: () => void }) => {
           <span>
             <strong style={{ fontWeight: 600 }}>Erst Projekt wählen.</strong>{" "}
             <span style={{ color: "var(--d-ink-2)" }}>
-              Danach kannst du die {open - 1} weiteren Erkenntnisse übernehmen.
+              Danach kannst du die {open - 1} weiteren Punkte übernehmen.
             </span>
           </span>
         </div>
@@ -204,8 +204,8 @@ const BatchReviewOverlay = ({ onClose }: { onClose: () => void }) => {
       <ConfirmDestructive
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
-        title={`${autoConfirmable.length} Erkenntnisse übernehmen?`}
-        description="Bestätigte Erkenntnisse fließen sofort in den Projektzustand. Eine Rücknahme ist nicht möglich — prüfe die Liste vorher kurz."
+        title={`${autoConfirmable.length} Punkte übernehmen?`}
+        description="Bestätigte Punkte fließen sofort in den Projektzustand. Eine Rücknahme ist nicht möglich — prüfe die Liste vorher kurz."
         confirmLabel="Alle übernehmen"
         cancelLabel="Abbrechen"
         onConfirm={runBulkConfirm}
