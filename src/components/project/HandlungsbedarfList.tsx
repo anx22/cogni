@@ -1,7 +1,13 @@
 import { useMemo, useState } from "react";
 import { Flag, AlertCircle, HelpCircle, Link2, Zap, GitMerge } from "lucide-react";
 import { useDialog } from "@/components/dialog/DialogProvider";
-import { buildHandlungsbedarfSession, buildThemaMergeSession } from "@/lib/dialog/sessionFactories";
+import {
+  buildHandlungsbedarfSession,
+  buildThemaMergeSession,
+  buildKonfliktSession,
+  buildGapSession,
+  buildDependencySession,
+} from "@/lib/dialog/sessionFactories";
 import type { Arbeitsmodus, HandlungsbedarfVM, ObjektTyp } from "@/lib/project/types";
 
 type Item = HandlungsbedarfVM;
@@ -205,6 +211,46 @@ const ActionRow = ({
             targetTopicId: item.topicMerge.targetTopicId,
           },
         }),
+      );
+      return;
+    }
+    if (item.objektTyp === "konflikt") {
+      // Konflikt-Drill mit A/B-Gegenüberstellung. Wenn faktA/B noch nicht
+      // strukturiert vorliegen, baut FaktDrillOverlay aus titel/beschreibung.
+      openDialog(
+        buildKonfliktSession({
+          id: item.id,
+          title: item.titel,
+          beschreibung: item.beschreibung,
+          faktA: "",
+          faktB: "",
+        }),
+      );
+      return;
+    }
+    if (item.objektTyp === "gap") {
+      openDialog(
+        buildGapSession({
+          id: item.id,
+          titel: item.titel,
+          wirkung: item.beschreibung,
+          betrifft: "",
+          lebensdauer: "",
+        }),
+      );
+      return;
+    }
+    if (item.objektTyp === "dependency") {
+      openDialog(
+        buildDependencySession(
+          {
+            id: item.id,
+            titel: item.titel,
+            beschreibung: item.beschreibung,
+            quelle: item.quelle,
+          },
+          projectId ?? null,
+        ),
       );
       return;
     }
