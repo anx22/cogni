@@ -26,29 +26,29 @@ intake-trigger (Lovable Cloud)
 
 ## Endpoints
 
-| Method | Path | Zweck |
-|--------|------|-------|
-| GET    | `/health`               | Liveness (kein Auth) |
-| POST   | `/aol/run`              | Verstehens-Lauf starten (von intake-trigger) |
-| POST   | `/aol/confirm`          | HITL-Bestätigung (von commit-fact) |
-| GET    | `/aol/runs/{run_id}`    | Trace eines Laufs (für UI) |
+| Method | Path                 | Zweck                                        |
+| ------ | -------------------- | -------------------------------------------- |
+| GET    | `/health`            | Liveness (kein Auth)                         |
+| POST   | `/aol/run`           | Verstehens-Lauf starten (von intake-trigger) |
+| POST   | `/aol/confirm`       | HITL-Bestätigung (von commit-fact)           |
+| GET    | `/aol/runs/{run_id}` | Trace eines Laufs (für UI)                   |
 
 Alle `/aol/*`-Routen erwarten `Authorization: Bearer ${AOL_SERVICE_TOKEN}`.
 
 ## ENV-Variablen (Railway)
 
-| Name | Beschreibung |
-|------|--------------|
-| `AOL_SERVICE_TOKEN` | Bearer-Secret. Muss exakt mit dem Lovable-Cloud-Secret übereinstimmen. |
-| `AOL_CALLBACK_URL` | Vollständige URL der `aol-callback` Edge Function in Lovable Cloud. |
-| `AOL_CALLBACK_TOKEN` | Shared Secret. Muss exakt mit dem gleichnamigen Lovable-Cloud-Secret übereinstimmen. |
-| `GRAPHITI_SERVICE_URL` | URL des deployten graphiti-server (ohne trailing /). |
-| `GRAPHITI_SERVICE_TOKEN` | Optional, falls dein Graphiti-Server Bearer erwartet. |
-| `NEO4J_URI` / `NEO4J_USER` / `NEO4J_PASSWORD` | Nur falls AOL Neo4j auch direkt liest (sonst nicht nötig). |
-| `OPENAI_API_KEY` | Embeddings via Graphiti (indirekt). |
-| `LOVABLE_API_KEY` | Für Lovable AI Gateway (Gemini). |
-| `LANGSMITH_API_KEY` | Optional. Aktiviert Tracing. |
-| `LANGCHAIN_PROJECT` | Optional. z.B. `produktintelligenz-aol` |
+| Name                                          | Beschreibung                                                                         |
+| --------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `AOL_SERVICE_TOKEN`                           | Bearer-Secret. Muss exakt mit dem Lovable-Cloud-Secret übereinstimmen.               |
+| `AOL_CALLBACK_URL`                            | Vollständige URL der `aol-callback` Edge Function in Lovable Cloud.                  |
+| `AOL_CALLBACK_TOKEN`                          | Shared Secret. Muss exakt mit dem gleichnamigen Lovable-Cloud-Secret übereinstimmen. |
+| `GRAPHITI_SERVICE_URL`                        | URL des deployten graphiti-server (ohne trailing /).                                 |
+| `GRAPHITI_SERVICE_TOKEN`                      | Optional, falls dein Graphiti-Server Bearer erwartet.                                |
+| `NEO4J_URI` / `NEO4J_USER` / `NEO4J_PASSWORD` | Nur falls AOL Neo4j auch direkt liest (sonst nicht nötig).                           |
+| `OPENAI_API_KEY`                              | Embeddings via Graphiti (indirekt).                                                  |
+| `LOVABLE_API_KEY`                             | Für Lovable AI Gateway (Gemini).                                                     |
+| `LANGSMITH_API_KEY`                           | Optional. Aktiviert Tracing.                                                         |
+| `LANGCHAIN_PROJECT`                           | Optional. z.B. `produktintelligenz-aol`                                              |
 
 > **Nicht nötig und nicht setzen:** `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
 > `DATABASE_URL`. Datenbank-Schreibzugriffe laufen ausschließlich in Lovable
@@ -57,10 +57,13 @@ Alle `/aol/*`-Routen erwarten `Authorization: Bearer ${AOL_SERVICE_TOKEN}`.
 ### `AOL_CALLBACK_URL` herausfinden
 
 Format:
+
 ```
 https://<project-ref>.functions.supabase.co/aol-callback
 ```
+
 Für dieses Projekt:
+
 ```
 https://zeazrfidtpdtgcrbnhbo.functions.supabase.co/aol-callback
 ```

@@ -28,10 +28,9 @@ export const handlers: Record<string, Handler> = {
     const gBase = graphitiBase();
     const headers = graphitiHeaders();
     const { project_id, query } = body;
-    const epRes = await fetch(
-      `${gBase}/episodes/${encodeURIComponent(project_id)}?last_n=20`,
-      { headers },
-    );
+    const epRes = await fetch(`${gBase}/episodes/${encodeURIComponent(project_id)}?last_n=20`, {
+      headers,
+    });
     const epBody = await epRes.text();
     const sRes = await fetch(`${gBase}/search`, {
       method: "POST",
@@ -118,8 +117,7 @@ export const handlers: Record<string, Handler> = {
       source_description: sourceDesc,
       graphiti_post: { status: epStatus, body: epBody.slice(0, 300) },
       episodes_after_wait: episodesProbe,
-      note:
-        "graphiti_uuid is NOT set anymore — server-generated, retrievable via source_description match.",
+      note: "graphiti_uuid is NOT set anymore — server-generated, retrievable via source_description match.",
     });
   },
 };

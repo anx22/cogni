@@ -54,7 +54,9 @@ interface PendingEvent {
 }
 
 function newCorrelationId() {
-  return (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  return (
+    globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`
+  );
 }
 
 function serializeError(err: unknown): Record<string, unknown> {
@@ -79,7 +81,10 @@ export interface Logger {
 }
 
 export function createLogger(ctx: LoggerCtx): Logger {
-  const state: Required<Omit<LoggerCtx, "client" | "correlationId">> & { correlationId: string; client?: SupabaseClient } = {
+  const state: Required<Omit<LoggerCtx, "client" | "correlationId">> & {
+    correlationId: string;
+    client?: SupabaseClient;
+  } = {
     fn: ctx.fn,
     userId: ctx.userId ?? null,
     correlationId: ctx.correlationId ?? newCorrelationId(),
@@ -102,7 +107,13 @@ export function createLogger(ctx: LoggerCtx): Logger {
     return state.client;
   }
 
-  function push(level: LogLevel, stage: string, message: string | undefined, payload?: Record<string, unknown>, err?: unknown) {
+  function push(
+    level: LogLevel,
+    stage: string,
+    message: string | undefined,
+    payload?: Record<string, unknown>,
+    err?: unknown,
+  ) {
     const evt: PendingEvent = {
       ts: new Date().toISOString(),
       fn: state.fn,
@@ -129,7 +140,9 @@ export function createLogger(ctx: LoggerCtx): Logger {
   }
 
   return {
-    get correlationId() { return state.correlationId; },
+    get correlationId() {
+      return state.correlationId;
+    },
     bind(patch) {
       if (patch.userId !== undefined) state.userId = patch.userId ?? null;
       if (patch.assetId !== undefined) state.assetId = patch.assetId ?? null;
@@ -138,9 +151,15 @@ export function createLogger(ctx: LoggerCtx): Logger {
       if (patch.projectId !== undefined) state.projectId = patch.projectId ?? null;
       if (patch.correlationId) state.correlationId = patch.correlationId;
     },
-    stage(stage, message, payload) { push("info", stage, message, payload); },
-    warn(stage, message, payload) { push("warn", stage, message, payload); },
-    error(stage, message, err, payload) { push("error", stage, message, payload, err); },
+    stage(stage, message, payload) {
+      push("info", stage, message, payload);
+    },
+    warn(stage, message, payload) {
+      push("warn", stage, message, payload);
+    },
+    error(stage, message, err, payload) {
+      push("error", stage, message, payload, err);
+    },
     async time(stage, fn, payload) {
       const t0 = Date.now();
       try {

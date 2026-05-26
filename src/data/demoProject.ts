@@ -29,10 +29,7 @@ export const demoProject = {
   outcome: {
     erfolgskriterium:
       "Self-Service-Quote von 70% innerhalb 3 Monaten nach Go-Live, Reporting-Latenz < 2s.",
-    nogos: [
-      "Kein Daten-Verlust bei Migration",
-      "Keine Funktionsregression gegenüber Altportal",
-    ],
+    nogos: ["Kein Daten-Verlust bei Migration", "Keine Funktionsregression gegenüber Altportal"],
   },
 
   stats: {
@@ -219,7 +216,8 @@ export const demoProject = {
       arbeitsmodus: "klaeren" as Arbeitsmodus,
       objektTyp: "dependency" as ObjektTyp,
       titel: "Migration blockiert durch Strategie-Konflikt",
-      beschreibung: "Datenmigration kann nicht starten, bevor Big-Bang vs. Phasenweise entschieden ist.",
+      beschreibung:
+        "Datenmigration kann nicht starten, bevor Big-Bang vs. Phasenweise entschieden ist.",
       verantwortlich: "Jan Krüger",
       frist: null,
       quelle: "Dependency #dep1",
@@ -348,22 +346,113 @@ export const demoProject = {
 
   // Substanz — Themen mit Drilldown-Counts
   themen: [
-    { id: "t1", name: "UX Design", beschreibung: "Wireframes, Prototypen, Usability-Tests", entscheidungen: 2, offenePunkte: 1, dokumente: 4 },
-    { id: "t2", name: "Datenmigration", beschreibung: "Bestandsdaten, Mapping, Validierung", entscheidungen: 1, offenePunkte: 2, dokumente: 3 },
-    { id: "t3", name: "API-Integration", beschreibung: "REST-Schnittstellen, Auth, Rate Limiting", entscheidungen: 1, offenePunkte: 1, dokumente: 2 },
-    { id: "t4", name: "Reporting", beschreibung: "Dashboards, Exportfunktionen, Zeitreihen", entscheidungen: 0, offenePunkte: 1, dokumente: 2 },
-    { id: "t5", name: "Infrastruktur", beschreibung: "Hosting, CI/CD, Monitoring", entscheidungen: 1, offenePunkte: 0, dokumente: 1 },
-    { id: "t6", name: "Rechtliches", beschreibung: "DSGVO, Impressum, Cookie-Consent", entscheidungen: 0, offenePunkte: 0, dokumente: 1 },
-    { id: "t7", name: "Schulung", beschreibung: "Endnutzer-Trainings, Dokumentation", entscheidungen: 0, offenePunkte: 0, dokumente: 1 },
-    { id: "t8", name: "Go-Live", beschreibung: "Rollout-Plan, Kommunikation, Fallback", entscheidungen: 1, offenePunkte: 0, dokumente: 0 },
+    {
+      id: "t1",
+      name: "UX Design",
+      beschreibung: "Wireframes, Prototypen, Usability-Tests",
+      entscheidungen: 2,
+      offenePunkte: 1,
+      dokumente: 4,
+    },
+    {
+      id: "t2",
+      name: "Datenmigration",
+      beschreibung: "Bestandsdaten, Mapping, Validierung",
+      entscheidungen: 1,
+      offenePunkte: 2,
+      dokumente: 3,
+    },
+    {
+      id: "t3",
+      name: "API-Integration",
+      beschreibung: "REST-Schnittstellen, Auth, Rate Limiting",
+      entscheidungen: 1,
+      offenePunkte: 1,
+      dokumente: 2,
+    },
+    {
+      id: "t4",
+      name: "Reporting",
+      beschreibung: "Dashboards, Exportfunktionen, Zeitreihen",
+      entscheidungen: 0,
+      offenePunkte: 1,
+      dokumente: 2,
+    },
+    {
+      id: "t5",
+      name: "Infrastruktur",
+      beschreibung: "Hosting, CI/CD, Monitoring",
+      entscheidungen: 1,
+      offenePunkte: 0,
+      dokumente: 1,
+    },
+    {
+      id: "t6",
+      name: "Rechtliches",
+      beschreibung: "DSGVO, Impressum, Cookie-Consent",
+      entscheidungen: 0,
+      offenePunkte: 0,
+      dokumente: 1,
+    },
+    {
+      id: "t7",
+      name: "Schulung",
+      beschreibung: "Endnutzer-Trainings, Dokumentation",
+      entscheidungen: 0,
+      offenePunkte: 0,
+      dokumente: 1,
+    },
+    {
+      id: "t8",
+      name: "Go-Live",
+      beschreibung: "Rollout-Plan, Kommunikation, Fallback",
+      entscheidungen: 1,
+      offenePunkte: 0,
+      dokumente: 0,
+    },
   ],
 
   dokumente: [
-    { id: "d1", name: "Steering Committee Protokoll", typ: "docx", version: 3, datum: "12.04.2026", thema: "Go-Live" },
-    { id: "d2", name: "UX-Prototyp Kundenportal", typ: "pptx", version: 2, datum: "08.04.2026", thema: "UX Design" },
-    { id: "d3", name: "Migrationsstrategie Vergleich", typ: "pdf", version: 1, datum: "10.04.2026", thema: "Datenmigration" },
-    { id: "d4", name: "API-Schnittstellenspezifikation", typ: "pdf", version: 1, datum: "05.04.2026", thema: "API-Integration" },
-    { id: "d5", name: "Budget-Freigabe CFO", typ: "eml", version: 1, datum: "14.04.2026", thema: null },
+    {
+      id: "d1",
+      name: "Steering Committee Protokoll",
+      typ: "docx",
+      version: 3,
+      datum: "12.04.2026",
+      thema: "Go-Live",
+    },
+    {
+      id: "d2",
+      name: "UX-Prototyp Kundenportal",
+      typ: "pptx",
+      version: 2,
+      datum: "08.04.2026",
+      thema: "UX Design",
+    },
+    {
+      id: "d3",
+      name: "Migrationsstrategie Vergleich",
+      typ: "pdf",
+      version: 1,
+      datum: "10.04.2026",
+      thema: "Datenmigration",
+    },
+    {
+      id: "d4",
+      name: "API-Schnittstellenspezifikation",
+      typ: "pdf",
+      version: 1,
+      datum: "05.04.2026",
+      thema: "API-Integration",
+    },
+    {
+      id: "d5",
+      name: "Budget-Freigabe CFO",
+      typ: "eml",
+      version: 1,
+      datum: "14.04.2026",
+      thema: null,
+    },
   ],
 
   stakeholder: [

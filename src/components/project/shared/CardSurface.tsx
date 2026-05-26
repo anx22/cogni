@@ -27,8 +27,7 @@ const CardSurface = ({
     variant === "circular"
       ? "rounded-full border border-c-hair-2 bg-c-surface-1 shadow-[var(--shadow-card-cogni)]"
       : "rounded-xl border border-border-subtle bg-surface-2";
-  const shadow =
-    variant === "flat" || variant === "circular" ? "" : "shadow-card-glow";
+  const shadow = variant === "flat" || variant === "circular" ? "" : "shadow-card-glow";
   const interactive =
     variant === "interactive"
       ? "cursor-pointer transition-all hover:bg-surface-3 hover:border-border-strong hover:-translate-y-0.5"

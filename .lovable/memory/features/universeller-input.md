@@ -3,6 +3,7 @@ name: Universeller Input
 description: Phase-5-Modul. Drop am Kern, Klick öffnet Overlay mit Pills (Notiz/Link/Datei/Sprache). Kein Auto-Switch.
 type: feature
 ---
+
 **Universeller Input (Phase 5)**
 
 - Drop direkt auf den Entity-Kern bleibt erhalten — schnellster Weg.
@@ -17,5 +18,6 @@ type: feature
 - Voice in Phase 5 NICHT implementiert — bewusst Platzhalter.
 
 **Intake-Flow**
+
 - Zentraler Hook `useIntake` zeigt Toast „X aufgenommen — wird verarbeitet", setzt Entity kurz auf `processing`, danach zurück auf `idle`.
 - Kein Backend, kein Storage in Phase 5 — Plug-Point für Phase 6.

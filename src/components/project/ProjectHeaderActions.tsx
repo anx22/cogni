@@ -48,10 +48,7 @@ const ProjectHeaderActions = ({ projectId, projectName, status, onRequestRename 
           align="end"
           className="bg-[hsl(var(--surface-1))] border-border-subtle min-w-[200px]"
         >
-          <DropdownMenuItem
-            disabled={actions.pending}
-            onClick={() => onRequestRename?.()}
-          >
+          <DropdownMenuItem disabled={actions.pending} onClick={() => onRequestRename?.()}>
             Umbenennen
           </DropdownMenuItem>
           {archived ? (
@@ -62,10 +59,7 @@ const ProjectHeaderActions = ({ projectId, projectName, status, onRequestRename 
               Wiederherstellen
             </DropdownMenuItem>
           ) : (
-            <DropdownMenuItem
-              disabled={actions.pending}
-              onClick={() => actions.archive(projectId)}
-            >
+            <DropdownMenuItem disabled={actions.pending} onClick={() => actions.archive(projectId)}>
               Archivieren
             </DropdownMenuItem>
           )}

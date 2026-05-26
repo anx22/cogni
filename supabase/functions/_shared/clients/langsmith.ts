@@ -35,8 +35,7 @@ export function createLangSmithClient(opts: { project?: string } = {}): LangSmit
   const key = Deno.env.get("LANGSMITH_API_KEY");
   if (!key) return null;
   const project = opts.project ?? PROJECT_DEFAULT;
-  const tenant =
-    Deno.env.get("LANGSMITH_WORKSPACE_ID") ?? Deno.env.get("LANGSMITH_PROMPT_OWNER");
+  const tenant = Deno.env.get("LANGSMITH_WORKSPACE_ID") ?? Deno.env.get("LANGSMITH_PROMPT_OWNER");
 
   const fetchFn = (path: string, init: RequestInit = {}): Promise<Response> => {
     const headers: Record<string, string> = {

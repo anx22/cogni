@@ -23,10 +23,7 @@ interface Props {
 }
 
 const RoleHeader = ({ role, title, right, className }: Props) => (
-  <header
-    className={cn("mb-6 flex items-end justify-between gap-4", className)}
-    data-role={role}
-  >
+  <header className={cn("mb-6 flex items-end justify-between gap-4", className)} data-role={role}>
     <div>
       <p className="t-micro ink-4 mb-2">{EYEBROWS[role]}</p>
       <h2 className="text-2xl font-light tracking-tight text-foreground">{title}</h2>

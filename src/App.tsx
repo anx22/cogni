@@ -26,7 +26,11 @@ const App = () => {
     attachPipelineSink();
     // Cogni-Theme: data-theme am <html>, aus localStorage hydrieren (Default: day).
     const stored = (() => {
-      try { return window.localStorage.getItem("cogniTheme"); } catch { return null; }
+      try {
+        return window.localStorage.getItem("cogniTheme");
+      } catch {
+        return null;
+      }
     })();
     const theme = stored === "night" || stored === "day" ? stored : "day";
     document.documentElement.setAttribute("data-theme", theme);

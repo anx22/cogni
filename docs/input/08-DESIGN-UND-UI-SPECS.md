@@ -6,6 +6,7 @@ Die App darf sich nicht wie Verwaltungssoftware anfühlen.
 Sie muss wie eine ruhige, konzentrierte, souveräne technische Intelligenz wirken.
 
 Richtung:
+
 - reduziert
 - präzise
 - ruhig
@@ -35,6 +36,7 @@ Keine überladene Modulnavigation.
 ## 3. Sichtbare Systemlogik
 
 Außen sichtbar sind nur drei Modi:
+
 - Entität
 - Projekt
 - Overlay
@@ -47,13 +49,16 @@ Parsing, Graph, Canonical State und Orchestrierung bleiben unsichtbar.
 ## 4. Screen 1 — Entität-Screen
 
 ### 4.1 Zweck
+
 Globaler Eingang in die Projektintelligenz.
 
 ### 4.2 Grundaufbau
+
 Fast leerer Screen.  
 Im Zentrum sitzt die Entität als großer kreisförmiger, lebendiger Kern.
 
 Um sie herum nur wenige sekundäre Zonen:
+
 - Upload-Hinweis oder Drop-Zustand
 - universeller Input
 - orbitale oder zufließende Asset-Fragmente
@@ -62,7 +67,9 @@ Um sie herum nur wenige sekundäre Zonen:
 - Review-Hinweis
 
 ### 4.3 Signatur-Element
+
 Die Entität ist gleichzeitig:
+
 - Dropzone
 - universeller Projekt-Input
 - Aktivitätsanzeige
@@ -71,6 +78,7 @@ Die Entität ist gleichzeitig:
 - globaler Zustandsanker
 
 ### 4.4 Zustände der Entität
+
 - Idle
 - Hover / Drag-Over
 - Processing
@@ -78,6 +86,7 @@ Die Entität ist gleichzeitig:
 - Failed / Unclear
 
 ### 4.5 Minimale ergänzende Elemente
+
 - Input-Hinweis
 - Asset-Orbit
 - Letzter Impact
@@ -85,7 +94,9 @@ Die Entität ist gleichzeitig:
 - zurückhaltender Projektzugang
 
 ### 4.6 Universeller Projekt-Input
+
 Ein einziges Eingabemodul für:
+
 - Datei
 - freier Text
 - Paste
@@ -94,6 +105,7 @@ Ein einziges Eingabemodul für:
 - kurze Antwort auf Rückfrage
 
 Verhalten:
+
 - erkennt grob den Eingabetyp
 - schlägt Einordnung vor
 - öffnet nur bei Bedarf den Reviewmodus
@@ -103,12 +115,15 @@ Verhalten:
 ## 5. Screen 2 — Projektscreen
 
 ### 5.1 Zweck
+
 Sichtbar machen, was die Entität aktuell über ein Projekt weiß.
 
 Nicht als Rohdatenliste, sondern als verdichteter Projektzustand.
 
 ### 5.2 Informationsarchitektur
+
 Der Screen folgt vier festen Rollen:
+
 - **Lage**
 - **Handlungsbedarf**
 - **Verlauf**
@@ -117,6 +132,7 @@ Der Screen folgt vier festen Rollen:
 Diese Rollen ersetzen die frühere Gleichrangigkeit vieler Fach-Panels.
 
 ### 5.3 Layoutlogik
+
 - Header mit Lage und Meta
 - operative Hauptfläche zuerst
 - danach Verlauf
@@ -124,6 +140,7 @@ Diese Rollen ersetzen die frühere Gleichrangigkeit vieler Fach-Panels.
 - keine gleich lauten Bento-Kacheln für alles
 
 Empfohlen:
+
 - obere Lagezone mit Lagetext, kritischen Chips, Review-Hinweis, nächstem Termin und minimaler Meta
 - darunter zwei Hauptblöcke: Handlungsbedarf und Verlauf
 - darunter Substanz mit Themen und Dokumenten
@@ -131,9 +148,11 @@ Empfohlen:
 ### 5.4 Die vier Rollen
 
 #### Lage
+
 Immer sichtbar.
 
 Enthält:
+
 - kurzer Lagetext
 - kritische Chips
 - Konflikt-/Review-Banner
@@ -145,9 +164,11 @@ Enthält:
 Stakeholder und Projektdaten sind Header-Material, keine Hauptpanels.
 
 #### Handlungsbedarf
+
 Operatives Zentrum.
 
 Fasst zusammen:
+
 - offene Punkte
 - Aufgaben
 - unbestätigte Entscheidungen
@@ -157,15 +178,18 @@ Fasst zusammen:
 - Blocker und Dependencies
 
 Arbeitsmodi:
+
 - entscheiden
 - klären
 - umsetzen
 - prüfen
 
 #### Verlauf
+
 Veränderungs- und Ereignislogik.
 
 Enthält:
+
 - Timeline
 - Änderungen
 - bestätigte Entscheidungen
@@ -176,14 +200,17 @@ Enthält:
 Änderungen existieren nicht als eigenes Panel neben dem Verlauf.
 
 #### Substanz
+
 Inhaltliche Tiefe.
 
 Enthält:
+
 - Themen
 - Dokumente und Versionen
 - Feedback/Korrekturen als Quellenmaterial, wenn relevant
 
 ### 5.5 Inhaltliche Regeln
+
 - Konflikte sind kein normales Panel.
 - Änderungen existieren nicht separat neben dem Verlauf.
 - Stakeholder und Projektdaten sind nie Hauptfläche.
@@ -199,9 +226,11 @@ Enthält:
 ### 5.6 Smarte Komponenten und UI-Patterns
 
 #### Lage-Komponenten
+
 Ruhig, dicht, wenig Interaktion.
 
 Patterns:
+
 - Lagetext-Block
 - Status-Chips
 - Konflikt-/Review-Banner
@@ -210,9 +239,11 @@ Patterns:
 - kleine Highlight-Karten für nächster Termin / letzte Änderung
 
 #### Handlungsbedarf-Komponenten
+
 Aktive Arbeitskomponenten.
 
 Patterns:
+
 - priorisierte Liste statt Kachelwand
 - gruppierbar nach entscheiden / klären / umsetzen / prüfen
 - Quick-Actions
@@ -223,9 +254,11 @@ Patterns:
 - Inline-Antworten für kurze Klärungen
 
 #### Verlauf-Komponenten
+
 Chronologisch, filterbar, ruhig.
 
 Patterns:
+
 - Ereignisfeed
 - Typfilter
 - Delta-Tags wie neu / ersetzt / bestätigt / widersprochen
@@ -233,9 +266,11 @@ Patterns:
 - Gruppierung nach Woche, Phase oder Meilenstein
 
 #### Substanz-Komponenten
+
 Mehr Tiefgang, weniger Alarm.
 
 Patterns:
+
 - Themencluster als echte Drilldown-Einstiege
 - Dokumentlisten mit Versionhinweisen
 - thematische Gruppierung
@@ -243,7 +278,9 @@ Patterns:
 - relationale Verweise in andere Rollen
 
 ### 5.7 Gemeinsame Trigger
+
 Damit die Rollen zusammenhängend bleiben:
+
 - einheitliche kleine Header-Zonen
 - subtile Change-Indikatoren
 - konsistente Source-/Provenance-Marker
@@ -252,16 +289,20 @@ Damit die Rollen zusammenhängend bleiben:
 - einheitliche Objekt-Tokens für Termin, Entscheidung, Konflikt, Dokument, Thema, Gap, Blocker
 
 ### 5.8 Unvollständigkeit sichtbar, aber ruhig
+
 Die UI darf nie so tun, als wüsste die Entität alles.
 
 Deshalb:
+
 - Lage ist immer als aktueller Rekonstruktionsstand formuliert
 - Lücken können als Gap-Signale auftauchen
 - operativ relevante Rückfragen werden im Overlay gestellt
 - Handlungsbedarf darf auch unklare oder unbestätigte Punkte enthalten
 
 ### 5.9 Später mögliche adaptive UI
+
 Später möglich, jetzt nicht Teil von V1:
+
 - feste Panelbibliothek
 - feste Screen-Modi je Projektkomplexität
 - automatische Vorauswahl der Modus-Variante
@@ -272,9 +313,11 @@ Später möglich, jetzt nicht Teil von V1:
 ## 6. Systemweiter Modus — Dialog-Overlay
 
 ### 6.1 Zweck
+
 Das Dialog-Overlay ist der Interaktionsraum zwischen Nutzer und Entität.
 
 Es dient für:
+
 - Review
 - Korrektur
 - Feedback
@@ -285,20 +328,24 @@ Es dient für:
 - gezielte Rückfragen bei relevanten Lücken
 
 ### 6.2 Charakter
+
 Vollbild. Hohe Fokussierung. Alles außerhalb tritt zurück.
 
 ### 6.3 Grundaufbau
+
 Kein Chatstream.
 
 Stattdessen ein dynamisch komponierter Gesprächsraum aus Boxen, die je nach Fall nebeneinander, untereinander oder sequenziell erscheinen.
 
 Typische räumliche Logik:
+
 - links oder oben: erkannte Information
 - daneben: Zuordnung oder Kontext
 - darunter: Alternativen, Konflikt, Gap oder Auswahl
 - am Abschluss: Bestätigen / Verwerfen / Präzisieren
 
 ### 6.4 Gesprächsboxen
+
 - Wissensbox
 - Zuordnungsbox
 - Konfliktbox
@@ -309,6 +356,7 @@ Typische räumliche Logik:
 - Aktionsbox
 
 ### 6.5 Visuelle Eigenschaften der Boxen
+
 - umrandet
 - gerundet
 - klar typisiert

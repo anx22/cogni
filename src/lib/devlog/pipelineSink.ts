@@ -29,7 +29,9 @@ export function attachPipelineSink() {
 
       const payload = isPlainObject(entry.payload) ? entry.payload : { value: entry.payload };
       const { error: errorPayload, ...rest } = payload;
-      const errorJson = isPlainObject(errorPayload) ? (errorPayload as Record<string, unknown>) : null;
+      const errorJson = isPlainObject(errorPayload)
+        ? (errorPayload as Record<string, unknown>)
+        : null;
 
       const row: Record<string, unknown> = {
         user_id: userId,

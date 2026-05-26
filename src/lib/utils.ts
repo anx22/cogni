@@ -9,7 +9,9 @@ export function cn(...inputs: ClassValue[]) {
  * Indiziert eine Liste von Objekten mit `id` als `Map<id, item>`.
  * Doppelte IDs werden vom späteren Eintrag überschrieben.
  */
-export function mapById<T extends { id: string }>(items: readonly T[] | null | undefined): Map<string, T> {
+export function mapById<T extends { id: string }>(
+  items: readonly T[] | null | undefined,
+): Map<string, T> {
   const m = new Map<string, T>();
   if (!items) return m;
   for (const item of items) m.set(item.id, item);

@@ -11,25 +11,25 @@
 
 export type BoxType =
   // Klassisch (Inhalt + Steuerung)
-  | "wissen"        // assertion
-  | "zuordnung"     // Projekt-Gate
-  | "konflikt"      // widersprüchlich
-  | "gap"           // Lücke mit Eingabe
-  | "auswahl"       // selection
-  | "eingabe"       // input
-  | "kontext"       // context
-  | "aktion"        // action
+  | "wissen" // assertion
+  | "zuordnung" // Projekt-Gate
+  | "konflikt" // widersprüchlich
+  | "gap" // Lücke mit Eingabe
+  | "auswahl" // selection
+  | "eingabe" // input
+  | "kontext" // context
+  | "aktion" // action
   // Sprechhandlungen (neu, siehe DECISIONS modality-matrix)
-  | "bedingung"     // condition — qualifiziert anderen Fakt
-  | "ausschluss"    // exclusion — "nicht enthalten"
-  | "annahme"       // assumption — Hypothese
-  | "vorschlag"     // suggestion — Option, noch nicht entschieden
-  | "frage"         // question — echte Frage an User (mit asks)
-  | "notiz"         // note — informativ, kein Pflicht-Click
-  | "beziehung"     // relation — Kante zwischen Entitäten
-  | "attribut"      // attribute — Update an Bezugsobjekt
-  | "risiko"        // risk — Warnung
-  | "unklar";       // unclear — KI weiß nicht, fragt User um Klassifikation
+  | "bedingung" // condition — qualifiziert anderen Fakt
+  | "ausschluss" // exclusion — "nicht enthalten"
+  | "annahme" // assumption — Hypothese
+  | "vorschlag" // suggestion — Option, noch nicht entschieden
+  | "frage" // question — echte Frage an User (mit asks)
+  | "notiz" // note — informativ, kein Pflicht-Click
+  | "beziehung" // relation — Kante zwischen Entitäten
+  | "attribut" // attribute — Update an Bezugsobjekt
+  | "risiko" // risk — Warnung
+  | "unklar"; // unclear — KI weiß nicht, fragt User um Klassifikation
 
 export type BoxState =
   | "vorgeschlagen"

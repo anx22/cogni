@@ -23,7 +23,12 @@ interface ActionDef {
 const HomePrompt = ({ onNote, onUpload, onPaste, onLink, onVoice }: HomePromptProps) => {
   const actions: ActionDef[] = [
     { label: "Datei", icon: <Upload size={20} strokeWidth={1.5} />, action: onUpload },
-    { label: "Einfügen", icon: <Clipboard size={20} strokeWidth={1.5} />, action: onPaste, highlight: true },
+    {
+      label: "Einfügen",
+      icon: <Clipboard size={20} strokeWidth={1.5} />,
+      action: onPaste,
+      highlight: true,
+    },
     { label: "Link", icon: <LinkIcon size={20} strokeWidth={1.5} />, action: onLink },
     { label: "Sprache", icon: <Mic size={20} strokeWidth={1.5} />, action: onVoice },
   ];

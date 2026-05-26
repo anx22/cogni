@@ -19,9 +19,11 @@
 
 // Offizieller SDK-Default ist US; dieser Account liegt EU, daher EU als Projekt-Default.
 // LANGSMITH_BASE_URL bleibt nur als Legacy-Fallback für bereits gesetzte Secrets erhalten.
-const HUB_BASE = (Deno.env.get("LANGSMITH_ENDPOINT") ??
+const HUB_BASE = (
+  Deno.env.get("LANGSMITH_ENDPOINT") ??
   Deno.env.get("LANGSMITH_BASE_URL") ??
-  "https://eu.api.smith.langchain.com").replace(/\/$/, "");
+  "https://eu.api.smith.langchain.com"
+).replace(/\/$/, "");
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const FETCH_TIMEOUT_MS = 2_000;
 const PROJECT_WORKSPACE_ID = "df8bba60-9dc7-4c0a-8f0b-696d09baac58";
@@ -138,10 +140,7 @@ function applyVariables(tmpl: string, vars?: Record<string, string>): string {
   );
 }
 
-async function ensureRepo(
-  name: string,
-  fallback: string,
-): Promise<void> {
+async function ensureRepo(name: string, fallback: string): Promise<void> {
   const key = `${PRIVATE_OWNER}/${name}`;
   if (ensuredRepos.has(key)) return;
   const headers = { ...authHeaders(), "Content-Type": "application/json" };
@@ -189,10 +188,7 @@ async function ensureRepo(
  * @param name z. B. "extract-facts" — Tenant wird automatisch ermittelt
  * @param opts variables, fallback, autoCreate
  */
-export async function getPrompt(
-  name: string,
-  opts: GetPromptOptions,
-): Promise<PromptResult> {
+export async function getPrompt(name: string, opts: GetPromptOptions): Promise<PromptResult> {
   const fallbackResult = (): PromptResult => ({
     system: applyVariables(opts.fallback, opts.variables),
     version: "fallback",
@@ -232,9 +228,7 @@ export async function getPrompt(
     const data = await res.json();
     const tmpl = extractSystemTemplate(data?.manifest);
     const version =
-      typeof data?.commit_hash === "string"
-        ? data.commit_hash.slice(0, 12)
-        : "unknown";
+      typeof data?.commit_hash === "string" ? data.commit_hash.slice(0, 12) : "unknown";
     if (!tmpl) {
       console.warn(`promptHub: ${name} hat kein parsebares Template`);
       return fallbackResult();

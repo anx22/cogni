@@ -10,8 +10,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRealtimeTables, type RealtimeListener } from "@/lib/realtime/useRealtimeTables";
 
 type UnderstandingStatus =
-  | "pending" | "running" | "empty" | "review_ready"
-  | "failed" | "rate_limited" | "payment_required";
+  | "pending"
+  | "running"
+  | "empty"
+  | "review_ready"
+  | "failed"
+  | "rate_limited"
+  | "payment_required";
 
 export interface VoiceState {
   text: string | null;
@@ -64,19 +69,25 @@ export function useEntityVoice(userId: string | undefined) {
     return [
       // Asset-Insert (Drop, Notiz, Link)
       {
-        table: "assets", event: "INSERT", filter,
+        table: "assets",
+        event: "INSERT",
+        filter,
         handler: (p) => {
           const row = p.new as { file_type?: string };
           const what =
-            row.file_type === "note" ? "deine Notiz"
-            : row.file_type === "other" ? "deinen Input"
-            : "deine Datei";
+            row.file_type === "note"
+              ? "deine Notiz"
+              : row.file_type === "other"
+                ? "deinen Input"
+                : "deine Datei";
           enqueue({ text: `Ich nehme ${what} auf.`, tone: "working" });
         },
       },
       // Asset-Update (Status-Spur)
       {
-        table: "assets", event: "UPDATE", filter,
+        table: "assets",
+        event: "UPDATE",
+        filter,
         handler: (p) => {
           const row = p.new as {
             id: string;
@@ -86,7 +97,10 @@ export function useEntityVoice(userId: string | undefined) {
           };
           if (row.processing_status === "processing") {
             enqueue({
-              text: row.file_type === "note" ? "Ich lese deine Notiz." : "Ich lese gerade dein Dokument.",
+              text:
+                row.file_type === "note"
+                  ? "Ich lese deine Notiz."
+                  : "Ich lese gerade dein Dokument.",
               tone: "working",
             });
           }
@@ -98,10 +112,18 @@ export function useEntityVoice(userId: string | undefined) {
               enqueue({ text: "Nichts Neues entdeckt — Original ist gespeichert.", tone: "calm" });
               break;
             case "failed":
-              enqueue({ text: "Das hat nicht geklappt — nochmal?", tone: "alert", retryAssetId: row.id });
+              enqueue({
+                text: "Das hat nicht geklappt — nochmal?",
+                tone: "alert",
+                retryAssetId: row.id,
+              });
               break;
             case "rate_limited":
-              enqueue({ text: "Bin gerade überlastet — gleich nochmal?", tone: "alert", retryAssetId: row.id });
+              enqueue({
+                text: "Bin gerade überlastet — gleich nochmal?",
+                tone: "alert",
+                retryAssetId: row.id,
+              });
               break;
             case "payment_required":
               enqueue({ text: "Mir gehen die Credits aus.", tone: "alert", retryAssetId: row.id });
@@ -111,12 +133,16 @@ export function useEntityVoice(userId: string | undefined) {
       },
       // Erster proposed_fact eines Laufs
       {
-        table: "proposed_facts", event: "INSERT", filter,
+        table: "proposed_facts",
+        event: "INSERT",
+        filter,
         handler: () => enqueue({ text: "Ich erkenne etwas.", tone: "working" }),
       },
       // Session offen → bereit
       {
-        table: "dialog_sessions", event: "INSERT", filter,
+        table: "dialog_sessions",
+        event: "INSERT",
+        filter,
         handler: (p) => {
           const row = p.new as { total_boxes?: number; metadata?: Record<string, unknown> };
           const n = row.total_boxes ?? 0;
@@ -134,7 +160,9 @@ export function useEntityVoice(userId: string | undefined) {
       },
       // Session geschlossen → Stimme räumt sich ab
       {
-        table: "dialog_sessions", event: "UPDATE", filter,
+        table: "dialog_sessions",
+        event: "UPDATE",
+        filter,
         handler: (p) => {
           const row = p.new as { status?: string };
           if (row.status === "completed" || row.status === "cancelled") {

@@ -22,38 +22,40 @@ interface Payload {
   user_decision?: Record<string, unknown> | null;
 }
 
-Deno.serve(withErrorBoundary("commit-fact", async (req) => {
-  const pre = handleOptions(req);
-  if (pre) return pre;
+Deno.serve(
+  withErrorBoundary("commit-fact", async (req) => {
+    const pre = handleOptions(req);
+    if (pre) return pre;
 
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  // deno-lint-ignore no-explicit-any
-  const admin: any = createClient(supabaseUrl, serviceKey);
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    // deno-lint-ignore no-explicit-any
+    const admin: any = createClient(supabaseUrl, serviceKey);
 
-  const auth = await getAuthenticatedUser(req);
-  if (!auth.ok) return fail(auth.error, auth.status);
-  const user = auth.user;
+    const auth = await getAuthenticatedUser(req);
+    if (!auth.ok) return fail(auth.error, auth.status);
+    const user = auth.user;
 
-  const log = createLogger({ fn: "commit-fact", userId: user.id, client: admin });
-  log.stage("start", "request received");
+    const log = createLogger({ fn: "commit-fact", userId: user.id, client: admin });
+    log.stage("start", "request received");
 
-  try {
-    const payload = (await req.json()) as Payload;
-    const result = await commitFact({ admin, user: { id: user.id }, payload, log });
-    await log.flush();
-    if (result.ok) return ok({ correlation_id: log.correlationId, ...result });
-    return new Response(
-      JSON.stringify({ ok: false, code: result.code, error: result.error }),
-      { status: result.status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    log.error("commit-fact.error", "commit-fact threw", err);
-    await log.flush();
-    return fail(msg, 500);
-  }
-}));
+    try {
+      const payload = (await req.json()) as Payload;
+      const result = await commitFact({ admin, user: { id: user.id }, payload, log });
+      await log.flush();
+      if (result.ok) return ok({ correlation_id: log.correlationId, ...result });
+      return new Response(JSON.stringify({ ok: false, code: result.code, error: result.error }), {
+        status: result.status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      log.error("commit-fact.error", "commit-fact threw", err);
+      await log.flush();
+      return fail(msg, 500);
+    }
+  }),
+);
 
 // Lokale ok/fail mit `{ok: true|false, ...}` Body-Shape — bewusst beibehalten,
 // FE/AOL-Konsumenten erwarten dieses Envelope. // custom shape, intentional

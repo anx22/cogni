@@ -3,11 +3,13 @@
 ## 1. Technischer Zielstack
 
 ### Fix gesetzt
+
 - **Lovable** = Experience Layer / UI / Produktschale
 - **Supabase** = kanonischer Kernzustand, Auth, Storage, Realtime, strukturierte Daten, Jobs
 - **Unstructured** = Document Intelligence / Parsing / Partitioning / strukturierte Dokumentausgabe
 
 ### Offen
+
 - **Graphiti** oder **Cognee** = Knowledge-Graph-/Memory-/Context-Unterbau
 
 ---
@@ -28,13 +30,16 @@
 ## 3. Aufgabenverteilung pro Plattform
 
 ### Lovable
+
 Verantwortlich für:
+
 - Entität-Screen
 - Projektdetailansicht
 - Dialog-Overlay
 - Visualisierung von Review, Deltas und Projektzustand
 
 Nicht verantwortlich für:
+
 - Dokumentverarbeitung
 - Projektlogik
 - Konfliktlogik
@@ -42,7 +47,9 @@ Nicht verantwortlich für:
 - Knowledge-Graph-Aufbau
 
 ### Supabase
+
 Verantwortlich für:
+
 - Storage der Originaldateien
 - strukturierte Kernpersistenz in Postgres
 - Review Sessions und Review Cases
@@ -54,7 +61,9 @@ Verantwortlich für:
 Supabase ist der kanonische Kernzustand.
 
 ### Unstructured
+
 Verantwortlich für:
+
 - Parsing unstrukturierter Dateien
 - Partitioning und Normalisierung
 - Ausgabe strukturierter Segmente und Metadaten
@@ -63,7 +72,9 @@ Verantwortlich für:
 Unstructured ist Dokumentservice, nicht Projektintelligenz.
 
 ### Graphiti
+
 Verantwortlich für:
+
 - temporalen Knowledge Graph
 - evolving relationships
 - Fact Invalidation
@@ -73,7 +84,9 @@ Verantwortlich für:
 Graphiti ist sinnvoll, wenn zeitliche Veränderung, Widerspruchspflege und Historisierung im Vordergrund stehen.
 
 ### Cognee
+
 Verantwortlich für:
+
 - integrierte Memory-/Knowledge-Engine
 - Graph + Vector + relationalen Kontext
 - Pipelines, Tasks und DataPoints
@@ -86,6 +99,7 @@ Cognee ist sinnvoll, wenn ein enger verzahnter Wissensmotor mit weniger Einzelve
 ## 4. Zusammenspiel der Systeme
 
 ### Datenfluss
+
 1. Nutzer lädt Material in der Entität hoch.
 2. Originaldatei und Intake-Metadaten werden in Supabase gespeichert.
 3. Unstructured verarbeitet das Material und liefert strukturierte Dokumentelemente zurück.
@@ -97,6 +111,7 @@ Cognee ist sinnvoll, wenn ein enger verzahnter Wissensmotor mit weniger Einzelve
 9. Lovable rendert den neuen Zustand aus Supabase.
 
 ### Harte Regel
+
 Nicht Parser ↔ Graph ↔ App ↔ Datenbank.
 
 Sondern:
@@ -109,6 +124,7 @@ Damit bleibt die Kopplung klar und die Zuständigkeit prüfbar.
 ## 5. Kanonische Kernobjekte
 
 Diese Objekte müssen sauber in Supabase modelliert sein:
+
 - Asset
 - Source
 - Parsed Document Output
@@ -121,6 +137,7 @@ Diese Objekte müssen sauber in Supabase modelliert sein:
 - Project State Snapshot
 
 Optionaler Unterbau je nach Wissensmotor:
+
 - Graph Node / Edge Projection
 - Memory Artifact
 - Retrieval Context Object
@@ -133,30 +150,38 @@ Das Overlay braucht echte Backend-Objekte. Es darf keine reine UI-Fassade sein.
 ## 6. Offene Unterbau-Entscheidung
 
 ### Option A — Graphiti
+
 Einsatz, wenn:
+
 - temporale Beziehungen zentral sind
 - Faktveränderungen und Invalidation wichtig sind
 - der Graph klar als spezialisierter Kontextmotor gedacht ist
 
 Stärken:
+
 - saubere zeitliche Wissenslogik
 - stark für Widersprüche, Historie, Versionsbeziehungen
 
 Risiken:
+
 - mehr eigene Integrations- und Orchestrierungsarbeit
 - Produktlogik muss stärker außerhalb des Graphen gebaut werden
 
 ### Option B — Cognee
+
 Einsatz, wenn:
+
 - Graph, Memory, Retrieval und Pipelines enger zusammenliegen sollen
 - weniger Einzelverkabelung gewünscht ist
 - der Wissensmotor stärker als integrierte Engine gedacht ist
 
 Stärken:
+
 - integrierter Ansatz
 - näher an einer Knowledge Engine als nur an einer Graph-Schicht
 
 Risiken:
+
 - Commit- und Review-Modell dürfen nicht in die Engine abrutschen
 - Produktlogik muss trotz Integration klar im Projektmodell verankert bleiben
 
@@ -165,29 +190,37 @@ Risiken:
 ## 7. Kritische technische Stellen
 
 ### 7.1 Wahrheit und Projektion nicht vermischen
+
 Der größte Architekturfehler wäre, Graphiti oder Cognee als eigentliche Wahrheit zu behandeln.
 
 Pflicht:
+
 - Supabase hält den offiziellen Zustand.
 - Graph/Memory hält abgeleiteten Kontext.
 
 ### 7.2 Dokumentstruktur nicht mit Projektwahrheit verwechseln
+
 Unstructured liefert Struktur, aber keine belastbaren Projektentscheidungen.
 
 Pflicht:
+
 - Zwischen Parsing und Projektfakt liegt immer ein eigener Interpretations- und Review-Schritt.
 
 ### 7.3 Review nicht weich machen
+
 Die Vision verlangt bewusst Kontrolle.
 
 Pflicht:
+
 - Nur bestätigte Vorschläge werden committed.
 - Confidence darf Priorisierung steuern, aber keinen finalen Auto-Commit.
 
 ### 7.4 Delta-Logik sauber modellieren
+
 Der Wissensmotor muss nicht nur erkennen, was neu ist, sondern was sich verändert.
 
 Pflicht:
+
 - bestätigen
 - ergänzen
 - ersetzen
@@ -198,9 +231,11 @@ Pflicht:
 Ohne diese Delta-Logik bleibt das System eine Ablage mit semantischen Tags.
 
 ### 7.5 Widersprüche als eigene Klasse behandeln
+
 Widersprüche sind kein Nebeneffekt.
 
 Pflicht:
+
 - Terminwidersprüche
 - Entscheidungswidersprüche
 - Versionskonflikte
@@ -209,16 +244,20 @@ Pflicht:
 Diese Fälle müssen explizit erzeugt, gespeichert und reviewbar gemacht werden.
 
 ### 7.6 Themen-Drift verhindern
+
 Themen dürfen nicht unkontrolliert wachsen und sich duplizieren.
 
 Pflicht:
+
 - Merge-Mechanik
 - Umbenennen
 - kontrollierte Zusammenführung
 - klare Quellbezüge je Thema
 
 ### 7.7 Provenance nie verlieren
+
 Jeder relevante Fakt braucht:
+
 - Quelle
 - Zeitpunkt
 - Extraktionslauf
@@ -228,9 +267,11 @@ Jeder relevante Fakt braucht:
 Ohne Provenance ist das System fachlich nicht belastbar.
 
 ### 7.8 Overlay und Backend streng koppeln
+
 Das Dialog-Overlay ist Kernfunktion.
 
 Pflicht:
+
 - Review Session
 - Review Case
 - Proposed Fact
@@ -240,9 +281,11 @@ Pflicht:
 Wenn diese Objekte fehlen, zerfällt die Gesprächslogik bei realen Änderungen.
 
 ### 7.9 Integrationstiefe begrenzen
+
 Graphiti oder Cognee dürfen nicht das gesamte Produktmodell übernehmen.
 
 Pflicht:
+
 - Wissensmotor nur für Kontext, Relationen, Retrieval und Historisierung einsetzen
 - Produktzustand, Review und Commit im eigenen Kern halten
 
@@ -251,6 +294,7 @@ Pflicht:
 ## 8. Roadmap
 
 ### V1
+
 - Lovable als Produktschale
 - Supabase als kanonischer Kern
 - Unstructured als fixer Dokumentservice
@@ -260,6 +304,7 @@ Pflicht:
 - vollständige Provenance und Commit-Historie
 
 ### Nicht in V1
+
 - automatische Mail-Synchronisation
 - autonome Hintergrundverarbeitung ohne Review
 - überkomplexe Agentenkaskaden
@@ -271,6 +316,7 @@ Pflicht:
 ## 9. Referenz für die Umsetzung
 
 Beim Coden und Reviewen gilt:
+
 - zuerst Kernzustand und Objektmodell sauber bauen
 - dann Parsing-Flow und Rückschreibelogik
 - dann Wissensmotor ankoppeln

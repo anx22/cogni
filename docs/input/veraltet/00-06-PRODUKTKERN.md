@@ -7,6 +7,7 @@ Produktintelligenz ist eine zentrale Entität, die rohe Projektobjekte aufnimmt,
 Das Produkt ist weder klassische Projektmanagement-Software noch Dateiablage noch Graph-Viewer.
 
 Außen gibt es nur drei sichtbare Modi:
+
 - **Entität-Screen**
 - **Projekt-Screen**
 - **Dialog-Overlay**
@@ -56,6 +57,7 @@ Die Entität verarbeitet, ordnet, vergleicht, markiert und fragt dort nach, wo m
 Der Entität-Screen ist kein Dashboard. Er ist der globale operative Eingang in die Projektintelligenz.
 
 Die Entität ist gleichzeitig:
+
 - Dropzone
 - Aktivitätszentrum
 - Identität des Produkts
@@ -63,6 +65,7 @@ Die Entität ist gleichzeitig:
 - globaler Zustandsanzeiger
 
 Der Nutzer kann hier hineinwerfen:
+
 - Copy/Paste-Mail
 - `.eml`
 - PDF
@@ -80,6 +83,7 @@ Der Projekt-Screen zeigt nicht Rohmaterial, sondern das Ergebnis der Entitätsar
 Er beginnt immer mit dem **aktuellen Stand** und entfaltet sich dann in aufklappbare Projektfacetten.
 
 Diese Facetten sind keine Primärnavigation, sondern verdichtete Sichten des Projektzustands:
+
 - aktueller Stand
 - wichtigste Änderungen
 - Konflikte
@@ -96,6 +100,7 @@ Diese Facetten sind keine Primärnavigation, sondern verdichtete Sichten des Pro
 Das Overlay ist der eigentliche Gesprächsraum zwischen Nutzer und Entität.
 
 Es läuft über beide Hauptscreens und übernimmt:
+
 - Review
 - Zuordnungsprüfung
 - Konfliktauflösung
@@ -133,9 +138,11 @@ Die Entität baut je nach Fall die passende Kombination aus Informations-, Auswa
 ### 3.3 Archetypische Gesprächsboxen
 
 #### Wissensbox
+
 Zeigt erkannte Erkenntnisse.
 
 Beispiele:
+
 - neue Entscheidung erkannt
 - Termin erkannt
 - Thema ergänzt
@@ -143,9 +150,11 @@ Beispiele:
 - Widerspruch erkannt
 
 #### Zuordnungsbox
+
 Zeigt, wohin die Entität etwas eingeordnet hat.
 
 Beispiele:
+
 - diesem Projekt zugeordnet
 - diesem Thema zugeordnet
 - als Version dieses Dokuments erkannt
@@ -153,42 +162,52 @@ Beispiele:
 Ausklappbar und änderbar.
 
 #### Konfliktbox
+
 Zeigt Kollisionen, Mehrdeutigkeiten oder Unsicherheiten.
 
 Beispiele:
+
 - neuer Termin widerspricht bestehendem Termin
 - neue Aussage kollidiert mit freigegebener Entscheidung
 - Dokument passt zu mehreren Projekten
 
 #### Auswahlbox
+
 Erzwingt eine explizite Entscheidung.
 
 Beispiele:
+
 - Projekt A / Projekt B / neues Projekt
 - bestätigen / verwerfen
 - Dokumentversion / eigenständiges Dokument
 
 #### Eingabebox
+
 Nimmt kurze manuelle Präzisierungen auf.
 
 Beispiele:
+
 - Projekt suchen
 - Thema umbenennen
 - Freitext-Korrektur
 - Stakeholder ergänzen
 
 #### Kontextbox
+
 Zeigt Begründung und Quellenbasis.
 
 Beispiele:
+
 - erkannt aus Mail vom …
 - Zuordnung basiert auf …
 - Konflikt entsteht durch …
 
 #### Aktionsbox
+
 Schließt den Fall.
 
 Beispiele:
+
 - bestätigen
 - abbrechen
 - als neues Thema anlegen
@@ -271,6 +290,7 @@ Nichts wird endgültig in den Projektzustand übernommen, bevor es durch einen R
 Der Projekt-Screen zeigt zuerst den **aktuellen Stand**. Erst danach entfaltet er die Tiefe.
 
 Der Nutzer soll sofort verstehen:
+
 - Was ist gerade die Lage?
 - Was hat sich verändert?
 - Was ist kritisch?
@@ -281,38 +301,49 @@ Der Nutzer soll sofort verstehen:
 ### 5.2 Projektfacetten
 
 #### Aktueller Stand
+
 Verdichtetes Lagebild.
 
 #### Änderungen
+
 Was wurde neu erkannt, bestätigt, verschoben, ersetzt, verworfen?
 
 #### Konflikte
+
 Welche Spannungen, Kollisionen oder Unklarheiten bestehen?
 
 #### Themen
+
 Inhaltliche Cluster mit Quellen, Entscheidungen, Feedback, Korrekturen, offenen Punkten und Dokumenten.
 
 #### Timeline
+
 Veränderungsverlauf statt bloßer Chronologie.
 
 #### Entscheidungen
+
 Mit Geltungsstatus, Quelle, Angriffspunkt und Verlauf.
 
 #### Offene Punkte und Aufgaben
+
 Getrennt, aber nah beieinander.
 
 #### Dokumente und Versionen
+
 Mit Herkunft, Projektbezug, Themenbezug und Versionslogik.
 
 #### Stakeholder
+
 Personen, Organisationen, Rollen, Beziehungen.
 
 #### Feedback und Korrekturen
+
 Querliegender Layer über das gesamte Projekt.
 
 ### 5.3 Zeit- und Gültigkeitslogik
 
 Bei konkurrierenden Informationen gilt:
+
 1. formal bindend
 2. explizit freigegeben
 3. neueste
@@ -365,6 +396,7 @@ Die Entität soll sich nicht wie starre App-Logik anfühlen. Sie wirkt wie ein e
 ### 7.1 Intake
 
 Mögliche Eingänge:
+
 - Copy/Paste-Mail
 - `.eml`
 - PDF

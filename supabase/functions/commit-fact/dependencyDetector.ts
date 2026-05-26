@@ -44,8 +44,7 @@ function norm(s: unknown): string {
   return typeof s === "string" ? s.trim().toLowerCase().replace(/\s+/g, " ") : "";
 }
 function titleOf(c: any): string {
-  return (typeof c?.title === "string" && c.title) ||
-    (typeof c?.name === "string" && c.name) || "";
+  return (typeof c?.title === "string" && c.title) || (typeof c?.name === "string" && c.name) || "";
 }
 function textBlob(c: any): string {
   return [c?.description, c?.text, c?.note, c?.notes, c?.summary]
@@ -59,10 +58,7 @@ function hasTrigger(text: string): boolean {
 /**
  * Pure: matched fresh gegen Bestand.
  */
-export function detectDependenciesPure(
-  fresh: Row,
-  projectFacts: Row[],
-): DetectedDependency[] {
+export function detectDependenciesPure(fresh: Row, projectFacts: Row[]): DetectedDependency[] {
   const out: DetectedDependency[] = [];
   const c = (fresh.content ?? {}) as any;
 
@@ -131,8 +127,7 @@ export async function detectAndPersistDependencies(
   if (fact_type !== "task" && fact_type !== "deadline") return [];
 
   try {
-    const wantedTypes =
-      fact_type === "task" ? ["task", "decision", "deadline"] : ["decision"];
+    const wantedTypes = fact_type === "task" ? ["task", "decision", "deadline"] : ["decision"];
     const { data, error } = await admin
       .from("canonical_facts")
       .select("id, fact_type, content")
@@ -143,10 +138,7 @@ export async function detectAndPersistDependencies(
       return [];
     }
     const others = (data ?? []) as Row[];
-    const detected = detectDependenciesPure(
-      { id: canonical_fact_id, fact_type, content },
-      others,
-    );
+    const detected = detectDependenciesPure({ id: canonical_fact_id, fact_type, content }, others);
     if (detected.length === 0) return [];
 
     const { data: existing } = await admin
@@ -155,15 +147,11 @@ export async function detectAndPersistDependencies(
       .eq("project_id", project_id)
       .eq("source_id", canonical_fact_id);
     const seen = new Set(
-      (existing ?? []).map((r: any) =>
-        `${r.source_id}|${r.target_id}|${r.dependency_type}`
-      ),
+      (existing ?? []).map((r: any) => `${r.source_id}|${r.target_id}|${r.dependency_type}`),
     );
 
     const toInsert = detected
-      .filter(
-        (d) => !seen.has(`${d.source_id}|${d.target_id}|${d.dependency_type}`),
-      )
+      .filter((d) => !seen.has(`${d.source_id}|${d.target_id}|${d.dependency_type}`))
       .map((d) => ({
         user_id,
         project_id,

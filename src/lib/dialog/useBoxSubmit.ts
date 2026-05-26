@@ -33,10 +33,7 @@ export interface BoxSubmitApi {
   reject: () => void;
 }
 
-export function useBoxSubmit(
-  box: DialogBox,
-  opts: UseBoxSubmitOptions = {},
-): BoxSubmitApi {
+export function useBoxSubmit(box: DialogBox, opts: UseBoxSubmitOptions = {}): BoxSubmitApi {
   const { markManualOnSubmit = true, respectGate = true } = opts;
   const { session, updateBoxPayload, commitBox, readonly, gateReason } = useDialog();
   const { markManual } = useManualOverrides();
@@ -51,7 +48,15 @@ export function useBoxSubmit(
       commitBox(box.id, "confirm", payload);
       if (markManualOnSubmit && session?.context) markManual(session.context);
     },
-    [enabled, box.id, updateBoxPayload, commitBox, markManualOnSubmit, session?.context, markManual],
+    [
+      enabled,
+      box.id,
+      updateBoxPayload,
+      commitBox,
+      markManualOnSubmit,
+      session?.context,
+      markManual,
+    ],
   );
 
   const reject = useCallback(() => {

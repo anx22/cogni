@@ -9,8 +9,6 @@ Format: `[YYYY-MM-DD] Problem → Choice → Reason`
 - NOW.md auf drei Milestones zum Prototyp gestrafft (M1 Provenance + Empfehlung, M2 Entity-Präsenz inkl. Universal-Overlay, M3 Antwort-Loops). Kein Klein-Klein-Backlog mehr.
 - Stopp-Linie bestätigt: keine `src/lib/**`-Eingriffe für reine Designwünsche.
 
-
-
 ## 2026-05-22 — K1+K2+K4 aus MainCompass abgehakt
 
 Drei kurzfristige Compass-Punkte in derselben Session umgesetzt:

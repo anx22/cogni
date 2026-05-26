@@ -36,12 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatRelative } from "@/lib/format/relativeTime";
 
 const STATES: EntityState[] = [
@@ -239,10 +234,7 @@ const OrbLab = () => {
           <header className="flex items-center justify-between gap-4 border-b border-border/40 pb-4">
             <div className="flex items-baseline gap-3">
               <h1 className="text-2xl tracking-tight font-light">Orb Lab</h1>
-              <Badge
-                variant="outline"
-                className="text-[10px] font-normal text-muted-foreground"
-              >
+              <Badge variant="outline" className="text-[10px] font-normal text-muted-foreground">
                 {loaded ? "DB" : "lädt …"}
               </Badge>
               <span className="text-[11px] text-muted-foreground hidden md:inline">
@@ -294,10 +286,7 @@ const OrbLab = () => {
             {/* Live-Vorschau */}
             <Card className="bg-card/30 border-border/50 lg:sticky lg:top-6">
               <CardContent className="flex flex-col items-center gap-5 py-8">
-                <div
-                  className="flex items-center justify-center"
-                  style={{ minHeight: size + 40 }}
-                >
+                <div className="flex items-center justify-center" style={{ minHeight: size + 40 }}>
                   <Entity
                     state={state}
                     size={`${size}px`}
@@ -327,20 +316,16 @@ const OrbLab = () => {
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent side="bottom" className="max-w-[240px]">
-                      Re-Roll: würfelt einen neuen Sample aus den Bereichen
-                      (Farbe, Dauer …) für diesen State.
+                      Re-Roll: würfelt einen neuen Sample aus den Bereichen (Farbe, Dauer …) für
+                      diesen State.
                     </TooltipContent>
                   </Tooltip>
                 </div>
 
                 <div className="w-full max-w-[280px] space-y-2 pt-2 border-t border-border/30">
                   <div className="flex items-center justify-between">
-                    <Label className="text-[11px] text-muted-foreground font-normal">
-                      Größe
-                    </Label>
-                    <span className="text-[11px] text-foreground/70 tabular-nums">
-                      {size}px
-                    </span>
+                    <Label className="text-[11px] text-muted-foreground font-normal">Größe</Label>
+                    <span className="text-[11px] text-foreground/70 tabular-nums">{size}px</span>
                   </div>
                   <Slider
                     min={80}
@@ -384,15 +369,9 @@ const OrbLab = () => {
               <section className="space-y-3">
                 <div className="flex items-baseline justify-between">
                   <h2 className="text-sm tracking-wide text-foreground/90">
-                    Editor{" "}
-                    <span className="text-muted-foreground">— {state}</span>
+                    Editor <span className="text-muted-foreground">— {state}</span>
                   </h2>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={reset}
-                    className="h-7 text-xs"
-                  >
+                  <Button size="sm" variant="ghost" onClick={reset} className="h-7 text-xs">
                     <RotateCcw className="h-3 w-3 mr-1.5" />
                     Default
                   </Button>
@@ -476,9 +455,7 @@ const OrbLab = () => {
                             step={0.1}
                             precision={2}
                             jitter={0.15}
-                            onChange={(_, dotSize) =>
-                              updateSurface({ dotSize })
-                            }
+                            onChange={(_, dotSize) => updateSurface({ dotSize })}
                           />
                           <ValueRow
                             label="Spacing"
@@ -488,9 +465,7 @@ const OrbLab = () => {
                             step={0.1}
                             precision={1}
                             jitter={0.4}
-                            onChange={(_, dotSpacing) =>
-                              updateSurface({ dotSpacing })
-                            }
+                            onChange={(_, dotSpacing) => updateSurface({ dotSpacing })}
                           />
                         </CardContent>
                       </Card>
@@ -570,9 +545,7 @@ const OrbLab = () => {
                             max={60}
                             step={1}
                             jitter={2}
-                            onChange={(_, innerHole) =>
-                              updateSurface({ innerHole })
-                            }
+                            onChange={(_, innerHole) => updateSurface({ innerHole })}
                           />
                           <ValueRow
                             label="Outer reach %"
@@ -581,9 +554,7 @@ const OrbLab = () => {
                             max={100}
                             step={1}
                             jitter={3}
-                            onChange={(_, outerFade) =>
-                              updateSurface({ outerFade })
-                            }
+                            onChange={(_, outerFade) => updateSurface({ outerFade })}
                           />
                           <ValueRow
                             label="Opacity"
@@ -593,9 +564,7 @@ const OrbLab = () => {
                             step={0.02}
                             precision={2}
                             jitter={0.05}
-                            onChange={(_, opacity) =>
-                              updateSurface({ opacity })
-                            }
+                            onChange={(_, opacity) => updateSurface({ opacity })}
                           />
                           <ValueRow
                             label="Rotation s (0 = aus)"
@@ -604,9 +573,7 @@ const OrbLab = () => {
                             max={120}
                             step={1}
                             jitter={0}
-                            onChange={(_, rotationDuration) =>
-                              updateSurface({ rotationDuration })
-                            }
+                            onChange={(_, rotationDuration) => updateSurface({ rotationDuration })}
                           />
                           <div className="space-y-2 md:col-span-2">
                             <Label className="text-[11px] text-muted-foreground font-normal">
@@ -614,9 +581,7 @@ const OrbLab = () => {
                             </Label>
                             <Select
                               value={surface.blendMode}
-                              onValueChange={(v) =>
-                                updateSurface({ blendMode: v as SurfaceBlend })
-                              }
+                              onValueChange={(v) => updateSurface({ blendMode: v as SurfaceBlend })}
                             >
                               <SelectTrigger className="h-8 text-xs">
                                 <SelectValue />
@@ -625,9 +590,7 @@ const OrbLab = () => {
                                 <SelectItem value="normal">normal</SelectItem>
                                 <SelectItem value="screen">screen</SelectItem>
                                 <SelectItem value="overlay">overlay</SelectItem>
-                                <SelectItem value="soft-light">
-                                  soft-light
-                                </SelectItem>
+                                <SelectItem value="soft-light">soft-light</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>

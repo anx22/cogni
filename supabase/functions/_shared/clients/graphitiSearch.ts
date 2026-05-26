@@ -35,9 +35,7 @@ export interface SearchEntitiesArgs {
 
 export type SearchEntitiesFn = (args: SearchEntitiesArgs) => Promise<GraphitiHit[] | null>;
 
-export const searchEntities: SearchEntitiesFn = async (
-  { project_id, query, k = 5 },
-) => {
+export const searchEntities: SearchEntitiesFn = async ({ project_id, query, k = 5 }) => {
   if (!isGraphitiConfigured()) return null;
   const trimmed = (query ?? "").trim();
   if (!trimmed) return [];

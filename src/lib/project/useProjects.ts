@@ -56,10 +56,7 @@ export function useProjects(options?: UseProjectsOptions): UseProjectsResult {
     setLoading(true);
     setError(null);
 
-    let q = supabase
-      .from("projects")
-      .select("id, name, updated_at, status")
-      .eq("user_id", userId);
+    let q = supabase.from("projects").select("id, name, updated_at, status").eq("user_id", userId);
     if (!includeArchived) q = q.neq("status", "archived");
     const { data: rows, error: pErr } = await q.order("updated_at", { ascending: false });
 
@@ -172,4 +169,3 @@ export function useProjects(options?: UseProjectsOptions): UseProjectsResult {
 
   return { projects, loading, error, reload: load };
 }
-

@@ -72,8 +72,7 @@ export async function handleCallback(opts: {
   if (payload.status) update.status = payload.status;
   if (payload.current_node) update.current_node = payload.current_node;
   if (payload.error !== undefined) {
-    update.error =
-      typeof payload.error === "string" ? { message: payload.error } : payload.error;
+    update.error = typeof payload.error === "string" ? { message: payload.error } : payload.error;
   }
   if (payload.status === "completed" || payload.status === "failed") {
     update.ended_at = new Date().toISOString();
@@ -81,17 +80,12 @@ export async function handleCallback(opts: {
   if (payload.metadata || payload.facts_written !== undefined || payload.session_id) {
     update.metadata = {
       ...(payload.metadata ?? {}),
-      ...(payload.facts_written !== undefined
-        ? { facts_written: payload.facts_written }
-        : {}),
+      ...(payload.facts_written !== undefined ? { facts_written: payload.facts_written } : {}),
       ...(payload.session_id ? { session_id: payload.session_id } : {}),
     };
   }
 
-  const { error } = await admin
-    .from("aol_runs")
-    .update(update)
-    .eq("id", payload.run_id);
+  const { error } = await admin.from("aol_runs").update(update).eq("id", payload.run_id);
   if (error) {
     log.error("update", "aol_runs update failed", error);
     return { ok: false, status: 500, body: { error: `aol_runs update: ${error.message}` } };
@@ -118,39 +112,44 @@ export async function handleCallback(opts: {
   };
 }
 
-Deno.serve(withErrorBoundary("aol-callback", async (req) => {
-  const pre = handleOptions(req);
-  if (pre) return pre;
+Deno.serve(
+  withErrorBoundary("aol-callback", async (req) => {
+    const pre = handleOptions(req);
+    if (pre) return pre;
 
-  const expected = Deno.env.get("AOL_CALLBACK_TOKEN") ?? "";
-  if (!expected) return fail("AOL_CALLBACK_TOKEN nicht konfiguriert", 500);
+    const expected = Deno.env.get("AOL_CALLBACK_TOKEN") ?? "";
+    if (!expected) return fail("AOL_CALLBACK_TOKEN nicht konfiguriert", 500);
 
-  const auth = req.headers.get("Authorization") ?? "";
-  if (auth !== `Bearer ${expected}`) {
-    return fail("unauthorized", 401);
-  }
+    const auth = req.headers.get("Authorization") ?? "";
+    if (auth !== `Bearer ${expected}`) {
+      return fail("unauthorized", 401);
+    }
 
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const admin = createClient(supabaseUrl, serviceKey);
-  const log = createLogger({ fn: "aol-callback", client: admin });
-  log.stage("start", "callback received");
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const admin = createClient(supabaseUrl, serviceKey);
+    const log = createLogger({ fn: "aol-callback", client: admin });
+    log.stage("start", "callback received");
 
-  try {
-    const payload = (await req.json()) as CallbackPayload;
-    const res = await handleCallback({ admin, payload, log });
-    await log.flush();
-    return new Response(JSON.stringify(res.ok ? { ok: true, ...res.body } : { ok: false, ...res.body }), {
-      status: res.status,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    log.error("error", msg, err);
-    await log.flush();
-    return fail(msg, 400);
-  }
-}));
+    try {
+      const payload = (await req.json()) as CallbackPayload;
+      const res = await handleCallback({ admin, payload, log });
+      await log.flush();
+      return new Response(
+        JSON.stringify(res.ok ? { ok: true, ...res.body } : { ok: false, ...res.body }),
+        {
+          status: res.status,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      log.error("error", msg, err);
+      await log.flush();
+      return fail(msg, 400);
+    }
+  }),
+);
 
 // Lokales fail mit `{ok: false, error}` Envelope. // custom shape, intentional
 function fail(msg: string, status = 500) {

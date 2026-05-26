@@ -12,9 +12,8 @@ export async function updateSessionProgress(admin: any, session_id: string) {
     .eq("session_id", session_id);
   const total = caseStats?.length ?? 0;
   const resolved =
-    caseStats?.filter((c: any) =>
-      ["confirmed", "rejected", "escalated"].includes(c.box_state),
-    ).length ?? 0;
+    caseStats?.filter((c: any) => ["confirmed", "rejected", "escalated"].includes(c.box_state))
+      .length ?? 0;
   await admin
     .from("dialog_sessions")
     .update({
@@ -66,7 +65,9 @@ export async function writeProjectSnapshot(
       },
     });
   } catch (err) {
-    opts.log?.warn("snapshot.failed", "writeProjectSnapshot failed", { error: err instanceof Error ? err.message : String(err) });
+    opts.log?.warn("snapshot.failed", "writeProjectSnapshot failed", {
+      error: err instanceof Error ? err.message : String(err),
+    });
   }
 }
 

@@ -24,9 +24,9 @@ const NEO4J_VARS: Record<string, string> = {
 };
 
 export const handlers: Record<string, Handler> = {
-  "list": async () => jsonResponse(await listAll()),
+  list: async () => jsonResponse(await listAll()),
 
-  "project": async (body) => {
+  project: async (body) => {
     if (!body.projectId) throw new Error("projectId required");
     return jsonResponse(await projectDetails(body.projectId));
   },
@@ -40,7 +40,7 @@ export const handlers: Record<string, Handler> = {
     return jsonResponse({ ok: true, set: r });
   },
 
-  "redeploy": async (body) => {
+  redeploy: async (body) => {
     const { serviceId, environmentId } = body;
     if (!serviceId || !environmentId) {
       throw new Error("serviceId, environmentId required");
@@ -65,7 +65,7 @@ export const handlers: Record<string, Handler> = {
     return jsonResponse({ ok: true, discovered, set, deploy });
   },
 
-  "raw": async (body) => {
+  raw: async (body) => {
     const { query, variables } = body;
     if (!query) throw new Error("query required");
     return jsonResponse(await gql(query, variables ?? {}));

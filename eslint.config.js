@@ -17,7 +17,14 @@ import prettier from "eslint-config-prettier";
 // shadcn-Komponenten und generierte Supabase-Types sind ausgenommen, weil sie
 // extern gepflegt werden und nicht unsere Stilrichtlinie tragen.
 export default tseslint.config(
-  { ignores: ["dist", "src/components/ui/**", "src/integrations/supabase/types.ts", "tailwind.config.ts"] },
+  {
+    ignores: [
+      "dist",
+      "src/components/ui/**",
+      "src/integrations/supabase/types.ts",
+      "tailwind.config.ts",
+    ],
+  },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended, prettier],
     files: ["**/*.{ts,tsx}"],
@@ -39,7 +46,7 @@ export default tseslint.config(
       "@typescript-eslint/no-explicit-any": "warn",
       "no-console": ["error", { allow: ["warn", "error", "debug"] }],
       "prefer-const": "error",
-      "eqeqeq": ["error", "smart"],
+      eqeqeq: ["error", "smart"],
     },
   },
   {

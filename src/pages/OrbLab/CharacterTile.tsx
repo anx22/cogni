@@ -5,10 +5,7 @@
 
 import { useMemo } from "react";
 import { CHARACTERS } from "@/components/entity/characters/registry";
-import {
-  ORB_PRESETS_DEFAULT,
-  samplePreset,
-} from "@/components/entity/orbPresets";
+import { ORB_PRESETS_DEFAULT, samplePreset } from "@/components/entity/orbPresets";
 import type { CharacterId } from "@/components/entity/characters/types";
 import { Check } from "lucide-react";
 
@@ -49,9 +46,7 @@ export const CharacterTile = ({ id, active, onSelect }: Props) => {
           sample,
         })}
       </div>
-      <div className="text-xs tracking-wide text-foreground/90">
-        {character.label}
-      </div>
+      <div className="text-xs tracking-wide text-foreground/90">{character.label}</div>
     </button>
   );
 };

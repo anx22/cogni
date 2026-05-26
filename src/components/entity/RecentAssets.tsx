@@ -80,8 +80,12 @@ const RecentAssets = ({ isDragActive }: Props) => {
     const aolBits = run
       ? [
           `AOL: ${run.status}${run.current_node ? ` · ${run.current_node}` : ""}`,
-          run.error ? `Fehler: ${(run.error as { message?: string })?.message ?? "unbekannt"}` : null,
-        ].filter(Boolean).join("\n")
+          run.error
+            ? `Fehler: ${(run.error as { message?: string })?.message ?? "unbekannt"}`
+            : null,
+        ]
+          .filter(Boolean)
+          .join("\n")
       : null;
 
     if (meta.kind === "url") {
@@ -122,7 +126,7 @@ const RecentAssets = ({ isDragActive }: Props) => {
           }}
         >
           {assets.map((a) => {
-            const Icon = isUrl(a) ? LinkIcon : ICONS[a.file_type] ?? File;
+            const Icon = isUrl(a) ? LinkIcon : (ICONS[a.file_type] ?? File);
             return <AssetTile key={a.id} asset={a} Icon={Icon} onClick={() => handleClick(a)} />;
           })}
         </div>
@@ -167,10 +171,7 @@ const AssetTile = ({ asset, Icon, onClick }: AssetTileProps) => {
       </button>
       <div className="absolute -top-1 -right-1">
         <HoverActionsMenu label={`Aktionen für ${asset.file_name}`}>
-          <DropdownMenuItem
-            disabled={actions.pending}
-            onClick={() => actions.reprocess(asset.id)}
-          >
+          <DropdownMenuItem disabled={actions.pending} onClick={() => actions.reprocess(asset.id)}>
             Erneut verarbeiten
           </DropdownMenuItem>
           <DropdownMenuSeparator />
@@ -188,7 +189,9 @@ const AssetTile = ({ asset, Icon, onClick }: AssetTileProps) => {
         onOpenChange={setConfirmDelete}
         title={`„${asset.file_name}" löschen?`}
         description="Die Datei und alle daraus extrahierten Vorschläge werden entfernt. Bereits übernommene Fakten bleiben bestehen — sie verlieren nur ihre Quelle."
-        onConfirm={async () => { await actions.remove(asset.id); }}
+        onConfirm={async () => {
+          await actions.remove(asset.id);
+        }}
       />
     </div>
   );

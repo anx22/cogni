@@ -14,12 +14,7 @@ const Project = () => {
 
   if (loading || !session) return null;
 
-  return (
-    <ProjectScreen
-      onBack={() => navigate("/")}
-      projectId={id ?? null}
-    />
-  );
+  return <ProjectScreen onBack={() => navigate("/")} projectId={id ?? null} />;
 };
 
 export default Project;

@@ -29,7 +29,10 @@ export interface ScoreResult {
 }
 
 function normalize(s: string): string {
-  return s.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "");
+  return s
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "");
 }
 
 function escapeRegex(s: string): string {
@@ -43,10 +46,7 @@ function wordHit(haystack: string, needle: string): boolean {
   return re.test(haystack);
 }
 
-export function scoreProjects(
-  text: string,
-  projects: ProjectContext[],
-): ScoreResult[] {
+export function scoreProjects(text: string, projects: ProjectContext[]): ScoreResult[] {
   const hay = normalize(text);
   const results: ScoreResult[] = [];
 
@@ -97,10 +97,7 @@ export function scoreProjects(
 
 // Hilfs-Loader: holt alle Projekte des Users mit Themen/Stakeholdern/Domains.
 // Ein Round-Trip pro Tabelle, keine Joins — bleibt einfach lesbar.
-export async function loadProjectContexts(
-  admin: any,
-  user_id: string,
-): Promise<ProjectContext[]> {
+export async function loadProjectContexts(admin: any, user_id: string): Promise<ProjectContext[]> {
   const { data: projects } = await admin
     .from("projects")
     .select("id, name, description")

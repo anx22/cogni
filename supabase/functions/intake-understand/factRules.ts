@@ -15,7 +15,12 @@ const s = (c: Record<string, unknown>, k: string): string =>
 
 export const FACT_SUMMARIZERS: Record<string, (c: Record<string, unknown>) => string> = {
   stakeholder: (c) => {
-    const parts = [s(c, "name"), s(c, "role") && `(${s(c, "role")})`, s(c, "organization"), s(c, "email")].filter(Boolean);
+    const parts = [
+      s(c, "name"),
+      s(c, "role") && `(${s(c, "role")})`,
+      s(c, "organization"),
+      s(c, "email"),
+    ].filter(Boolean);
     return parts.join(" · ");
   },
   decision: (c) => s(c, "decision") || s(c, "title") || "Entscheidung",

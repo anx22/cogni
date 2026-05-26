@@ -61,10 +61,10 @@ Deno.serve(
       return res;
     } catch (e) {
       log.error("dispatch", "railway-admin failed", e, { action });
-      return new Response(
-        JSON.stringify({ error: e instanceof Error ? e.message : String(e) }),
-        { status: 500, headers: { ...cors, "Content-Type": "application/json" } },
-      );
+      return new Response(JSON.stringify({ error: e instanceof Error ? e.message : String(e) }), {
+        status: 500,
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
     } finally {
       await log.flush();
     }

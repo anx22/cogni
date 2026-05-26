@@ -14,9 +14,6 @@ export function useSelectedCharacter() {
     scope: "user",
   });
   const characterId = (values.character as CharacterId) ?? DEFAULT_CHARACTER_ID;
-  const setCharacterId = useCallback(
-    (c: CharacterId) => setValue("character", c),
-    [setValue],
-  );
+  const setCharacterId = useCallback((c: CharacterId) => setValue("character", c), [setValue]);
   return { characterId, setCharacterId, loaded };
 }

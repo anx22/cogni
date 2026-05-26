@@ -7,6 +7,7 @@ Produktintelligenz ist eine zentrale Entität, die rohe Projektobjekte und direk
 Das Produkt ist weder klassische Projektmanagement-Software noch Dateiablage noch Graph-Viewer.
 
 Außen sichtbar sind nur drei Modi:
+
 - Entität-Screen
 - Projekt-Screen
 - Dialog-Overlay
@@ -49,6 +50,7 @@ Innen arbeitet eine agentische Intelligenz mit Parsing-, Matching-, Kontext-, Ko
 Der Entität-Screen ist globaler Eingang in die Projektintelligenz.
 
 Die Entität ist gleichzeitig:
+
 - Dropzone
 - universeller Projekt-Input
 - Aktivitätszentrum
@@ -57,6 +59,7 @@ Die Entität ist gleichzeitig:
 - globaler Zustandsanzeiger
 
 Eingaben:
+
 - Copy/Paste-Mail
 - `.eml`
 - PDF
@@ -76,6 +79,7 @@ Eingaben:
 Der Projekt-Screen zeigt nicht Rohmaterial, sondern den aktuell rekonstruierten Projektzustand.
 
 Er folgt vier festen Rollen:
+
 - **Lage**
 - **Handlungsbedarf**
 - **Verlauf**
@@ -88,6 +92,7 @@ Diese Rollen ersetzen die frühere Gleichrangigkeit vieler Fach-Panels.
 Das Overlay ist der Gesprächsraum zwischen Nutzer und Entität.
 
 Es übernimmt:
+
 - Review
 - Zuordnungsprüfung
 - Konfliktauflösung
@@ -200,6 +205,7 @@ Nichts wird endgültig in den Projektzustand übernommen, bevor es durch einen R
 Der Projektzustand ist keine Rohsammlung, sondern eine verdichtete, laufend aktualisierte Sicht auf ein Projekt.
 
 Er enthält:
+
 - Lagebild
 - Handlungsbedarf
 - Verlauf
@@ -213,9 +219,11 @@ Er enthält:
 ### 5.1 Die vier Rollen des Projektscreens
 
 #### Lage
+
 Der obere, immer sichtbare Zustand des Projekts.
 
 Enthält:
+
 - kurzer Lagetext
 - kritische Chips
 - nächster harter Termin
@@ -227,9 +235,11 @@ Enthält:
 Stakeholder und Projektdaten sitzen hier reduziert im Header.
 
 #### Handlungsbedarf
+
 Das operative Zentrum.
 
 Fasst zusammen:
+
 - offene Punkte
 - Aufgaben
 - unbestätigte Entscheidungen
@@ -239,15 +249,18 @@ Fasst zusammen:
 - Abhängigkeiten mit Blocker-Wirkung
 
 Arbeitsmodi:
+
 - entscheiden
 - klären
 - umsetzen
 - prüfen
 
 #### Verlauf
+
 Die Veränderungs- und Ereignislogik des Projekts.
 
 Enthält:
+
 - Timeline
 - Änderungen
 - bestätigte Entscheidungen
@@ -258,9 +271,11 @@ Enthält:
 Änderungen existieren nicht als eigenes Panel neben dem Verlauf.
 
 #### Substanz
+
 Die inhaltliche Tiefe des Projekts.
 
 Enthält:
+
 - Themen
 - Dokumente und Versionen
 - Feedback und Korrekturen als Quellenmaterial, falls relevant

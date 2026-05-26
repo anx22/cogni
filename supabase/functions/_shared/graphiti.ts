@@ -42,17 +42,12 @@ export class GraphitiHttpError extends Error {
 
 function url(path: string): string {
   if (!BASE) {
-    throw new GraphitiUnavailableError(
-      "GRAPHITI_SERVICE_URL nicht gesetzt — Wissensgraph offline",
-    );
+    throw new GraphitiUnavailableError("GRAPHITI_SERVICE_URL nicht gesetzt — Wissensgraph offline");
   }
   return `${BASE}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
-async function request<T>(
-  path: string,
-  init: RequestInit = {},
-): Promise<T> {
+async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const res = await fetch(url(path), {
     ...init,
     headers: {
@@ -184,14 +179,8 @@ export async function getMemory(input: {
   });
 }
 
-export async function getEpisodes(
-  project_id: string,
-  last_n = 20,
-): Promise<unknown> {
-  return request(
-    `/episodes/${encodeURIComponent(project_id)}?last_n=${last_n}`,
-    { method: "GET" },
-  );
+export async function getEpisodes(project_id: string, last_n = 20): Promise<unknown> {
+  return request(`/episodes/${encodeURIComponent(project_id)}?last_n=${last_n}`, { method: "GET" });
 }
 
 // ---------- Entity-Anlage --------------------------------------------------

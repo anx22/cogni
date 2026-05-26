@@ -28,10 +28,7 @@ export interface FixtureContext {
 }
 
 export function adminClient() {
-  return createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-  );
+  return createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 }
 
 export function newTestRunId(): string {
@@ -175,12 +172,25 @@ export function mockAdmin(stubs: Record<string, MockResponse[]> = {}): MockAdmin
     // deno-lint-ignore no-explicit-any
     const b: any = {};
     // deno-lint-ignore no-explicit-any
-    b.select = (..._a: any[]) => { return b; };
+    b.select = (..._a: any[]) => {
+      return b;
+    };
     // deno-lint-ignore no-explicit-any
-    b.insert = (p: any) => { op = "insert"; payload = p; return b; };
+    b.insert = (p: any) => {
+      op = "insert";
+      payload = p;
+      return b;
+    };
     // deno-lint-ignore no-explicit-any
-    b.update = (p: any) => { op = "update"; payload = p; return b; };
-    b.delete = () => { op = "delete"; return b; };
+    b.update = (p: any) => {
+      op = "update";
+      payload = p;
+      return b;
+    };
+    b.delete = () => {
+      op = "delete";
+      return b;
+    };
     // deno-lint-ignore no-explicit-any
     b.eq = (..._a: any[]) => b;
     // deno-lint-ignore no-explicit-any

@@ -30,202 +30,208 @@ interface Payload {
   retry?: boolean;
 }
 
-Deno.serve(withErrorBoundary("intake-trigger", async (req) => {
-  const pre = handleOptions(req);
-  if (pre) return pre;
+Deno.serve(
+  withErrorBoundary("intake-trigger", async (req) => {
+    const pre = handleOptions(req);
+    if (pre) return pre;
 
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const admin = createClient(supabaseUrl, serviceKey);
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const admin = createClient(supabaseUrl, serviceKey);
 
-  const log = createLogger({ fn: "intake-trigger", client: admin });
+    const log = createLogger({ fn: "intake-trigger", client: admin });
 
-  const rawAolUrl = (Deno.env.get("AOL_SERVICE_URL") ?? "").trim().replace(/\/+$/, "");
-  const aolUrl = rawAolUrl && !/^https?:\/\//i.test(rawAolUrl) ? `https://${rawAolUrl}` : rawAolUrl;
-  const aolToken = Deno.env.get("AOL_SERVICE_TOKEN") ?? "";
+    const rawAolUrl = (Deno.env.get("AOL_SERVICE_URL") ?? "").trim().replace(/\/+$/, "");
+    const aolUrl =
+      rawAolUrl && !/^https?:\/\//i.test(rawAolUrl) ? `https://${rawAolUrl}` : rawAolUrl;
+    const aolToken = Deno.env.get("AOL_SERVICE_TOKEN") ?? "";
 
-  let asset_id = "";
-  let runId: string | null = null;
+    let asset_id = "";
+    let runId: string | null = null;
 
-  try {
-    const body = (await req.json()) as Payload;
-    asset_id = body.asset_id;
-    if (!asset_id) throw new Error("asset_id fehlt");
+    try {
+      const body = (await req.json()) as Payload;
+      asset_id = body.asset_id;
+      if (!asset_id) throw new Error("asset_id fehlt");
 
-    log.bind({ assetId: asset_id });
-    log.stage("enter", "request received", { retry: !!body.retry });
+      log.bind({ assetId: asset_id });
+      log.stage("enter", "request received", { retry: !!body.retry });
 
-    const { data: asset, error: aErr } = await admin
-      .from("assets")
-      .select("id, user_id, project_id")
-      .eq("id", asset_id)
-      .single();
-    if (aErr || !asset) throw new Error(`Asset nicht gefunden: ${aErr?.message}`);
+      const { data: asset, error: aErr } = await admin
+        .from("assets")
+        .select("id, user_id, project_id")
+        .eq("id", asset_id)
+        .single();
+      if (aErr || !asset) throw new Error(`Asset nicht gefunden: ${aErr?.message}`);
 
-    log.bind({ userId: asset.user_id, projectId: asset.project_id });
-    log.stage("asset_loaded", "asset resolved", {
-      project_id: asset.project_id,
-    });
+      log.bind({ userId: asset.user_id, projectId: asset.project_id });
+      log.stage("asset_loaded", "asset resolved", {
+        project_id: asset.project_id,
+      });
 
-    // 1. aol_runs anlegen ----------------------------------------------------
-    const { data: run } = await admin
-      .from("aol_runs")
-      .insert({
-        user_id: asset.user_id,
-        asset_id,
-        project_id: asset.project_id ?? null,
-        status: "pending",
-        trigger_type: body.retry ? "retry" : "intake",
-        started_at: new Date().toISOString(),
-      })
-      .select("id")
-      .single();
-    runId = run?.id ?? null;
-    log.bind({ runId });
-    log.stage("run_created", "aol_runs row inserted", { run_id: runId });
+      // 1. aol_runs anlegen ----------------------------------------------------
+      const { data: run } = await admin
+        .from("aol_runs")
+        .insert({
+          user_id: asset.user_id,
+          asset_id,
+          project_id: asset.project_id ?? null,
+          status: "pending",
+          trigger_type: body.retry ? "retry" : "intake",
+          started_at: new Date().toISOString(),
+        })
+        .select("id")
+        .single();
+      runId = run?.id ?? null;
+      log.bind({ runId });
+      log.stage("run_created", "aol_runs row inserted", { run_id: runId });
 
-    // 2. Wenn AOL konfiguriert ist → Graph-Kontext holen ---------------------
-    let graphHint: string | null = null;
-    if (aolUrl && aolToken) {
-      try {
-        log.stage("aol_call", "POST /aol/run", { url: aolUrl });
-        const res = await fetch(`${aolUrl}/aol/run`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${aolToken}`,
-          },
-          body: JSON.stringify({
-            asset_id,
-            user_id: asset.user_id,
-            project_id: asset.project_id,
-            run_id: runId,
-            retry: !!body.retry,
-          }),
-        });
-        const txt = await res.text();
-        if (!res.ok) {
-          throw new Error(`AOL ${res.status}: ${txt.slice(0, 300)}`);
+      // 2. Wenn AOL konfiguriert ist → Graph-Kontext holen ---------------------
+      let graphHint: string | null = null;
+      if (aolUrl && aolToken) {
+        try {
+          log.stage("aol_call", "POST /aol/run", { url: aolUrl });
+          const res = await fetch(`${aolUrl}/aol/run`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${aolToken}`,
+            },
+            body: JSON.stringify({
+              asset_id,
+              user_id: asset.user_id,
+              project_id: asset.project_id,
+              run_id: runId,
+              retry: !!body.retry,
+            }),
+          });
+          const txt = await res.text();
+          if (!res.ok) {
+            throw new Error(`AOL ${res.status}: ${txt.slice(0, 300)}`);
+          }
+          const aolResponse = safeJson(txt) as { graph_context?: unknown };
+          graphHint =
+            typeof aolResponse.graph_context === "string" ? aolResponse.graph_context : null;
+          log.stage("aol_call", "graph context received", {
+            chars: graphHint?.length ?? 0,
+          });
+          await admin
+            .from("aol_runs")
+            .update({
+              status: "running",
+              current_node: "context_loaded",
+              metadata: { graph_context_chars: graphHint?.length ?? 0 },
+            })
+            .eq("id", runId);
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          log.warn("aol_failed", "AOL context failed, continuing without graph hint", {
+            message: msg,
+          });
+          await admin
+            .from("aol_runs")
+            .update({
+              status: "running",
+              current_node: "context_failed",
+              error: { message: msg, where: "aol_call" },
+            })
+            .eq("id", runId);
+          // Weiter mit normalem Cloud-internen Verstehen ohne Graph-Hint.
         }
-        const aolResponse = safeJson(txt) as { graph_context?: unknown };
-        graphHint = typeof aolResponse.graph_context === "string" ? aolResponse.graph_context : null;
-        log.stage("aol_call", "graph context received", {
-          chars: graphHint?.length ?? 0,
-        });
-        await admin
-          .from("aol_runs")
-          .update({
-            status: "running",
-            current_node: "context_loaded",
-            metadata: { graph_context_chars: graphHint?.length ?? 0 },
-          })
-          .eq("id", runId);
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        log.warn("aol_failed", "AOL context failed, continuing without graph hint", {
-          message: msg,
-        });
-        await admin
-          .from("aol_runs")
-          .update({
-            status: "running",
-            current_node: "context_failed",
-            error: { message: msg, where: "aol_call" },
-          })
-          .eq("id", runId);
-        // Weiter mit normalem Cloud-internen Verstehen ohne Graph-Hint.
       }
-    }
 
-    // 3. Cloud-internes Verstehen triggern (fire-and-forget) ----------------
-    //    intake-understand kann 25-50s laufen (LLM-Calls). Wir dürfen NICHT
-    //    awaiten, sonst läuft intake-trigger in seinen eigenen Timeout und
-    //    der Client sieht ein 500.
-    log.stage("invoke_understand_bg", "background invoke", {
-      with_graph_hint: !!graphHint,
-    });
+      // 3. Cloud-internes Verstehen triggern (fire-and-forget) ----------------
+      //    intake-understand kann 25-50s laufen (LLM-Calls). Wir dürfen NICHT
+      //    awaiten, sonst läuft intake-trigger in seinen eigenen Timeout und
+      //    der Client sieht ein 500.
+      log.stage("invoke_understand_bg", "background invoke", {
+        with_graph_hint: !!graphHint,
+      });
 
-    const understandPromise = admin.functions
-      .invoke("intake-understand", {
-        body: { asset_id, retry: !!body.retry, graph_hint: graphHint },
-      })
-      .then(async ({ error: invErr }) => {
-        if (invErr) {
-          log.error(
-            "bg_failed",
-            "intake-understand bg invoke failed",
-            invErr,
-            { run_id: runId },
-          );
+      const understandPromise = admin.functions
+        .invoke("intake-understand", {
+          body: { asset_id, retry: !!body.retry, graph_hint: graphHint },
+        })
+        .then(async ({ error: invErr }) => {
+          if (invErr) {
+            log.error("bg_failed", "intake-understand bg invoke failed", invErr, { run_id: runId });
+            if (runId) {
+              await admin
+                .from("aol_runs")
+                .update({
+                  status: "failed",
+                  error: { message: invErr.message, where: "intake-understand" },
+                  ended_at: new Date().toISOString(),
+                })
+                .eq("id", runId);
+            }
+            await log.flush();
+            return;
+          }
+          log.stage("bg_completed", "intake-understand bg done", {
+            run_id: runId,
+          });
           if (runId) {
             await admin
               .from("aol_runs")
               .update({
-                status: "failed",
-                error: { message: invErr.message, where: "intake-understand" },
+                status: "completed",
+                current_node: graphHint ? "aol_enriched" : "cloud_understand",
                 ended_at: new Date().toISOString(),
               })
               .eq("id", runId);
           }
           await log.flush();
-          return;
-        }
-        log.stage("bg_completed", "intake-understand bg done", {
-          run_id: runId,
-        });
-        if (runId) {
-          await admin
-            .from("aol_runs")
-            .update({
-              status: "completed",
-              current_node: graphHint ? "aol_enriched" : "cloud_understand",
-              ended_at: new Date().toISOString(),
-            })
-            .eq("id", runId);
-        }
-        await log.flush();
-      })
-      .catch(async (err) => {
-        log.error("bg_failed", "intake-understand bg unexpected error", err, {
-          run_id: runId,
-        });
-        await log.flush();
-      });
-
-    // EdgeRuntime.waitUntil hält den Worker am Leben, bis das Promise fertig ist,
-    // ohne die Response zu blockieren.
-    try {
-      EdgeRuntime?.waitUntil(understandPromise);
-    } catch {
-      // Fallback: wenn waitUntil nicht verfügbar ist, einfach nicht awaiten.
-    }
-
-    log.stage("exit", "ack returned", {
-      mode: graphHint ? "aol_enriched_async" : "cloud_understand_async",
-    });
-    await log.flush();
-
-    return ok({ run_id: runId, mode: graphHint ? "aol_enriched_async" : "cloud_understand_async" });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    log.error("error", "intake-trigger fatal", err, { asset_id });
-    if (runId) {
-      await admin
-        .from("aol_runs")
-        .update({
-          status: "failed",
-          error: { message: msg },
-          ended_at: new Date().toISOString(),
         })
-        .eq("id", runId);
+        .catch(async (err) => {
+          log.error("bg_failed", "intake-understand bg unexpected error", err, {
+            run_id: runId,
+          });
+          await log.flush();
+        });
+
+      // EdgeRuntime.waitUntil hält den Worker am Leben, bis das Promise fertig ist,
+      // ohne die Response zu blockieren.
+      try {
+        EdgeRuntime?.waitUntil(understandPromise);
+      } catch {
+        // Fallback: wenn waitUntil nicht verfügbar ist, einfach nicht awaiten.
+      }
+
+      log.stage("exit", "ack returned", {
+        mode: graphHint ? "aol_enriched_async" : "cloud_understand_async",
+      });
+      await log.flush();
+
+      return ok({
+        run_id: runId,
+        mode: graphHint ? "aol_enriched_async" : "cloud_understand_async",
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      log.error("error", "intake-trigger fatal", err, { asset_id });
+      if (runId) {
+        await admin
+          .from("aol_runs")
+          .update({
+            status: "failed",
+            error: { message: msg },
+            ended_at: new Date().toISOString(),
+          })
+          .eq("id", runId);
+      }
+      await log.flush();
+      return fail(msg, 500);
     }
-    await log.flush();
-    return fail(msg, 500);
-  }
-}));
+  }),
+);
 
 function safeJson(s: string): unknown {
-  try { return JSON.parse(s); } catch { return s; }
+  try {
+    return JSON.parse(s);
+  } catch {
+    return s;
+  }
 }
 
 // Lokale ok/fail mit `{ok: true|false, ...}` Envelope. // custom shape, intentional

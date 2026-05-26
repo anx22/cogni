@@ -105,7 +105,13 @@ export const handlers: Record<string, Handler> = {
       }),
     });
     const text = await r.text();
-    return jsonResponse({ ok: true, base, tenant: tid, status: r.status, body: text.slice(0, 800) });
+    return jsonResponse({
+      ok: true,
+      base,
+      tenant: tid,
+      status: r.status,
+      body: text.slice(0, 800),
+    });
   },
 
   "langsmith-tenant-resolve": async () => {
@@ -150,7 +156,10 @@ export const handlers: Record<string, Handler> = {
     const key = Deno.env.get("LANGSMITH_API_KEY") ?? "";
     const base = defaultBase();
     const workspaceId = Deno.env.get("LANGSMITH_WORKSPACE_ID") ?? "";
-    const headers: Record<string, string> = { "x-api-key": key, "Content-Type": "application/json" };
+    const headers: Record<string, string> = {
+      "x-api-key": key,
+      "Content-Type": "application/json",
+    };
     if (workspaceId) headers["x-tenant-id"] = workspaceId;
     const r = await fetch(`${base}/api/v1/repos/`, {
       method: "POST",

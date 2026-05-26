@@ -12,14 +12,7 @@
  *   (z.B. Supabase-Insert, IndexedDB, WebSocket-Stream)
  */
 
-export type DevLogCategory =
-  | "intake"
-  | "db"
-  | "edge"
-  | "realtime"
-  | "auth"
-  | "ui"
-  | "error";
+export type DevLogCategory = "intake" | "db" | "edge" | "realtime" | "auth" | "ui" | "error";
 
 export type DevLogLevel = "debug" | "info" | "warn" | "error";
 
@@ -77,12 +70,7 @@ class DevLog {
     this.notify();
   }
 
-  log(
-    category: DevLogCategory,
-    message: string,
-    payload?: unknown,
-    level: DevLogLevel = "info",
-  ) {
+  log(category: DevLogCategory, message: string, payload?: unknown, level: DevLogLevel = "info") {
     if (!IS_DEV || this.paused) return;
 
     const entry: DevLogEntry = {
@@ -95,9 +83,10 @@ class DevLog {
     };
 
     // Append + Trim (neuer Array-Ref für React)
-    const next = this.entries.length >= MAX_ENTRIES
-      ? [...this.entries.slice(-(MAX_ENTRIES - 1)), entry]
-      : [...this.entries, entry];
+    const next =
+      this.entries.length >= MAX_ENTRIES
+        ? [...this.entries.slice(-(MAX_ENTRIES - 1)), entry]
+        : [...this.entries, entry];
     this.entries = next;
 
     // Browser-DevTools-Spiegel
@@ -109,7 +98,11 @@ class DevLog {
 
     // Sinks
     for (const sink of this.sinks) {
-      try { sink(entry); } catch { /* ignore */ }
+      try {
+        sink(entry);
+      } catch {
+        /* ignore */
+      }
     }
 
     this.notify();
@@ -132,13 +125,13 @@ class DevLog {
 }
 
 export const CATEGORY_COLOR: Record<DevLogCategory, string> = {
-  intake: "#7dd3fc",   // sky-300
-  db: "#a78bfa",       // violet-400
-  edge: "#fbbf24",     // amber-400
+  intake: "#7dd3fc", // sky-300
+  db: "#a78bfa", // violet-400
+  edge: "#fbbf24", // amber-400
   realtime: "#34d399", // emerald-400
-  auth: "#f472b6",     // pink-400
-  ui: "#94a3b8",       // slate-400
-  error: "#f87171",    // red-400
+  auth: "#f472b6", // pink-400
+  ui: "#94a3b8", // slate-400
+  error: "#f87171", // red-400
 };
 
 function safeClone(v: unknown): unknown {

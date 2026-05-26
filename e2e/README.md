@@ -22,5 +22,5 @@ Specs:
 - `03-review.spec.ts` — Vorhandenes Asset → Review-Overlay sichtbar
 
 Die Smokes sind **nicht** Teil von `bun test` (Vitest). Sie laufen nur, wenn
-PLAYWRIGHT_USER_EMAIL/_PASSWORD gesetzt sind. Im CI: eigener Workflow oder
+PLAYWRIGHT_USER_EMAIL/\_PASSWORD gesetzt sind. Im CI: eigener Workflow oder
 `if: env.PLAYWRIGHT_USER_EMAIL`-Guard.

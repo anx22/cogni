@@ -12,10 +12,7 @@ interface Options {
   scope?: SettingScope;
 }
 
-export function useNamespace<T = unknown>(
-  namespace: string,
-  options: Options = {},
-) {
+export function useNamespace<T = unknown>(namespace: string, options: Options = {}) {
   const scope: SettingScope = options.scope ?? "global";
   const [values, setValues] = useState<Record<string, T>>({});
   const [loaded, setLoaded] = useState(false);
@@ -43,10 +40,7 @@ export function useNamespace<T = unknown>(
     };
   }, [namespace, scope]);
 
-  const channelName = useMemo(
-    () => `app_settings:${namespace}:${scope}`,
-    [namespace, scope],
-  );
+  const channelName = useMemo(() => `app_settings:${namespace}:${scope}`, [namespace, scope]);
 
   const listeners = useMemo<RealtimeListener[]>(
     () => [

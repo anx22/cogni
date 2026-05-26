@@ -20,10 +20,7 @@ const VerlaufFeed = ({ verlauf }: { verlauf: VerlaufVM[] }) => {
         borderLeft: "1px solid var(--hair)",
       }}
     >
-      <header
-        className="flex items-baseline"
-        style={{ gap: 10, marginBottom: 22 }}
-      >
+      <header className="flex items-baseline" style={{ gap: 10, marginBottom: 22 }}>
         <h2
           style={{
             margin: 0,
@@ -40,10 +37,7 @@ const VerlaufFeed = ({ verlauf }: { verlauf: VerlaufVM[] }) => {
         </span>
       </header>
 
-      <div
-        className="flex flex-col relative"
-        style={{ gap: 16 }}
-      >
+      <div className="flex flex-col relative" style={{ gap: 16 }}>
         <div
           aria-hidden
           style={{
@@ -61,7 +55,13 @@ const VerlaufFeed = ({ verlauf }: { verlauf: VerlaufVM[] }) => {
             type="button"
             onClick={() => openDialog(buildVerlaufSession(e))}
             className="w-full text-left flex relative group"
-            style={{ gap: 14, background: "transparent", border: "none", cursor: "pointer", padding: 0 }}
+            style={{
+              gap: 14,
+              background: "transparent",
+              border: "none",
+              cursor: "pointer",
+              padding: 0,
+            }}
           >
             <span
               aria-hidden
@@ -91,7 +91,9 @@ const VerlaufFeed = ({ verlauf }: { verlauf: VerlaufVM[] }) => {
                 {e.inhalt}
               </div>
               {e.quelle && (
-                <div className="src" style={{ marginTop: 3 }}>{e.quelle}</div>
+                <div className="src" style={{ marginTop: 3 }}>
+                  {e.quelle}
+                </div>
               )}
             </div>
           </button>

@@ -105,10 +105,7 @@ const SideGrid = ({
       )}
     >
       <div
-        className={cn(
-          "rounded-3xl p-7 backdrop-blur-sm",
-          "bg-[hsl(var(--surface-1)/0.3)]",
-        )}
+        className={cn("rounded-3xl p-7 backdrop-blur-sm", "bg-[hsl(var(--surface-1)/0.3)]")}
         style={{
           backgroundImage:
             "radial-gradient(circle, hsl(var(--foreground) / 0.08) 1px, transparent 1px)",
@@ -118,7 +115,10 @@ const SideGrid = ({
         {error && side === "left" ? (
           <div
             className="flex flex-col items-center justify-center gap-3 text-center"
-            style={{ width: `${COLS * 140 + (COLS - 1) * 10}px`, height: `${ROWS * 72 + (ROWS - 1) * 12}px` }}
+            style={{
+              width: `${COLS * 140 + (COLS - 1) * 10}px`,
+              height: `${ROWS * 72 + (ROWS - 1) * 12}px`,
+            }}
             role="alert"
           >
             <AlertCircle size={18} className="text-destructive/70" strokeWidth={1.5} />

@@ -171,11 +171,7 @@ const AppSidebar = ({
                 >
                   {p.name}
                 </span>
-                <span
-                  className="flex items-center shrink-0"
-                  style={{ gap: 4 }}
-                  aria-hidden
-                >
+                <span className="flex items-center shrink-0" style={{ gap: 4 }} aria-hidden>
                   {signalClass && <span className={`dot ${signalClass}`} />}
                   {signal2Class && <span className={`dot ${signal2Class}`} />}
                 </span>

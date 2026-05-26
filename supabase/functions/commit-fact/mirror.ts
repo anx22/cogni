@@ -31,7 +31,9 @@ export async function mirrorToGraphiti(
     log?.warn("graphiti.mirror", "GRAPHITI_SERVICE_URL not set — skipped");
     return;
   }
-  log?.stage("graphiti.mirror.start", "preparing episode", { canonical_fact_id: args.canonical_fact_id });
+  log?.stage("graphiti.mirror.start", "preparing episode", {
+    canonical_fact_id: args.canonical_fact_id,
+  });
 
   const { data: ownerRow } = await admin
     .from("canonical_facts")
@@ -56,7 +58,9 @@ export async function mirrorToGraphiti(
       name: `${args.fact_type}:${args.canonical_fact_id.slice(0, 8)}`,
       source_description: `canonical_fact:${args.canonical_fact_id}`,
     });
-    log?.stage("graphiti.message", "mirror sent", { source_description: `canonical_fact:${args.canonical_fact_id}` });
+    log?.stage("graphiti.message", "mirror sent", {
+      source_description: `canonical_fact:${args.canonical_fact_id}`,
+    });
 
     // status='ok' = Mirror-Send erfolgreich (HTTP 2xx). Episode-UUID wird
     // separat per `graphiti-reconcile` aufgelöst (eigene Log-Zeile).
@@ -67,7 +71,10 @@ export async function mirrorToGraphiti(
       entity_type: args.fact_type ?? "canonical_fact",
       operation: "mirror",
       status: "ok",
-      payload: { source_description: `canonical_fact:${args.canonical_fact_id}`, project_id: args.project_id },
+      payload: {
+        source_description: `canonical_fact:${args.canonical_fact_id}`,
+        project_id: args.project_id,
+      },
     });
 
     const { data: cur } = await admin
@@ -91,13 +98,17 @@ export async function mirrorToGraphiti(
       })
       .eq("id", args.canonical_fact_id);
     if (uErr) {
-      log?.warn("graphiti.provenance_update_failed", "provenance update after mirror failed", { error: uErr.message });
+      log?.warn("graphiti.provenance_update_failed", "provenance update after mirror failed", {
+        error: uErr.message,
+      });
     }
   } catch (err) {
     const errInfo =
-      err instanceof GraphitiUnavailableError ? { kind: "unavailable", message: err.message }
-      : err instanceof GraphitiHttpError ? { kind: "http", status: err.status, body: err.body.slice(0, 240) }
-      : { kind: "unknown", message: err instanceof Error ? err.message : String(err) };
+      err instanceof GraphitiUnavailableError
+        ? { kind: "unavailable", message: err.message }
+        : err instanceof GraphitiHttpError
+          ? { kind: "http", status: err.status, body: err.body.slice(0, 240) }
+          : { kind: "unknown", message: err instanceof Error ? err.message : String(err) };
     log?.error("graphiti.mirror", "mirror failed", err, errInfo);
 
     const { data: cur } = await admin
@@ -122,7 +133,10 @@ export async function mirrorToGraphiti(
       entity_type: args.fact_type ?? "canonical_fact",
       operation: "mirror",
       status: "failed",
-      error: typeof (errInfo as any).body === "string" ? (errInfo as any).body : (errInfo as any).message,
+      error:
+        typeof (errInfo as any).body === "string"
+          ? (errInfo as any).body
+          : (errInfo as any).message,
       payload: errInfo,
     });
   }

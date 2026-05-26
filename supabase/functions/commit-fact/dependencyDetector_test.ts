@@ -11,9 +11,7 @@ Deno.test("task mit 'blockiert von <Title>' → 1 dep blockiert_durch", () => {
       fact_type: "task",
       content: { title: "Statik prüfen", description: "blockiert von Statik-Freigabe Tübingen" },
     },
-    [
-      { id: "d1", fact_type: "decision", content: { title: "Statik-Freigabe Tübingen" } },
-    ],
+    [{ id: "d1", fact_type: "decision", content: { title: "Statik-Freigabe Tübingen" } }],
   );
   assertEquals(out.length, 1);
   assertEquals(out[0].dependency_type, "blockiert_durch");
@@ -22,7 +20,11 @@ Deno.test("task mit 'blockiert von <Title>' → 1 dep blockiert_durch", () => {
 
 Deno.test("task ohne Trigger → 0", () => {
   const out = detectDependenciesPure(
-    { id: "t2", fact_type: "task", content: { title: "Statik prüfen", description: "Statik-Freigabe Tübingen" } },
+    {
+      id: "t2",
+      fact_type: "task",
+      content: { title: "Statik prüfen", description: "Statik-Freigabe Tübingen" },
+    },
     [{ id: "d1", fact_type: "decision", content: { title: "Statik-Freigabe Tübingen" } }],
   );
   assertEquals(out.length, 0);
@@ -30,7 +32,11 @@ Deno.test("task ohne Trigger → 0", () => {
 
 Deno.test("task mit Trigger aber kein Match → 0", () => {
   const out = detectDependenciesPure(
-    { id: "t3", fact_type: "task", content: { title: "X", description: "blockiert von etwas anderem" } },
+    {
+      id: "t3",
+      fact_type: "task",
+      content: { title: "X", description: "blockiert von etwas anderem" },
+    },
     [{ id: "d1", fact_type: "decision", content: { title: "Statik-Freigabe" } }],
   );
   assertEquals(out.length, 0);

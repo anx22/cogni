@@ -52,9 +52,7 @@ const ProjectSwitcher = ({ currentId, currentName, globalShortcut }: Props) => {
           )}
           aria-label="Projekt wechseln"
         >
-          <span className="truncate max-w-[20ch]">
-            {currentName ?? "Projekt wählen"}
-          </span>
+          <span className="truncate max-w-[20ch]">{currentName ?? "Projekt wählen"}</span>
           <ChevronsUpDown className="w-3 h-3 opacity-60" />
         </button>
       </PopoverTrigger>

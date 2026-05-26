@@ -63,10 +63,7 @@ export async function handleAssignment(
     .eq("id", rc.session_id);
 
   if (ctx.asset_id) {
-    await admin
-      .from("assets")
-      .update({ project_id: chosenProjectId })
-      .eq("id", ctx.asset_id);
+    await admin.from("assets").update({ project_id: chosenProjectId }).eq("id", ctx.asset_id);
   }
 
   const sessionMetaRunId = sessionMeta?.extraction_run_id;

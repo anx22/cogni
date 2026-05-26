@@ -28,7 +28,12 @@ interface CorrelationSummary {
   stages: string[];
   worst_level: "info" | "warn" | "error";
   error_count: number;
-  errors?: Array<{ fn: string; stage: string; message: string | null; error: Record<string, unknown> | null }>;
+  errors?: Array<{
+    fn: string;
+    stage: string;
+    message: string | null;
+    error: Record<string, unknown> | null;
+  }>;
   last_ts: string | null;
   first_ts: string | null;
   total_ms: number;
@@ -87,14 +92,15 @@ const PipelineHealth = () => {
     }
   }, [filter]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   // Realtime: neuer Insert → leichte Reload-Schwelle (debounced).
-  useRealtimeTables(
-    "pipeline_events_health",
-    [{ table: "pipeline_events", event: "INSERT" }],
-    { onTrigger: load, debounceMs: 800 },
-  );
+  useRealtimeTables("pipeline_events_health", [{ table: "pipeline_events", event: "INSERT" }], {
+    onTrigger: load,
+    debounceMs: 800,
+  });
 
   const loadDetail = useCallback(async (correlationId: string) => {
     setSelectedId(correlationId);
@@ -131,10 +137,16 @@ const PipelineHealth = () => {
         <header className="flex items-center justify-between gap-4 border-b border-border/40 pb-4">
           <div className="flex items-baseline gap-3">
             <Button asChild variant="ghost" size="icon" className="h-8 w-8">
-              <Link to="/" aria-label="Zurück"><ArrowLeft className="h-4 w-4" /></Link>
+              <Link to="/" aria-label="Zurück">
+                <ArrowLeft className="h-4 w-4" />
+              </Link>
             </Button>
             <h1 className="text-2xl tracking-tight font-light">Pipeline Health</h1>
-            <Badge variant="outline" className="text-[10px] font-normal text-muted-foreground" title="Fehler/Warnungen der letzten 24 h">
+            <Badge
+              variant="outline"
+              className="text-[10px] font-normal text-muted-foreground"
+              title="Fehler/Warnungen der letzten 24 h"
+            >
               {counts.total} ges. · 24 h: {counts.errors} Fehler · {counts.warns} Warnungen
             </Badge>
           </div>
@@ -145,14 +157,22 @@ const PipelineHealth = () => {
                   key={f}
                   onClick={() => setFilter(f)}
                   className={`px-3 py-1 text-xs ${
-                    filter === f ? "bg-primary/20 text-foreground" : "text-muted-foreground hover:bg-card/40"
+                    filter === f
+                      ? "bg-primary/20 text-foreground"
+                      : "text-muted-foreground hover:bg-card/40"
                   }`}
                 >
                   {f === "all" ? "alle" : f}
                 </button>
               ))}
             </div>
-            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={load} disabled={loading}>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8"
+              onClick={load}
+              disabled={loading}
+            >
               <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             </Button>
           </div>
@@ -197,7 +217,12 @@ const PipelineHealth = () => {
                             <span>{c.count} Stages</span>
                             <span>·</span>
                             <span className="tabular-nums">{c.total_ms}ms</span>
-                            {c.asset_id && (<><span>·</span><span className="font-mono">asset {c.asset_id.slice(0, 6)}</span></>)}
+                            {c.asset_id && (
+                              <>
+                                <span>·</span>
+                                <span className="font-mono">asset {c.asset_id.slice(0, 6)}</span>
+                              </>
+                            )}
                           </div>
                           <div className="text-[10px] font-mono text-muted-foreground/60 truncate">
                             {c.correlation_id.slice(0, 18)}…
@@ -250,7 +275,9 @@ const PipelineHealth = () => {
                           )}
                           {ev.payload && Object.keys(ev.payload).length > 0 && (
                             <details className="text-[10px] text-muted-foreground">
-                              <summary className="cursor-pointer hover:text-foreground/80">payload</summary>
+                              <summary className="cursor-pointer hover:text-foreground/80">
+                                payload
+                              </summary>
                               <pre className="mt-1 bg-card/50 rounded px-2 py-1 overflow-x-auto whitespace-pre-wrap">
                                 {JSON.stringify(ev.payload, null, 2)}
                               </pre>

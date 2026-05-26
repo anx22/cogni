@@ -37,9 +37,12 @@ const DialogOverlay = () => {
 
   if (!session) return null;
 
-  const overlay = open.length === 1
-    ? <FaktDrillOverlay onClose={() => (openCount > 0 ? setConfirmClose(true) : closeDialog())} />
-    : <BatchReviewOverlay onClose={() => (openCount > 0 ? setConfirmClose(true) : closeDialog())} />;
+  const overlay =
+    open.length === 1 ? (
+      <FaktDrillOverlay onClose={() => (openCount > 0 ? setConfirmClose(true) : closeDialog())} />
+    ) : (
+      <BatchReviewOverlay onClose={() => (openCount > 0 ? setConfirmClose(true) : closeDialog())} />
+    );
 
   return createPortal(
     <>
@@ -51,7 +54,10 @@ const DialogOverlay = () => {
         description="Offene Erkenntnisse bleiben in der Pipeline und können später bearbeitet werden. Bestätigte Entscheidungen sind bereits gespeichert."
         confirmLabel="Schließen"
         cancelLabel="Weiter prüfen"
-        onConfirm={() => { setConfirmClose(false); closeDialog(); }}
+        onConfirm={() => {
+          setConfirmClose(false);
+          closeDialog();
+        }}
       />
     </>,
     document.body,

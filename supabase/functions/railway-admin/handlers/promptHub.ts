@@ -19,9 +19,8 @@ export const handlers: Record<string, Handler> = {
     const state = promptCacheState();
     const probes: Record<string, unknown> = {};
     if (body.probe || body.ensure) {
-      const { AGENT_SYSTEM_PROMPT_FALLBACK, ASSIGNMENT_SYSTEM_PROMPT_FALLBACK } = await import(
-        "../../_shared/agentConfig.ts"
-      );
+      const { AGENT_SYSTEM_PROMPT_FALLBACK, ASSIGNMENT_SYSTEM_PROMPT_FALLBACK } =
+        await import("../../_shared/agentConfig.ts");
       const fallbacks: Record<string, string> = {
         "extract-facts": AGENT_SYSTEM_PROMPT_FALLBACK,
         "suggest-assignment": ASSIGNMENT_SYSTEM_PROMPT_FALLBACK,

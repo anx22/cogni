@@ -11,10 +11,9 @@ import { corsHeaders, ok as okJson, fail as failJson } from "./http.ts";
 
 export { corsHeaders };
 
-export async function requireUser(req: Request): Promise<
-  | { ok: true; userId: string }
-  | { ok: false; response: Response }
-> {
+export async function requireUser(
+  req: Request,
+): Promise<{ ok: true; userId: string } | { ok: false; response: Response }> {
   const r = await getAuthenticatedUser(req);
   if (!r.ok) {
     return { ok: false, response: failJson(r.error, r.status) };

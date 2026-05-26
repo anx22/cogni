@@ -68,8 +68,7 @@ export interface SampledPreset {
 
 // ---- Sampling --------------------------------------------------------------
 
-export const rand = (r: Range): number =>
-  r.min + Math.random() * (r.max - r.min);
+export const rand = (r: Range): number => r.min + Math.random() * (r.max - r.min);
 
 export const oklch = (l: number, c: number, h: number): string =>
   `oklch(${l.toFixed(2)}% ${c.toFixed(3)} ${h.toFixed(1)})`;
@@ -128,14 +127,14 @@ export const ORB_PRESETS_DEFAULT: Record<EntityState, OrbPresetRange> = {
     bg: { l: { min: 16, max: 20 }, c: { min: 0.015, max: 0.03 }, h: { min: 255, max: 275 } },
     c1: { l: { min: 68, max: 78 }, c: { min: 0.08, max: 0.12 }, h: { min: 215, max: 245 } },
     c2: { l: { min: 66, max: 76 }, c: { min: 0.07, max: 0.11 }, h: { min: 270, max: 295 } },
-    c3: { l: { min: 62, max: 72 }, c: { min: 0.06, max: 0.10 }, h: { min: 185, max: 215 } },
+    c3: { l: { min: 62, max: 72 }, c: { min: 0.06, max: 0.1 }, h: { min: 185, max: 215 } },
     duration: { min: 18, max: 26 },
     surface: DEFAULT_SURFACE,
   },
   hover: {
     bg: { l: { min: 20, max: 24 }, c: { min: 0.025, max: 0.04 }, h: { min: 230, max: 250 } },
     c1: { l: { min: 78, max: 86 }, c: { min: 0.11, max: 0.16 }, h: { min: 195, max: 220 } },
-    c2: { l: { min: 72, max: 80 }, c: { min: 0.10, max: 0.14 }, h: { min: 275, max: 295 } },
+    c2: { l: { min: 72, max: 80 }, c: { min: 0.1, max: 0.14 }, h: { min: 275, max: 295 } },
     c3: { l: { min: 70, max: 78 }, c: { min: 0.09, max: 0.13 }, h: { min: 190, max: 210 } },
     duration: { min: 9, max: 14 },
     surface: {
@@ -150,7 +149,7 @@ export const ORB_PRESETS_DEFAULT: Record<EntityState, OrbPresetRange> = {
   },
   processing: {
     bg: { l: { min: 18, max: 22 }, c: { min: 0.035, max: 0.05 }, h: { min: 35, max: 65 } },
-    c1: { l: { min: 74, max: 82 }, c: { min: 0.15, max: 0.20 }, h: { min: 50, max: 75 } },
+    c1: { l: { min: 74, max: 82 }, c: { min: 0.15, max: 0.2 }, h: { min: 50, max: 75 } },
     c2: { l: { min: 66, max: 74 }, c: { min: 0.16, max: 0.21 }, h: { min: 20, max: 45 } },
     c3: { l: { min: 78, max: 86 }, c: { min: 0.13, max: 0.18 }, h: { min: 75, max: 100 } },
     duration: { min: 2.5, max: 5 },
@@ -168,14 +167,14 @@ export const ORB_PRESETS_DEFAULT: Record<EntityState, OrbPresetRange> = {
   "review-ready": {
     bg: { l: { min: 18, max: 22 }, c: { min: 0.025, max: 0.04 }, h: { min: 170, max: 195 } },
     c1: { l: { min: 76, max: 84 }, c: { min: 0.12, max: 0.16 }, h: { min: 150, max: 175 } },
-    c2: { l: { min: 74, max: 82 }, c: { min: 0.10, max: 0.14 }, h: { min: 185, max: 210 } },
+    c2: { l: { min: 74, max: 82 }, c: { min: 0.1, max: 0.14 }, h: { min: 185, max: 210 } },
     c3: { l: { min: 78, max: 86 }, c: { min: 0.09, max: 0.13 }, h: { min: 85, max: 105 } },
     duration: { min: 6, max: 10 },
     surface: {
       ...DEFAULT_SURFACE,
       dotColor: {
         l: { min: 72, max: 82 },
-        c: { min: 0.06, max: 0.10 },
+        c: { min: 0.06, max: 0.1 },
         h: { min: 160, max: 185 },
       },
     },
@@ -191,7 +190,7 @@ export const ORB_PRESETS_DEFAULT: Record<EntityState, OrbPresetRange> = {
       opacity: { min: 0.35, max: 0.55 },
       dotColor: {
         l: { min: 45, max: 60 },
-        c: { min: 0.05, max: 0.10 },
+        c: { min: 0.05, max: 0.1 },
         h: { min: 15, max: 30 },
       },
     },
@@ -256,10 +255,7 @@ export function useOrbPresets(): OrbPresetsAPI {
 }
 
 // Defensive merge: missing fields fall back to defaults so old DB rows keep working.
-function mergePreset(
-  def: OrbPresetRange,
-  override: OrbPresetRange | undefined,
-): OrbPresetRange {
+function mergePreset(def: OrbPresetRange, override: OrbPresetRange | undefined): OrbPresetRange {
   if (!override) return def;
   return {
     bg: override.bg ?? def.bg,

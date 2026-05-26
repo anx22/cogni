@@ -31,9 +31,7 @@ export interface LinkOptions {
 function titleOf(content: unknown): string {
   const c = content as Record<string, unknown> | null;
   const v =
-    (typeof c?.title === "string" && c.title) ||
-    (typeof c?.name === "string" && c.name) ||
-    "";
+    (typeof c?.title === "string" && c.title) || (typeof c?.name === "string" && c.name) || "";
   return typeof v === "string" ? v.trim().toLowerCase() : "";
 }
 

@@ -9,18 +9,53 @@
 // =============================================================================
 
 const SUPPORTED = new Set([
-  "pdf", "docx", "doc", "pptx", "ppt", "txt", "md", "rtf",
-  "eml", "msg",
-  "png", "jpg", "jpeg", "webp", "gif", "heic", "heif", "tiff", "bmp",
-  "csv", "json",
+  "pdf",
+  "docx",
+  "doc",
+  "pptx",
+  "ppt",
+  "txt",
+  "md",
+  "rtf",
+  "eml",
+  "msg",
+  "png",
+  "jpg",
+  "jpeg",
+  "webp",
+  "gif",
+  "heic",
+  "heif",
+  "tiff",
+  "bmp",
+  "csv",
+  "json",
 ]);
 
 const BLOCKED = new Set([
-  "zip", "rar", "7z", "tar", "gz", "bz2",
-  "exe", "msi", "dmg", "app", "apk", "ipa",
-  "mp4", "mov", "mkv", "avi", "webm",
-  "mp3", "wav", "flac", "ogg",
-  "iso", "bin",
+  "zip",
+  "rar",
+  "7z",
+  "tar",
+  "gz",
+  "bz2",
+  "exe",
+  "msi",
+  "dmg",
+  "app",
+  "apk",
+  "ipa",
+  "mp4",
+  "mov",
+  "mkv",
+  "avi",
+  "webm",
+  "mp3",
+  "wav",
+  "flac",
+  "ogg",
+  "iso",
+  "bin",
 ]);
 
 export type FileCheck = "supported" | "unknown" | "blocked";
@@ -51,8 +86,10 @@ export function partitionFiles(files: File[]): PartitionedFiles {
   for (const f of files) {
     const c = checkFile(f);
     if (c === "blocked") blocked.push(f);
-    else if (c === "unknown") { accepted.push(f); unknown.push(f); }
-    else accepted.push(f);
+    else if (c === "unknown") {
+      accepted.push(f);
+      unknown.push(f);
+    } else accepted.push(f);
   }
   return { accepted, blocked, unknown };
 }

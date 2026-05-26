@@ -50,8 +50,22 @@ const GlobalCommandMenu = () => {
           ))}
         </CommandGroup>
         <CommandGroup heading="Navigation">
-          <CommandItem onSelect={() => { setOpen(false); navigate("/"); }}>Startseite</CommandItem>
-          <CommandItem onSelect={() => { setOpen(false); navigate("/pipeline-health"); }}>Pipeline Health</CommandItem>
+          <CommandItem
+            onSelect={() => {
+              setOpen(false);
+              navigate("/");
+            }}
+          >
+            Startseite
+          </CommandItem>
+          <CommandItem
+            onSelect={() => {
+              setOpen(false);
+              navigate("/pipeline-health");
+            }}
+          >
+            Pipeline Health
+          </CommandItem>
         </CommandGroup>
       </CommandList>
     </CommandDialog>

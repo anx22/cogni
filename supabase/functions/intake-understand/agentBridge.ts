@@ -9,7 +9,12 @@ import {
   AgentTimeoutError,
 } from "../_shared/agentClient.ts";
 
-export type AgentErrorOutcome = { status: number; error: string; assetStatus: string; assetError: string };
+export type AgentErrorOutcome = {
+  status: number;
+  error: string;
+  assetStatus: string;
+  assetError: string;
+};
 
 export async function setStatus(
   admin: any,
@@ -31,15 +36,30 @@ export async function handleAgentError(
 ): Promise<AgentErrorOutcome> {
   if (err instanceof AgentRateLimitError) {
     await setStatus(admin, asset_id, "rate_limited", "Agent ist gerade überlastet.");
-    return { status: 429, error: "rate_limited", assetStatus: "rate_limited", assetError: "Agent ist gerade überlastet." };
+    return {
+      status: 429,
+      error: "rate_limited",
+      assetStatus: "rate_limited",
+      assetError: "Agent ist gerade überlastet.",
+    };
   }
   if (err instanceof AgentPaymentError) {
     await setStatus(admin, asset_id, "payment_required", "Agent benötigt Credits.");
-    return { status: 402, error: "payment_required", assetStatus: "payment_required", assetError: "Agent benötigt Credits." };
+    return {
+      status: 402,
+      error: "payment_required",
+      assetStatus: "payment_required",
+      assetError: "Agent benötigt Credits.",
+    };
   }
   if (err instanceof AgentTimeoutError) {
     await setStatus(admin, asset_id, "failed", "Agent hat zu lange gebraucht.");
-    return { status: 504, error: "agent_timeout", assetStatus: "failed", assetError: "Agent hat zu lange gebraucht." };
+    return {
+      status: 504,
+      error: "agent_timeout",
+      assetStatus: "failed",
+      assetError: "Agent hat zu lange gebraucht.",
+    };
   }
   const msg = err instanceof Error ? err.message : String(err);
   await setStatus(admin, asset_id, "failed", msg.slice(0, 240));

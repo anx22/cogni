@@ -8,7 +8,12 @@ interface InputPillsProps {
   onChange: (mode: InputMode) => void;
 }
 
-export const INPUT_MODES: { id: InputMode; label: string; Icon: typeof FileText; disabled?: boolean }[] = [
+export const INPUT_MODES: {
+  id: InputMode;
+  label: string;
+  Icon: typeof FileText;
+  disabled?: boolean;
+}[] = [
   { id: "note", label: "Notiz", Icon: FileText },
   { id: "link", label: "Link", Icon: LinkIcon },
   { id: "file", label: "Datei", Icon: Paperclip },

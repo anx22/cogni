@@ -7,7 +7,7 @@
 import { type Handler, gql, jsonResponse, prefix } from "../_helpers.ts";
 
 export const handlers: Record<string, Handler> = {
-  "diagnose": async (body) => {
+  diagnose: async (body) => {
     const sb = {
       AOL_SERVICE_TOKEN: prefix(Deno.env.get("AOL_SERVICE_TOKEN")),
       GRAPHITI_SERVICE_TOKEN: prefix(Deno.env.get("GRAPHITI_SERVICE_TOKEN")),

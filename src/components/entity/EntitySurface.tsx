@@ -33,7 +33,11 @@ const EntitySurface: FC<EntitySurfaceProps> = ({ orbSize, surface, className }) 
   const orbPct = (1 / scale) * 100;
   const innerStart = clamp(orbPct + Math.max(0, surface.innerHole), 0, 95);
   const innerSoft = clamp(innerStart + 4, 0, 98);
-  const outerEnd = clamp(orbPct + Math.max(surface.innerHole + 8, surface.outerFade), innerSoft + 4, 100);
+  const outerEnd = clamp(
+    orbPct + Math.max(surface.innerHole + 8, surface.outerFade),
+    innerSoft + 4,
+    100,
+  );
   const outerSoft = clamp(outerEnd - 8, innerSoft + 2, outerEnd - 1);
 
   return (

@@ -7,7 +7,14 @@ import InspectorPanel from "./InspectorPanel";
 type Tab = "log" | "inspector";
 
 const CATEGORIES: (DevLogCategory | "all")[] = [
-  "all", "intake", "db", "edge", "realtime", "auth", "ui", "error",
+  "all",
+  "intake",
+  "db",
+  "edge",
+  "realtime",
+  "auth",
+  "ui",
+  "error",
 ];
 
 export default function DevLogPanel() {
@@ -22,10 +29,7 @@ export default function DevLogPanel() {
     [entries, filter],
   );
 
-  const errorCount = useMemo(
-    () => entries.filter((e) => e.level === "error").length,
-    [entries],
-  );
+  const errorCount = useMemo(() => entries.filter((e) => e.level === "error").length, [entries]);
 
   useEffect(() => {
     if (!open) return;
@@ -79,7 +83,9 @@ export default function DevLogPanel() {
                   onClick={() => setTab("log")}
                   className={cn(
                     "text-xs uppercase tracking-widest transition-colors",
-                    tab === "log" ? "text-foreground" : "text-muted-foreground/60 hover:text-foreground",
+                    tab === "log"
+                      ? "text-foreground"
+                      : "text-muted-foreground/60 hover:text-foreground",
                   )}
                 >
                   System-Log
@@ -89,7 +95,9 @@ export default function DevLogPanel() {
                   onClick={() => setTab("inspector")}
                   className={cn(
                     "text-xs uppercase tracking-widest transition-colors",
-                    tab === "inspector" ? "text-foreground" : "text-muted-foreground/60 hover:text-foreground",
+                    tab === "inspector"
+                      ? "text-foreground"
+                      : "text-muted-foreground/60 hover:text-foreground",
                   )}
                 >
                   Inspector
@@ -110,7 +118,9 @@ export default function DevLogPanel() {
                       {paused ? "▶ resume" : "⏸ pause"}
                     </button>
                     <button
-                      onClick={() => navigator.clipboard.writeText(JSON.stringify(filtered, null, 2))}
+                      onClick={() =>
+                        navigator.clipboard.writeText(JSON.stringify(filtered, null, 2))
+                      }
                       className="rounded px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-muted/50"
                     >
                       copy
@@ -166,20 +176,24 @@ export default function DevLogPanel() {
                       keine Einträge
                     </div>
                   ) : (
-                    filtered.slice().reverse().map((e) => (
-                      <Row
-                        key={e.id}
-                        entry={e}
-                        open={expanded.has(e.id)}
-                        onToggle={() =>
-                          setExpanded((prev) => {
-                            const n = new Set(prev);
-                            if (n.has(e.id)) n.delete(e.id); else n.add(e.id);
-                            return n;
-                          })
-                        }
-                      />
-                    ))
+                    filtered
+                      .slice()
+                      .reverse()
+                      .map((e) => (
+                        <Row
+                          key={e.id}
+                          entry={e}
+                          open={expanded.has(e.id)}
+                          onToggle={() =>
+                            setExpanded((prev) => {
+                              const n = new Set(prev);
+                              if (n.has(e.id)) n.delete(e.id);
+                              else n.add(e.id);
+                              return n;
+                            })
+                          }
+                        />
+                      ))
                   )}
                 </div>
               </>
@@ -201,8 +215,10 @@ function Row({
   onToggle: () => void;
 }) {
   const color = CATEGORY_COLOR[entry.category];
-  const time = new Date(entry.ts).toLocaleTimeString("de-DE", { hour12: false }) +
-    "." + String(entry.ts % 1000).padStart(3, "0");
+  const time =
+    new Date(entry.ts).toLocaleTimeString("de-DE", { hour12: false }) +
+    "." +
+    String(entry.ts % 1000).padStart(3, "0");
   const hasPayload = entry.payload !== undefined;
 
   return (

@@ -57,9 +57,7 @@ vi.mock("@/integrations/supabase/client", () => {
     b.maybeSingle = () =>
       Promise.resolve({
         data:
-          table === "canonical_facts"
-            ? { id: "f1", project_id: "p1", content: { x: 1 } }
-            : null,
+          table === "canonical_facts" ? { id: "f1", project_id: "p1", content: { x: 1 } } : null,
         error: null,
       });
     b.single = () => Promise.resolve({ data: { id: "asset-1" }, error: null });
@@ -99,7 +97,14 @@ vi.mock("sonner", () => ({
 }));
 
 vi.mock("@/lib/devlog/devlog", () => ({
-  devlog: { intake: vi.fn(), edge: vi.fn(), warn: vi.fn(), error: vi.fn(), db: vi.fn(), info: vi.fn() },
+  devlog: {
+    intake: vi.fn(),
+    edge: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    db: vi.fn(),
+    info: vi.fn(),
+  },
 }));
 
 vi.mock("@/lib/pipeline/pollAolRun", () => ({
@@ -123,9 +128,7 @@ describe("E2E Smoke: Note → Verstehen", () => {
     await act(async () => {
       await result.current.intake({ type: "text", text: "kurze Notiz für QA", label: "Notiz" });
     });
-    await waitFor(() =>
-      expect(rec.invokes.find((i) => i.name === "intake-trigger")).toBeTruthy(),
-    );
+    await waitFor(() => expect(rec.invokes.find((i) => i.name === "intake-trigger")).toBeTruthy());
     const ins = rec.inserts.find((i) => i.table === "assets");
     expect(ins).toBeTruthy();
     expect((ins!.payload as { file_type: string }).file_type).toBe("note");

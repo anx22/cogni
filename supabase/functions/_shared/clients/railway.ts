@@ -36,7 +36,8 @@ export function createRailwayClient(): RailwayClient | null {
         body: JSON.stringify({ query, variables }),
       });
       const txt = await res.text();
-      if (!res.ok) throw new RailwayError(`Railway ${res.status}: ${txt.slice(0, 400)}`, res.status);
+      if (!res.ok)
+        throw new RailwayError(`Railway ${res.status}: ${txt.slice(0, 400)}`, res.status);
       let json: { data?: T; errors?: unknown };
       try {
         json = JSON.parse(txt);

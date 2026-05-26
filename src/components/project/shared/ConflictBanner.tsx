@@ -20,7 +20,8 @@ const ConflictBanner = ({ konflikte }: { konflikte: Konflikt[] }) => {
         <AlertTriangle className="w-4 h-4 text-destructive mt-0.5 shrink-0" />
         <div className="flex-1 min-w-0">
           <p className="text-xs uppercase tracking-widest text-destructive font-medium mb-1.5">
-            {konflikte.length} {konflikte.length === 1 ? "Konflikt blockiert" : "Konflikte blockieren"}
+            {konflikte.length}{" "}
+            {konflikte.length === 1 ? "Konflikt blockiert" : "Konflikte blockieren"}
           </p>
           <ul className="space-y-1">
             {konflikte.map((k) => (

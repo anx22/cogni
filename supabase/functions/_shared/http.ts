@@ -23,11 +23,7 @@ export function ok(payload: unknown, init?: ResponseInit): Response {
 }
 
 /** Fehler-Response. `extra` wird in den Body gemerged. */
-export function fail(
-  message: string,
-  status = 400,
-  extra?: Record<string, unknown>,
-): Response {
+export function fail(message: string, status = 400, extra?: Record<string, unknown>): Response {
   return new Response(JSON.stringify({ error: message, ...extra }), {
     status,
     headers: jsonHeaders,

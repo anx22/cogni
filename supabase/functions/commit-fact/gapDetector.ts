@@ -48,8 +48,9 @@ function norm(s: unknown): string {
   return typeof s === "string" ? s.trim().toLowerCase() : "";
 }
 function titleOf(c: any): string {
-  return (typeof c?.title === "string" && c.title) ||
-    (typeof c?.name === "string" && c.name) || "—";
+  return (
+    (typeof c?.title === "string" && c.title) || (typeof c?.name === "string" && c.name) || "—"
+  );
 }
 function nonEmpty(v: unknown): boolean {
   return typeof v === "string" ? v.trim().length > 0 : !!v;
@@ -65,7 +66,9 @@ export function detectGapsPure(fresh: Row, projectFacts: Row[]): DetectedGap[] {
 
   if (fresh.fact_type === "deadline") {
     const hasOwner =
-      nonEmpty(c.assignee) || nonEmpty(c.owner) || nonEmpty(c.responsible) ||
+      nonEmpty(c.assignee) ||
+      nonEmpty(c.owner) ||
+      nonEmpty(c.responsible) ||
       nonEmpty(c.assigned_to);
     if (!hasOwner) {
       out.push({
@@ -145,10 +148,7 @@ export async function detectAndPersistGaps(
       others = (data ?? []) as Row[];
     }
 
-    const detected = detectGapsPure(
-      { id: canonical_fact_id, fact_type, content },
-      others,
-    );
+    const detected = detectGapsPure({ id: canonical_fact_id, fact_type, content }, others);
     if (detected.length === 0) return [];
 
     // Idempotenz: existierende offene Gaps für diesen Fakt+Kind ausfiltern.

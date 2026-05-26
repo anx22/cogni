@@ -51,10 +51,7 @@ function decisionPayload(c: any): string {
 /**
  * Pure: vergleicht den neuen Fakt mit Kandidatenmenge gleichen Typs.
  */
-export function detectConflictsPure(
-  fresh: Row,
-  others: Row[],
-): DetectedConflict[] {
+export function detectConflictsPure(fresh: Row, others: Row[]): DetectedConflict[] {
   const out: DetectedConflict[] = [];
   const t = titleOf(fresh.content);
   if (!t) return out;
@@ -127,10 +124,7 @@ export async function detectAndPersistConflicts(
       return [];
     }
     const others = (rows ?? []) as Row[];
-    const detected = detectConflictsPure(
-      { id: canonical_fact_id, fact_type, content },
-      others,
-    );
+    const detected = detectConflictsPure({ id: canonical_fact_id, fact_type, content }, others);
     if (detected.length === 0) return [];
 
     // Idempotenz: existierende Paare ausfiltern.
@@ -140,7 +134,7 @@ export async function detectAndPersistConflicts(
       .eq("project_id", project_id);
     const seen = new Set(
       (existing ?? []).map((r: any) =>
-        [r.contradiction_type, ...[r.fact_a_id, r.fact_b_id].sort()].join("|")
+        [r.contradiction_type, ...[r.fact_a_id, r.fact_b_id].sort()].join("|"),
       ),
     );
 
@@ -169,7 +163,9 @@ export async function detectAndPersistConflicts(
     });
     return detected;
   } catch (e) {
-    log.warn("conflict.detector_threw", "unexpected error", { error: e instanceof Error ? e.message : String(e) });
+    log.warn("conflict.detector_threw", "unexpected error", {
+      error: e instanceof Error ? e.message : String(e),
+    });
     return [];
   }
 }

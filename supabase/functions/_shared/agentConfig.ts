@@ -45,7 +45,7 @@ export const MODALITIES = [
   "risk",
   "unclear",
 ] as const;
-export type Modality = typeof MODALITIES[number];
+export type Modality = (typeof MODALITIES)[number];
 
 // ---------- System-Prompt Extract (Fallback — Live-Quelle: LangSmith Hub) ----------
 export const AGENT_SYSTEM_PROMPT_FALLBACK = `Du bist der Verstehens-Agent einer Projektintelligenz-App.
@@ -190,15 +190,35 @@ export const SUGGEST_ASSIGNMENT_TOOL = {
 // ---------- Typen + Mapping ----------
 export type DeltaType = "add" | "confirm" | "replace" | "contradict" | "merge" | "discard";
 export type FactType =
-  | "stakeholder" | "topic" | "decision" | "task"
-  | "deadline" | "open_point" | "reference" | "other";
+  | "stakeholder"
+  | "topic"
+  | "decision"
+  | "task"
+  | "deadline"
+  | "open_point"
+  | "reference"
+  | "other";
 
 export type BoxType =
-  | "knowledge" | "assignment" | "conflict" | "selection"
-  | "input" | "context" | "action" | "gap_box"
+  | "knowledge"
+  | "assignment"
+  | "conflict"
+  | "selection"
+  | "input"
+  | "context"
+  | "action"
+  | "gap_box"
   // Sprechhandlungs-Boxen
-  | "condition" | "exclusion" | "assumption" | "suggestion"
-  | "question" | "note" | "relation" | "attribute" | "risk" | "unclear";
+  | "condition"
+  | "exclusion"
+  | "assumption"
+  | "suggestion"
+  | "question"
+  | "note"
+  | "relation"
+  | "attribute"
+  | "risk"
+  | "unclear";
 
 /**
  * Generalistisches Box-Mapping mit Modalitäts-Priorität.
@@ -215,17 +235,28 @@ export function mapToBoxType(
 ): BoxType {
   if (delta === "replace" || delta === "contradict") return "conflict";
   switch (modality) {
-    case "condition":  return "condition";
-    case "exclusion":  return "exclusion";
-    case "assumption": return "assumption";
-    case "suggestion": return "suggestion";
-    case "question":   return "question";
-    case "note":       return "note";
-    case "relation":   return "relation";
-    case "attribute":  return "attribute";
-    case "risk":       return "risk";
-    case "unclear":    return "unclear";
-    case "assertion":  return "knowledge";
+    case "condition":
+      return "condition";
+    case "exclusion":
+      return "exclusion";
+    case "assumption":
+      return "assumption";
+    case "suggestion":
+      return "suggestion";
+    case "question":
+      return "question";
+    case "note":
+      return "note";
+    case "relation":
+      return "relation";
+    case "attribute":
+      return "attribute";
+    case "risk":
+      return "risk";
+    case "unclear":
+      return "unclear";
+    case "assertion":
+      return "knowledge";
   }
   if (fact === "open_point") return "gap_box";
   return "knowledge";

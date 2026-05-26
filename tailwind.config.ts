@@ -2,7 +2,12 @@ import type { Config } from "tailwindcss";
 
 export default {
   darkMode: ["class"],
-  content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
+  content: [
+    "./pages/**/*.{ts,tsx}",
+    "./components/**/*.{ts,tsx}",
+    "./app/**/*.{ts,tsx}",
+    "./src/**/*.{ts,tsx}",
+  ],
   prefix: "",
   theme: {
     container: {
@@ -65,26 +70,26 @@ export default {
         },
 
         // Cogni-Tokens (Hex via CSS-Vars, theme-bewusst über [data-theme])
-        "c-surface-0":    "var(--surface-0)",
-        "c-surface-1":    "var(--surface-1)",
-        "c-surface-2":    "var(--surface-2)",
-        "c-surface-3":    "var(--surface-3)",
-        "c-surface-inv":  "var(--surface-inv)",
-        "c-ink":          "var(--ink)",
-        "c-ink-2":        "var(--ink-2)",
-        "c-ink-3":        "var(--ink-3)",
-        "c-ink-4":        "var(--ink-4)",
-        "c-hair":         "var(--hair)",
-        "c-hair-2":       "var(--hair-2)",
-        "c-accent":       "var(--c-accent)",
-        "c-accent-soft":  "var(--c-accent-soft)",
-        "sig-calm":          "var(--sig-calm)",
-        "sig-calm-soft":     "var(--sig-calm-soft)",
-        "sig-review":        "var(--sig-review)",
-        "sig-review-soft":   "var(--sig-review-soft)",
-        "sig-action":        "var(--sig-action)",
-        "sig-action-soft":   "var(--sig-action-soft)",
-        "sig-conflict":      "var(--sig-conflict)",
+        "c-surface-0": "var(--surface-0)",
+        "c-surface-1": "var(--surface-1)",
+        "c-surface-2": "var(--surface-2)",
+        "c-surface-3": "var(--surface-3)",
+        "c-surface-inv": "var(--surface-inv)",
+        "c-ink": "var(--ink)",
+        "c-ink-2": "var(--ink-2)",
+        "c-ink-3": "var(--ink-3)",
+        "c-ink-4": "var(--ink-4)",
+        "c-hair": "var(--hair)",
+        "c-hair-2": "var(--hair-2)",
+        "c-accent": "var(--c-accent)",
+        "c-accent-soft": "var(--c-accent-soft)",
+        "sig-calm": "var(--sig-calm)",
+        "sig-calm-soft": "var(--sig-calm-soft)",
+        "sig-review": "var(--sig-review)",
+        "sig-review-soft": "var(--sig-review-soft)",
+        "sig-action": "var(--sig-action)",
+        "sig-action-soft": "var(--sig-action-soft)",
+        "sig-conflict": "var(--sig-conflict)",
         "sig-conflict-soft": "var(--sig-conflict-soft)",
       },
       borderRadius: {
@@ -94,7 +99,8 @@ export default {
       },
       boxShadow: {
         card: "0 1px 0 rgba(0,0,0,0.4), 0 8px 24px -12px rgba(0,0,0,0.6)",
-        "card-glow": "inset 0 1px 0 rgba(255,255,255,0.04), 0 1px 0 rgba(0,0,0,0.4), 0 8px 24px -12px rgba(0,0,0,0.6)",
+        "card-glow":
+          "inset 0 1px 0 rgba(255,255,255,0.04), 0 1px 0 rgba(0,0,0,0.4), 0 8px 24px -12px rgba(0,0,0,0.6)",
         "card-cogni": "var(--shadow-card-cogni)",
       },
       fontSize: {

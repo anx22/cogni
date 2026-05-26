@@ -44,10 +44,7 @@ export interface PollResult {
   snapshot: AolRunSnapshot | null;
 }
 
-export async function pollAolRun(
-  runId: string,
-  opts: PollOptions = {},
-): Promise<PollResult> {
+export async function pollAolRun(runId: string, opts: PollOptions = {}): Promise<PollResult> {
   const intervalMs = opts.intervalMs ?? 1500;
   const timeoutMs = opts.timeoutMs ?? 120_000;
   const start = Date.now();

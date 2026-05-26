@@ -30,8 +30,12 @@ const BatchReviewOverlay = ({ onClose }: { onClose: () => void }) => {
   const autoConfirmable = openBoxes.filter((b) => AUTO_CONFIRMABLE.has(b.type));
   const open = openBoxes.length;
   const ready = decisionBoxes.length - open;
-  const conflicts = decisionBoxes.filter((b) => b.type === "konflikt" && !END_STATES.includes(b.state)).length;
-  const gaps = decisionBoxes.filter((b) => (b.type === "gap" || b.type === "eingabe") && !END_STATES.includes(b.state)).length;
+  const conflicts = decisionBoxes.filter(
+    (b) => b.type === "konflikt" && !END_STATES.includes(b.state),
+  ).length;
+  const gaps = decisionBoxes.filter(
+    (b) => (b.type === "gap" || b.type === "eingabe") && !END_STATES.includes(b.state),
+  ).length;
 
   const summaryParts = [`${decisionBoxes.length} Erkenntnisse`];
   if (conflicts > 0) summaryParts.push(`${conflicts} Konflikt${conflicts === 1 ? "" : "e"}`);
@@ -40,8 +44,9 @@ const BatchReviewOverlay = ({ onClose }: { onClose: () => void }) => {
   const isBulkRunning = bulkProgress !== null;
   const allReady = open === 0;
   const canBulk = !gateReason && autoConfirmable.length > 0 && !isBulkRunning;
-  const bulkBlockedReason = gateReason
-    ?? (open === 0 ? null : autoConfirmable.length === 0 ? "Nur manuelle Entscheidungen offen" : null);
+  const bulkBlockedReason =
+    gateReason ??
+    (open === 0 ? null : autoConfirmable.length === 0 ? "Nur manuelle Entscheidungen offen" : null);
 
   // Sortierung: Zuordnung immer ganz oben
   const sortedBoxes = useMemo(() => {
@@ -157,7 +162,12 @@ const BatchReviewOverlay = ({ onClose }: { onClose: () => void }) => {
       </div>
 
       <div className="dlg2-commitbar">
-        <button type="button" className="dlg2-btn-secondary" onClick={onClose} disabled={isBulkRunning}>
+        <button
+          type="button"
+          className="dlg2-btn-secondary"
+          onClick={onClose}
+          disabled={isBulkRunning}
+        >
           Alle verwerfen
         </button>
         <div className="flex items-center" style={{ gap: 12 }}>
@@ -167,7 +177,8 @@ const BatchReviewOverlay = ({ onClose }: { onClose: () => void }) => {
             ) : open > 0 ? (
               <>
                 <span style={{ color: "var(--d-warn)", fontWeight: 500 }}>{open} offen</span>
-                {" · "}{ready} bereit
+                {" · "}
+                {ready} bereit
               </>
             ) : (
               <>{ready} bereit</>
@@ -182,7 +193,9 @@ const BatchReviewOverlay = ({ onClose }: { onClose: () => void }) => {
           >
             {bulkLabel}
             {!isBulkRunning && (
-              <span className="mono" style={{ opacity: 0.5, fontSize: 12 }}>↵</span>
+              <span className="mono" style={{ opacity: 0.5, fontSize: 12 }}>
+                ↵
+              </span>
             )}
           </button>
         </div>

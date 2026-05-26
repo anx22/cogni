@@ -47,9 +47,7 @@ const Auth = () => {
           <h1 className="text-2xl font-light tracking-wide text-foreground">
             {mode === "signin" ? "Anmelden" : "Konto anlegen"}
           </h1>
-          <p className="text-xs text-muted-foreground/60 tracking-wide">
-            Produktintelligenz
-          </p>
+          <p className="text-xs text-muted-foreground/60 tracking-wide">Produktintelligenz</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">

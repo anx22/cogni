@@ -155,9 +155,7 @@ function AssetOrbit({ items = [], radius = 230, arc = Math.PI * 1.25 }) {
   return (
     <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
       {items.map((it, i) => {
-        const angle = n === 1
-          ? -Math.PI / 2
-          : startAngle + (i / (n - 1)) * arc;
+        const angle = n === 1 ? -Math.PI / 2 : startAngle + (i / (n - 1)) * arc;
         // Alter shiftet die Distanz: neu = -20px, alt = +40px
         const ageOffset = (it.ageRing ?? 0) * 60 - 10;
         const r = radius + ageOffset;
@@ -167,18 +165,38 @@ function AssetOrbit({ items = [], radius = 230, arc = Math.PI * 1.25 }) {
 
         const StatusDot = () => {
           if (it.status === "review-ready")
-            return <span className="dot dot--review dot--live" style={{ width: 6, height: 6, position: "relative", flex: "0 0 auto" }} />;
+            return (
+              <span
+                className="dot dot--review dot--live"
+                style={{ width: 6, height: 6, position: "relative", flex: "0 0 auto" }}
+              />
+            );
           if (it.status === "failed")
-            return <span className="dot dot--conflict" style={{ width: 6, height: 6, flex: "0 0 auto" }} />;
+            return (
+              <span
+                className="dot dot--conflict"
+                style={{ width: 6, height: 6, flex: "0 0 auto" }}
+              />
+            );
           if (it.status === "understanding")
-            return <span style={{
-              width: 8, height: 8, borderRadius: 999, flex: "0 0 auto",
-              border: "1.5px solid var(--sig-action)", borderTopColor: "transparent",
-              animation: "cogni-orb-rotate-slow 1.2s linear infinite",
-              display: "inline-block",
-            }} />;
+            return (
+              <span
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: 999,
+                  flex: "0 0 auto",
+                  border: "1.5px solid var(--sig-action)",
+                  borderTopColor: "transparent",
+                  animation: "cogni-orb-rotate-slow 1.2s linear infinite",
+                  display: "inline-block",
+                }}
+              />
+            );
           // parsing: animated dashed ring (we just show a calm dot here)
-          return <span className="dot dot--calm" style={{ width: 6, height: 6, flex: "0 0 auto" }} />;
+          return (
+            <span className="dot dot--calm" style={{ width: 6, height: 6, flex: "0 0 auto" }} />
+          );
         };
 
         return (
@@ -192,26 +210,40 @@ function AssetOrbit({ items = [], radius = 230, arc = Math.PI * 1.25 }) {
               padding: "6px 10px 6px 8px",
               borderRadius: 999,
               background: "var(--surface-1)",
-              border: it.status === "parsing"
-                ? "1px dashed var(--hair-3)"
-                : "1px solid var(--hair-2)",
-              boxShadow: it.status === "review-ready"
-                ? "0 0 0 3px var(--sig-review-soft), var(--shadow-card)"
-                : "var(--shadow-card)",
+              border:
+                it.status === "parsing" ? "1px dashed var(--hair-3)" : "1px solid var(--hair-2)",
+              boxShadow:
+                it.status === "review-ready"
+                  ? "0 0 0 3px var(--sig-review-soft), var(--shadow-card)"
+                  : "var(--shadow-card)",
               fontFamily: "Geist Mono, monospace",
-              fontSize: 10.5, color: "var(--ink-2)",
+              fontSize: 10.5,
+              color: "var(--ink-2)",
               whiteSpace: "nowrap",
-              display: "flex", alignItems: "center", gap: 7,
+              display: "flex",
+              alignItems: "center",
+              gap: 7,
               opacity,
             }}
           >
-            <span style={{
-              width: 14, height: 14, borderRadius: 4,
-              background: "var(--surface-2)", color: "var(--ink-3)",
-              display: "inline-flex", alignItems: "center", justifyContent: "center",
-              fontSize: 9, letterSpacing: "0.02em", textTransform: "uppercase",
-              flex: "0 0 auto",
-            }}>{it.type ?? "·"}</span>
+            <span
+              style={{
+                width: 14,
+                height: 14,
+                borderRadius: 4,
+                background: "var(--surface-2)",
+                color: "var(--ink-3)",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 9,
+                letterSpacing: "0.02em",
+                textTransform: "uppercase",
+                flex: "0 0 auto",
+              }}
+            >
+              {it.type ?? "·"}
+            </span>
             <span style={{ color: "var(--ink)" }}>{it.label}</span>
             {it.age && <span style={{ color: "var(--ink-4)" }}>· {it.age}</span>}
             <StatusDot />
