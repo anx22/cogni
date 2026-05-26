@@ -218,10 +218,10 @@ const LageZone = ({
                 cursor: hasOpenReview ? "pointer" : "not-allowed",
                 border: hasOpenReview ? "none" : "1px solid var(--hair)",
               }}
-              title={hasOpenReview ? "Offene Review öffnen" : "Keine offene Review"}
+              title={hasOpenReview ? "Offene Klärung öffnen" : "Keine offenen Punkte"}
             >
               <Sparkles className="w-3.5 h-3.5" />
-              {hasOpenReview ? "Review öffnen" : "Keine Review"}
+              {hasOpenReview ? "Klärung öffnen" : "Alles geklärt"}
               {hasOpenReview && <ArrowRight className="w-3.5 h-3.5" />}
             </button>
           </div>
