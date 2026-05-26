@@ -17,14 +17,15 @@
 
 ---
 
-## Achse 2 — Status (Stand 2026-05-24)
+## Achse 2 — Status (Stand 2026-05-26)
 
-Belastbare Basis steht. Vision-Kern ~90% implementiert, UI-Sprache stimmt mit Prototyp-Referenz überein.
+Belastbare Basis steht. Vision-Kern ~90% implementiert, UI-Sprache und Drill-Routing am Prototyp ausgerichtet.
 
 - **Pipeline 7/7**: asset → parsed → proposed → review → canonical + change_events + snapshot → graphiti async.
 - **Detektoren 5/5**: Linker · Conflict · Gap · Dependency · TopicMerge.
-- **Dialog**: 18 BoxTypes, Factory + DB-Sessions unified, Antwort-Pipeline geschlossen.
-- **Frontend**: 4 Rollen, AssetOrbit, Realtime, Day/Night-Theme, Geist-Font, shadcn-Bridge.
+- **Dialog**: 18 BoxTypes, Factory + DB-Sessions unified, Antwort-Pipeline geschlossen, objektbezogene Drills (Konflikt/Gap/Dependency/Thema/Dokument/Korrektur/Rückfrage).
+- **Frontend**: 4 Rollen, AssetOrbit, Realtime, Day/Night-Theme, Geist-Font, shadcn-Bridge auf `--surface-1`/`--hair-2`/`--shadow-pop`.
+- **UI-Sprache enttechnisiert**: keine `Konflikt #abc`/`Gap #abc`/`Dependency #abc`/`Thema #…`/`Dokument #…` mehr sichtbar; Lagetext aus Zustand, nicht aus Commit-Log.
 - **Redesign durch** (Pässe 1–6 + Audit-Fixbatch): Sidebar, Hero, Mittelfeld, Substanz, BatchReview, FaktDrill — Quelle: `docs/redesign/`.
 - **Tests**: Vitest 89/89 grün, Deno-Suiten pro Detector, 19/19 EFs mit Boundary + Logger, RLS überall.
 
@@ -73,11 +74,14 @@ Readonly-Reste auflösen: Verlauf-Notiz, Feedback-Button, Impact-Pfeile. Damit i
 
 - **Graphiti-Sync-Retry** — Cron `*/30 min`, `inspect-graphiti diagnose` für Top-Reasons.
 - **Test-Coverage halten** — neue Funktion = Pure-Test, Drift in DECISIONS.
+- **Sprach-Restposten** — Pipeline-Vokabular noch in drei Toast-/Fallback-Strings: `useIntake.ts:36-40` („Verstehen fehlgeschlagen/läuft länger"), `IntakeSessionsPanel.tsx:156` („Verstehens-Loop startet erneut"), `ImpactPipelinePanel.tsx:35-37` EVENT_LABELS-Fallback („Erkenntnis übernommen/verworfen/aktualisiert"). Beim nächsten Sprache-Pass mit ablösen.
+- **Pre-existing Build-Fehler aus Lovable-Hand-Off** — `useProjectData` Migrations-Drift, `submitNote` DevLogCategory, `VerlaufFeed`. Brauchen klare Backend-Entscheidung, kein blinder Fix.
 
 ---
 
 ## Recently completed
 
+- **2026-05-26 — UX-Konzepttreue: Sprache, Drilldowns, Projekt-Detail** Pipeline-Begriffe und interne IDs aus dem UI entfernt (`Konflikt #` / `Gap #` / `Dependency #` / `Thema #` / `Dokument #` → fachliche Quellen-Labels „Widerspruch"/„Offene Frage"/„Abhängigkeit"/„Hinweis"/„Thema"/„Dokument"). `humanizeSnapshotSummary` filtert Commit-Log-Sätze als Lagetext aus; `buildProjectViewModel` baut die Lage aus Widersprüchen/Blockern/offenen Fragen. ImpactPipelinePanel-Aggregat: „Eingang · Auswertung · Zu klären · Widerspruch". Drill-Routing nach Objekttyp: Konflikt → `buildKonfliktSession` (A/B im FaktDrillOverlay), Gap → `buildGapSession` mit Antwortfeld, Dependency → neue `buildDependencySession` mit Quelle/Ziel + Auflöse-Eingabe; Thema/Dokument bleiben readonly-Inspect. shadcn-Overlays (`dialog`, `alert-dialog`, `dropdown-menu`) auf solide `--surface-1` + `--hair-2` + `--shadow-pop` — keine halbtransparenten Glas-Flächen mehr über hellem Projekt-Screen. Substanz-Themen mit Item-Preview + lesbarem Zähler („3 Entscheidungen · 2 offen · 1 Dokument"). Docs nachgezogen (dieser Eintrag + DECISIONS). Restposten siehe „Sprach-Restposten" in Aktive Loops.
 - **2026-05-24 — Redesign abgeschlossen + Doku-Konsolidierung** Pässe 1–6 + Audit-Fixbatch durch (Sidebar, Hero, Mittelfeld, Substanz, BatchReview, FaktDrill, Readonly-Sessions, `deriveSignal`, Material/Review-Buttons, Sidebar `onCreateProject`, `escalate`-Payload). `.lovable/plan.md` und `docs/redesign/REVIEW.md` gelöscht — visuelle Quelle bleiben `prototype/` + `screenshots/`.
 - **2026-05-22 — K1+K2+K4 aus MainCompass** Migration `delta_type unclear`, Persona-E2E `04-vier-rollen-smoke`, Graphiti-Retry-Loop mit Cron. Risiken offen: Migrations apply + Vault-Secret manuell.
 - **2026-05-22 — Test-Overhaul Vitest 70 → 89** Neue Tests für `deriveSignal`, `loadSession`, `assignment` (Deno), `factRules` (Deno). Drift-Fixes in sessionFactories/projectViewModel/gapDetector/projectScoring/commitFact.
