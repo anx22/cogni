@@ -23,6 +23,8 @@ export function toVerlauf(events: any[]): VerlaufVM[] {
     ereignisTyp: eventTypeToErlaubnis(e.event_type),
     inhalt: titleFromJson(e.new_value ?? e.previous_value, "Änderung"),
     objekt: "Fakt",
-    quelle: "Verstehens-Loop",
+    // Quelle wird im Frontend nur angezeigt, wenn sie fachlich etwas trägt.
+    // Der interne Pipeline-Begriff verschwindet hier komplett.
+    quelle: "",
   }));
 }

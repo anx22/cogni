@@ -2,6 +2,8 @@
 import { fmtShort } from "@/lib/format/dateFormatters";
 import type { HandlungsbedarfVM } from "../types";
 
+// Quelle wird als fachliche Kategorie angezeigt — keine internen IDs.
+// Wer wirklich die ID braucht, findet sie im Drill-Header (kontextuell).
 export function toHandlungsbedarf(rows: {
   decisions: any[];
   contradictions: any[];
@@ -38,7 +40,7 @@ export function toHandlungsbedarf(rows: {
       beschreibung: c.description ?? "",
       verantwortlich: null,
       frist: null,
-      quelle: `Konflikt #${c.id.slice(0, 6)}`,
+      quelle: "Widerspruch",
       blocker: true,
     }),
   );
@@ -51,7 +53,7 @@ export function toHandlungsbedarf(rows: {
       beschreibung: g.impact ?? "",
       verantwortlich: null,
       frist: null,
-      quelle: `Gap #${g.id.slice(0, 6)}`,
+      quelle: "Offene Frage",
       blocker: false,
     }),
   );
@@ -92,7 +94,7 @@ export function toHandlungsbedarf(rows: {
       beschreibung: f.content,
       verantwortlich: null,
       frist: null,
-      quelle: "Feedback",
+      quelle: "Hinweis",
       blocker: false,
     }),
   );
@@ -101,16 +103,15 @@ export function toHandlungsbedarf(rows: {
       id: `dep-${d.id}`,
       arbeitsmodus: "klaeren",
       objektTyp: "dependency",
-      titel: d.description ?? `${d.source_type} → ${d.target_type}`,
+      titel: d.description ?? `${d.source_type} hängt an ${d.target_type}`,
       beschreibung: d.description ?? "",
       verantwortlich: null,
       frist: null,
-      quelle: `Dependency #${d.id.slice(0, 6)}`,
+      quelle: "Abhängigkeit",
       blocker: d.dependency_type === "blockiert_durch",
     }),
   );
 
-  // P1-B4: Topic-Merge-Kandidaten als Klären-Aufgabe einreihen.
   (rows.topicMergeCandidates ?? []).forEach((c) => {
     const srcName = c.source?.name ?? c.source_name ?? "Thema A";
     const tgtName = c.target?.name ?? c.target_name ?? "Thema B";
@@ -124,7 +125,7 @@ export function toHandlungsbedarf(rows: {
       beschreibung: "Diese beiden Themen klingen ähnlich — sollen sie zusammengeführt werden?",
       verantwortlich: null,
       frist: null,
-      quelle: "Thema-Merge",
+      quelle: "Themen",
       blocker: false,
       topicMerge: {
         candidateId: c.id,

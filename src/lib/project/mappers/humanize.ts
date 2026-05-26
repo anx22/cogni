@@ -1,33 +1,21 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // Humanize-Helpers + JSON-Picker. Pure functions.
+//
+// Wichtig: humanizeSnapshotSummary gibt KEINE Commit-Log-Sätze mehr zurück.
+// Solche Sätze ("Termin übernommen — 11 bestätigte Erkenntnisse") sind Verlauf,
+// nicht Lage. Wenn das Backend nur einen solchen Satz liefert, geben wir
+// `undefined` zurück und lassen den Composer einen echten Lage-Satz bauen.
 
-const SUBJECT_DE: Record<string, string> = {
-  stakeholder: "Stakeholder",
-  deadline: "Termin",
-  decision: "Entscheidung",
-  task: "Aufgabe",
-  open_point: "Offener Punkt",
-  gap_signal: "Lücke",
-  contradiction: "Widerspruch",
-  dependency: "Abhängigkeit",
-  fact: "Fakt",
-};
-const VERB_DE: Record<string, string> = {
-  add: "ergänzt",
-  update: "aktualisiert",
-  remove: "entfernt",
-  resolve: "geschlossen",
-  confirm: "bestätigt",
-  reject: "verworfen",
-};
+const SNAPSHOT_PATTERN = /^Snapshot nach\s+[a-z_]+:[a-z_]+/i;
 
 export const humanizeSnapshotSummary = (raw: string | undefined): string | undefined => {
   if (!raw) return undefined;
-  const m = raw.match(/^Snapshot nach\s+([a-z_]+):([a-z_]+)(?::([a-z_]+))?/i);
-  if (!m) return raw;
-  const subj = SUBJECT_DE[m[2]] ?? m[2];
-  const verb = VERB_DE[m[3] ?? ""] ?? "aktualisiert";
-  return `${subj} ${verb}.`;
+  // Generisches Commit-Pattern → kein Lage-Text.
+  if (SNAPSHOT_PATTERN.test(raw)) return undefined;
+  // Heuristik für die alten "X übernommen — Projekt enthält jetzt N …"-Sätze.
+  if (/übernommen.*enthält/i.test(raw)) return undefined;
+  if (/^[A-Za-zÄÖÜäöü]+\s+(übernommen|verworfen|aktualisiert)\b/i.test(raw)) return undefined;
+  return raw;
 };
 
 export const titleFromJson = (v: unknown, fallback = "—"): string => {
