@@ -43,7 +43,7 @@ const HoverActionsMenu = ({
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
-        className="bg-[hsl(var(--surface-1))] border-border-subtle backdrop-blur-xl min-w-[180px]"
+        className="min-w-[180px]"
         onClick={(e) => e.stopPropagation()}
       >
         {children}
