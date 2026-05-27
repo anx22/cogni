@@ -8,7 +8,6 @@ type Project = ProjectViewModel;
 
 interface LageZoneProps {
   project: Project;
-  editableName?: boolean;
   forceEdit?: boolean;
   onEditDone?: () => void;
   onNameChange?: (name: string) => void;
@@ -39,7 +38,6 @@ function initialsFromName(name: string): string {
 
 const LageZone = ({
   project,
-  editableName,
   forceEdit,
   onEditDone,
   onNameChange,
@@ -51,7 +49,7 @@ const LageZone = ({
   const titleRef = useRef<HTMLHeadingElement | null>(null);
 
   useEffect(() => {
-    if (!forceEdit || !editableName) return;
+    if (!forceEdit) return;
     const el = titleRef.current;
     if (!el) return;
     el.focus();
@@ -60,7 +58,7 @@ const LageZone = ({
     const sel = window.getSelection();
     sel?.removeAllRanges();
     sel?.addRange(range);
-  }, [forceEdit, editableName]);
+  }, [forceEdit]);
 
   const handleNameBlur = (e: React.FocusEvent<HTMLHeadingElement>) => {
     const text = e.currentTarget.textContent?.trim() ?? "";
@@ -73,10 +71,14 @@ const LageZone = ({
     onEditDone?.();
   };
 
-  const titleNode = editableName ? (
+  const titleNode = (
     <h1
       ref={titleRef}
-      className="text-foreground outline-none border-b border-dashed border-primary/30 focus:border-primary/60 transition-colors"
+      className={
+        forceEdit
+          ? "text-foreground outline-none border-b border-dashed border-primary/30 focus:border-primary/60 transition-colors"
+          : "text-foreground"
+      }
       style={{
         fontSize: 44,
         fontWeight: 500,
@@ -84,34 +86,25 @@ const LageZone = ({
         lineHeight: 1.04,
         margin: 0,
       }}
-      contentEditable
+      contentEditable={forceEdit}
       spellCheck={false}
       suppressContentEditableWarning
-      onBlur={handleNameBlur}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          e.currentTarget.blur();
-        }
-        if (e.key === "Escape") {
-          e.preventDefault();
-          e.currentTarget.textContent = project.name;
-          e.currentTarget.blur();
-        }
-      }}
-    >
-      {project.name}
-    </h1>
-  ) : (
-    <h1
-      className="text-foreground"
-      style={{
-        fontSize: 44,
-        fontWeight: 500,
-        letterSpacing: "-0.03em",
-        lineHeight: 1.04,
-        margin: 0,
-      }}
+      onBlur={forceEdit ? handleNameBlur : undefined}
+      onKeyDown={
+        forceEdit
+          ? (e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                e.currentTarget.blur();
+              }
+              if (e.key === "Escape") {
+                e.preventDefault();
+                e.currentTarget.textContent = project.name;
+                e.currentTarget.blur();
+              }
+            }
+          : undefined
+      }
     >
       {project.name}
     </h1>

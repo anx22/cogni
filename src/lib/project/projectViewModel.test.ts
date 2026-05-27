@@ -297,7 +297,7 @@ describe("buildProjectViewModel — Composition", () => {
     expect(vm.stats.naechsterTermin).toBe("—");
   });
 
-  it("baut Lagetext aus Widerspruch+Gap-Counts wenn kein Snapshot", () => {
+  it("baut Lagetext mit offenen Punkten wenn kein Snapshot", () => {
     const raw = emptyRaw();
     raw.canonical = [
       { id: "a", content: { title: "X" }, updated_at: "2026-05-14" },
@@ -310,8 +310,9 @@ describe("buildProjectViewModel — Composition", () => {
     ] as unknown as RawProjectData["gaps"];
     const { vm, isEmpty } = buildProjectViewModel(raw);
     expect(isEmpty).toBe(false);
-    expect(vm.lagetext).toMatch(/Widerspruch/);
-    expect(vm.lagetext).toMatch(/offene Frage/);
+    // Narrative: Projektbeschreibung + offene-Punkte-Satz (kein Graphstatus)
+    expect(vm.lagetext).toMatch(/Archviz/);
+    expect(vm.lagetext).toMatch(/offene/i);
     expect(vm.konflikte).toHaveLength(1);
     expect(vm.gaps).toHaveLength(1);
   });
@@ -327,9 +328,9 @@ describe("buildProjectViewModel — Composition", () => {
     expect(vm.stats.naechsterTermin).not.toBe("—");
   });
 
-  it("filtert Commit-Log-Snapshot heraus und baut Lagetext aus Zustand", () => {
+  it("filtert Commit-Log-Snapshot heraus und zeigt Projektbeschreibung", () => {
     const raw = emptyRaw();
-    // Commit-Log-Snapshot wird gefiltert → lageFromState greift
+    // Commit-Log-Snapshot wird gefiltert → fallbackLage greift (Projektbeschreibung)
     raw.snapshot = {
       summary: "Snapshot nach commit:deadline:add",
     } as unknown as RawProjectData["snapshot"];
@@ -337,7 +338,8 @@ describe("buildProjectViewModel — Composition", () => {
       { id: "a", content: { title: "X" }, updated_at: "2026-05-14" },
     ] as unknown as RawProjectData["canonical"];
     const { vm } = buildProjectViewModel(raw);
-    expect(vm.lagetext).toMatch(/Keine offenen Punkte/);
+    // Neue Narrative: Projektbeschreibung als Lagetext, nicht Graphzähler
+    expect(vm.lagetext).toMatch(/Archviz/);
   });
 
   it("D7: coverage-Felder werden aus canonical + gaps + konflikte berechnet", () => {
