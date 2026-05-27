@@ -8,7 +8,8 @@ import {
   buildGapSession,
   buildDependencySession,
 } from "@/lib/dialog/sessionFactories";
-import type { Arbeitsmodus, HandlungsbedarfVM, ObjektTyp } from "@/lib/project/types";
+import type { Arbeitsmodus, HandlungsbedarfVM, KonfliktVM, ObjektTyp } from "@/lib/project/types";
+import KonfliktPopover from "./KonfliktPopover";
 
 type Item = HandlungsbedarfVM;
 type Filter = "alle" | "blocker" | "ohne_frist";
@@ -187,6 +188,19 @@ const FilterBtn = ({
   </button>
 );
 
+function buildKonfliktDrillSession(item: Item) {
+  const k = item.konfliktRef;
+  const empty: KonfliktVM["faktA"] = { inhalt: "", datum: "", quelle: "", mode: "abgeleitet" };
+  return buildKonfliktSession({
+    id: item.id.replace(/^con-/, ""),
+    title: item.titel,
+    beschreibung: item.beschreibung,
+    faktA: k?.faktA ?? empty,
+    faktB: k?.faktB ?? empty,
+    empfehlung: k?.empfehlung ?? null,
+  });
+}
+
 const ActionRow = ({
   item,
   last,
@@ -197,7 +211,9 @@ const ActionRow = ({
   projectId?: string | null;
 }) => {
   const { openDialog } = useDialog();
-  const handleClick = () => {
+  const [popover, setPopover] = useState<DOMRect | null>(null);
+
+  const openDrilldown = () => {
     if (item.objektTyp === "topic_merge" && item.topicMerge) {
       openDialog(
         buildThemaMergeSession({
@@ -215,17 +231,7 @@ const ActionRow = ({
       return;
     }
     if (item.objektTyp === "konflikt") {
-      // Konflikt-Drill mit A/B-Gegenüberstellung. Wenn faktA/B noch nicht
-      // strukturiert vorliegen, baut FaktDrillOverlay aus titel/beschreibung.
-      openDialog(
-        buildKonfliktSession({
-          id: item.id,
-          title: item.titel,
-          beschreibung: item.beschreibung,
-          faktA: "",
-          faktB: "",
-        }),
-      );
+      openDialog(buildKonfliktDrillSession(item));
       return;
     }
     if (item.objektTyp === "gap") {
@@ -256,118 +262,145 @@ const ActionRow = ({
     }
     openDialog(buildHandlungsbedarfSession(item, projectId ?? null));
   };
+
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    // Tier-1 Konflikt → Popover (Schnellentscheidung)
+    if (
+      item.objektTyp === "konflikt" &&
+      item.konfliktRef?.empfehlung?.tier === 1 &&
+      item.konfliktRef.empfehlung.gewinner !== null
+    ) {
+      setPopover(e.currentTarget.getBoundingClientRect());
+      return;
+    }
+    openDrilldown();
+  };
+
   return (
-    <button
-      type="button"
-      onClick={handleClick}
-      className="w-full flex items-center text-left"
-      style={{
-        gap: 14,
-        padding: "13px 4px",
-        borderBottom: last ? "none" : "1px solid var(--hair)",
-        background: "transparent",
-        border: "none",
-        cursor: "pointer",
-      }}
-    >
-      {item.blocker && (
-        <span
-          aria-hidden
-          title="Blocker"
-          style={{
-            width: 3,
-            height: 32,
-            borderRadius: 2,
-            background: "var(--sig-conflict)",
-            flex: "0 0 auto",
-            marginLeft: -8,
+    <>
+      {popover && item.konfliktRef?.empfehlung?.gewinner && (
+        <KonfliktPopover
+          konflikt={item.konfliktRef}
+          anchor={popover}
+          onClose={() => setPopover(null)}
+          onOpenDrill={() => {
+            setPopover(null);
+            openDrilldown();
           }}
         />
       )}
-      <span
-        title={item.objektTyp}
-        className="inline-flex items-center justify-center shrink-0"
+      <button
+        type="button"
+        onClick={handleClick}
+        className="w-full flex items-center text-left"
         style={{
-          width: 26,
-          height: 26,
-          borderRadius: 6,
-          background: "var(--surface-2)",
-          color: "var(--ink-3)",
+          gap: 14,
+          padding: "13px 4px",
+          borderBottom: last ? "none" : "1px solid var(--hair)",
+          background: "transparent",
+          border: "none",
+          cursor: "pointer",
         }}
       >
-        <TypeIcon kind={item.objektTyp} />
-      </span>
-
-      <div className="flex-1 min-w-0">
-        <div
-          className="flex items-center"
+        {item.blocker && (
+          <span
+            aria-hidden
+            title="Blocker"
+            style={{
+              width: 3,
+              height: 32,
+              borderRadius: 2,
+              background: "var(--sig-conflict)",
+              flex: "0 0 auto",
+              marginLeft: -8,
+            }}
+          />
+        )}
+        <span
+          title={item.objektTyp}
+          className="inline-flex items-center justify-center shrink-0"
           style={{
-            gap: 8,
-            fontSize: 14.5,
-            color: "var(--ink)",
-            fontWeight: 450,
-            letterSpacing: "-.01em",
+            width: 26,
+            height: 26,
+            borderRadius: 6,
+            background: "var(--surface-2)",
+            color: "var(--ink-3)",
           }}
         >
-          <span className="truncate">{item.titel}</span>
-          {item.manuell && (
-            <span title="manuell ergänzt" style={{ color: "var(--ink-4)", fontSize: 11 }}>
-              ·
+          <TypeIcon kind={item.objektTyp} />
+        </span>
+
+        <div className="flex-1 min-w-0">
+          <div
+            className="flex items-center"
+            style={{
+              gap: 8,
+              fontSize: 14.5,
+              color: "var(--ink)",
+              fontWeight: 450,
+              letterSpacing: "-.01em",
+            }}
+          >
+            <span className="truncate">{item.titel}</span>
+            {item.manuell && (
+              <span title="manuell ergänzt" style={{ color: "var(--ink-4)", fontSize: 11 }}>
+                ·
+              </span>
+            )}
+          </div>
+          {item.beschreibung && (
+            <div
+              style={{
+                marginTop: 2,
+                fontSize: 12.5,
+                color: "var(--ink-3)",
+                lineHeight: 1.4,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {item.beschreibung}
+            </div>
+          )}
+        </div>
+
+        <div
+          className="flex items-center shrink-0"
+          style={{ gap: 16, fontSize: 12, color: "var(--ink-3)" }}
+        >
+          {item.verantwortlich && (
+            <span className="inline-flex items-center" style={{ gap: 6 }}>
+              <span
+                className="inline-flex items-center justify-center"
+                style={{
+                  width: 18,
+                  height: 18,
+                  borderRadius: 999,
+                  background: "var(--surface-3)",
+                  fontFamily: "Geist Mono, monospace",
+                  fontSize: 9,
+                  color: "var(--ink-2)",
+                }}
+              >
+                {initials(item.verantwortlich)}
+              </span>
+              <span style={{ color: "var(--ink-2)" }}>{firstName(item.verantwortlich)}</span>
+            </span>
+          )}
+          {item.frist && (
+            <span className="mono tabular" style={{ color: "var(--ink-2)" }}>
+              {item.frist}
+            </span>
+          )}
+          {item.quelle && (
+            <span className="src" title={item.quelle}>
+              {item.quelle}
             </span>
           )}
         </div>
-        {item.beschreibung && (
-          <div
-            style={{
-              marginTop: 2,
-              fontSize: 12.5,
-              color: "var(--ink-3)",
-              lineHeight: 1.4,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {item.beschreibung}
-          </div>
-        )}
-      </div>
-
-      <div
-        className="flex items-center shrink-0"
-        style={{ gap: 16, fontSize: 12, color: "var(--ink-3)" }}
-      >
-        {item.verantwortlich && (
-          <span className="inline-flex items-center" style={{ gap: 6 }}>
-            <span
-              className="inline-flex items-center justify-center"
-              style={{
-                width: 18,
-                height: 18,
-                borderRadius: 999,
-                background: "var(--surface-3)",
-                fontFamily: "Geist Mono, monospace",
-                fontSize: 9,
-                color: "var(--ink-2)",
-              }}
-            >
-              {initials(item.verantwortlich)}
-            </span>
-            <span style={{ color: "var(--ink-2)" }}>{firstName(item.verantwortlich)}</span>
-          </span>
-        )}
-        {item.frist && (
-          <span className="mono tabular" style={{ color: "var(--ink-2)" }}>
-            {item.frist}
-          </span>
-        )}
-        {item.quelle && (
-          <span className="src" title={item.quelle}>
-            {item.quelle}
-          </span>
-        )}
-      </div>
-    </button>
+      </button>
+    </>
   );
 };
 

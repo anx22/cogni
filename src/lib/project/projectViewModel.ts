@@ -128,6 +128,18 @@ export function buildProjectViewModel(raw: RawProjectData): ComposedProjectVM {
     topicMergeCandidates: topicMergeCandidates ?? [],
   });
   const verlauf = toVerlauf(events);
+
+  // Wire konfliktRef into matching handlungsbedarf items so HandlungsbedarfList
+  // can route Tier-1 conflicts to the quick Popover without a full drilldown.
+  const konflikteById = new Map(konflikte.map((k) => [k.id, k]));
+  for (const h of handlungsbedarf) {
+    if (h.objektTyp === "konflikt") {
+      const rawId = h.id.replace(/^con-/, "");
+      const ref = konflikteById.get(rawId);
+      if (ref) h.konfliktRef = ref;
+    }
+  }
+
   const themen = toThemen(topics, decisions, openPoints);
   const dokumente = toDokumente(assets);
   const stakeholderVMs = toStakeholder(stakeholders);
@@ -169,13 +181,11 @@ export function buildProjectViewModel(raw: RawProjectData): ComposedProjectVM {
       parts.push(`${konflikte.length} Widerspr${konflikte.length === 1 ? "uch" : "üche"}`);
     const blocker = handlungsbedarf.filter((h) => h.blocker).length;
     if (blocker) parts.push(`${blocker} Blocker`);
-    if (gapVMs.length)
-      parts.push(`${gapVMs.length} offene Frage${gapVMs.length === 1 ? "" : "n"}`);
+    if (gapVMs.length) parts.push(`${gapVMs.length} offene Frage${gapVMs.length === 1 ? "" : "n"}`);
     const rest = handlungsbedarf.length - blocker;
-    if (rest > 0) parts.push(`${rest} weitere${rest === 1 ? "r" : ""} Punkt${rest === 1 ? "" : "e"}`);
-    return parts.length
-      ? `Aktuell: ${parts.join(", ")}.`
-      : "Der Stand ist konsistent.";
+    if (rest > 0)
+      parts.push(`${rest} weitere${rest === 1 ? "r" : ""} Punkt${rest === 1 ? "" : "e"}`);
+    return parts.length ? `Aktuell: ${parts.join(", ")}.` : "Der Stand ist konsistent.";
   })();
   const fallbackLage = lageFromState;
 

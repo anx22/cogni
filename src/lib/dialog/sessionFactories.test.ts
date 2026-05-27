@@ -13,17 +13,29 @@ import {
 
 describe("sessionFactories", () => {
   it("buildKonfliktSession erzeugt eine konflikt-Box mit beiden Fakten", () => {
+    const factRef = (inhalt: string) => ({
+      inhalt,
+      datum: "14.05.2026",
+      quelle: "Direktquelle",
+      mode: "direkt" as const,
+    });
     const s = buildKonfliktSession({
       id: "k1",
       title: "Termin",
       beschreibung: "x",
-      faktA: "Mo",
-      faktB: "Di",
+      faktA: factRef("Mo"),
+      faktB: factRef("Di"),
+      empfehlung: { gewinner: "A", begruendung: "Neuer.", konfidenz: 0.8, tier: 1 },
     });
     expect(s.boxes).toHaveLength(1);
     expect(s.boxes[0].type).toBe("konflikt");
+    // Payload enthält inhalt-Strings für den Renderer
     expect(s.boxes[0].payload.faktA).toBe("Mo");
-    expect(s.context).toContain("Konflikt");
+    expect(s.boxes[0].payload.faktB).toBe("Di");
+    // SourceA trägt empfehlung-Hint
+    expect((s.boxes[0].payload.sourceA as { recommend: boolean }).recommend).toBe(true);
+    expect(s.anlass).toBe("Widerspruch klären");
+    expect(s.context).toBe("Termin");
   });
 
   it("buildGapSession erzeugt eine gap-Box", () => {
@@ -72,7 +84,7 @@ describe("sessionFactories", () => {
     const s = buildFeedbackSession("Projekt X");
     expect(s.boxes).toHaveLength(1);
     expect(s.boxes[0].type).toBe("eingabe");
-    expect(s.anlass).toBe("Feedback");
+    expect(s.anlass).toBe("Hinweis");
   });
 
   it("session-IDs sind eindeutig", () => {
@@ -116,7 +128,7 @@ describe("sessionFactories", () => {
       titelB: "Lieferkette",
       beschreibungB: "...",
     });
-    expect(s.anlass).toBe("Thema zusammenführen");
+    expect(s.anlass).toBe("Themen zusammenführen");
     expect(s.boxes.map((b) => b.type)).toEqual(["kontext", "kontext", "aktion"]);
     expect(s.boxes[2].payload.aktionen).toContain("Zusammenführen");
   });

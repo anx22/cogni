@@ -30,6 +30,11 @@ type SubmitIntent =
       targetTopicId: string;
     };
 
+type ConflictIntent = {
+  kind: "resolve_conflict";
+  contradictionId: string;
+};
+
 // eslint-disable-next-line react-refresh/only-export-components -- gewollter Hook-Re-Export, alle Caller importieren `useDialog` von hier.
 export { useDialog } from "./dialogContext";
 
@@ -97,11 +102,42 @@ export const DialogProvider = ({ children }: { children: ReactNode }) => {
       updateBoxState(boxId, decision === "confirm" ? "bestaetigt" : "verworfen");
 
       if (!reviewCaseId) {
-        // Factory-Sessions ohne Backend-Review-Case. Wenn die Box ein
-        // __submitIntent trägt UND bestätigt wurde, route die User-Eingabe
-        // durch die passende Pipeline (heute: intake_note für Antwort/Feedback/
-        // Rückfrage/Korrektur, topic_merge für Themen-Merge-Aktion).
-        // Verwerfen oder fehlender Intent → silent.
+        // Factory-Sessions ohne Backend-Review-Case.
+
+        // Konflikt-Auflösung: markiert Widerspruch in DB als resolved.
+        const conflictIntent = box?.payload?.__conflictIntent as ConflictIntent | undefined;
+        if (conflictIntent?.kind === "resolve_conflict") {
+          if (decision === "confirm") {
+            const auswahl = (userDecision?.auswahl as "A" | "B") ?? null;
+            try {
+              await supabase
+                .from("contradictions")
+                .update({ resolved: true })
+                .eq("id", conflictIntent.contradictionId);
+              const label =
+                auswahl === "A"
+                  ? "Erste Version"
+                  : auswahl === "B"
+                    ? "Zweite Version"
+                    : "Widerspruch";
+              toast.success(`${label} bestätigt`, { description: "Widerspruch aufgelöst" });
+              devlog.edge("resolve-conflict ok", {
+                contradictionId: conflictIntent.contradictionId,
+                auswahl,
+              });
+            } catch (err) {
+              if (previousState) updateBoxState(boxId, previousState);
+              devlog.error("resolve-conflict failed", err);
+              toast.error("Konnte Widerspruch nicht auflösen");
+            }
+          } else {
+            toast.info("Widerspruch bleibt offen");
+          }
+          return;
+        }
+
+        // Wenn die Box ein __submitIntent trägt UND bestätigt wurde, route
+        // die User-Eingabe durch die passende Pipeline.
         const intent = box?.payload?.__submitIntent as SubmitIntent | undefined;
         if (intent?.kind === "topic_merge") {
           const aktion = (userDecision?.aktion as string | undefined) ?? null;
