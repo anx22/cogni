@@ -104,13 +104,16 @@ const FaktDrillOverlay = ({ onClose }: { onClose: () => void }) => {
   );
 
   // ───────────────────────────────────── Konflikt ─────────────────
+  // Empfehlung-First: wenn empBlock vorhanden, dominiert der Empfehlungs-
+  // Block. Vergleich ist Sekundärzeile + "Korrigieren" für A/B-Wahl.
+  // Bei empBlock=null (keine Empfehlung möglich) → klassische neutrale
+  // Gegenüberstellung.
   const renderConflict = () => {
     const faktA = box.payload?.faktA as string | undefined;
     const faktB = box.payload?.faktB as string | undefined;
     const beschreibung = box.payload?.beschreibung as string | undefined;
     const sourceA = (box.payload?.sourceA ?? {}) as SourceMeta;
     const sourceB = (box.payload?.sourceB ?? {}) as SourceMeta;
-    const empfehlung = box.payload?.empfehlung as string | undefined;
 
     const save = () => {
       if (selected === "A") commitBox(box.id, "confirm", { auswahl: "A", wert: faktA });
@@ -118,6 +121,168 @@ const FaktDrillOverlay = ({ onClose }: { onClose: () => void }) => {
       else if (selected === "open") commitBox(box.id, "reject");
     };
 
+    const acceptRecommendation = () => {
+      if (!empBlock) return;
+      const wert = empBlock.winnerSide === "A" ? faktA : faktB;
+      commitBox(box.id, "confirm", { auswahl: empBlock.winnerSide, wert });
+    };
+
+    // ─── Variante A: cogni hat eine Empfehlung → Empfehlung-First ───
+    if (empBlock && !showCompare) {
+      const winnerLabel = empBlock.winnerQuelle
+        ? `${empBlock.winnerQuelle}${empBlock.winnerDatum ? ` · ${empBlock.winnerDatum}` : ""}`
+        : empBlock.winnerDatum || "Direkte Quelle";
+      const loserLabel = empBlock.loserQuelle
+        ? `${empBlock.loserQuelle}${empBlock.loserDatum ? ` · ${empBlock.loserDatum}` : ""}`
+        : empBlock.loserDatum || "Vergleichsquelle";
+
+      return (
+        <div
+          style={{
+            flex: 1,
+            padding: "32px 56px 0",
+            display: "flex",
+            flexDirection: "column",
+            gap: 20,
+            overflowY: "auto",
+          }}
+        >
+          {/* Widerspruch-Kontext, knapp */}
+          {beschreibung && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                fontSize: 13,
+                color: "var(--d-ink-3)",
+              }}
+            >
+              <AlertTriangle size={14} style={{ color: "var(--d-conf)" }} />
+              <span>{beschreibung}</span>
+            </div>
+          )}
+
+          {/* Empfehlungs-Block: dominiert die Bühne */}
+          <div
+            style={{
+              padding: "28px 32px 26px",
+              borderRadius: 18,
+              background: "var(--d-surf)",
+              border: "1px solid var(--d-warn)",
+              boxShadow: "0 1px 0 0 var(--d-warn-soft) inset",
+            }}
+          >
+            <div
+              className="mono"
+              style={{
+                fontSize: 10.5,
+                color: "var(--d-warn)",
+                letterSpacing: ".08em",
+                marginBottom: 14,
+              }}
+            >
+              COGNI EMPFIEHLT
+            </div>
+            <div
+              style={{
+                fontSize: 36,
+                fontWeight: 500,
+                letterSpacing: "-.028em",
+                color: "var(--d-ink)",
+                lineHeight: 1.1,
+              }}
+            >
+              {empBlock.winnerFact}
+            </div>
+            <div
+              style={{
+                marginTop: 14,
+                fontSize: 13,
+                color: "var(--d-ink-2)",
+              }}
+            >
+              {winnerLabel}
+            </div>
+            {empBlock.begruendung && (
+              <div
+                style={{
+                  marginTop: 6,
+                  fontSize: 13,
+                  color: "var(--d-ink-3)",
+                  lineHeight: 1.5,
+                }}
+              >
+                Begründung: {empBlock.begruendung}
+              </div>
+            )}
+          </div>
+
+          {/* Sekundärzeile: was die andere Quelle sagt */}
+          <div
+            style={{
+              padding: "12px 18px",
+              borderRadius: 12,
+              background: "var(--d-surf-3)",
+              border: "1px solid var(--d-hair)",
+              display: "flex",
+              alignItems: "baseline",
+              gap: 10,
+              flexWrap: "wrap",
+            }}
+          >
+            <span className="mono" style={{ fontSize: 10.5, color: "var(--d-ink-4)" }}>
+              IM VERGLEICH
+            </span>
+            <span style={{ fontSize: 14, color: "var(--d-ink-2)" }}>{empBlock.loserFact}</span>
+            <span style={{ fontSize: 12, color: "var(--d-ink-4)" }}>· {loserLabel}</span>
+          </div>
+
+          {/* Footer: Übernehmen / Korrigieren / Offen lassen */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "20px 0 28px",
+              marginTop: "auto",
+              gap: 10,
+            }}
+          >
+            <button
+              type="button"
+              className="dlg2-btn-secondary"
+              onClick={() => commitBox(box.id, "reject", { escalate: true })}
+              title="Bleibt in der Pipeline und erscheint als Handlungsbedarf"
+            >
+              Offen lassen
+            </button>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                type="button"
+                className="dlg2-btn-secondary"
+                onClick={() => {
+                  setSelected(null);
+                  setShowCompare(true);
+                }}
+              >
+                Korrigieren
+              </button>
+              <button
+                type="button"
+                className="dlg2-btn-commit ready"
+                onClick={acceptRecommendation}
+              >
+                Übernehmen →
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ─── Variante B: keine Empfehlung ODER User hat "Korrigieren" gewählt ───
+    // Neutrale A/B-Gegenüberstellung.
     const SourceCard = ({
       side,
       fakt,
@@ -127,7 +292,7 @@ const FaktDrillOverlay = ({ onClose }: { onClose: () => void }) => {
       fakt: string | undefined;
       meta: SourceMeta;
     }) => {
-      const isRec = meta.recommend ?? (side === "A" ? recA : false);
+      const isRec = meta.recommend ?? false;
       return (
         <div
           style={
@@ -155,11 +320,11 @@ const FaktDrillOverlay = ({ onClose }: { onClose: () => void }) => {
           </div>
           <div
             style={{
-              fontSize: 32,
+              fontSize: 28,
               fontWeight: 500,
-              letterSpacing: "-.03em",
+              letterSpacing: "-.025em",
               color: isRec ? "var(--d-ink)" : "var(--d-ink-2)",
-              lineHeight: 1.1,
+              lineHeight: 1.15,
             }}
           >
             {fakt ?? "—"}
@@ -186,26 +351,12 @@ const FaktDrillOverlay = ({ onClose }: { onClose: () => void }) => {
               )}
             </div>
           )}
-          {meta.hint && (
-            <div style={{ marginTop: 14, display: "flex", gap: 6, alignItems: "center" }}>
-              <span
-                style={{
-                  width: 5,
-                  height: 5,
-                  borderRadius: 999,
-                  background: isRec ? "var(--d-warn-soft)" : "var(--d-surf-3)",
-                  border: `1px solid ${isRec ? "var(--d-warn)" : "var(--d-hair-2)"}`,
-                }}
-              />
-              <span style={{ fontSize: 12, color: "var(--d-ink-3)" }}>{meta.hint}</span>
-            </div>
-          )}
         </div>
       );
     };
 
     const tiles: Array<{ key: "A" | "B" | "open"; label: string; hint?: string }> = [
-      { key: "A", label: faktA ?? "Quelle A", hint: sourceA.hint ?? "cogni-Empfehlung" },
+      { key: "A", label: faktA ?? "Quelle A", hint: sourceA.hint },
       { key: "B", label: faktB ?? "Quelle B", hint: sourceB.hint },
       { key: "open", label: "Offen lassen", hint: "als Handlungsbedarf weiterführen" },
     ];
@@ -221,6 +372,23 @@ const FaktDrillOverlay = ({ onClose }: { onClose: () => void }) => {
           overflowY: "auto",
         }}
       >
+        {/* Hinweis zurück zur Empfehlung, falls vorhanden */}
+        {empBlock && (
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <button
+              type="button"
+              className="dlg2-btn-secondary"
+              style={{ height: 28, fontSize: 12, gap: 6, display: "inline-flex", alignItems: "center" }}
+              onClick={() => {
+                setShowCompare(false);
+                setSelected(empBlock.winnerSide);
+              }}
+            >
+              <ArrowLeft size={12} /> Zurück zur Empfehlung
+            </button>
+          </div>
+        )}
+
         {/* Widerspruch-Banner */}
         <div
           style={{
@@ -291,13 +459,6 @@ const FaktDrillOverlay = ({ onClose }: { onClose: () => void }) => {
           </div>
           <SourceCard side="B" fakt={faktB} meta={sourceB} />
         </div>
-
-        {/* "cogni empfiehlt" Hint-Zeile, falls vorhanden */}
-        {empfehlung && (
-          <div style={{ fontSize: 12.5, color: "var(--d-ink-3)" }}>
-            cogni empfiehlt <span style={{ color: "var(--d-warn)" }}>{empfehlung}</span>
-          </div>
-        )}
 
         {/* Auswahl-Tiles */}
         <div
@@ -380,7 +541,7 @@ const FaktDrillOverlay = ({ onClose }: { onClose: () => void }) => {
           </button>
           <div style={{ display: "flex", gap: 10 }}>
             <button type="button" className="dlg2-btn-secondary" onClick={onClose}>
-              Verwerfen
+              Schließen
             </button>
             <button
               type="button"
