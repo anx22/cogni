@@ -32,14 +32,35 @@ function deriveEmpfehlung(factA: any, factB: any): KonfliktEmpfehlung | null {
   const confB = typeof provB.confidence === "number" ? provB.confidence : 0.5;
   const timeA = new Date(factA.created_at ?? 0).getTime();
   const timeB = new Date(factB.created_at ?? 0).getTime();
+  const modeA: "direkt" | "abgeleitet" = provA.corrected || confA >= 0.8 ? "direkt" : "abgeleitet";
+  const modeB: "direkt" | "abgeleitet" = provB.corrected || confB >= 0.8 ? "direkt" : "abgeleitet";
+
+  // Begründungs-Bausteine sammeln (human, nicht prozentual).
+  const bausteine = (gewinner: "A" | "B"): string[] => {
+    const out: string[] = [];
+    const dayDiff = Math.round(Math.abs(timeA - timeB) / (1000 * 60 * 60 * 24));
+    const newerSide: "A" | "B" = timeA >= timeB ? "A" : "B";
+    if (dayDiff >= 1 && newerSide === gewinner) {
+      out.push(dayDiff === 1 ? "1 Tag neuer" : `${dayDiff} Tage neuer`);
+    }
+    const winMode = gewinner === "A" ? modeA : modeB;
+    const loseMode = gewinner === "A" ? modeB : modeA;
+    if (winMode === "direkt" && loseMode === "abgeleitet") {
+      out.push("direkte Quelle statt abgeleiteter");
+    } else if (winMode === "direkt") {
+      out.push("direkte Quelle");
+    }
+    return out;
+  };
 
   const confDiff = Math.abs(confA - confB);
   if (confDiff >= 0.15) {
     const gewinner: "A" | "B" = confA >= confB ? "A" : "B";
-    const winConf = gewinner === "A" ? confA : confB;
+    const parts = bausteine(gewinner);
+    if (parts.length === 0) parts.push("aus zuverlässigerer Quelle");
     return {
       gewinner,
-      begruendung: `Höhere Zuverlässigkeit (${Math.round(winConf * 100)} %) — cogni bevorzugt diese Version.`,
+      begruendung: parts.join(" · "),
       konfidenz: Math.min(0.95, confDiff * 4),
       tier: confDiff >= 0.25 ? 1 : 2,
     };
@@ -48,10 +69,10 @@ function deriveEmpfehlung(factA: any, factB: any): KonfliktEmpfehlung | null {
   const dayDiff = Math.abs(timeA - timeB) / (1000 * 60 * 60 * 24);
   if (dayDiff >= 3) {
     const gewinner: "A" | "B" = timeA >= timeB ? "A" : "B";
-    const days = Math.round(dayDiff);
+    const parts = bausteine(gewinner);
     return {
       gewinner,
-      begruendung: `Neuere Quelle — ${days} Tag${days === 1 ? "" : "e"} aktueller.`,
+      begruendung: parts.length ? parts.join(" · ") : `${Math.round(dayDiff)} Tage neuer`,
       konfidenz: Math.min(0.85, 0.5 + dayDiff / 200),
       tier: dayDiff >= 14 ? 1 : 2,
     };
@@ -59,7 +80,7 @@ function deriveEmpfehlung(factA: any, factB: any): KonfliktEmpfehlung | null {
 
   return {
     gewinner: null,
-    begruendung: "Beide Versionen ähnlich — bitte manuell entscheiden.",
+    begruendung: "Beide Versionen sind sich zu ähnlich — bitte selbst entscheiden.",
     konfidenz: 0,
     tier: 2,
   };
