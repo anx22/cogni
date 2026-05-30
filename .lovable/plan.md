@@ -1,170 +1,93 @@
-## Diagnose
 
-Die Kritik ist berechtigt. Der aktuelle Stand ist an mehreren Stellen konzeptuntreu:
+## Befund — wo der Riss wirklich liegt
 
-- **Sprache driftet in interne Pipeline-Begriffe**: „Verstehens-Loop“, „Intake“, „rekonstruiert“, „Verstanden“, `Gap #…`, `Konflikt #…`, `Dependency #…` stehen sichtbar im UI. Das ist Maschinenprotokoll, keine Projektsprache.
-- **Projekt-Detail ist zu listenhaft**: Handlungsbedarf/Verlauf/Substanz zeigen teils Datenbank-Spuren statt nutzbarer Projektlage. Besonders Substanz/Dokumente sind noch zu roh.
-- **Interaktion ist falsch generalisiert**: Viele Klicks öffnen denselben Review-/Kontext-Overlay-Typ. Das erzeugt Arbeit statt Klarheit.
-- **Drilldown-Logik existiert teilweise, wird aber nicht konsequent genutzt**: Konflikt-Drill ist in `FaktDrillOverlay` vorhanden, aber Listenklicks bauen oft generische Sessions statt spezifische Konflikt-/Lücken-/Dokument-Flows.
-- **Popup/Overlay-Theme ist inkonsistent**: shadcn Dropdown/Dialog/AlertDialog nutzen teils HSL-Token, teils Cogni-Hex-Token-Brücken. Dadurch entstehen transparente/halb lesbare Flächen wie im Screenshot.
-- **Lage ist inhaltlich falsch befüllt**: Snapshot-Summary wie „Termin übernommen …“ wird als Lagetext gerendert. Das gehört in Verlauf, nicht in Lage.
+Ich habe die vier Säulen gegen den Code geprüft. Die Pipeline ist solide, die Sprache ist 80% bereinigt, das Routing nach Objekttyp existiert. Die Lücke ist nicht „kaputt", sie ist **eine Dimension tiefer**:
 
-## Zielbild dieses Sprints
+**1. Empfehlung wird berechnet, aber nicht geführt.**
+`konflikte.ts → deriveEmpfehlung()` produziert bereits `{gewinner, begruendung, konfidenz, tier}` aus Confidence + Recency. `FaktDrillOverlay` zeigt sie aber als Fußnote unter der A/B-Gegenüberstellung: _„cogni empfiehlt …"_ in 12.5px grau. Die Bühne behandelt A und B als gleichwertig. Default-Selection ist nur `A` (nie `B`), auch wenn `B` empfohlen ist. → **Das System hat entschieden, aber tut so, als hätte es nicht.**
 
-Ein gehaltvoller UX-Schnitt, der den Prototyp als hilfreiches Projektwerkzeug spürbar nach vorn bringt:
+**2. Empfehlungs-Text ist heuristik-roh, nicht cogni-Stimme.**
+„Höhere Zuverlässigkeit (87 %) — cogni bevorzugt diese Version." Das ist Maschinen-Output, kein Berater. Was fehlt: konkreter Bezug („neuer", „direkte Quelle", „Mail von Thomas Berger statt Kickoff-Protokoll").
 
-1. Projekt-Screen zeigt **Projektzustand**, nicht Pipeline-Log.
-2. Klicks öffnen **passende Arbeitsräume**, nicht immer denselben Review-Screen.
-3. Sichtbare Sprache ist **menschlich, fachlich, knapp**.
-4. Substanz/Dokumente wirken wie **gestaltete Wissensfläche**, nicht wie nackte Tabellen.
-5. Popups/Overlays sind **kontrastreich und lesbar**.
+**3. Das Muster fehlt für alle anderen Objekttypen.**
+Gap, Dependency, Decision haben heute keinen Empfehlungsslot. Sie sind reine Eingabefelder. Sobald M1 sitzt, gibt es ein Vokabular, das auf alle Sessions übertragbar ist — heute gibt es keins.
 
-## Umsetzung in einem Rutsch
+**4. Die vier Rollen sind Sections, keine Perspektiven.**
+Korrekt erkannt im User-Brief. Das ist aber ein M2-Thema und kein M1-Thema — Spatial Continuity / Universal-Overlay ist bereits als M2 dokumentiert. **Nicht jetzt anpacken.**
 
-### 1. Sichtbare Sprach-Sanierung
+**5. Sprach-Restposten existieren noch** (NOW.md zählt drei: `useIntake.ts`, `IntakeSessionsPanel`, `ImpactPipelinePanel`). Mitnehmen, weil 5-Minuten-Aufwand.
 
-Ich baue eine kleine UI-Semantik-Schicht statt überall Einzelstrings zu verstreuen:
+## Was dieser Sprint ist
 
-- Interne Labels ersetzen:
-  - „Intake“ → „Eingang“ / „Material“
-  - „Verstehen“/„Verstehens-Loop“ → „Auswertung“ / „Analyse“ / „wird ausgewertet“
-  - „Verstanden“ im Lage-Meta → „Letztes Material“ oder „Aktualisiert“
-  - „Review“ wo user-facing → „Prüfen“ / „Offene Klärung“
-  - „Erkenntnis“ in Dialog-Buttons nur dort, wo fachlich sinnvoll; sonst „Punkt“, „Information“, „Änderung“
-- Technische Quellenlabels entfernen:
-  - `Gap #abc123`, `Konflikt #abc123`, `Dependency #abc123`, `Thema #…`, `Dokument #…`
-  - stattdessen fachliche Quelle: „Offene Frage“, „Widerspruch“, „Abhängigkeit“, „Thema“, „Dokument“
-- Command-Menü und Home-Panels ebenfalls säubern (`Pipeline Health`, `IntakeSessionsPanel`, `ImpactPipelinePanel`).
+**Ein Muster, an einer Stelle, vollständig.** Dann Replikation. Kein UX-Overhaul.
 
-### 2. Lage reparieren: kein Verlaufssatz mehr als Lageplan
+### Schritt 1 — Empfehlungs-Block wird primär (Konflikt)
 
-In `buildProjectViewModel`/`humanizeSnapshotSummary` wird die Lage nicht mehr aus Commit-Log-Sätzen übernommen.
-
-Neue Priorität:
+`FaktDrillOverlay → renderConflict` umbauen. Statt „A | vs | B → Tile-Reihe → Fußnoten-Hint":
 
 ```text
-Outcome/Status + Konflikte + offene Punkte + nächster Termin
-→ prägnanter Lage-Satz
-→ Snapshot-Summary nur, wenn sie wirklich ein Zustands-Summary ist
-→ Commit-Summary bleibt Verlauf
+┌─────────────────────────────────────────────────────┐
+│  cogni empfiehlt: 14. April 2026                    │   ← groß, primär
+│  Quelle B (Mail von Thomas Berger, 09.04. · 14:22)  │   ← konkret
+│  Begründung: 5 Tage neuer · direkter Absender       │   ← human
+│                                                     │
+│  [ Übernehmen ]      [ Korrigieren ▾ ]              │
+└─────────────────────────────────────────────────────┘
+
+  Im Vergleich: 21. März 2026 (Kickoff-Protokoll)        ← klein, sekundär
 ```
 
-Beispiel statt „Termin übernommen — Projekt enthält jetzt 11 bestätigte Erkenntnisse.“:
+- Empfehlung dominiert visuell. A/B-Gegenüberstellung kollabiert in Sekundärzeile.
+- „Korrigieren" expandiert in die A/B-Wahl + offen-lassen (heutige Tile-Reihe als Sub-State).
+- Bei `empfehlung.gewinner === null` (beide ähnlich): kein Empfehlungs-Block, sondern direkt heutige neutrale A/B-Bühne — das ist der einzige Fall, in dem User wirklich entscheiden muss.
 
-```text
-Final Lookbook ist blockiert: Termin widerspricht sich, Verantwortlichkeit fehlt, Stoffauswahl hängt daran.
+### Schritt 2 — Empfehlungs-Text human machen
+
+`konflikte.ts → deriveEmpfehlung` schreibt heute „Höhere Zuverlässigkeit (X%)". Stattdessen Begründungs-Bausteine kombinieren:
+
+- Recency-Differenz → „N Tage neuer"
+- Confidence-Differenz → „direktere Quelle" / „aus erster Hand"
+- Quellen-Typ (Mode `direkt` vs `abgeleitet`) → „direkt aus Mail" / „aus Protokoll abgeleitet"
+
+Plus: `KonfliktFactRef.quelle` mit konkretem Absender/Dokumenttitel auflösen (steht in `canonical_facts.provenance.source_label` falls vorhanden — sonst Fallback auf heutiges „Direktquelle"/„Abgeleitet"). Kein neuer DB-Call, nur Mapper-Erweiterung in `toKonflikte`.
+
+### Schritt 3 — Empfehlungs-Slot in Session-Vertrag aufnehmen
+
+`DialogBox.payload` bekommt optional:
+```ts
+empfehlung?: {
+  text: string;        // "14. April 2026"
+  begruendung: string; // "5 Tage neuer · direkter Absender"
+  quelle: string;      // "Mail von Thomas Berger · 09.04."
+  primary: "A" | "B" | "submit"; // welcher Button = Übernehmen
+}
 ```
 
-Falls die Daten nur dünn sind:
+Damit ist der Slot da, sobald Gap-/Dependency-/Decision-Sessions ihn füllen wollen. **In diesem Sprint nur Konflikt füllt — die anderen Sessions bleiben unverändert.** Der Slot signalisiert aber das neue Muster für Wave 3.
 
-```text
-Projekt ist angelegt. Material ergänzen, damit Lage, offene Punkte und Abhängigkeiten sichtbar werden.
-```
+### Schritt 4 — Sprach-Restposten
 
-### 3. Projekt-Detail nach Redesign-Referenz schärfen
+Drei Strings aus NOW.md mitnehmen (Toasts in `useIntake.ts:36-40`, `IntakeSessionsPanel.tsx:156`, EVENT_LABELS-Fallback in `ImpactPipelinePanel.tsx:35-37`). Keine eigene Recherche, NOW.md sagt wo.
 
-**Handlungsbedarf** bleibt die operative Hauptspalte, wird aber weniger Datenbankliste:
+### Schritt 5 — KonfliktPopover (Tier-1-Schnellentscheidung) ausrichten
 
-- rechte technische Quellen-ID weg
-- Typen menschlich als leise Fachlabels
-- Konflikte bekommen direkte Gegenüberstellung im Row-Preview, wenn `faktA/faktB` vorhanden
-- Lücken zeigen „was fehlt / warum wichtig“ statt Gap-Sprache
-- Abhängigkeiten zeigen Quelle/Ziel als Lesetext, nicht `Dependency #…`
+`KonfliktPopover` heute zeigt Empfehlung schon kompakt, aber nur Tier-1. Mit dem neuen Empfehlungs-Block ist der Drilldown selbst auch 2-Sekunden-Bestätigung — Popover bleibt als noch schnellere Variante. **Beide Pfade müssen dieselbe Sprache sprechen.** Popover-Texte an neue `begruendung`-Bausteine angleichen, sonst nichts.
 
-**Verlauf** wird bewusst read-only und enttechnisiert:
+## Was bewusst NICHT in diesem Sprint ist
 
-- Quelle „Verstehens-Loop“ weg
-- Delta-Tags fachlich: „neu“, „aktualisiert“, „bestätigt“, „widerspricht“
-- Klick auf Verlauf öffnet höchstens eine kompakte Detailansicht oder wird nicht als primäre Aktion inszeniert; kein Review-Arbeitsraum für reine Historie.
+- **Gap/Dependency/Decision-Empfehlungen** — Slot ist da, Befüllung kommt wenn Detektor-Heuristik existiert (heute gibt es keine echte Recommendation-Logik dafür; nur Pattern dafür anlegen wäre Augenwischerei).
+- **Vier Rollen als Perspektiven statt Sections** — das ist M2 (Spatial Continuity). Würde das Layout-Skelett umwerfen.
+- **Universal-Overlay (⌘+Space), Atmosphären-Stripe-Realtime, AssetOrbit-Retry** — bleibt M2.
+- **note-create / feedback-create Edge Functions** — bleibt M3.
+- **Build-Fehler aus Lovable-Hand-Off** (`useProjectData`, `submitNote`, `VerlaufFeed`) — separater Block, NOW.md führt sie schon. Nicht hier mit reinmischen.
 
-### 4. Substanz & Dokumente als gestaltete Wissensfläche
+## Technische Details
 
-`SubstanzSection` wird am Redesign-Prototyp ausgerichtet:
+- **Dateien angefasst:** `src/components/dialog/FaktDrillOverlay.tsx` (renderConflict-Umbau), `src/lib/project/mappers/konflikte.ts` (deriveEmpfehlung-Text + Quellen-Auflösung), `src/lib/dialog/sessionFactories.ts` (Empfehlungs-Payload), `src/lib/dialog/types.ts` (optional empfehlung-Slot), `src/components/project/KonfliktPopover.tsx` (Sprach-Angleich), `src/lib/intake/useIntake.ts`, `src/components/entity/IntakeSessionsPanel.tsx`, `src/components/home/ImpactPipelinePanel.tsx` (drei Strings).
+- **Tests:** `konflikte.test.ts` (falls existiert — sonst neu), Snapshot von `deriveEmpfehlung` mit drei Szenarien (gewinner A / gewinner B / kein gewinner). Vitest-Suite muss 89/89+ bleiben.
+- **Keine Migration, keine Edge-Function-Änderung, keine Backend-Touches.** Reines Frontend + Mapper.
+- **Doku:** NOW.md M1-Eintrag von „Provenance & Empfehlung schließen (vorbereitet, backend-leer)" auf „Empfehlung-First-Drilldown live, Slot für Wave 3 offen" updaten. DECISIONS-Eintrag: „Drilldown-Muster = Empfehlung dominiert, Vergleich sekundär — Konflikt zuerst, andere Objekttypen wenn Recommendation-Logik existiert."
 
-- Themen als größere, ruhige Karten mit:
-  - Titel
-  - Kurzbeschreibung
-  - lesbare Zähler: „3 Entscheidungen“, „2 offen“, „1 Dokument“
-  - sichtbare letzte/erste verknüpfte Items als Mini-Zeilen
-- Dokumente als gestaltete Dokumentkarten/-rows mit:
-  - Dateityp-Chip
-  - Name
-  - Datum/Version leise
-  - Thema, wenn vorhanden
-  - kein Vollscreen-Review bei normalem Klick; stattdessen kompakter Dokument-Drill/Preview-Stub mit klarer Phase-Markierung, bis echte Preview-Backendlogik existiert.
+## Erfolgsmaß
 
-### 5. Drilldown-Routing nach Objekttyp
-
-Ich ändere die Click-Logik so, dass nicht alles generisch `buildHandlungsbedarfSession` öffnet:
-
-- `konflikt` → großer `FaktDrillOverlay`-Konflikt mit A/B-Gegenüberstellung.
-- `gap` / fehlende Angaben → Gap-Drill mit konkretem Antwortfeld.
-- `dependency` → Abhängigkeits-Drill: „blockiert / wartet auf / hängt ab von“, mit Antwort/Korrektur.
-- `entscheidung` / `aufgabe` / `offener_punkt` → kompakter Arbeitsraum mit „kommentieren“, „ändern“, „als erledigt/weiter offen“ soweit Backend vorhanden; nicht vorhandene Persistenz wird im UI als „kommt im Antwort-Loop“ markiert, nicht als Fake-Funktion.
-- `dokument` / `thema` → Inspect-Drill, nicht Review-Drill.
-
-Technisch: zusätzliche Factory-Builder in `sessionFactories.ts`, aber keine neue Backend-Tabelle in diesem Sprint.
-
-### 6. Interaktive Möglichkeiten ohne Fake-Backend
-
-Wo Persistenz bereits existiert (`submitNote` → volle Auswertung), werden Antworten/Korrekturen darüber geleitet.
-
-Wo Persistenz noch fehlt, wird es klar als geplanter Antwort-Loop gekennzeichnet:
-
-- „Kommentar speichern“ nur, wenn es wirklich durch `submitNote` läuft.
-- „Status ändern“/„Dokumentversion wählen“ nur anzeigen, wenn Backendpfad existiert.
-- Sonst: ruhiger Hinweis „Antwort-Loop M3“ innerhalb des Drills, nicht als kaputter Button.
-
-### 7. Popups/Overlays lesbar machen
-
-Ich ziehe die shadcn Overlay-Primitiven auf Cogni-Token-Niveau:
-
-- `DialogContent`, `AlertDialogContent`, `DropdownMenuContent`, `CommandDialog`
-- solide `surface-1/surface-2` Hintergründe
-- klare Hairline-Borders
-- kein transparentes Weiß/Glas über hellem Projekt-Screen
-- Dropdown-Menu im Header/Projektkarten explizit mit Popover-Surface und genug Kontrast
-
-Das behebt den Screenshot-Fehler und extrapoliert ihn auf alle Radix-Popups.
-
-### 8. Dokumentation aktualisieren, knapp
-
-Nach Umsetzung:
-
-- `docs/NOW.md`: aktueller Sprint wird zu „UX-Konzepttreue: Sprache, Drilldowns, Projekt-Detail“ aktualisiert.
-- `docs/DECISIONS.md`: kurzer Eintrag, warum UI-Sprache keine Pipeline-/ID-Begriffe mehr zeigen darf und warum objektbezogene Drills die generischen Review-Screens ersetzen.
-- Kein riesiges Redesign-Protokoll.
-
-## Technische Dateien voraussichtlich betroffen
-
-- `src/lib/project/types.ts`
-- `src/lib/project/projectViewModel.ts`
-- `src/lib/project/mappers/humanize.ts`
-- `src/lib/project/mappers/handlungsbedarf.ts`
-- `src/lib/project/mappers/verlauf.ts`
-- `src/lib/project/mappers/konflikte.ts`
-- `src/lib/dialog/sessionFactories.ts`
-- `src/components/project/LageZone.tsx`
-- `src/components/project/HandlungsbedarfList.tsx`
-- `src/components/project/VerlaufFeed.tsx`
-- `src/components/project/SubstanzSection.tsx`
-- `src/components/dialog/FaktDrillOverlay.tsx`
-- `src/components/dialog/parts/ReviewRow.tsx`
-- `src/components/ui/dialog.tsx`
-- `src/components/ui/alert-dialog.tsx`
-- `src/components/ui/dropdown-menu.tsx`
-- `src/components/ui/command.tsx`
-- `src/components/home/ImpactPipelinePanel.tsx`
-- `src/components/entity/IntakeSessionsPanel.tsx`
-- `src/components/shared/GlobalCommandMenu.tsx`
-- `docs/NOW.md`
-- `docs/DECISIONS.md`
-
-## Nicht in diesem Rutsch
-
-- Keine neue Datenbankarchitektur.
-- Keine echte Dokument-Preview, wenn Backend/Storage-Previewpfad fehlt.
-- Keine komplette Universal-Overlay-Implementierung aus M2.
-- Keine neue M3-Backendlogik für `note-create`/`feedback-create`, außer vorhandene `submitNote`-Pfade sauberer zu nutzen.
-
-Diese offenen Teile werden im UI klar markiert und in NOW.md als Prototyp-Milestone belassen.
+Wenn ich auf einen Konflikt klicke: Ich sehe in 1 Sekunde, was cogni empfiehlt und warum. Ich drücke „Übernehmen". Fertig. Bei Tier-1 nicht mal das Overlay nötig (Popover). Das ist der Sprung von Verwaltungs- zu Intelligenz-Tool — an einer Stelle, sauber, übertragbar.
