@@ -153,7 +153,7 @@ const IntakeSessionsPanel = (_props: Props) => {
   });
 
   const handleRetry = useCallback(async (assetId: string) => {
-    toast("Wird nochmal versucht", { description: "Verstehens-Loop startet erneut" });
+    toast("Wird nochmal versucht", { description: "Analyse läuft erneut" });
     await supabase.functions.invoke("intake-understand", {
       body: { asset_id: assetId, retry: true },
     });

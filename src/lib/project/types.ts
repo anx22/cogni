@@ -18,14 +18,29 @@ export type ObjektTyp =
 
 export type DeltaTyp = "neu" | "ersetzt" | "bestaetigt" | "widersprochen" | "unclear";
 
+export interface KonfliktFactRef {
+  inhalt: string;
+  datum: string;
+  quelle: string;
+  mode: "direkt" | "abgeleitet" | "extern";
+}
+
+export interface KonfliktEmpfehlung {
+  gewinner: "A" | "B" | null;
+  begruendung: string;
+  konfidenz: number;
+  tier: 1 | 2;
+}
+
 export interface KonfliktVM {
   id: string;
   typ: "deadline" | "decision" | "version" | "assignment";
   title: string;
   beschreibung: string;
-  faktA: string;
-  faktB: string;
+  faktA: KonfliktFactRef;
+  faktB: KonfliktFactRef;
   status: string;
+  empfehlung: KonfliktEmpfehlung | null;
 }
 
 export interface GapVM {
@@ -67,6 +82,8 @@ export interface HandlungsbedarfVM {
   manuell?: boolean;
   /** Bei objektTyp='topic_merge' hängt der Render-Pfad daran. */
   topicMerge?: TopicMergePayloadVM;
+  /** Bei objektTyp='konflikt': vollständiger KonfliktVM für Tier-Routing und Popover. */
+  konfliktRef?: KonfliktVM;
 }
 
 export interface VerlaufVM {

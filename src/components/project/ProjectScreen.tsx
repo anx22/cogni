@@ -190,7 +190,6 @@ const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
         {status === "empty" && project && (
           <LageZone
             project={project}
-            editableName
             forceEdit={forceRename}
             onEditDone={() => setForceRename(false)}
             onNameChange={handleRename}

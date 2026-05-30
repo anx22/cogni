@@ -1,4 +1,5 @@
 import type { DialogBox, DialogSession } from "./types";
+import type { KonfliktFactRef, KonfliktEmpfehlung } from "@/lib/project/types";
 
 let counter = 0;
 const uid = (prefix = "b") => `${prefix}_${Date.now()}_${counter++}`;
@@ -28,20 +29,38 @@ export const buildKonfliktSession = (k: {
   id: string;
   title: string;
   beschreibung: string;
-  faktA: string;
-  faktB: string;
-}): DialogSession =>
-  mkSession("Widerspruch klären", k.title, [
+  faktA: KonfliktFactRef;
+  faktB: KonfliktFactRef;
+  empfehlung: KonfliktEmpfehlung | null;
+}): DialogSession => {
+  const recA = k.empfehlung?.gewinner === "A";
+  const recB = k.empfehlung?.gewinner === "B";
+  return mkSession("Widerspruch klären", k.title, [
     mkBox({
       type: "konflikt",
       title: k.title,
       payload: {
         beschreibung: k.beschreibung,
-        faktA: k.faktA,
-        faktB: k.faktB,
+        faktA: k.faktA.inhalt,
+        faktB: k.faktB.inhalt,
+        sourceA: {
+          label: k.faktA.quelle || undefined,
+          meta: k.faktA.datum || undefined,
+          hint: recA ? "cogni-Empfehlung" : undefined,
+          recommend: recA,
+        },
+        sourceB: {
+          label: k.faktB.quelle || undefined,
+          meta: k.faktB.datum || undefined,
+          hint: recB ? "cogni-Empfehlung" : undefined,
+          recommend: recB,
+        },
+        empfehlung: k.empfehlung?.gewinner ? k.empfehlung.begruendung : undefined,
+        __conflictIntent: { kind: "resolve_conflict", contradictionId: k.id },
       },
     }),
   ]);
+};
 
 // ---------------------- Gap ----------------------
 export const buildGapSession = (g: {

@@ -60,10 +60,9 @@ describe("titleFromJson", () => {
 });
 
 describe("humanizeSnapshotSummary", () => {
-  it("übersetzt Maschinen-Code", () => {
-    expect(humanizeSnapshotSummary("Snapshot nach commit:stakeholder:add")).toBe(
-      "Stakeholder ergänzt.",
-    );
+  it("filtert Commit-Log-Sätze (Snapshot-Pattern) heraus", () => {
+    expect(humanizeSnapshotSummary("Snapshot nach commit:stakeholder:add")).toBeUndefined();
+    expect(humanizeSnapshotSummary("Snapshot nach commit:deadline:add")).toBeUndefined();
   });
   it("lässt freien Text durch", () => {
     expect(humanizeSnapshotSummary("Frau Hase will Pflaume statt Salbei.")).toBe(
@@ -76,10 +75,10 @@ describe("humanizeSnapshotSummary", () => {
 });
 
 describe("toKonflikte", () => {
-  it("löst Faktreferenzen auf", () => {
+  it("löst Faktreferenzen auf und liefert KonfliktFactRef-Objekte", () => {
     const canonical = [
-      { id: "a", content: { title: "Höhe 72m" } },
-      { id: "b", content: { title: "Höhe 87m" } },
+      { id: "a", content: { title: "Höhe 72m" }, created_at: "2026-05-01T00:00:00Z" },
+      { id: "b", content: { title: "Höhe 87m" }, created_at: "2026-05-14T00:00:00Z" },
     ];
     const contradictions = [
       {
@@ -93,14 +92,17 @@ describe("toKonflikte", () => {
     ];
     const out = toKonflikte(contradictions, canonical);
     expect(out).toHaveLength(1);
-    expect(out[0].faktA).toBe("Höhe 72m");
-    expect(out[0].faktB).toBe("Höhe 87m");
+    expect(out[0].faktA.inhalt).toBe("Höhe 72m");
+    expect(out[0].faktB.inhalt).toBe("Höhe 87m");
     expect(out[0].status).toBe("offen");
+    // Neuere Quelle B gewinnt (13 Tage jünger) → empfehlung.gewinner = "B", tier 1 oder 2
+    expect(out[0].empfehlung?.gewinner).toBe("B");
   });
   it("handhabt fehlende Faktreferenzen", () => {
     const out = toKonflikte([{ id: "c", contradiction_type: "version", resolved: true }], []);
-    expect(out[0].faktA).toBe("Fakt A");
+    expect(out[0].faktA.inhalt).toBe("Fakt A");
     expect(out[0].status).toBe("geloest");
+    expect(out[0].empfehlung).toBeNull();
   });
 });
 
@@ -291,11 +293,11 @@ describe("buildProjectViewModel — Composition", () => {
   it("liefert isEmpty=true bei leerem Projekt + Standard-Lagetext", () => {
     const { vm, isEmpty } = buildProjectViewModel(emptyRaw());
     expect(isEmpty).toBe(true);
-    expect(vm.lagetext).toMatch(/Noch keine Erkenntnisse/);
+    expect(vm.lagetext).toMatch(/Projekt ist angelegt/);
     expect(vm.stats.naechsterTermin).toBe("—");
   });
 
-  it("baut Lagetext aus Konflikt+Gap-Counts wenn kein Snapshot", () => {
+  it("baut Lagetext mit offenen Punkten wenn kein Snapshot", () => {
     const raw = emptyRaw();
     raw.canonical = [
       { id: "a", content: { title: "X" }, updated_at: "2026-05-14" },
@@ -308,8 +310,9 @@ describe("buildProjectViewModel — Composition", () => {
     ] as unknown as RawProjectData["gaps"];
     const { vm, isEmpty } = buildProjectViewModel(raw);
     expect(isEmpty).toBe(false);
-    expect(vm.lagetext).toMatch(/1 Konflikt/);
-    expect(vm.lagetext).toMatch(/1 Lücke/);
+    // Narrative: Projektbeschreibung + offene-Punkte-Satz (kein Graphstatus)
+    expect(vm.lagetext).toMatch(/Archviz/);
+    expect(vm.lagetext).toMatch(/offene/i);
     expect(vm.konflikte).toHaveLength(1);
     expect(vm.gaps).toHaveLength(1);
   });
@@ -325,8 +328,9 @@ describe("buildProjectViewModel — Composition", () => {
     expect(vm.stats.naechsterTermin).not.toBe("—");
   });
 
-  it("nutzt humanisierten Snapshot-Summary als Lagetext", () => {
+  it("filtert Commit-Log-Snapshot heraus und zeigt Projektbeschreibung", () => {
     const raw = emptyRaw();
+    // Commit-Log-Snapshot wird gefiltert → fallbackLage greift (Projektbeschreibung)
     raw.snapshot = {
       summary: "Snapshot nach commit:deadline:add",
     } as unknown as RawProjectData["snapshot"];
@@ -334,7 +338,8 @@ describe("buildProjectViewModel — Composition", () => {
       { id: "a", content: { title: "X" }, updated_at: "2026-05-14" },
     ] as unknown as RawProjectData["canonical"];
     const { vm } = buildProjectViewModel(raw);
-    expect(vm.lagetext).toBe("Termin ergänzt.");
+    // Neue Narrative: Projektbeschreibung als Lagetext, nicht Graphzähler
+    expect(vm.lagetext).toMatch(/Archviz/);
   });
 
   it("D7: coverage-Felder werden aus canonical + gaps + konflikte berechnet", () => {

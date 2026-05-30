@@ -33,11 +33,11 @@ function trackPipeline(
   promise.then((res) => {
     devlog.edge("pipeline terminal", { status: res.status, runId: res.snapshot?.id });
     if (res.status === "failed") {
-      const msg = res.snapshot?.error?.message ?? "Verstehen fehlgeschlagen";
-      toast.error("Verstehen fehlgeschlagen", { description: msg.slice(0, 160) });
+      const msg = res.snapshot?.error?.message ?? "Analyse fehlgeschlagen";
+      toast.error("Analyse fehlgeschlagen", { description: msg.slice(0, 160) });
       setEntityState?.("failed");
     } else if (res.status === "timeout") {
-      toast.warning("Verstehen läuft länger als erwartet", {
+      toast.warning("Dauert etwas länger", {
         description: "Die Box erscheint, sobald die Pipeline fertig ist.",
       });
     }
