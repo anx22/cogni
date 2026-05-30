@@ -25,6 +25,11 @@ const mkSession = (
 });
 
 // ---------------------- Konflikt ----------------------
+// Empfehlung-First-Drilldown: wenn cogni einen Gewinner hat, wird er als
+// strukturierter Block (`empfehlungBlock`) durchgereicht. Das Overlay
+// rendert ihn primär; A/B-Vergleich kollabiert zur Sekundärzeile. Bei
+// `gewinner=null` bleibt der Block leer und das Overlay zeigt die
+// neutrale Gegenüberstellung als einzige Bühne.
 export const buildKonfliktSession = (k: {
   id: string;
   title: string;
@@ -33,8 +38,26 @@ export const buildKonfliktSession = (k: {
   faktB: KonfliktFactRef;
   empfehlung: KonfliktEmpfehlung | null;
 }): DialogSession => {
-  const recA = k.empfehlung?.gewinner === "A";
-  const recB = k.empfehlung?.gewinner === "B";
+  const winnerSide = k.empfehlung?.gewinner ?? null;
+  const recA = winnerSide === "A";
+  const recB = winnerSide === "B";
+  const winner = winnerSide === "A" ? k.faktA : winnerSide === "B" ? k.faktB : null;
+  const loser = winnerSide === "A" ? k.faktB : winnerSide === "B" ? k.faktA : null;
+
+  const empfehlungBlock = winner && winnerSide
+    ? {
+        winnerSide,
+        winnerFact: winner.inhalt,
+        winnerQuelle: winner.quelle,
+        winnerDatum: winner.datum,
+        winnerMode: winner.mode,
+        loserFact: loser?.inhalt ?? "",
+        loserQuelle: loser?.quelle ?? "",
+        loserDatum: loser?.datum ?? "",
+        begruendung: k.empfehlung?.begruendung ?? "",
+      }
+    : null;
+
   return mkSession("Widerspruch klären", k.title, [
     mkBox({
       type: "konflikt",
@@ -56,6 +79,7 @@ export const buildKonfliktSession = (k: {
           recommend: recB,
         },
         empfehlung: k.empfehlung?.gewinner ? k.empfehlung.begruendung : undefined,
+        empfehlungBlock,
         __conflictIntent: { kind: "resolve_conflict", contradictionId: k.id },
       },
     }),

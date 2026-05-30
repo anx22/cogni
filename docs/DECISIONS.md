@@ -2,7 +2,16 @@
 
 Format: `[YYYY-MM-DD] Problem → Choice → Reason`
 
+## 2026-05-30 — Empfehlung-First-Drilldown (M1, Stufe 1)
+
+- `2026-05-30` **Empfehlung dominiert, Vergleich ist sekundär**: Konflikt-Drilldown war neutrale A/B-Bühne mit „cogni empfiehlt …" als 12.5px-Fußnote, Default-Selection nur A → **`FaktDrillOverlay.renderConflict` zweistufig**: Variante A (Empfehlung-First) zeigt den empfohlenen Fakt 36px groß, Quelle + Begründung darunter, Sekundärzeile „Im Vergleich: …", Footer „Übernehmen / Korrigieren / Offen lassen"; Variante B (klassische A/B-Gegenüberstellung) erscheint erst, wenn User „Korrigieren" drückt oder cogni keine Empfehlung hat (`empfehlungBlock === null`). Slot `payload.empfehlungBlock` mit `winnerSide/winnerFact/winnerQuelle/winnerDatum/winnerMode/loserFact/loserQuelle/loserDatum/begruendung` ist in `sessionFactories.buildKonfliktSession` zentral gebaut. Reason: Review-First bedeutet „cogni hat entschieden, du bestätigst" — nicht „cogni stellt dir zwei Optionen vor und wartet". Der bestehende neutrale Vergleich bleibt als Fallback, weil bei ähnlicher Confidence + ähnlichem Alter wirklich der User entscheiden muss.
+
+- `2026-05-30` **Empfehlungs-Text als Bausteine, nicht als Prozentwerte**: `deriveEmpfehlung` schrieb „Höhere Zuverlässigkeit (87 %) — cogni bevorzugt diese Version" → **Bausteine kombinieren**: Recency („N Tage neuer"), Mode-Übergang („direkte Quelle statt abgeleiteter" / „direkte Quelle"), Fallback „aus zuverlässigerer Quelle". Reason: Prozentwerte sind Maschinen-Stimme, Bausteine sind Berater-Stimme; der User entscheidet auf „direkte Quelle" + „5 Tage neuer", nicht auf „87 %".
+
+- `2026-05-30` **Empfehlungs-Slot nur für Konflikt gefüllt**: Gap/Dependency/Decision haben keine Recommendation-Logik im Detector → **Slot ist im Box-Payload-Schema vorgesehen, aber leer für andere Objekttypen**. Reason: Pattern für künftige Detektor-Heuristiken angelegt; Befüllung ohne echte Logik wäre Augenwischerei. Triggers Wave 3.
+
 ## 2026-05-26 — UX-Konzepttreue: Sprache, Drilldowns, Lage
+
 
 - `2026-05-26` **UI-Sprachregel**: Pipeline-Vokabular und interne IDs gehören nicht ins sichtbare UI → **Sprachschicht beim Mapper, nicht beim Render-Point** → `toHandlungsbedarf`/`sessionFactories` setzen `quelle` als fachliche Kategorie („Widerspruch"/„Offene Frage"/„Abhängigkeit"/„Hinweis"/„Thema"/„Dokument"), nicht als `Konflikt #abc` o. ä. Reason: Internes Maschinenprotokoll im User-Pfad erzeugt Anstrengung statt Klarheit; eine PM-App muss in Projektsprache reden, nicht in Pipeline-Sprache. Restposten (drei Toast-Strings + ein EVENT_LABELS-Fallback) sind als Loop in `NOW.md` markiert, nicht in dieser Runde gefixt.
 
