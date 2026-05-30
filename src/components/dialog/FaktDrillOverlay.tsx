@@ -19,13 +19,29 @@ type SourceMeta = {
   recommend?: boolean;
 };
 
+type EmpfehlungBlock = {
+  winnerSide: "A" | "B";
+  winnerFact: string;
+  winnerQuelle: string;
+  winnerDatum: string;
+  winnerMode: "direkt" | "abgeleitet" | "extern";
+  loserFact: string;
+  loserQuelle: string;
+  loserDatum: string;
+  begruendung: string;
+};
+
 const FaktDrillOverlay = ({ onClose }: { onClose: () => void }) => {
   const { session, commitBox } = useDialog();
   const box = session?.boxes.find((b) => b.type !== "kontext" && !END_STATES.includes(b.state));
 
   // Konflikt-Auswahl
-  const recA = (box?.payload?.sourceA as SourceMeta | undefined)?.recommend ?? true;
-  const [selected, setSelected] = useState<"A" | "B" | "open" | null>(recA ? "A" : null);
+  const empBlock = (box?.payload?.empfehlungBlock as EmpfehlungBlock | null | undefined) ?? null;
+  const recA = (box?.payload?.sourceA as SourceMeta | undefined)?.recommend ?? false;
+  const recB = (box?.payload?.sourceB as SourceMeta | undefined)?.recommend ?? false;
+  const defaultSel: "A" | "B" | null = recA ? "A" : recB ? "B" : null;
+  const [selected, setSelected] = useState<"A" | "B" | "open" | null>(defaultSel);
+  const [showCompare, setShowCompare] = useState(false);
   // Gap-Input
   const [gapInput, setGapInput] = useState<string>("");
   // Inline-Korrektur (Bezug / Frist / Entscheidung) für Modality-Renderer
