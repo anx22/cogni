@@ -37,11 +37,10 @@ Statt Backlog-Friedhof: drei Sprints, jeder mit klarem Outcome. Reihenfolge M1 �
 
 ### M1 — Provenance & Empfehlung schließen
 
-Konflikt-Source-Metadaten und cogni-Empfehlung sind UI-seitig vorbereitet, aber backend-leer. Review wirkt heute wie blinder Vergleich.
+**Stufe 1 erledigt (2026-05-30):** Empfehlung-First-Drilldown live. `FaktDrillOverlay.renderConflict` zeigt cogni-Empfehlung 36px primär mit Quelle + Begründung, „Übernehmen / Korrigieren / Offen lassen" — Vergleich nur noch sekundär. `deriveEmpfehlung` liefert human Bausteine („5 Tage neuer · direkte Quelle statt abgeleiteter") statt Prozentwerte. Slot `payload.empfehlungBlock` im Box-Schema offen für Gap/Dependency/Decision.
 
-- `KonfliktVM.faktA/B`: String → Objekt (Datum, Mode, Hint, Quelle).
-- `commit-fact` schreibt Empfehlungstext + Begründung in Konflikt-Payload.
-- BatchReview und FaktDrill rendern beides ohne weitere UI-Änderung.
+**Stufe 2 offen:** Empfehlung für andere Objekttypen, sobald Detektor-Heuristik existiert (Gap-Antwort-Vorschläge, Dependency-Auflösungs-Vorschläge). Heute kein Code dafür — Trigger ist Wave 3 / L1.
+
 
 ### M2 — Entity bleibt überall präsent
 
@@ -74,14 +73,14 @@ Readonly-Reste auflösen: Verlauf-Notiz, Feedback-Button, Impact-Pfeile. Damit i
 
 - **Graphiti-Sync-Retry** — Cron `*/30 min`, `inspect-graphiti diagnose` für Top-Reasons.
 - **Test-Coverage halten** — neue Funktion = Pure-Test, Drift in DECISIONS.
-- **Sprach-Restposten** — Pipeline-Vokabular noch in drei Toast-/Fallback-Strings: `useIntake.ts:36-40` („Verstehen fehlgeschlagen/läuft länger"), `IntakeSessionsPanel.tsx:156` („Verstehens-Loop startet erneut"), `ImpactPipelinePanel.tsx:35-37` EVENT_LABELS-Fallback („Erkenntnis übernommen/verworfen/aktualisiert"). Beim nächsten Sprache-Pass mit ablösen.
+- **Sprach-Restposten** — bei Audit 2026-05-30 nochmal geprüft: `useIntake.ts:36-40`, `IntakeSessionsPanel.tsx:156`, `ImpactPipelinePanel.tsx:35-41` sind bereits in Projektsprache. Loop geschlossen.
 - **Pre-existing Build-Fehler aus Lovable-Hand-Off** — `useProjectData` Migrations-Drift, `submitNote` DevLogCategory, `VerlaufFeed`. Brauchen klare Backend-Entscheidung, kein blinder Fix.
 
 ---
 
 ## Recently completed
 
-- **2026-05-26 — UX-Konzepttreue: Sprache, Drilldowns, Projekt-Detail** Pipeline-Begriffe und interne IDs aus dem UI entfernt (`Konflikt #` / `Gap #` / `Dependency #` / `Thema #` / `Dokument #` → fachliche Quellen-Labels „Widerspruch"/„Offene Frage"/„Abhängigkeit"/„Hinweis"/„Thema"/„Dokument"). `humanizeSnapshotSummary` filtert Commit-Log-Sätze als Lagetext aus; `buildProjectViewModel` baut die Lage aus Widersprüchen/Blockern/offenen Fragen. ImpactPipelinePanel-Aggregat: „Eingang · Auswertung · Zu klären · Widerspruch". Drill-Routing nach Objekttyp: Konflikt → `buildKonfliktSession` (A/B im FaktDrillOverlay), Gap → `buildGapSession` mit Antwortfeld, Dependency → neue `buildDependencySession` mit Quelle/Ziel + Auflöse-Eingabe; Thema/Dokument bleiben readonly-Inspect. shadcn-Overlays (`dialog`, `alert-dialog`, `dropdown-menu`) auf solide `--surface-1` + `--hair-2` + `--shadow-pop` — keine halbtransparenten Glas-Flächen mehr über hellem Projekt-Screen. Substanz-Themen mit Item-Preview + lesbarem Zähler („3 Entscheidungen · 2 offen · 1 Dokument"). Docs nachgezogen (dieser Eintrag + DECISIONS). Restposten siehe „Sprach-Restposten" in Aktive Loops.
+- **2026-05-30 — Empfehlung-First-Drilldown (M1 Stufe 1)** Konflikt-Bühne umgebaut von neutralem A/B-Vergleich zu „cogni empfiehlt X (Quelle, Begründung) — [Übernehmen] [Korrigieren] [Offen lassen]". Korrigieren expandiert in die alte A/B-Wahl als Sub-State. `deriveEmpfehlung` schreibt Bausteine („N Tage neuer · direkte Quelle statt abgeleiteter") statt Prozentwerte. `payload.empfehlungBlock` als strukturierter Slot in `sessionFactories.buildKonfliktSession`. KonfliktPopover bleibt als Tier-1-Schnellbestätigung, Sprache deckungsgleich. Files: `FaktDrillOverlay.tsx`, `sessionFactories.ts`, `mappers/konflikte.ts`. Sprach-Restposten-Audit erledigt — drei Strings bereits clean. Build-Drift aus Lovable-Hand-Off (`useProjectData`, `submitNote`, `VerlaufFeed`) bleibt separater Block.
 - **2026-05-24 — Redesign abgeschlossen + Doku-Konsolidierung** Pässe 1–6 + Audit-Fixbatch durch (Sidebar, Hero, Mittelfeld, Substanz, BatchReview, FaktDrill, Readonly-Sessions, `deriveSignal`, Material/Review-Buttons, Sidebar `onCreateProject`, `escalate`-Payload). `.lovable/plan.md` und `docs/redesign/REVIEW.md` gelöscht — visuelle Quelle bleiben `prototype/` + `screenshots/`.
 - **2026-05-22 — K1+K2+K4 aus MainCompass** Migration `delta_type unclear`, Persona-E2E `04-vier-rollen-smoke`, Graphiti-Retry-Loop mit Cron. Risiken offen: Migrations apply + Vault-Secret manuell.
 - **2026-05-22 — Test-Overhaul Vitest 70 → 89** Neue Tests für `deriveSignal`, `loadSession`, `assignment` (Deno), `factRules` (Deno). Drift-Fixes in sessionFactories/projectViewModel/gapDetector/projectScoring/commitFact.
