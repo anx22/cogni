@@ -138,12 +138,16 @@ export const buildKonfliktSession = (k: {
 };
 
 // ---------------------- Gap ----------------------
+// Empfehlung-First: wenn die Heuristik einen ehrlichen Vorschlag liefert
+// (mappers/gaps.deriveGapEmpfehlung), wird er via `empfehlungBlock` als
+// dominante Bühne gezeigt. Sonst klassischer Gap-Drill.
 export const buildGapSession = (g: {
   id: string;
   titel: string;
   wirkung: string;
   betrifft: string;
   lebensdauer: string;
+  empfehlung?: Empfehlung | null;
 }): DialogSession =>
   mkSession("Offene Frage", g.titel, [
     mkBox({
@@ -154,6 +158,7 @@ export const buildGapSession = (g: {
         lebensdauer: g.lebensdauer,
         betrifft: g.betrifft,
         asks: "Was fehlt hier?",
+        empfehlungBlock: toEmpfehlungBlock(g.empfehlung),
       },
     }),
   ]);
@@ -162,14 +167,24 @@ export const buildGapSession = (g: {
 // Default-Renderer für entscheidung/aufgabe/offener_punkt/feedback.
 // Antwort fließt über `__submitIntent` → submitNote → Verstehens-Pipeline.
 export const buildHandlungsbedarfSession = (
-  item: { id: string; titel: string; beschreibung: string; quelle: string },
+  item: {
+    id: string;
+    titel: string;
+    beschreibung: string;
+    quelle: string;
+    empfehlung?: Empfehlung | null;
+  },
   projectId?: string | null,
 ): DialogSession =>
   mkSession(item.quelle || "Punkt", item.titel, [
     mkBox({
       type: "wissen",
       title: item.titel,
-      payload: { sachverhalt: item.beschreibung, quelle: item.quelle },
+      payload: {
+        sachverhalt: item.beschreibung,
+        quelle: item.quelle,
+        empfehlungBlock: toEmpfehlungBlock(item.empfehlung),
+      },
     }),
     mkBox({
       type: "eingabe",
@@ -195,6 +210,7 @@ export const buildDependencySession = (
     titel: string;
     beschreibung: string;
     quelle: string;
+    empfehlung?: Empfehlung | null;
   },
   projectId?: string | null,
 ): DialogSession =>
@@ -205,6 +221,7 @@ export const buildDependencySession = (
       payload: {
         auszug: d.beschreibung || "Diese Aufgabe hängt an einer anderen.",
         begruendung: "So lange die Abhängigkeit besteht, lässt sich der Punkt nicht erledigen.",
+        empfehlungBlock: toEmpfehlungBlock(d.empfehlung),
       },
     }),
     mkBox({
