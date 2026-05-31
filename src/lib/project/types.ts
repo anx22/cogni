@@ -114,6 +114,8 @@ export interface HandlungsbedarfVM {
   topicMerge?: TopicMergePayloadVM;
   /** Bei objektTyp='konflikt': vollständiger KonfliktVM für Tier-Routing und Popover. */
   konfliktRef?: KonfliktVM;
+  /** Einheitliche Empfehlung — für Gap/Dependency/Konflikt/Entscheidung. */
+  empfehlung?: Empfehlung | null;
 }
 
 export interface VerlaufVM {
