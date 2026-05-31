@@ -1,5 +1,43 @@
 import type { DialogBox, DialogSession } from "./types";
-import type { KonfliktFactRef, KonfliktEmpfehlung } from "@/lib/project/types";
+import type { Empfehlung, KonfliktFactRef, KonfliktEmpfehlung } from "@/lib/project/types";
+
+// Einheitliches Empfehlungs-Payload — alle Drilldown-Objekte teilen sich diesen
+// Slot in `payload`. Der FaktDrillOverlay-Renderer reagiert auf `kind`.
+export interface EmpfehlungBlockPayload {
+  kind: Empfehlung["kind"];
+  vorschlag: string;
+  begruendung: string;
+  quelle?: string;
+  konfidenz: Empfehlung["konfidenz"];
+  intent: Empfehlung["intent"];
+  /** Optionaler Commit-Payload-Override. */
+  acceptPayload?: Record<string, unknown>;
+  // Konflikt-spezifisch (nur wenn kind === "konflikt"): Felder für A/B-Sub-State.
+  konflikt?: {
+    winnerSide: "A" | "B";
+    winnerFact: string;
+    winnerQuelle: string;
+    winnerDatum: string;
+    winnerMode: "direkt" | "abgeleitet" | "extern";
+    loserFact: string;
+    loserQuelle: string;
+    loserDatum: string;
+  };
+}
+
+function toEmpfehlungBlock(e: Empfehlung | null | undefined): EmpfehlungBlockPayload | null {
+  if (!e) return null;
+  return {
+    kind: e.kind,
+    vorschlag: e.vorschlag,
+    begruendung: e.begruendung,
+    quelle: e.quelle,
+    konfidenz: e.konfidenz,
+    intent: e.intent,
+    acceptPayload: e.payload,
+  };
+}
+
 
 let counter = 0;
 const uid = (prefix = "b") => `${prefix}_${Date.now()}_${counter++}`;
