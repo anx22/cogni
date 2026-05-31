@@ -5,7 +5,7 @@ import type { DependencyVM, Empfehlung } from "../types";
 // Dependency-Heuristik — Empfehlung nur bei klar typisierter Abhängigkeit.
 // Konfidenz bewusst niedrig: User soll bewusst bestätigen, kein Auto-Klick.
 // =============================================================================
-function deriveDepEmpfehlung(
+export function deriveDepEmpfehlung(
   typ: string,
   source: string | null,
   target: string | null,

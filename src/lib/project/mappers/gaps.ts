@@ -6,7 +6,7 @@ import type { Empfehlung, GapVM } from "../types";
 // Gap-Heuristik — ehrliche Empfehlung NUR wenn die vorhandenen Felder eine
 // substanzielle Aussage erlauben. Sonst `null`. Keine erfundene KI.
 // =============================================================================
-function deriveGapEmpfehlung(
+export function deriveGapEmpfehlung(
   affects: string | null,
   impact: string | null,
   ageDays: number,
