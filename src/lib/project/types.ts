@@ -43,12 +43,41 @@ export interface KonfliktVM {
   empfehlung: KonfliktEmpfehlung | null;
 }
 
+// =============================================================================
+// Empfehlung — einheitlicher Vertrag für alle Drilldown-Objekte.
+// Konflikt/Gap/Dependency/Entscheidung teilen sich die gleiche UI-Bühne im
+// FaktDrillOverlay. `null` heißt „cogni hat keine ehrliche Empfehlung" → User
+// sieht die heutige neutrale Bühne. Heuristik bleibt deterministisch
+// (kein erfundenes KI-Signal), liegt in `src/lib/project/mappers/*`.
+// =============================================================================
+export type EmpfehlungKind = "konflikt" | "gap" | "dependency" | "entscheidung";
+export type EmpfehlungKonfidenz = "hoch" | "mittel" | "niedrig";
+
+export interface Empfehlung {
+  kind: EmpfehlungKind;
+  /** Zentrale Aussage, dominiert die Bühne. */
+  vorschlag: string;
+  /** Human Bausteine ("seit 12 Tagen offen · betrifft Frist Vertrag"). */
+  begruendung: string;
+  quelle?: string;
+  konfidenz: EmpfehlungKonfidenz;
+  /**
+   * Was passiert bei „Übernehmen"?
+   * - `accept`: direkter Commit (Konflikt: vorgewählte Seite).
+   * - `submit_value`: Vorschlag landet als Antwort/Wert (Gap/Dependency).
+   */
+  intent: "accept" | "submit_value";
+  /** Optionaler Payload-Override beim Commit. */
+  payload?: Record<string, unknown>;
+}
+
 export interface GapVM {
   id: string;
   titel: string;
   wirkung: string;
   betrifft: string;
   lebensdauer: string;
+  empfehlung?: Empfehlung | null;
 }
 
 export interface DependencyVM {
@@ -57,6 +86,7 @@ export interface DependencyVM {
   quelle: string;
   ziel: string;
   beschreibung: string;
+  empfehlung?: Empfehlung | null;
 }
 
 export interface TopicMergePayloadVM {
