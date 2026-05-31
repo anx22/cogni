@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { fmtShort } from "@/lib/format/dateFormatters";
+import { fmtShort, ageInDays } from "@/lib/format/dateFormatters";
 import type { HandlungsbedarfVM } from "../types";
+import { deriveGapEmpfehlung } from "./gaps";
+import { deriveDepEmpfehlung } from "./dependencies";
 
 // Quelle wird als fachliche Kategorie angezeigt — keine internen IDs.
 // Wer wirklich die ID braucht, findet sie im Drill-Header (kontextuell).
@@ -55,6 +57,11 @@ export function toHandlungsbedarf(rows: {
       frist: null,
       quelle: "Offene Frage",
       blocker: false,
+      empfehlung: deriveGapEmpfehlung(
+        g.affects ?? null,
+        g.impact ?? null,
+        ageInDays(g.detected_at),
+      ),
     }),
   );
   rows.openPoints.forEach((o) =>
@@ -109,6 +116,7 @@ export function toHandlungsbedarf(rows: {
       frist: null,
       quelle: "Abhängigkeit",
       blocker: d.dependency_type === "blockiert_durch",
+      empfehlung: deriveDepEmpfehlung(d.dependency_type, d.source_type, d.target_type),
     }),
   );
 
