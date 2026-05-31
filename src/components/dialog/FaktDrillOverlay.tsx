@@ -20,15 +20,33 @@ type SourceMeta = {
 };
 
 type EmpfehlungBlock = {
-  winnerSide: "A" | "B";
-  winnerFact: string;
-  winnerQuelle: string;
-  winnerDatum: string;
-  winnerMode: "direkt" | "abgeleitet" | "extern";
-  loserFact: string;
-  loserQuelle: string;
-  loserDatum: string;
-  begruendung: string;
+  // Konflikt-spezifisch (alte Form, weiter unterstützt für renderConflict)
+  winnerSide?: "A" | "B";
+  winnerFact?: string;
+  winnerQuelle?: string;
+  winnerDatum?: string;
+  winnerMode?: "direkt" | "abgeleitet" | "extern";
+  loserFact?: string;
+  loserQuelle?: string;
+  loserDatum?: string;
+  // Generalisierte Form (Konflikt/Gap/Dependency/Entscheidung)
+  kind?: "konflikt" | "gap" | "dependency" | "entscheidung";
+  vorschlag?: string;
+  begruendung?: string;
+  quelle?: string;
+  konfidenz?: "hoch" | "mittel" | "niedrig";
+  intent?: "accept" | "submit_value";
+  acceptPayload?: Record<string, unknown>;
+  konflikt?: {
+    winnerSide: "A" | "B";
+    winnerFact: string;
+    winnerQuelle: string;
+    winnerDatum: string;
+    winnerMode: "direkt" | "abgeleitet" | "extern";
+    loserFact: string;
+    loserQuelle: string;
+    loserDatum: string;
+  };
 };
 
 const FaktDrillOverlay = ({ onClose }: { onClose: () => void }) => {
@@ -381,7 +399,7 @@ const FaktDrillOverlay = ({ onClose }: { onClose: () => void }) => {
               style={{ height: 28, fontSize: 12, gap: 6, display: "inline-flex", alignItems: "center" }}
               onClick={() => {
                 setShowCompare(false);
-                setSelected(empBlock.winnerSide);
+                setSelected(empBlock.winnerSide ?? null);
               }}
             >
               <ArrowLeft size={12} /> Zurück zur Empfehlung

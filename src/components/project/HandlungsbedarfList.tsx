@@ -242,6 +242,7 @@ const ActionRow = ({
           wirkung: item.beschreibung,
           betrifft: "",
           lebensdauer: "",
+          empfehlung: item.empfehlung ?? null,
         }),
       );
       return;
@@ -254,13 +255,19 @@ const ActionRow = ({
             titel: item.titel,
             beschreibung: item.beschreibung,
             quelle: item.quelle,
+            empfehlung: item.empfehlung ?? null,
           },
           projectId ?? null,
         ),
       );
       return;
     }
-    openDialog(buildHandlungsbedarfSession(item, projectId ?? null));
+    openDialog(
+      buildHandlungsbedarfSession(
+        { ...item, empfehlung: item.empfehlung ?? null },
+        projectId ?? null,
+      ),
+    );
   };
 
   const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {

@@ -1,5 +1,43 @@
 import type { DialogBox, DialogSession } from "./types";
-import type { KonfliktFactRef, KonfliktEmpfehlung } from "@/lib/project/types";
+import type { Empfehlung, KonfliktFactRef, KonfliktEmpfehlung } from "@/lib/project/types";
+
+// Einheitliches Empfehlungs-Payload — alle Drilldown-Objekte teilen sich diesen
+// Slot in `payload`. Der FaktDrillOverlay-Renderer reagiert auf `kind`.
+export interface EmpfehlungBlockPayload {
+  kind: Empfehlung["kind"];
+  vorschlag: string;
+  begruendung: string;
+  quelle?: string;
+  konfidenz: Empfehlung["konfidenz"];
+  intent: Empfehlung["intent"];
+  /** Optionaler Commit-Payload-Override. */
+  acceptPayload?: Record<string, unknown>;
+  // Konflikt-spezifisch (nur wenn kind === "konflikt"): Felder für A/B-Sub-State.
+  konflikt?: {
+    winnerSide: "A" | "B";
+    winnerFact: string;
+    winnerQuelle: string;
+    winnerDatum: string;
+    winnerMode: "direkt" | "abgeleitet" | "extern";
+    loserFact: string;
+    loserQuelle: string;
+    loserDatum: string;
+  };
+}
+
+function toEmpfehlungBlock(e: Empfehlung | null | undefined): EmpfehlungBlockPayload | null {
+  if (!e) return null;
+  return {
+    kind: e.kind,
+    vorschlag: e.vorschlag,
+    begruendung: e.begruendung,
+    quelle: e.quelle,
+    konfidenz: e.konfidenz,
+    intent: e.intent,
+    acceptPayload: e.payload,
+  };
+}
+
 
 let counter = 0;
 const uid = (prefix = "b") => `${prefix}_${Date.now()}_${counter++}`;
@@ -44,8 +82,32 @@ export const buildKonfliktSession = (k: {
   const winner = winnerSide === "A" ? k.faktA : winnerSide === "B" ? k.faktB : null;
   const loser = winnerSide === "A" ? k.faktB : winnerSide === "B" ? k.faktA : null;
 
-  const empfehlungBlock = winner && winnerSide
+  const empfehlungBlock: EmpfehlungBlockPayload | null = winner && winnerSide
     ? {
+        kind: "konflikt",
+        vorschlag: winner.inhalt,
+        begruendung: k.empfehlung?.begruendung ?? "",
+        quelle: winner.quelle || undefined,
+        konfidenz:
+          (k.empfehlung?.konfidenz ?? 0) >= 0.8
+            ? "hoch"
+            : (k.empfehlung?.konfidenz ?? 0) >= 0.5
+              ? "mittel"
+              : "niedrig",
+        intent: "accept",
+        acceptPayload: { auswahl: winnerSide, wert: winner.inhalt },
+        // Top-Level Konflikt-Felder bleiben für renderConflict erhalten.
+        konflikt: {
+          winnerSide,
+          winnerFact: winner.inhalt,
+          winnerQuelle: winner.quelle,
+          winnerDatum: winner.datum,
+          winnerMode: winner.mode,
+          loserFact: loser?.inhalt ?? "",
+          loserQuelle: loser?.quelle ?? "",
+          loserDatum: loser?.datum ?? "",
+        },
+        // Alias-Felder für bestehenden renderConflict-Code:
         winnerSide,
         winnerFact: winner.inhalt,
         winnerQuelle: winner.quelle,
@@ -54,7 +116,8 @@ export const buildKonfliktSession = (k: {
         loserFact: loser?.inhalt ?? "",
         loserQuelle: loser?.quelle ?? "",
         loserDatum: loser?.datum ?? "",
-        begruendung: k.empfehlung?.begruendung ?? "",
+      } as EmpfehlungBlockPayload & Record<string, unknown>
+    : null;
       }
     : null;
 
@@ -87,12 +150,16 @@ export const buildKonfliktSession = (k: {
 };
 
 // ---------------------- Gap ----------------------
+// Empfehlung-First: wenn die Heuristik einen ehrlichen Vorschlag liefert
+// (mappers/gaps.deriveGapEmpfehlung), wird er via `empfehlungBlock` als
+// dominante Bühne gezeigt. Sonst klassischer Gap-Drill.
 export const buildGapSession = (g: {
   id: string;
   titel: string;
   wirkung: string;
   betrifft: string;
   lebensdauer: string;
+  empfehlung?: Empfehlung | null;
 }): DialogSession =>
   mkSession("Offene Frage", g.titel, [
     mkBox({
@@ -103,6 +170,7 @@ export const buildGapSession = (g: {
         lebensdauer: g.lebensdauer,
         betrifft: g.betrifft,
         asks: "Was fehlt hier?",
+        empfehlungBlock: toEmpfehlungBlock(g.empfehlung),
       },
     }),
   ]);
@@ -111,14 +179,24 @@ export const buildGapSession = (g: {
 // Default-Renderer für entscheidung/aufgabe/offener_punkt/feedback.
 // Antwort fließt über `__submitIntent` → submitNote → Verstehens-Pipeline.
 export const buildHandlungsbedarfSession = (
-  item: { id: string; titel: string; beschreibung: string; quelle: string },
+  item: {
+    id: string;
+    titel: string;
+    beschreibung: string;
+    quelle: string;
+    empfehlung?: Empfehlung | null;
+  },
   projectId?: string | null,
 ): DialogSession =>
   mkSession(item.quelle || "Punkt", item.titel, [
     mkBox({
       type: "wissen",
       title: item.titel,
-      payload: { sachverhalt: item.beschreibung, quelle: item.quelle },
+      payload: {
+        sachverhalt: item.beschreibung,
+        quelle: item.quelle,
+        empfehlungBlock: toEmpfehlungBlock(item.empfehlung),
+      },
     }),
     mkBox({
       type: "eingabe",
@@ -144,6 +222,7 @@ export const buildDependencySession = (
     titel: string;
     beschreibung: string;
     quelle: string;
+    empfehlung?: Empfehlung | null;
   },
   projectId?: string | null,
 ): DialogSession =>
@@ -154,6 +233,7 @@ export const buildDependencySession = (
       payload: {
         auszug: d.beschreibung || "Diese Aufgabe hängt an einer anderen.",
         begruendung: "So lange die Abhängigkeit besteht, lässt sich der Punkt nicht erledigen.",
+        empfehlungBlock: toEmpfehlungBlock(d.empfehlung),
       },
     }),
     mkBox({
