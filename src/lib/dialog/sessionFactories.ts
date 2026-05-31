@@ -96,6 +96,7 @@ export const buildKonfliktSession = (k: {
               : "niedrig",
         intent: "accept",
         acceptPayload: { auswahl: winnerSide, wert: winner.inhalt },
+        // Top-Level Konflikt-Felder bleiben für renderConflict erhalten.
         konflikt: {
           winnerSide,
           winnerFact: winner.inhalt,
@@ -106,6 +107,17 @@ export const buildKonfliktSession = (k: {
           loserQuelle: loser?.quelle ?? "",
           loserDatum: loser?.datum ?? "",
         },
+        // Alias-Felder für bestehenden renderConflict-Code:
+        winnerSide,
+        winnerFact: winner.inhalt,
+        winnerQuelle: winner.quelle,
+        winnerDatum: winner.datum,
+        winnerMode: winner.mode,
+        loserFact: loser?.inhalt ?? "",
+        loserQuelle: loser?.quelle ?? "",
+        loserDatum: loser?.datum ?? "",
+      } as EmpfehlungBlockPayload & Record<string, unknown>
+    : null;
       }
     : null;
 
