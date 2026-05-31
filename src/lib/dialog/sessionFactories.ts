@@ -82,17 +82,30 @@ export const buildKonfliktSession = (k: {
   const winner = winnerSide === "A" ? k.faktA : winnerSide === "B" ? k.faktB : null;
   const loser = winnerSide === "A" ? k.faktB : winnerSide === "B" ? k.faktA : null;
 
-  const empfehlungBlock = winner && winnerSide
+  const empfehlungBlock: EmpfehlungBlockPayload | null = winner && winnerSide
     ? {
-        winnerSide,
-        winnerFact: winner.inhalt,
-        winnerQuelle: winner.quelle,
-        winnerDatum: winner.datum,
-        winnerMode: winner.mode,
-        loserFact: loser?.inhalt ?? "",
-        loserQuelle: loser?.quelle ?? "",
-        loserDatum: loser?.datum ?? "",
+        kind: "konflikt",
+        vorschlag: winner.inhalt,
         begruendung: k.empfehlung?.begruendung ?? "",
+        quelle: winner.quelle || undefined,
+        konfidenz:
+          (k.empfehlung?.konfidenz ?? 0) >= 0.8
+            ? "hoch"
+            : (k.empfehlung?.konfidenz ?? 0) >= 0.5
+              ? "mittel"
+              : "niedrig",
+        intent: "accept",
+        acceptPayload: { auswahl: winnerSide, wert: winner.inhalt },
+        konflikt: {
+          winnerSide,
+          winnerFact: winner.inhalt,
+          winnerQuelle: winner.quelle,
+          winnerDatum: winner.datum,
+          winnerMode: winner.mode,
+          loserFact: loser?.inhalt ?? "",
+          loserQuelle: loser?.quelle ?? "",
+          loserDatum: loser?.datum ?? "",
+        },
       }
     : null;
 
