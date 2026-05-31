@@ -399,7 +399,7 @@ const FaktDrillOverlay = ({ onClose }: { onClose: () => void }) => {
               style={{ height: 28, fontSize: 12, gap: 6, display: "inline-flex", alignItems: "center" }}
               onClick={() => {
                 setShowCompare(false);
-                setSelected(empBlock.winnerSide);
+                setSelected(empBlock.winnerSide ?? null);
               }}
             >
               <ArrowLeft size={12} /> Zurück zur Empfehlung
