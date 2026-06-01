@@ -82,6 +82,117 @@ const VerlaufFeed = ({ verlauf, projectId }: VerlaufFeedProps) => {
             background: "var(--hair)",
           }}
         />
+
+        {/* Inline-Notiz: schließt die Antwort-Loop direkt im Verlauf */}
+        <div className="flex relative" style={{ gap: 14 }}>
+          <span
+            aria-hidden
+            style={{
+              width: 13,
+              height: 13,
+              borderRadius: 999,
+              marginTop: 4,
+              background: "var(--surface-1)",
+              border: "2px dashed var(--ink-4)",
+              flex: "0 0 auto",
+              position: "relative",
+              zIndex: 1,
+            }}
+          />
+          <div className="flex-1 min-w-0">
+            {!noteOpen ? (
+              <button
+                type="button"
+                onClick={() => setNoteOpen(true)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  padding: 0,
+                  fontSize: 13,
+                  color: "var(--ink-3)",
+                  cursor: "pointer",
+                  fontStyle: "italic",
+                }}
+                className="hover:text-foreground transition-colors"
+              >
+                Notiz hinzufügen …
+              </button>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <textarea
+                  value={noteText}
+                  onChange={(ev) => setNoteText(ev.target.value)}
+                  placeholder="Was ist passiert, was hast du beschlossen?"
+                  autoFocus
+                  rows={3}
+                  onKeyDown={(ev) => {
+                    if (ev.key === "Escape") {
+                      setNoteOpen(false);
+                      setNoteText("");
+                    }
+                    if (ev.key === "Enter" && (ev.metaKey || ev.ctrlKey)) {
+                      ev.preventDefault();
+                      handleSubmitNote();
+                    }
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: "10px 12px",
+                    borderRadius: 8,
+                    border: "1px solid var(--hair)",
+                    background: "var(--surface-1)",
+                    color: "var(--ink)",
+                    fontFamily: "inherit",
+                    fontSize: 13.5,
+                    lineHeight: 1.4,
+                    outline: "none",
+                    resize: "vertical",
+                  }}
+                />
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <button
+                    type="button"
+                    onClick={handleSubmitNote}
+                    disabled={!noteText.trim() || submitting}
+                    style={{
+                      padding: "6px 14px",
+                      borderRadius: 6,
+                      fontSize: 12,
+                      background: noteText.trim() ? "var(--ink)" : "var(--ink-4)",
+                      color: "var(--surface-0)",
+                      border: "none",
+                      cursor: noteText.trim() && !submitting ? "pointer" : "not-allowed",
+                    }}
+                  >
+                    {submitting ? "Speichere …" : "Notiz ablegen"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNoteOpen(false);
+                      setNoteText("");
+                    }}
+                    style={{
+                      padding: "6px 10px",
+                      borderRadius: 6,
+                      fontSize: 12,
+                      background: "transparent",
+                      color: "var(--ink-3)",
+                      border: "none",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Abbrechen
+                  </button>
+                  <span style={{ fontSize: 11, color: "var(--ink-4)", marginLeft: "auto" }}>
+                    ⌘ + Enter
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
         {verlauf.map((e) => (
           <button
             key={e.id}
