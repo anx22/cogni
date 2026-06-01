@@ -7,6 +7,7 @@ import HandlungsbedarfList from "./HandlungsbedarfList";
 import VerlaufFeed from "./VerlaufFeed";
 import SubstanzSection from "./SubstanzSection";
 import ProjectHeaderActions from "./ProjectHeaderActions";
+import AtmosphereStripe from "./AtmosphereStripe";
 import AppSidebar from "@/components/sidebar/AppSidebar";
 import CreateProjectDialog from "@/components/entity/CreateProjectDialog";
 import InputOverlay from "@/components/entity/InputOverlay";
@@ -148,8 +149,8 @@ const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
         onEntityClick={onBack}
       />
 
-      {/* Globaler Atmosphären-Stripe — über die volle Breite, auch über die Sidebar */}
-      <div className="atmosphere-stripe pointer-events-none" aria-hidden style={{ zIndex: 20 }} />
+      {/* Globaler Atmosphären-Stripe — Lebenszustand des Projekts */}
+      <AtmosphereStripe project={project} />
 
       <div
         className="flex-1 min-w-0 animate-[fade-in_0.5s_ease-out] relative overflow-y-auto overscroll-contain"
