@@ -216,7 +216,7 @@ const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
                   <HandlungsbedarfList items={project.handlungsbedarf} projectId={realProjectId} />
                 </div>
                 <div className="lg:col-span-2 min-w-0">
-                  <VerlaufFeed verlauf={project.verlauf} />
+                  <VerlaufFeed verlauf={project.verlauf} projectId={realProjectId} />
                 </div>
               </div>
             </section>
