@@ -296,3 +296,9 @@ aber die geteilten `corsHeaders` — Verhalten unverändert.
 - `2026-05-18` **DB-Migration**: `box_type` um `condition, exclusion, assumption, suggestion, question, note, relation, attribute, risk, unclear` erweitert. Bestehende Werte unverändert, Migration additiv.
 - `2026-05-18` **UI-Renderer-Matrix** (`src/components/dialog/parts/ReviewRow.tsx`): pro Modalität eigene Default-Aktion + Aktionsleiste. `RefToken` zeigt `attaches_to` als Mini-Chip. Eingabefeld nur bei `gap/eingabe/frage` mit `asks`. Sprechhandlungs-Boxen (Bedingung, Annahme, …) bekommen `Übernehmen / Bezug ändern / Verwerfen` ohne Eingabezwang.
 - `2026-05-18` **Kein neues Designsystem** — Modalität ist Daten-/UX-Vertrag, nicht Optik. Architektur (Token-System, ProjectViewModel-Vertrag, Edge-Function-Hülle) unangetastet.
+
+[2026-06-01] Empfehlungs-Vertrag über alle Drilldown-Objekte → Einheitlicher `Empfehlung`-Slot in `types.ts`, deterministische Heuristik in den Mappern (kein erfundenes KI-Signal), `FaktDrillOverlay` rendert eine gemeinsame Bühne → Ein visueller Vertrag für Konflikt/Gap/Dependency/Entscheidung, ohne LLM-Abhängigkeit.
+
+[2026-06-01] Verlauf-Notiz nutzt `submitNote` statt neuer `note-create` Edge Function → submitNote schreibt bereits `assets` mit `file_type='note'` und triggert `intake-trigger` → Redundanz vermieden, ein Pipeline-Pfad statt zwei.
+
+[2026-06-01] `AtmosphereStripe` als eigene Komponente → Spiegelt Projekt-Lebenszustand (offen/review-warm), reine Anzeige ohne Logik-Verschiebung → Spatial Continuity ohne neue Datenflüsse.
