@@ -1,6 +1,9 @@
+import { useState } from "react";
+import { toast } from "sonner";
 import DeltaTag from "./shared/DeltaTag";
 import { useDialog } from "@/components/dialog/DialogProvider";
 import { buildVerlaufSession } from "@/lib/dialog/sessionFactories";
+import { submitNote } from "@/lib/intake/submitNote";
 import type { DeltaTyp, VerlaufVM } from "@/lib/project/types";
 
 const DOT_COLOR: Record<DeltaTyp, string> = {
@@ -11,8 +14,37 @@ const DOT_COLOR: Record<DeltaTyp, string> = {
   unclear: "var(--sig-review)",
 };
 
-const VerlaufFeed = ({ verlauf }: { verlauf: VerlaufVM[] }) => {
+interface VerlaufFeedProps {
+  verlauf: VerlaufVM[];
+  projectId?: string | null;
+}
+
+const VerlaufFeed = ({ verlauf, projectId }: VerlaufFeedProps) => {
   const { openDialog } = useDialog();
+  const [noteOpen, setNoteOpen] = useState(false);
+  const [noteText, setNoteText] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmitNote = async () => {
+    const text = noteText.trim();
+    if (!text || submitting) return;
+    setSubmitting(true);
+    const result = await submitNote(text, {
+      projectId: projectId ?? null,
+      contextHint: "Notiz im Verlauf",
+      sourceRef: { type: "verlauf" },
+    });
+    setSubmitting(false);
+    if (result) {
+      toast.success("Notiz aufgenommen", {
+        description: "Erscheint nach dem Verstehens-Lauf im Verlauf.",
+      });
+      setNoteText("");
+      setNoteOpen(false);
+    } else {
+      toast.error("Notiz konnte nicht abgelegt werden");
+    }
+  };
 
   return (
     <section
