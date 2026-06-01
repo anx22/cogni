@@ -118,8 +118,6 @@ export const buildKonfliktSession = (k: {
         loserDatum: loser?.datum ?? "",
       } as EmpfehlungBlockPayload & Record<string, unknown>
     : null;
-      }
-    : null;
 
   return mkSession("Widerspruch klären", k.title, [
     mkBox({
