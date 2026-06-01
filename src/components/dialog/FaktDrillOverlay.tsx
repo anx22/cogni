@@ -1226,6 +1226,139 @@ const FaktDrillOverlay = ({ onClose }: { onClose: () => void }) => {
     );
   };
 
+  // ───────────────── Empfehlungs-Bühne (Gap / Dependency / Entscheidung) ──
+  // Spiegelt das Konflikt-Empfehlungs-Layout, aber ohne A/B-Vergleich.
+  // "Korrigieren" → springt zurück in den klassischen Renderer.
+  const renderEmpfehlungBuehne = () => {
+    if (!empBlock) return null;
+    const KIND_LABEL: Record<string, string> = {
+      gap: "COGNI SCHLÄGT VOR",
+      dependency: "COGNI SCHLÄGT VOR",
+      entscheidung: "COGNI EMPFIEHLT",
+    };
+    const KONFIDENZ_LABEL: Record<string, string> = {
+      hoch: "hohe Konfidenz",
+      mittel: "mittlere Konfidenz",
+      niedrig: "niedrige Konfidenz",
+    };
+    const label = KIND_LABEL[empBlock.kind ?? ""] ?? "COGNI SCHLÄGT VOR";
+    const acceptLabel = empBlock.intent === "submit_value" ? "Übernehmen →" : "Übernehmen →";
+
+    const onAccept = () => {
+      if (empBlock.intent === "submit_value") {
+        commitBox(box.id, "confirm", { antwort: empBlock.vorschlag, ...empBlock.acceptPayload });
+      } else {
+        commitBox(box.id, "confirm", empBlock.acceptPayload);
+      }
+    };
+
+    const onCorrect = () => {
+      // Vorbefüllen, dann zum Standard-Renderer springen
+      if (box.type === "gap" && empBlock.vorschlag) setGapInput(empBlock.vorschlag);
+      setShowCompare(true);
+    };
+
+    return (
+      <div
+        style={{
+          flex: 1,
+          padding: "32px 56px 0",
+          display: "flex",
+          flexDirection: "column",
+          gap: 20,
+          overflowY: "auto",
+        }}
+      >
+        <div
+          style={{
+            padding: "28px 32px 26px",
+            borderRadius: 18,
+            background: "var(--d-surf)",
+            border: "1px solid var(--d-warn)",
+            boxShadow: "0 1px 0 0 var(--d-warn-soft) inset",
+          }}
+        >
+          <div
+            className="mono"
+            style={{
+              fontSize: 10.5,
+              color: "var(--d-warn)",
+              letterSpacing: ".08em",
+              marginBottom: 14,
+            }}
+          >
+            {label}
+          </div>
+          <div
+            style={{
+              fontSize: 36,
+              fontWeight: 500,
+              letterSpacing: "-.028em",
+              color: "var(--d-ink)",
+              lineHeight: 1.1,
+            }}
+          >
+            {empBlock.vorschlag}
+          </div>
+          {empBlock.quelle && (
+            <div style={{ marginTop: 14, fontSize: 13, color: "var(--d-ink-2)" }}>
+              {empBlock.quelle}
+            </div>
+          )}
+          {empBlock.begruendung && (
+            <div
+              style={{
+                marginTop: 6,
+                fontSize: 13,
+                color: "var(--d-ink-3)",
+                lineHeight: 1.5,
+              }}
+            >
+              Begründung: {empBlock.begruendung}
+              {empBlock.konfidenz && (
+                <span style={{ color: "var(--d-ink-4)" }}>
+                  {" "}
+                  · {KONFIDENZ_LABEL[empBlock.konfidenz]}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "20px 0 28px",
+            marginTop: "auto",
+            gap: 10,
+          }}
+        >
+          <button
+            type="button"
+            className="dlg2-btn-secondary"
+            onClick={() => commitBox(box.id, "reject", { escalate: true })}
+            title="Bleibt in der Pipeline und erscheint als Handlungsbedarf"
+          >
+            Offen lassen
+          </button>
+          <div style={{ display: "flex", gap: 10 }}>
+            <button type="button" className="dlg2-btn-secondary" onClick={onCorrect}>
+              Korrigieren
+            </button>
+            <button type="button" className="dlg2-btn-commit ready" onClick={onAccept}>
+              {acceptLabel}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const hasGenericEmpfehlung =
+    empBlock && empBlock.kind && empBlock.kind !== "konflikt" && !showCompare;
+
   return (
     <div data-dialog className="dlg2-root dialog-backdrop">
       <SessionHeader
@@ -1237,9 +1370,11 @@ const FaktDrillOverlay = ({ onClose }: { onClose: () => void }) => {
       <DrillHeader />
       {box.type === "konflikt"
         ? renderConflict()
-        : box.type === "gap"
-          ? renderGap()
-          : renderGeneric()}
+        : hasGenericEmpfehlung
+          ? renderEmpfehlungBuehne()
+          : box.type === "gap"
+            ? renderGap()
+            : renderGeneric()}
     </div>
   );
 };

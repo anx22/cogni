@@ -191,8 +191,8 @@ export function buildProjectViewModel(raw: RawProjectData): ComposedProjectVM {
     // Nächste Deadline als Meilenstein
     if (nextDeadline) {
       const label =
-        (nextDeadline.label as string | null)?.trim() ||
-        (nextDeadline.description as string | null)?.trim() ||
+        (nextDeadline.title as string | null)?.trim() ||
+        (nextDeadline.relevance as string | null)?.trim() ||
         "Nächster Termin";
       sentences.push(`Nächster Meilenstein: ${label}, ${fmtDate(nextDeadline.due_date)}.`);
     }

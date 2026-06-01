@@ -37,24 +37,26 @@ Statt Backlog-Friedhof: drei Sprints, jeder mit klarem Outcome. Reihenfolge M1 �
 
 ### M1 — Provenance & Empfehlung schließen
 
-**Stufe 1 erledigt (2026-05-30):** Empfehlung-First-Drilldown live. `FaktDrillOverlay.renderConflict` zeigt cogni-Empfehlung 36px primär mit Quelle + Begründung, „Übernehmen / Korrigieren / Offen lassen" — Vergleich nur noch sekundär. `deriveEmpfehlung` liefert human Bausteine („5 Tage neuer · direkte Quelle statt abgeleiteter") statt Prozentwerte. Slot `payload.empfehlungBlock` im Box-Schema offen für Gap/Dependency/Decision.
+**Stufe 1 erledigt (2026-05-30):** Empfehlung-First-Drilldown live für Konflikt. `FaktDrillOverlay.renderConflict` zeigt cogni-Empfehlung 36px primär mit Quelle + Begründung, „Übernehmen / Korrigieren / Offen lassen" — Vergleich nur noch sekundär. `deriveEmpfehlung` liefert humane Bausteine („5 Tage neuer · direkte Quelle statt abgeleiteter") statt Prozentwerte.
 
-**Stufe 2 offen:** Empfehlung für andere Objekttypen, sobald Detektor-Heuristik existiert (Gap-Antwort-Vorschläge, Dependency-Auflösungs-Vorschläge). Heute kein Code dafür — Trigger ist Wave 3 / L1.
+**Stufe 2 erledigt (2026-06-01):** Empfehlungs-Vertrag generalisiert über Gap / Dependency / Entscheidung. `Empfehlung`-Interface in `types.ts`, deterministische Heuristiken in `mappers/gaps.ts` + `mappers/dependencies.ts` aus vorhandenen Feldern (Alter, Wirkung, Quelle). Session-Factories reichen `empfehlungBlock` einheitlich durch, `FaktDrillOverlay.renderEmpfehlungBuehne` rendert für alle drei Objekttypen die gleiche 36px-Bühne. „Korrigieren" befüllt Gap-Input vor, fällt sonst auf den klassischen Renderer zurück. LLM-Hebung bleibt L1.
 
 
 ### M2 — Entity bleibt überall präsent
 
 Spatial-Continuity-Geste komplettieren. Heute bricht „Entity ist immer da" ab, sobald ein Projekt offen ist.
 
-- Atmosphären-Streifen mit Realtime-Hook (Pipeline-aktiv → beschleunigt + review-warm).
+- **Stufe 1 erledigt (2026-06-01):** `AtmosphereStripe` als eigene Komponente — spiegelt Lebenszustand des Projekts (offen / review-warm via `is-active`). Hängt an `project.handlungsbedarf`.
 - Universal-Overlay (⌘+Space): Entity-Bühne über jedem Screen, Kontext-Anker.
 - AssetOrbit-Retry für `failed`-Chips (Polish, gehört thematisch hier rein).
+- Realtime-Hook für Pipeline-Activity (Atmosphäre während Verstehens-Lauf).
 
 ### M3 — Antwort-Loops schließen
 
 Readonly-Reste auflösen: Verlauf-Notiz, Feedback-Button, Impact-Pfeile. Damit ist der Prototyp ein geschlossener Kreis.
 
-- Edge Functions `note-create` + `feedback-create`.
+- **Stufe 1 erledigt (2026-06-01):** Inline-„Notiz hinzufügen" im `VerlaufFeed`. Nutzt bestehende `submitNote` mit `sourceRef.type = "verlauf"` — keine neue Edge Function nötig, das `assets`/`intake-trigger`-Routing schließt den Kreis. Optimistic UI + Toast-Feedback.
+- `feedback-create` Pfad (Feedback-Button konsolidiert).
 - ImpactPipelinePanel-Pfeile öffnen referenzierte Sessions/Items.
 - Readonly-Hints aus Dialog-Sessions entfernen, sobald Backend live.
 
