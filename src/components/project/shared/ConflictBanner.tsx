@@ -2,13 +2,17 @@ import { AlertTriangle } from "lucide-react";
 import { useDialog } from "@/components/dialog/DialogProvider";
 import { buildKonfliktSession } from "@/lib/dialog/sessionFactories";
 
+import type { KonfliktFactRef } from "@/lib/project/types";
+
 interface Konflikt {
   id: string;
   title: string;
   beschreibung: string;
-  faktA?: string;
-  faktB?: string;
+  faktA?: KonfliktFactRef;
+  faktB?: KonfliktFactRef;
 }
+
+const EMPTY_REF: KonfliktFactRef = { inhalt: "—", quelle: "", datum: "", mode: "direkt" };
 
 const ConflictBanner = ({ konflikte }: { konflikte: Konflikt[] }) => {
   const { openDialog } = useDialog();
@@ -34,8 +38,9 @@ const ConflictBanner = ({ konflikte }: { konflikte: Konflikt[] }) => {
                         id: k.id,
                         title: k.title,
                         beschreibung: k.beschreibung,
-                        faktA: k.faktA ?? "Variante A",
-                        faktB: k.faktB ?? "Variante B",
+                        faktA: k.faktA ?? EMPTY_REF,
+                        faktB: k.faktB ?? EMPTY_REF,
+                        empfehlung: null,
                       }),
                     )
                   }

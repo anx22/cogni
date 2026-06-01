@@ -32,7 +32,7 @@ export async function submitNote(
   const { data: userData } = await supabase.auth.getUser();
   const user = userData.user;
   if (!user) {
-    devlog.warn("submitNote", "aborted — no user");
+    devlog.warn("intake", "submitNote aborted — no user");
     return null;
   }
   const trimmed = text.trim();
