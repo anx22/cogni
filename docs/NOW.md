@@ -39,7 +39,7 @@ Statt Backlog-Friedhof: drei Sprints, jeder mit klarem Outcome. Reihenfolge M1 �
 
 **Stufe 1 erledigt (2026-05-30):** Empfehlung-First-Drilldown live für Konflikt. `FaktDrillOverlay.renderConflict` zeigt cogni-Empfehlung 36px primär mit Quelle + Begründung, „Übernehmen / Korrigieren / Offen lassen" — Vergleich nur noch sekundär. `deriveEmpfehlung` liefert humane Bausteine („5 Tage neuer · direkte Quelle statt abgeleiteter") statt Prozentwerte.
 
-**Stufe 2 erledigt (2026-06-01):** Empfehlungs-Vertrag generalisiert über Gap / Dependency / Entscheidung. `Empfehlung`-Interface in `types.ts`, deterministische Heuristiken in `mappers/gaps.ts` + `mappers/dependencies.ts` aus vorhandenen Feldern (Alter, Wirkung, Quelle). Session-Factories reichen `empfehlungBlock` einheitlich durch, `FaktDrillOverlay.renderEmpfehlungBuehne` rendert für alle drei Objekttypen die gleiche 36px-Bühne. „Korrigieren" befüllt Gap-Input vor, fällt sonst auf den klassischen Renderer zurück. LLM-Hebung bleibt L1.
+**Stufe 2 erledigt (2026-06-01):** Empfehlungs-Vertrag generalisiert über Gap / Dependency / Entscheidung. `Empfehlung`-Interface in `types.ts`, deterministische Heuristiken in `mappers/gaps.ts` + `mappers/dependencies.ts` aus vorhandenen Feldern (Alter, Wirkung, Quelle). Session-Factories reichen `empfehlungBlock` einheitlich durch, `FaktDrillOverlay.renderEmpfehlungBuehne` rendert für alle drei Objekttypen die gleiche 36px-Bühne. „Korrigieren" befüllt Gap-Input vor, fällt sonst auf den klassischen Renderer zurück. Tests: `gaps.test.ts` + `dependencies.test.ts` decken Konfidenz-Staffelung + Null-Pfade ab. LLM-Hebung bleibt L1.
 
 ### M2 — Entity bleibt überall präsent
 
