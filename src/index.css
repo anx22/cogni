@@ -572,6 +572,13 @@
   background: linear-gradient(180deg, var(--sig-review), transparent);
   opacity: 0.18;
 }
+.atmosphere-stripe.is-processing {
+  animation: atmosphere-breathe 1.6s ease-in-out infinite;
+}
+.atmosphere-stripe.is-processing::after {
+  background: linear-gradient(180deg, var(--sig-action), transparent);
+  opacity: 0.22;
+}
 
 @keyframes cogni-entity-breathe {
   0%,

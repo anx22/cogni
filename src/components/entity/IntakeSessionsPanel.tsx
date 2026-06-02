@@ -19,13 +19,13 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { supabase } from "@/integrations/supabase/client";
 import { useRealtimeTables } from "@/lib/realtime/useRealtimeTables";
 import { useDialog } from "@/components/dialog/DialogProvider";
 import { formatRelative } from "@/lib/format/relativeTime";
 import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
-import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import { retryIntake } from "@/lib/intake/retryIntake";
 
 type Session = Database["public"]["Tables"]["dialog_sessions"]["Row"];
 type Asset = Database["public"]["Tables"]["assets"]["Row"];
@@ -152,12 +152,7 @@ const IntakeSessionsPanel = (_props: Props) => {
     onTrigger: load,
   });
 
-  const handleRetry = useCallback(async (assetId: string) => {
-    toast("Wird nochmal versucht", { description: "Analyse läuft erneut" });
-    await supabase.functions.invoke("intake-understand", {
-      body: { asset_id: assetId, retry: true },
-    });
-  }, []);
+  const handleRetry = useCallback((assetId: string) => retryIntake(assetId), []);
 
   const tiles: SessionTile[] = useMemo(() => {
     const triggerIds = new Set(sessions.map((s) => s.trigger_ref_id).filter(Boolean));

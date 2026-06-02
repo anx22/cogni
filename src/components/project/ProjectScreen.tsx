@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-
+import { Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import LageZone from "./LageZone";
@@ -15,6 +15,7 @@ import { useIntake } from "@/lib/intake/useIntake";
 import { detectFromDrop } from "@/lib/intake/detectInputType";
 import { useProject } from "@/lib/project/useProject";
 import { useProjects } from "@/lib/project/useProjects";
+import { useProjectPipeline } from "@/lib/project/useProjectPipeline";
 import { useProjectActions } from "@/lib/object-actions/useObjectActions";
 import { useBodyScrollLock } from "@/lib/ui/useBodyScrollLock";
 import { useDropZone } from "@/lib/intake/useDropZone";
@@ -137,6 +138,7 @@ const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
   useBodyScrollLock(true);
 
   const signal = project ? deriveSignal(project) : "calm";
+  const { isProcessing } = useProjectPipeline(realProjectId);
 
   return (
     <div className="flex overflow-hidden bg-c-surface-0 relative" style={{ height: "100dvh" }}>
@@ -150,7 +152,7 @@ const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
       />
 
       {/* Globaler Atmosphären-Stripe — Lebenszustand des Projekts */}
-      <AtmosphereStripe project={project} />
+      <AtmosphereStripe project={project} isProcessing={isProcessing} />
 
       <div
         className="flex-1 min-w-0 animate-[fade-in_0.5s_ease-out] relative overflow-y-auto overscroll-contain"
@@ -168,12 +170,77 @@ const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
                 title={SIGNAL_LABEL[signal]}
               />
               <span className="text-sm text-foreground/90 truncate">{project.name}</span>
+              {project.status === "archived" && (
+                <span
+                  className="t-micro shrink-0"
+                  style={{
+                    padding: "2px 8px",
+                    borderRadius: 6,
+                    background: "var(--surface-2)",
+                    color: "var(--ink-4)",
+                    border: "1px solid var(--hair)",
+                  }}
+                >
+                  Archiviert
+                </span>
+              )}
             </div>
-            <ProjectHeaderActions
-              projectId={realProjectId}
-              projectName={project.name}
-              onRequestRename={() => setForceRename(true)}
+            <div className="flex items-center gap-2 shrink-0">
+              {openReviewSessionId && (
+                <button
+                  type="button"
+                  onClick={handleOpenReview}
+                  className="inline-flex items-center gap-1.5"
+                  style={{
+                    height: 30,
+                    padding: "0 12px",
+                    borderRadius: 8,
+                    background: "var(--ink)",
+                    color: "var(--surface-0)",
+                    fontSize: 12.5,
+                    fontWeight: 500,
+                    border: "none",
+                    cursor: "pointer",
+                  }}
+                  title="Offene Klärung öffnen"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Klärung öffnen
+                </button>
+              )}
+              <ProjectHeaderActions
+                projectId={realProjectId}
+                projectName={project.name}
+                status={project.status}
+                onRequestRename={() => setForceRename(true)}
+              />
+            </div>
+          </div>
+        )}
+
+        {(status === "ready" || status === "empty") && project && isProcessing && (
+          <div
+            className="flex items-center gap-3 px-6 py-2.5"
+            style={{
+              background: "var(--surface-2)",
+              borderBottom: "1px solid var(--hair)",
+              color: "var(--ink-2)",
+              fontSize: 13,
+            }}
+          >
+            <span
+              aria-hidden
+              className="animate-spin"
+              style={{
+                width: 13,
+                height: 13,
+                borderRadius: 999,
+                border: "1.5px solid var(--sig-action)",
+                borderTopColor: "transparent",
+                flexShrink: 0,
+              }}
             />
+            <span>Material wird ausgewertet — die Klärung erscheint, sobald ich fertig bin.</span>
           </div>
         )}
 
@@ -194,6 +261,7 @@ const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
             forceEdit={forceRename}
             onEditDone={() => setForceRename(false)}
             onNameChange={handleRename}
+            onOpenIntake={() => setIntakeOpen(true)}
             variant="shell"
           />
         )}

@@ -11,7 +11,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { ArrowRight } from "lucide-react";
-// Navigate-Hook reserviert für klickbare Impacts/Pipeline-Rows — Backlog NOW.md.
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useProjects } from "@/lib/project/useProjects";
@@ -23,6 +23,7 @@ interface ImpactItem {
   when: string;
   what: string;
   projectName: string;
+  projectId: string | null;
 }
 
 interface ActivePipelineItem {
@@ -30,6 +31,7 @@ interface ActivePipelineItem {
   label: string;
   fileType: string | null;
   startedAt: string;
+  projectId: string | null;
 }
 
 const EVENT_LABELS: Record<string, string> = {
@@ -53,6 +55,7 @@ const labelForEvent = (eventType: string, payload: Record<string, unknown> | nul
 const ImpactPipelinePanel = () => {
   const { session } = useAuth();
   const userId = session?.user?.id;
+  const navigate = useNavigate();
   const { projects } = useProjects();
 
   const [impacts, setImpacts] = useState<ImpactItem[]>([]);
@@ -85,6 +88,7 @@ const ImpactPipelinePanel = () => {
             row.new_value as Record<string, unknown> | null,
           ),
           projectName: row.project_id ? (projectNameById.get(row.project_id) ?? "—") : "—",
+          projectId: row.project_id ?? null,
         })),
       );
     },
@@ -96,7 +100,9 @@ const ImpactPipelinePanel = () => {
       if (!userId) return;
       const { data } = await supabase
         .from("assets")
-        .select("id, file_type, file_name, created_at, processing_status, understanding_status")
+        .select(
+          "id, file_type, file_name, created_at, processing_status, understanding_status, project_id",
+        )
         .eq("user_id", userId)
         .or("processing_status.eq.processing,understanding_status.eq.running")
         .order("created_at", { ascending: false })
@@ -111,6 +117,7 @@ const ImpactPipelinePanel = () => {
         label: row.file_name ?? "Unbenannt",
         fileType: row.file_type,
         startedAt: row.created_at ?? new Date().toISOString(),
+        projectId: row.project_id ?? null,
       });
     },
     [userId],
@@ -182,11 +189,31 @@ const ImpactPipelinePanel = () => {
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {impacts.map((it) => (
-              <div key={it.id} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              <button
+                key={it.id}
+                type="button"
+                onClick={() => it.projectId && navigate(`/projekt/${it.projectId}`)}
+                disabled={!it.projectId}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 3,
+                  textAlign: "left",
+                  background: "transparent",
+                  border: "none",
+                  padding: 0,
+                  cursor: it.projectId ? "pointer" : "default",
+                  opacity: 1,
+                }}
+                className={it.projectId ? "group" : ""}
+              >
                 <div className="t-micro mono" style={{ color: "var(--ink-4)" }}>
                   {it.when}
                 </div>
-                <div className="t-body" style={{ color: "var(--ink)", lineHeight: 1.4 }}>
+                <div
+                  className="t-body group-hover:underline"
+                  style={{ color: "var(--ink)", lineHeight: 1.4 }}
+                >
                   {it.what}
                 </div>
                 <div
@@ -195,7 +222,7 @@ const ImpactPipelinePanel = () => {
                 >
                   <ArrowRight size={11} /> {it.projectName}
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         )}
@@ -210,8 +237,12 @@ const ImpactPipelinePanel = () => {
             <div className="t-micro" style={{ color: "var(--ink-3)", marginBottom: 10 }}>
               Jetzt
             </div>
-            <div
+            <button
+              type="button"
+              onClick={() => active.projectId && navigate(`/projekt/${active.projectId}`)}
+              disabled={!active.projectId}
               style={{
+                width: "100%",
                 padding: "10px 12px",
                 borderRadius: 10,
                 background: "var(--surface-2)",
@@ -219,9 +250,12 @@ const ImpactPipelinePanel = () => {
                 display: "flex",
                 gap: 10,
                 alignItems: "flex-start",
+                textAlign: "left",
+                cursor: active.projectId ? "pointer" : "default",
               }}
             >
               <span
+                className="animate-spin"
                 style={{
                   width: 14,
                   height: 14,
@@ -229,7 +263,6 @@ const ImpactPipelinePanel = () => {
                   marginTop: 3,
                   border: "1.5px solid var(--sig-action)",
                   borderTopColor: "transparent",
-                  animation: "cogni-orb-rotate-slow 1.2s linear infinite",
                   flex: "0 0 auto",
                 }}
               />
@@ -250,7 +283,7 @@ const ImpactPipelinePanel = () => {
                   {active.label}
                 </div>
               </div>
-            </div>
+            </button>
           </section>
           <div className="hairline" />
         </>
