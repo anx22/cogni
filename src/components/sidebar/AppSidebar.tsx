@@ -6,9 +6,11 @@
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus } from "lucide-react";
+import { Plus, Archive, ChevronRight, RotateCcw } from "lucide-react";
 import type { DemoProject, ProjectSignal } from "@/data/demoProjects";
 import Entity from "@/components/entity/Entity";
+import { useArchivedProjects } from "@/lib/project/useArchivedProjects";
+import { useProjectActions } from "@/lib/object-actions/useObjectActions";
 
 const SIGNAL_TO_DOT: Record<ProjectSignal, string> = {
   conflict: "dot--conflict",
@@ -38,6 +40,9 @@ const AppSidebar = ({
 }: AppSidebarProps) => {
   const navigate = useNavigate();
   const [entityHover, setEntityHover] = useState(false);
+  const [archiveOpen, setArchiveOpen] = useState(false);
+  const { projects: archived } = useArchivedProjects(archiveOpen);
+  const projectActions = useProjectActions();
   const handleEntityClick = () => {
     if (onEntityClick) onEntityClick();
     else navigate("/");
@@ -200,6 +205,97 @@ const AppSidebar = ({
             <span>Neues Projekt</span>
           </button>
         )}
+
+        {/* Archiv — lazy ausklappbar */}
+        <div style={{ marginTop: 8, borderTop: "1px solid var(--hair)", paddingTop: 8 }}>
+          <button
+            type="button"
+            onClick={() => setArchiveOpen((v) => !v)}
+            className="w-full flex items-center gap-2"
+            style={{
+              padding: "8px",
+              borderRadius: 8,
+              background: "transparent",
+              border: "none",
+              cursor: "pointer",
+              color: "var(--ink-4)",
+              fontSize: 13,
+            }}
+          >
+            <ChevronRight
+              size={12}
+              style={{
+                transform: archiveOpen ? "rotate(90deg)" : "none",
+                transition: "transform .15s",
+              }}
+            />
+            <Archive size={12} />
+            <span>Archiv</span>
+            {archiveOpen && archived.length > 0 && (
+              <span className="mono tabular" style={{ marginLeft: "auto", fontSize: 11 }}>
+                {archived.length}
+              </span>
+            )}
+          </button>
+
+          {archiveOpen && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 1, marginTop: 2 }}>
+              {archived.length === 0 ? (
+                <div
+                  className="t-small"
+                  style={{ padding: "6px 8px 6px 30px", color: "var(--ink-4)" }}
+                >
+                  Keine archivierten Projekte.
+                </div>
+              ) : (
+                archived.map((p) => (
+                  <div
+                    key={p.id}
+                    className="group w-full flex items-center"
+                    style={{ padding: "6px 8px 6px 30px", borderRadius: 8, gap: 8 }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => onProjectSelect(p.id)}
+                      className="flex-1 truncate text-left"
+                      style={{
+                        fontSize: 13,
+                        color: "var(--ink-3)",
+                        background: "transparent",
+                        border: "none",
+                        cursor: "pointer",
+                      }}
+                      title={p.name}
+                    >
+                      {p.name}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => projectActions.unarchive(p.id)}
+                      disabled={projectActions.pending}
+                      className="shrink-0"
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: 22,
+                        height: 22,
+                        borderRadius: 6,
+                        background: "transparent",
+                        border: "none",
+                        cursor: "pointer",
+                        color: "var(--ink-4)",
+                      }}
+                      title="Wiederherstellen"
+                    >
+                      <RotateCcw size={12} />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </aside>
   );

@@ -170,10 +170,25 @@ const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
                 title={SIGNAL_LABEL[signal]}
               />
               <span className="text-sm text-foreground/90 truncate">{project.name}</span>
+              {project.status === "archived" && (
+                <span
+                  className="t-micro shrink-0"
+                  style={{
+                    padding: "2px 8px",
+                    borderRadius: 6,
+                    background: "var(--surface-2)",
+                    color: "var(--ink-4)",
+                    border: "1px solid var(--hair)",
+                  }}
+                >
+                  Archiviert
+                </span>
+              )}
             </div>
             <ProjectHeaderActions
               projectId={realProjectId}
               projectName={project.name}
+              status={project.status}
               onRequestRename={() => setForceRename(true)}
             />
           </div>
@@ -196,6 +211,7 @@ const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
             forceEdit={forceRename}
             onEditDone={() => setForceRename(false)}
             onNameChange={handleRename}
+            onOpenIntake={() => setIntakeOpen(true)}
             variant="shell"
           />
         )}

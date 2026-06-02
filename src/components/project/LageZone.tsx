@@ -121,6 +121,27 @@ const LageZone = ({
             Noch keine Substanz. Lege etwas ab — eine Datei, einen Link, eine Notiz — ich beginne
             mit dem Verstehen.
           </p>
+          {onOpenIntake && (
+            <button
+              type="button"
+              onClick={onOpenIntake}
+              className="inline-flex items-center gap-2 mt-8"
+              style={{
+                height: 40,
+                padding: "0 18px",
+                borderRadius: 12,
+                background: "var(--ink)",
+                color: "var(--surface-0)",
+                fontSize: 14,
+                fontWeight: 500,
+                cursor: "pointer",
+                border: "none",
+              }}
+            >
+              <Upload className="w-4 h-4" />
+              Material ablegen
+            </button>
+          )}
         </div>
       </section>
     );
