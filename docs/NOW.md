@@ -41,15 +41,14 @@ Statt Backlog-Friedhof: drei Sprints, jeder mit klarem Outcome. Reihenfolge M1 �
 
 **Stufe 2 erledigt (2026-06-01):** Empfehlungs-Vertrag generalisiert über Gap / Dependency / Entscheidung. `Empfehlung`-Interface in `types.ts`, deterministische Heuristiken in `mappers/gaps.ts` + `mappers/dependencies.ts` aus vorhandenen Feldern (Alter, Wirkung, Quelle). Session-Factories reichen `empfehlungBlock` einheitlich durch, `FaktDrillOverlay.renderEmpfehlungBuehne` rendert für alle drei Objekttypen die gleiche 36px-Bühne. „Korrigieren" befüllt Gap-Input vor, fällt sonst auf den klassischen Renderer zurück. LLM-Hebung bleibt L1.
 
-
 ### M2 — Entity bleibt überall präsent
 
 Spatial-Continuity-Geste komplettieren. Heute bricht „Entity ist immer da" ab, sobald ein Projekt offen ist.
 
 - **Stufe 1 erledigt (2026-06-01):** `AtmosphereStripe` als eigene Komponente — spiegelt Lebenszustand des Projekts (offen / review-warm via `is-active`). Hängt an `project.handlungsbedarf`.
 - Universal-Overlay (⌘+Space): Entity-Bühne über jedem Screen, Kontext-Anker.
-- AssetOrbit-Retry für `failed`-Chips (Polish, gehört thematisch hier rein).
-- Realtime-Hook für Pipeline-Activity (Atmosphäre während Verstehens-Lauf).
+- **Stufe 2 erledigt (2026-06-02):** AssetOrbit-Retry für `failed`-Chips — `retryIntake.ts` als gemeinsame lib-Funktion, failed-Chip zeigt RotateCcw-Icon und ist klickbar. `IntakeSessionsPanel` nutzt dieselbe Funktion.
+- **Stufe 3 erledigt (2026-06-02):** Realtime-Hook `useProjectPipeline` — `AtmosphereStripe` erhält `isProcessing` prop, `.is-processing`-CSS (1.6s, sig-action-Farbe) unterscheidet aktive Pipeline-Läufe von offenem Handlungsbedarf.
 
 ### M3 — Antwort-Loops schließen
 
@@ -57,7 +56,7 @@ Readonly-Reste auflösen: Verlauf-Notiz, Feedback-Button, Impact-Pfeile. Damit i
 
 - **Stufe 1 erledigt (2026-06-01):** Inline-„Notiz hinzufügen" im `VerlaufFeed`. Nutzt bestehende `submitNote` mit `sourceRef.type = "verlauf"` — keine neue Edge Function nötig, das `assets`/`intake-trigger`-Routing schließt den Kreis. Optimistic UI + Toast-Feedback.
 - `feedback-create` Pfad (Feedback-Button konsolidiert).
-- ImpactPipelinePanel-Pfeile öffnen referenzierte Sessions/Items.
+- **Stufe 2 erledigt (2026-06-02):** ImpactPipelinePanel-Impact-Rows und Active-Item navigieren per Klick zum Projekt (`/projekt/:id`). `ImpactItem` + `ActivePipelineItem` tragen `projectId`, `loadActive` selektiert `project_id` mit.
 - Readonly-Hints aus Dialog-Sessions entfernen, sobald Backend live.
 
 ### Langfristig (Wave 3 — bewusst zurückgestellt)
