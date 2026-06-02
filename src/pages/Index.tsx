@@ -6,12 +6,12 @@ import EntityVoice from "@/components/entity/EntityVoice";
 import AppSidebar from "@/components/sidebar/AppSidebar";
 import HomePrompt from "@/components/home/HomePrompt";
 import ImpactPipelinePanel from "@/components/home/ImpactPipelinePanel";
-import MobileNavSheet from "@/components/entity/MobileNavSheet";
+import MobileNavSheet from "@/components/home/MobileNavSheet";
 import HomeDropOverlay from "@/components/entity/HomeDropOverlay";
 import AssetOrbit from "@/components/entity/AssetOrbit";
 import InputOverlay from "@/components/entity/InputOverlay";
-import AccountDrawer from "@/components/entity/AccountDrawer";
-import CreateProjectDialog from "@/components/entity/CreateProjectDialog";
+import AccountDrawer from "@/components/home/AccountDrawer";
+import CreateProjectDialog from "@/components/project/CreateProjectDialog";
 import { useProjects } from "@/lib/project/useProjects";
 import { useIntake } from "@/lib/intake/useIntake";
 import { detectFromDrop } from "@/lib/intake/detectInputType";
@@ -54,7 +54,9 @@ const Index = () => {
     const filter = `user_id=eq.${userId}`;
     return [
       {
-        table: "assets", event: "INSERT", filter,
+        table: "assets",
+        event: "INSERT",
+        filter,
         handler: (payload) => {
           const row = payload.new as { id?: string; file_type?: string };
           devlog.realtime(`assets INSERT → ${row.file_type}`, { id: row.id });
@@ -62,7 +64,9 @@ const Index = () => {
         },
       },
       {
-        table: "assets", event: "UPDATE", filter,
+        table: "assets",
+        event: "UPDATE",
+        filter,
         handler: (payload) => {
           const row = payload.new as {
             id?: string;
@@ -83,7 +87,9 @@ const Index = () => {
         },
       },
       {
-        table: "dialog_sessions", event: "INSERT", filter,
+        table: "dialog_sessions",
+        event: "INSERT",
+        filter,
         handler: (payload) => {
           const row = payload.new as { id?: string; status?: string; trigger_type?: string };
           devlog.realtime(`dialog_session INSERT → ${row.status}`, { id: row.id });
@@ -128,9 +134,12 @@ const Index = () => {
   // Globale Drop-Zone auf window — eine State-Quelle für HomeDropOverlay + Entity.
   const { isDragging } = useDropZone({ scope: "window", busy, onDrop: handleDrop });
 
-  const handleProjectClick = useCallback((id: string) => {
-    navigate(`/projekt/${id}`);
-  }, [navigate]);
+  const handleProjectClick = useCallback(
+    (id: string) => {
+      navigate(`/projekt/${id}`);
+    },
+    [navigate],
+  );
 
   const handleCreateProject = useCallback(() => {
     if (!session?.user) return;

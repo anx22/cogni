@@ -70,7 +70,10 @@ const CreateProjectDialog = ({ open, onOpenChange, userId, onCreated }: Props) =
   };
 
   const onKey = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && (e.metaKey || e.ctrlKey || (e.target as HTMLElement).tagName !== "TEXTAREA")) {
+    if (
+      e.key === "Enter" &&
+      (e.metaKey || e.ctrlKey || (e.target as HTMLElement).tagName !== "TEXTAREA")
+    ) {
       e.preventDefault();
       submit();
     }

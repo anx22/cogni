@@ -78,18 +78,26 @@ const STATUS_BADGE: Record<TileStatus, { label: string; className: string }> = {
 
 const iconForType = (t?: string): LucideIcon => {
   switch (t) {
-    case "note": return StickyNote;
+    case "note":
+      return StickyNote;
     case "url":
-    case "link": return LinkIcon;
-    case "image": return ImageIcon;
-    case "audio": return Mic;
+    case "link":
+      return LinkIcon;
+    case "image":
+      return ImageIcon;
+    case "audio":
+      return Mic;
     case "eml":
-    case "email": return Mail;
+    case "email":
+      return Mail;
     case "pdf":
     case "doc":
-    case "docx": return FileText;
-    case "pptx": return Presentation;
-    default: return File;
+    case "docx":
+      return FileText;
+    case "pptx":
+      return Presentation;
+    default:
+      return File;
   }
 };
 
@@ -140,14 +148,9 @@ const IntakeSessionsPanel = (_props: Props) => {
     load();
   }, [load]);
 
-  useRealtimeTables(
-    "intake-sessions-panel",
-    [
-      { table: "dialog_sessions" },
-      { table: "assets" },
-    ],
-    { onTrigger: load },
-  );
+  useRealtimeTables("intake-sessions-panel", [{ table: "dialog_sessions" }, { table: "assets" }], {
+    onTrigger: load,
+  });
 
   const handleRetry = useCallback(async (assetId: string) => {
     toast("Wird nochmal versucht", { description: "Verstehens-Loop startet erneut" });
@@ -268,7 +271,8 @@ const IntakeSessionsPanel = (_props: Props) => {
           <ScrollArea className="h-[324px] w-[192px] pr-3">
             <div className="flex flex-col gap-3">
               {tiles.map((t) => {
-                const clickable = t.status === "failed" || (t.status !== "pending" && !!t.sessionId);
+                const clickable =
+                  t.status === "failed" || (t.status !== "pending" && !!t.sessionId);
                 const Icon = iconForType(t.fileType);
                 const open = (t.total ?? 0) - (t.resolved ?? 0);
                 const meta = [
@@ -346,12 +350,15 @@ const IntakeSessionsPanel = (_props: Props) => {
                 if (t.status !== "pending" && (t.fileSize || t.fileType)) {
                   return (
                     <HoverCard key={t.key} openDelay={400}>
-                      <HoverCardTrigger asChild>
-                        {tileContent}
-                      </HoverCardTrigger>
-                      <HoverCardContent side="left" className="w-56 bg-[hsl(var(--surface-2))] border-border/30 p-3">
+                      <HoverCardTrigger asChild>{tileContent}</HoverCardTrigger>
+                      <HoverCardContent
+                        side="left"
+                        className="w-56 bg-[hsl(var(--surface-2))] border-border/30 p-3"
+                      >
                         <div className="space-y-1.5">
-                          <p className="text-xs font-medium text-foreground/90 truncate">{t.firstName}</p>
+                          <p className="text-xs font-medium text-foreground/90 truncate">
+                            {t.firstName}
+                          </p>
                           <div className="flex items-center gap-2 text-[10px] text-muted-foreground/60">
                             {t.fileType && <span className="uppercase">{t.fileType}</span>}
                             {t.fileSize && <span>{formatSize(t.fileSize)}</span>}
@@ -360,7 +367,9 @@ const IntakeSessionsPanel = (_props: Props) => {
                             {formatRelative(t.createdAt)}
                           </p>
                           {t.status === "failed" && (
-                            <p className="text-[10px] text-destructive/80 mt-1">Klick zum erneuten Versuch</p>
+                            <p className="text-[10px] text-destructive/80 mt-1">
+                              Klick zum erneuten Versuch
+                            </p>
                           )}
                         </div>
                       </HoverCardContent>
@@ -374,9 +383,7 @@ const IntakeSessionsPanel = (_props: Props) => {
           </ScrollArea>
         )}
       </div>
-      <span className="text-[10px] tracking-widest uppercase text-muted-foreground/40">
-        Intake
-      </span>
+      <span className="text-[10px] tracking-widest uppercase text-muted-foreground/40">Intake</span>
     </div>
   );
 };

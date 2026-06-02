@@ -8,7 +8,7 @@ import VerlaufFeed from "./VerlaufFeed";
 import SubstanzSection from "./SubstanzSection";
 import ProjectHeaderActions from "./ProjectHeaderActions";
 import AppSidebar from "@/components/sidebar/AppSidebar";
-import CreateProjectDialog from "@/components/entity/CreateProjectDialog";
+import CreateProjectDialog from "@/components/project/CreateProjectDialog";
 import InputOverlay from "@/components/entity/InputOverlay";
 import { useIntake } from "@/lib/intake/useIntake";
 import { detectFromDrop } from "@/lib/intake/detectInputType";

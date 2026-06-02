@@ -47,7 +47,10 @@ const MobileNavSheet = ({
           <Menu className="w-5 h-5" />
         </button>
       </SheetTrigger>
-      <SheetContent side="left" className="bg-background border-border-subtle overflow-y-auto w-[min(92vw,420px)]">
+      <SheetContent
+        side="left"
+        className="bg-background border-border-subtle overflow-y-auto w-[min(92vw,420px)]"
+      >
         <SheetTitle className="sr-only">Projekte und Intake</SheetTitle>
         <div className="flex flex-col items-center gap-8 pt-8">
           <SideGrid

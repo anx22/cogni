@@ -4,10 +4,7 @@ import { formatRelative } from "@/lib/format/relativeTime";
 import type { ProjectSignal } from "@/data/demoProjects";
 import HoverActionsMenu from "@/components/shared/HoverActionsMenu";
 import ConfirmDestructive from "@/components/shared/ConfirmDestructive";
-import {
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
+import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { useProjectActions } from "@/lib/object-actions/useObjectActions";
 
 interface ProjectTileProps {
@@ -67,9 +64,7 @@ const ProjectTile = forwardRef<HTMLButtonElement, ProjectTileProps>(
   ) => {
     const signals = orderedSignals(signal, signal2);
     const time = formatRelative(lastChangedAt);
-    const meta = [time, openCount ? `${openCount} offen` : null]
-      .filter(Boolean)
-      .join(" · ");
+    const meta = [time, openCount ? `${openCount} offen` : null].filter(Boolean).join(" · ");
 
     const [renaming, setRenaming] = useState(false);
     const [draftName, setDraftName] = useState(name);
