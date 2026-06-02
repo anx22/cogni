@@ -350,7 +350,7 @@ const ReviewRow = ({ box, projectName, blocked, onConfirm, onReject }: ReviewRow
                       background: isRec ? "var(--d-warn-soft)" : "transparent",
                     }}
                     onClick={() => onConfirm({ project_id: c.project_id })}
-                    title={isRec ? "Empfohlen vom Verstehens-Lauf" : undefined}
+                    title={isRec ? "Von der Analyse empfohlen" : undefined}
                   >
                     {isRec && <span style={{ marginRight: 6 }}>★</span>}
                     {c.name}
@@ -549,7 +549,7 @@ const ReviewRow = ({ box, projectName, blocked, onConfirm, onReject }: ReviewRow
           open={rejectOpen}
           onOpenChange={setRejectOpen}
           title="Konflikt verwerfen?"
-          description="Die Erkenntnis wird endgültig verworfen und fließt nicht in den Projektzustand."
+          description="Der Punkt wird endgültig verworfen und fließt nicht in den Projektzustand."
           confirmLabel="Endgültig verwerfen"
           onConfirm={() => onReject()}
         />
@@ -772,7 +772,7 @@ const ReviewRow = ({ box, projectName, blocked, onConfirm, onReject }: ReviewRow
             </div>
             {understood && (
               <div style={{ fontSize: 12, color: "var(--d-ink-3)", marginTop: 2, lineHeight: 1.4 }}>
-                Verstanden: {understood}
+                Kontext: {understood}
               </div>
             )}
           </div>
@@ -894,7 +894,7 @@ const ReviewRow = ({ box, projectName, blocked, onConfirm, onReject }: ReviewRow
             </div>
             {understood && (
               <div style={{ fontSize: 12, color: "var(--d-ink-3)", marginTop: 2, lineHeight: 1.4 }}>
-                Verstanden: {understood}
+                Kontext: {understood}
               </div>
             )}
           </div>

@@ -224,7 +224,7 @@ const IntakeSessionsPanel = (_props: Props) => {
         assetId: linkedAsset?.id,
         status: sessionStatusToTile(s),
         count: 1,
-        firstName: linkedAsset?.file_name ?? s.summary ?? "Verstehens-Lauf",
+        firstName: linkedAsset?.file_name ?? s.summary ?? "Analyse",
         fileType: linkedAsset?.file_type,
         fileSize: linkedAsset?.file_size,
         resolved: s.resolved_boxes ?? 0,

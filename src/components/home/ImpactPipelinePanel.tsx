@@ -289,10 +289,10 @@ const ImpactPipelinePanel = () => {
         </>
       )}
 
-      {/* Pipeline */}
+      {/* Analyse */}
       <section>
         <div className="t-micro" style={{ color: "var(--ink-3)", marginBottom: 10 }}>
-          Pipeline
+          Analyse
         </div>
         {[
           { label: "Eingang", count: pipeline.intake, dot: "calm" },

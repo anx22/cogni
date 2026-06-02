@@ -271,7 +271,7 @@ const FaktDrillOverlay = ({ onClose }: { onClose: () => void }) => {
               type="button"
               className="dlg2-btn-secondary"
               onClick={() => commitBox(box.id, "reject", { escalate: true })}
-              title="Bleibt in der Pipeline und erscheint als Handlungsbedarf"
+              title="Bleibt offen und erscheint als Handlungsbedarf"
             >
               Offen lassen
             </button>
@@ -396,7 +396,13 @@ const FaktDrillOverlay = ({ onClose }: { onClose: () => void }) => {
             <button
               type="button"
               className="dlg2-btn-secondary"
-              style={{ height: 28, fontSize: 12, gap: 6, display: "inline-flex", alignItems: "center" }}
+              style={{
+                height: 28,
+                fontSize: 12,
+                gap: 6,
+                display: "inline-flex",
+                alignItems: "center",
+              }}
               onClick={() => {
                 setShowCompare(false);
                 setSelected(empBlock.winnerSide ?? null);
@@ -553,7 +559,7 @@ const FaktDrillOverlay = ({ onClose }: { onClose: () => void }) => {
             type="button"
             className="dlg2-btn-secondary"
             onClick={() => commitBox(box.id, "reject", { escalate: true })}
-            title="Bleibt in der Pipeline und erscheint als Handlungsbedarf"
+            title="Bleibt offen und erscheint als Handlungsbedarf"
           >
             Als Handlungsbedarf markieren
           </button>
@@ -1339,7 +1345,7 @@ const FaktDrillOverlay = ({ onClose }: { onClose: () => void }) => {
             type="button"
             className="dlg2-btn-secondary"
             onClick={() => commitBox(box.id, "reject", { escalate: true })}
-            title="Bleibt in der Pipeline und erscheint als Handlungsbedarf"
+            title="Bleibt offen und erscheint als Handlungsbedarf"
           >
             Offen lassen
           </button>

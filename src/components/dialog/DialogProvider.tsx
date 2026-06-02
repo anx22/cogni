@@ -184,7 +184,7 @@ export const DialogProvider = ({ children }: { children: ReactNode }) => {
               sourceRef: intent.sourceRef,
             });
             if (result) {
-              toast.success("Antwort aufgenommen", { description: "wird verstanden" });
+              toast.success("Antwort aufgenommen", { description: "wird analysiert" });
               devlog.edge("submit-intent intake_note ok", { boxId, assetId: result.assetId });
             } else {
               if (previousState) updateBoxState(boxId, previousState);
