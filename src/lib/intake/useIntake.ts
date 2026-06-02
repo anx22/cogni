@@ -38,7 +38,7 @@ function trackPipeline(
       setEntityState?.("failed");
     } else if (res.status === "timeout") {
       toast.warning("Dauert etwas länger", {
-        description: "Die Box erscheint, sobald die Pipeline fertig ist.",
+        description: "Die Analyse läuft noch — die Box erscheint gleich.",
       });
     }
     // 'completed' wird via Realtime auf dialog_sessions in Index.tsx
@@ -166,7 +166,7 @@ export function useIntake(options: UseIntakeOptions = {}) {
             throw error;
           }
           devlog.db("link inserted", { url: payload.url, id: data.id });
-          toast("Link aufgenommen", { description: "wird verstanden" });
+          toast("Link aufgenommen", { description: "wird analysiert" });
           setLastImpact?.("Link aufgenommen");
           devlog.edge("invoke intake-trigger (link)", { assetId: data.id });
           supabase.functions
@@ -183,7 +183,7 @@ export function useIntake(options: UseIntakeOptions = {}) {
         } else if (payload.type === "text" && payload.text) {
           const result = await submitNote(payload.text, { projectId: projectId ?? null });
           if (!result) throw new Error("Notiz konnte nicht gespeichert werden");
-          toast("Notiz aufgenommen", { description: "wird verstanden" });
+          toast("Notiz aufgenommen", { description: "wird analysiert" });
           setLastImpact?.("Notiz aufgenommen");
           trackPipeline({ runId: result.runId, assetId: result.assetId }, setEntityState);
         }

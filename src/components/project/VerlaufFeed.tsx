@@ -37,7 +37,7 @@ const VerlaufFeed = ({ verlauf, projectId }: VerlaufFeedProps) => {
     setSubmitting(false);
     if (result) {
       toast.success("Notiz aufgenommen", {
-        description: "Erscheint nach dem Verstehens-Lauf im Verlauf.",
+        description: "Erscheint nach der Analyse im Verlauf.",
       });
       setNoteText("");
       setNoteOpen(false);
