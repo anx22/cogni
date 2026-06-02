@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-
+import { Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import LageZone from "./LageZone";
@@ -185,12 +185,62 @@ const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
                 </span>
               )}
             </div>
-            <ProjectHeaderActions
-              projectId={realProjectId}
-              projectName={project.name}
-              status={project.status}
-              onRequestRename={() => setForceRename(true)}
+            <div className="flex items-center gap-2 shrink-0">
+              {openReviewSessionId && (
+                <button
+                  type="button"
+                  onClick={handleOpenReview}
+                  className="inline-flex items-center gap-1.5"
+                  style={{
+                    height: 30,
+                    padding: "0 12px",
+                    borderRadius: 8,
+                    background: "var(--ink)",
+                    color: "var(--surface-0)",
+                    fontSize: 12.5,
+                    fontWeight: 500,
+                    border: "none",
+                    cursor: "pointer",
+                  }}
+                  title="Offene Klärung öffnen"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Klärung öffnen
+                </button>
+              )}
+              <ProjectHeaderActions
+                projectId={realProjectId}
+                projectName={project.name}
+                status={project.status}
+                onRequestRename={() => setForceRename(true)}
+              />
+            </div>
+          </div>
+        )}
+
+        {(status === "ready" || status === "empty") && project && isProcessing && (
+          <div
+            className="flex items-center gap-3 px-6 py-2.5"
+            style={{
+              background: "var(--surface-2)",
+              borderBottom: "1px solid var(--hair)",
+              color: "var(--ink-2)",
+              fontSize: 13,
+            }}
+          >
+            <span
+              aria-hidden
+              className="animate-spin"
+              style={{
+                width: 13,
+                height: 13,
+                borderRadius: 999,
+                border: "1.5px solid var(--sig-action)",
+                borderTopColor: "transparent",
+                flexShrink: 0,
+              }}
             />
+            <span>Material wird ausgewertet — die Klärung erscheint, sobald ich fertig bin.</span>
           </div>
         )}
 

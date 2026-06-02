@@ -255,6 +255,7 @@ const ImpactPipelinePanel = () => {
               }}
             >
               <span
+                className="animate-spin"
                 style={{
                   width: 14,
                   height: 14,
@@ -262,7 +263,6 @@ const ImpactPipelinePanel = () => {
                   marginTop: 3,
                   border: "1.5px solid var(--sig-action)",
                   borderTopColor: "transparent",
-                  animation: "cogni-orb-rotate-slow 1.2s linear infinite",
                   flex: "0 0 auto",
                 }}
               />
