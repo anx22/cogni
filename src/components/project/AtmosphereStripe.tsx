@@ -8,21 +8,22 @@ import type { ProjectViewModel } from "@/lib/project/types";
 
 interface AtmosphereStripeProps {
   project?: ProjectViewModel | null;
+  isProcessing?: boolean;
 }
 
-const AtmosphereStripe = ({ project }: AtmosphereStripeProps) => {
+const AtmosphereStripe = ({ project, isProcessing }: AtmosphereStripeProps) => {
   const offen = project?.handlungsbedarf?.length ?? 0;
-  const konflikte =
-    project?.handlungsbedarf?.filter((h) => h.objektTyp === "konflikt").length ?? 0;
+  const konflikte = project?.handlungsbedarf?.filter((h) => h.objektTyp === "konflikt").length ?? 0;
   const active = offen > 0 || konflikte > 0;
 
-  return (
-    <div
-      className={`atmosphere-stripe pointer-events-none${active ? " is-active" : ""}`}
-      aria-hidden
-      style={{ zIndex: 20 }}
-    />
-  );
+  const cls = [
+    "atmosphere-stripe pointer-events-none",
+    isProcessing ? "is-processing" : active ? "is-active" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  return <div className={cls} aria-hidden style={{ zIndex: 20 }} />;
 };
 
 export default AtmosphereStripe;

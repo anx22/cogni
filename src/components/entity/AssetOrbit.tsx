@@ -1,10 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FileText, Link as LinkIcon, StickyNote, Image as ImageIcon, File } from "lucide-react";
+import {
+  FileText,
+  Link as LinkIcon,
+  StickyNote,
+  Image as ImageIcon,
+  File,
+  RotateCcw,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useRealtimeTables } from "@/lib/realtime/useRealtimeTables";
 import { useDialog } from "@/components/dialog/DialogProvider";
 import { formatRelative } from "@/lib/format/relativeTime";
+import { retryIntake } from "@/lib/intake/retryIntake";
 
 type ChipStatus = "parsing" | "understanding" | "review-ready" | "failed";
 
@@ -150,6 +158,8 @@ const AssetOrbit = () => {
   const handleClick = (c: Chip) => {
     if (c.status === "review-ready" && c.sessionId) {
       openSessionFromDB(c.sessionId);
+    } else if (c.status === "failed") {
+      retryIntake(c.assetId);
     }
   };
 
@@ -160,7 +170,7 @@ const AssetOrbit = () => {
       <div className="absolute left-1/2 top-1/2">
         {positioned.map((c) => {
           const Icon = c.fileType === "link" ? LinkIcon : (ICON[c.fileType] ?? File);
-          const interactive = c.status === "review-ready";
+          const interactive = c.status === "review-ready" || c.status === "failed";
           const borderClass =
             c.status === "parsing"
               ? "border-dashed border-[color:var(--ink-3)] text-[color:var(--ink-3)]"
@@ -184,6 +194,8 @@ const AssetOrbit = () => {
             >
               {c.status === "understanding" ? (
                 <span className="w-3 h-3 rounded-full border-2 border-current border-t-transparent animate-spin" />
+              ) : c.status === "failed" ? (
+                <RotateCcw size={12} strokeWidth={1.5} />
               ) : (
                 <Icon size={12} strokeWidth={1.5} />
               )}

@@ -15,6 +15,7 @@ import { useIntake } from "@/lib/intake/useIntake";
 import { detectFromDrop } from "@/lib/intake/detectInputType";
 import { useProject } from "@/lib/project/useProject";
 import { useProjects } from "@/lib/project/useProjects";
+import { useProjectPipeline } from "@/lib/project/useProjectPipeline";
 import { useProjectActions } from "@/lib/object-actions/useObjectActions";
 import { useBodyScrollLock } from "@/lib/ui/useBodyScrollLock";
 import { useDropZone } from "@/lib/intake/useDropZone";
@@ -137,6 +138,7 @@ const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
   useBodyScrollLock(true);
 
   const signal = project ? deriveSignal(project) : "calm";
+  const { isProcessing } = useProjectPipeline(realProjectId);
 
   return (
     <div className="flex overflow-hidden bg-c-surface-0 relative" style={{ height: "100dvh" }}>
@@ -150,7 +152,7 @@ const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
       />
 
       {/* Globaler Atmosphären-Stripe — Lebenszustand des Projekts */}
-      <AtmosphereStripe project={project} />
+      <AtmosphereStripe project={project} isProcessing={isProcessing} />
 
       <div
         className="flex-1 min-w-0 animate-[fade-in_0.5s_ease-out] relative overflow-y-auto overscroll-contain"
