@@ -2,14 +2,35 @@
 
 Format: `[YYYY-MM-DD] Problem → Choice → Reason`
 
+## 2026-06-02 — Entity-Core als eigenständiges Kernmodul (Spec + Refactor-Roadmap)
+
+Die Entität (Orb/Avatar = Gesicht der App) war gewachsen statt entworfen: Zustand lebt als `useState` in
+`Index.tsx` und wird von außen gesetzt (Realtime-Listener/`useIntake`/Dialog-Effekt), Verhalten verteilt,
+Eingebot dreifach (FacePill-2×2, InputOverlay, HomePrompt), `components/entity/` mit 7 fremden Komponenten
+vermischt, null Tests. Entscheidung: Refactor zu einem **in sich geschlossenen Modul** mit reinem testbarem
+Gehirn (`src/lib/entity/`), Signal-Interface nach außen, Singleton-`EntityProvider` (ein Gehirn/eine Subscription),
+formalem Verhaltensvertrag (Standardset vs. Charakter-`manifest`), Zwei-Achsen-Ausdruck (State×Mode → Bewegung/
+Farbe/Sprache) und Hybrid-Composer. Volle Spec: `docs/entity-core.md`.
+
+- `2026-06-02` **Modulgrenze**: andere Module reden nur über Inputs (Signale) / Outputs (`vm`/`controller`),
+  öffentliche API via Barrel `src/lib/entity/index.ts`, keine Tiefimporte, kein externes `setEntityState`.
+- `2026-06-02` **Ordner-Hygiene (Phase A)**: 7 Nicht-Entity-Komponenten verlassen `components/entity/`
+  (AccountDrawer/MobileNavSheet/SideGrid/IntakeSessionsPanel → `home/`; ProjectTile/CreateProjectDialog
+  → `project/`). `RecentAssets` war abgelöster Altcode (früheres rechtes SideGrid-Panel, ersetzt durch
+  `IntakeSessionsPanel`; von niemandem mehr importiert) → **gelöscht**. Die übrigen 6 sind (transitiv) live
+  (`Index` → AccountDrawer, MobileNavSheet → SideGrid/IntakeSessionsPanel → ProjectTile; CreateProjectDialog
+  in Index + ProjectScreen).
+- `2026-06-02` **Verbindliche Look-/Bewegungs-Vorlage**: lokale Codebeispiele `../entitaet/` (Button_Orb =
+  Bewegungs-Signaturen, Orby = Morph/Weichheit, Siri Orb = Ist-Stand) — präzise Werte in `docs/entity-core.md`.
+- `2026-06-02` **Phasen**: A (Hygiene) + 0 (Gehirn-Gerüst) in dieser Session umgesetzt; 1–7 folgen inkrementell,
+  jede einzeln auslieferbar (visuell zunächst identisch). 6 EntityStates unverändert → Presets/OrbLab/DB gültig.
+
 ## 2026-05-24 — Redesign abgeschlossen + Doku-Konsolidierung
 
 - Redesign-Pässe 1–6 + Audit-Fixbatch sind durch (Sidebar, Hero, Mittelfeld, Substanz, BatchReview, FaktDrill, Readonly-Sessions, `deriveSignal`, Material/Review-Buttons, `escalate`-Payload). UI-Sprache deckt sich mit `docs/redesign/prototype/` + `docs/redesign/screenshots/`.
 - `.lovable/plan.md`, `docs/redesign/REVIEW.md` und `docs/redesign/Cogni.zip` gelöscht — waren Übergangs-Tracker. Visuelle Quelle bleibt der Prototyp-Ordner.
 - NOW.md auf drei Milestones zum Prototyp gestrafft (M1 Provenance + Empfehlung, M2 Entity-Präsenz inkl. Universal-Overlay, M3 Antwort-Loops). Kein Klein-Klein-Backlog mehr.
 - Stopp-Linie bestätigt: keine `src/lib/**`-Eingriffe für reine Designwünsche.
-
-
 
 ## 2026-05-22 — K1+K2+K4 aus MainCompass abgehakt
 

@@ -35,31 +35,48 @@ Belastbare Basis steht. Vision-Kern ~90% implementiert, UI-Sprache stimmt mit Pr
 Statt Backlog-Friedhof: drei Sprints, jeder mit klarem Outcome. Reihenfolge M1 → M2 → M3.
 
 ### M1 — Provenance & Empfehlung schließen
+
 Konflikt-Source-Metadaten und cogni-Empfehlung sind UI-seitig vorbereitet, aber backend-leer. Review wirkt heute wie blinder Vergleich.
+
 - `KonfliktVM.faktA/B`: String → Objekt (Datum, Mode, Hint, Quelle).
 - `commit-fact` schreibt Empfehlungstext + Begründung in Konflikt-Payload.
 - BatchReview und FaktDrill rendern beides ohne weitere UI-Änderung.
 
 ### M2 — Entity bleibt überall präsent
+
 Spatial-Continuity-Geste komplettieren. Heute bricht „Entity ist immer da" ab, sobald ein Projekt offen ist.
+
 - Atmosphären-Streifen mit Realtime-Hook (Pipeline-aktiv → beschleunigt + review-warm).
 - Universal-Overlay (⌘+Space): Entity-Bühne über jedem Screen, Kontext-Anker.
 - AssetOrbit-Retry für `failed`-Chips (Polish, gehört thematisch hier rein).
 
 ### M3 — Antwort-Loops schließen
+
 Readonly-Reste auflösen: Verlauf-Notiz, Feedback-Button, Impact-Pfeile. Damit ist der Prototyp ein geschlossener Kreis.
+
 - Edge Functions `note-create` + `feedback-create`.
 - ImpactPipelinePanel-Pfeile öffnen referenzierte Sessions/Items.
 - Readonly-Hints aus Dialog-Sessions entfernen, sobald Backend live.
 
+### Entity-Core (Kernmodul-Refactor) — Fundament für Säule 1 + M2
+
+Die Entität (Gesicht der App) wird zum in sich geschlossenen Modul mit reinem Gehirn, Signal-Interface,
+Singleton-Provider und Hybrid-Composer. Volle Spec: `docs/entity-core.md` (Entscheidung: DECISIONS 2026-06-02).
+Macht „Ein Eingang" (Säule 1) sauber und „Entity überall präsent" (M2) zu einem Einzeiler (`useEntity()`).
+Phasen einzeln auslieferbar, visuell zunächst identisch.
+
+- **A** Ordner-Hygiene (7 Fremd-Dateien raus aus `components/entity/`) — ✅ 2026-06-02
+- **0** Gehirn-Gerüst (`src/lib/entity/` machine/signals/interaction/deriveExpression/capabilities + Tests + Barrel) — ✅ 2026-06-02
+- **1–7** Provider+Sources · Orchestrator/Visuals · Capability-Vertrag+A11y · Ausdrucks-Engine · Unified Composer · Kommunikation+Orbit · Universal-Overlay (= M2).
+
 ### Langfristig (Wave 3 — bewusst zurückgestellt)
 
-| #   | Aufgabe                                    | Trigger                                              |
-| --- | ------------------------------------------ | ---------------------------------------------------- |
-| L1  | LLM-Heuristiken in Detektoren              | Wenn deterministischer Recall zu niedrig wird        |
-| L2  | React Query (Caching + Mutations)          | Wenn Realtime + manuelle Re-Fetches racen            |
-| L3  | Reference-Token-Auflösung                  | Wenn Dependency-Detector zu viele False Positives    |
-| L4  | Voice/Mail-Sync (V2)                       | Nach Prototyp-Freigabe                               |
+| #   | Aufgabe                           | Trigger                                           |
+| --- | --------------------------------- | ------------------------------------------------- |
+| L1  | LLM-Heuristiken in Detektoren     | Wenn deterministischer Recall zu niedrig wird     |
+| L2  | React Query (Caching + Mutations) | Wenn Realtime + manuelle Re-Fetches racen         |
+| L3  | Reference-Token-Auflösung         | Wenn Dependency-Detector zu viele False Positives |
+| L4  | Voice/Mail-Sync (V2)              | Nach Prototyp-Freigabe                            |
 
 ---
 

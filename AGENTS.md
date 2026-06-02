@@ -14,6 +14,7 @@ Drei Außenmodi: Entität, Projekt, Dialog-Overlay. Keine Sidebar, keine Dashboa
 - **Was läuft jetzt?** → `docs/NOW.md`
 - **Warum so entschieden?** → `docs/DECISIONS.md`
 - **Seam-Inventar (lebende QA-Karte)** → `docs/qa-seam-inventar.md`
+- **Entity-Kernmodul (Spec + Refactor-Roadmap)** → `docs/entity-core.md`
 
 ## Memory (`mem://`)
 
