@@ -35,6 +35,9 @@ User-Review (Dialog-Overlay)
 - **Hooks** in `src/lib/<domain>/`. Komponenten importieren Hooks, nie Supabase direkt aus dem View.
 - **Edge Functions** in `supabase/functions/<name>/index.ts` (kein Sub-Folder). Shared-Code in `supabase/functions/_shared/`.
 - **Pipeline-Trace** ausschließlich in `pipeline_events` (per `createLogger`), kein paralleles Log-System.
+- **Entity-Core** (`src/lib/entity/` + `src/components/entity/`) ist ein geschlossenes Modul: öffentliche API
+  nur via Barrel `@/lib/entity`, keine Tiefimporte; andere Module reden über Signale (Input) + `vm`/`controller`
+  (Output), nie via `setEntityState`/Hardcoding. Spec: `docs/entity-core.md`. Nur Entity-Kern im `entity/`-Ordner.
 
 ## Golden Principles
 

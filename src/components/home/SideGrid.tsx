@@ -1,7 +1,7 @@
 import { useMemo, useState, useRef, useCallback, useEffect, KeyboardEvent } from "react";
 import { Plus, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import ProjectTile from "./ProjectTile";
+import ProjectTile from "@/components/project/ProjectTile";
 import type { DemoProject } from "@/data/demoProjects";
 
 interface SideGridProps {

@@ -17,15 +17,14 @@
 
 ---
 
-## Achse 2 — Status (Stand 2026-05-26)
+## Achse 2 — Status (Stand 2026-05-24)
 
-Belastbare Basis steht. Vision-Kern ~90% implementiert, UI-Sprache und Drill-Routing am Prototyp ausgerichtet.
+Belastbare Basis steht. Vision-Kern ~90% implementiert, UI-Sprache stimmt mit Prototyp-Referenz überein.
 
 - **Pipeline 7/7**: asset → parsed → proposed → review → canonical + change_events + snapshot → graphiti async.
 - **Detektoren 5/5**: Linker · Conflict · Gap · Dependency · TopicMerge.
-- **Dialog**: 18 BoxTypes, Factory + DB-Sessions unified, Antwort-Pipeline geschlossen, objektbezogene Drills (Konflikt/Gap/Dependency/Thema/Dokument/Korrektur/Rückfrage).
-- **Frontend**: 4 Rollen, AssetOrbit, Realtime, Day/Night-Theme, Geist-Font, shadcn-Bridge auf `--surface-1`/`--hair-2`/`--shadow-pop`.
-- **UI-Sprache enttechnisiert**: keine `Konflikt #abc`/`Gap #abc`/`Dependency #abc`/`Thema #…`/`Dokument #…` mehr sichtbar; Lagetext aus Zustand, nicht aus Commit-Log.
+- **Dialog**: 18 BoxTypes, Factory + DB-Sessions unified, Antwort-Pipeline geschlossen.
+- **Frontend**: 4 Rollen, AssetOrbit, Realtime, Day/Night-Theme, Geist-Font, shadcn-Bridge.
 - **Redesign durch** (Pässe 1–6 + Audit-Fixbatch): Sidebar, Hero, Mittelfeld, Substanz, BatchReview, FaktDrill — Quelle: `docs/redesign/`.
 - **Tests**: Vitest 89/89 grün, Deno-Suiten pro Detector, 19/19 EFs mit Boundary + Logger, RLS überall.
 
@@ -37,27 +36,38 @@ Statt Backlog-Friedhof: drei Sprints, jeder mit klarem Outcome. Reihenfolge M1 �
 
 ### M1 — Provenance & Empfehlung schließen
 
-**Stufe 1 erledigt (2026-05-30):** Empfehlung-First-Drilldown live für Konflikt. `FaktDrillOverlay.renderConflict` zeigt cogni-Empfehlung 36px primär mit Quelle + Begründung, „Übernehmen / Korrigieren / Offen lassen" — Vergleich nur noch sekundär. `deriveEmpfehlung` liefert humane Bausteine („5 Tage neuer · direkte Quelle statt abgeleiteter") statt Prozentwerte.
+Konflikt-Source-Metadaten und cogni-Empfehlung sind UI-seitig vorbereitet, aber backend-leer. Review wirkt heute wie blinder Vergleich.
 
-**Stufe 2 erledigt (2026-06-01):** Empfehlungs-Vertrag generalisiert über Gap / Dependency / Entscheidung. `Empfehlung`-Interface in `types.ts`, deterministische Heuristiken in `mappers/gaps.ts` + `mappers/dependencies.ts` aus vorhandenen Feldern (Alter, Wirkung, Quelle). Session-Factories reichen `empfehlungBlock` einheitlich durch, `FaktDrillOverlay.renderEmpfehlungBuehne` rendert für alle drei Objekttypen die gleiche 36px-Bühne. „Korrigieren" befüllt Gap-Input vor, fällt sonst auf den klassischen Renderer zurück. Tests: `gaps.test.ts` + `dependencies.test.ts` decken Konfidenz-Staffelung + Null-Pfade ab. LLM-Hebung bleibt L1.
+- `KonfliktVM.faktA/B`: String → Objekt (Datum, Mode, Hint, Quelle).
+- `commit-fact` schreibt Empfehlungstext + Begründung in Konflikt-Payload.
+- BatchReview und FaktDrill rendern beides ohne weitere UI-Änderung.
 
 ### M2 — Entity bleibt überall präsent
 
 Spatial-Continuity-Geste komplettieren. Heute bricht „Entity ist immer da" ab, sobald ein Projekt offen ist.
 
-- **Stufe 1 erledigt (2026-06-01):** `AtmosphereStripe` als eigene Komponente — spiegelt Lebenszustand des Projekts (offen / review-warm via `is-active`). Hängt an `project.handlungsbedarf`.
-- ~~Universal-Overlay (⌘+Space)~~ **gestrichen (2026-06-02):** Es gibt kein Entity-Overlay im UI. Ziel ist stattdessen die persistente Entität rechts an der Seite (Main + Projektdetail) — eigene UI-Phase, noch nicht reincommittet.
-- **Stufe 2 erledigt (2026-06-02):** AssetOrbit-Retry für `failed`-Chips — `retryIntake.ts` als gemeinsame lib-Funktion, failed-Chip zeigt RotateCcw-Icon und ist klickbar. `IntakeSessionsPanel` nutzt dieselbe Funktion.
-- **Stufe 3 erledigt (2026-06-02):** Realtime-Hook `useProjectPipeline` — `AtmosphereStripe` erhält `isProcessing` prop, `.is-processing`-CSS (1.6s, sig-action-Farbe) unterscheidet aktive Pipeline-Läufe von offenem Handlungsbedarf.
+- Atmosphären-Streifen mit Realtime-Hook (Pipeline-aktiv → beschleunigt + review-warm).
+- Universal-Overlay (⌘+Space): Entity-Bühne über jedem Screen, Kontext-Anker.
+- AssetOrbit-Retry für `failed`-Chips (Polish, gehört thematisch hier rein).
 
 ### M3 — Antwort-Loops schließen
 
 Readonly-Reste auflösen: Verlauf-Notiz, Feedback-Button, Impact-Pfeile. Damit ist der Prototyp ein geschlossener Kreis.
 
-- **Stufe 1 erledigt (2026-06-01):** Inline-„Notiz hinzufügen" im `VerlaufFeed`. Nutzt bestehende `submitNote` mit `sourceRef.type = "verlauf"` — keine neue Edge Function nötig, das `assets`/`intake-trigger`-Routing schließt den Kreis. Optimistic UI + Toast-Feedback.
-- `feedback-create` Pfad (Feedback-Button konsolidiert).
-- **Stufe 2 erledigt (2026-06-02):** ImpactPipelinePanel-Impact-Rows und Active-Item navigieren per Klick zum Projekt (`/projekt/:id`). `ImpactItem` + `ActivePipelineItem` tragen `projectId`, `loadActive` selektiert `project_id` mit.
+- Edge Functions `note-create` + `feedback-create`.
+- ImpactPipelinePanel-Pfeile öffnen referenzierte Sessions/Items.
 - Readonly-Hints aus Dialog-Sessions entfernen, sobald Backend live.
+
+### Entity-Core (Kernmodul-Refactor) — Fundament für Säule 1 + M2
+
+Die Entität (Gesicht der App) wird zum in sich geschlossenen Modul mit reinem Gehirn, Signal-Interface,
+Singleton-Provider und Hybrid-Composer. Volle Spec: `docs/entity-core.md` (Entscheidung: DECISIONS 2026-06-02).
+Macht „Ein Eingang" (Säule 1) sauber und „Entity überall präsent" (M2) zu einem Einzeiler (`useEntity()`).
+Phasen einzeln auslieferbar, visuell zunächst identisch.
+
+- **A** Ordner-Hygiene (7 Fremd-Dateien raus aus `components/entity/`) — ✅ 2026-06-02
+- **0** Gehirn-Gerüst (`src/lib/entity/` machine/signals/interaction/deriveExpression/capabilities + Tests + Barrel) — ✅ 2026-06-02
+- **1–7** Provider+Sources · Orchestrator/Visuals · Capability-Vertrag+A11y · Ausdrucks-Engine · Unified Composer · Kommunikation+Orbit · Universal-Overlay (= M2).
 
 ### Langfristig (Wave 3 — bewusst zurückgestellt)
 
@@ -74,15 +84,11 @@ Readonly-Reste auflösen: Verlauf-Notiz, Feedback-Button, Impact-Pfeile. Damit i
 
 - **Graphiti-Sync-Retry** — Cron `*/30 min`, `inspect-graphiti diagnose` für Top-Reasons.
 - **Test-Coverage halten** — neue Funktion = Pure-Test, Drift in DECISIONS.
-- **Sprach-Restposten** — bei Audit 2026-05-30 nochmal geprüft: `useIntake.ts:36-40`, `IntakeSessionsPanel.tsx:156`, `ImpactPipelinePanel.tsx:35-41` sind bereits in Projektsprache. Loop geschlossen.
-- **Pre-existing Build-Fehler aus Lovable-Hand-Off** — `useProjectData` Migrations-Drift, `submitNote` DevLogCategory, `VerlaufFeed`. Brauchen klare Backend-Entscheidung, kein blinder Fix.
 
 ---
 
 ## Recently completed
 
-- **2026-06-02 — Funktional-Sprint 1+2 (Fundament + Pipeline-Sichtbarkeit)** auf `dev`. **Sprint 1 (Fundament):** Archiv-Lifecycle repariert — `ProjectScreen` reicht `project.status` an `ProjectHeaderActions` (zeigt korrekt „Wiederherstellen"), „Archiviert"-Badge im Header, neuer Lazy-Hook `useArchivedProjects` + ausklappbarer Archiv-Bereich in `AppSidebar` mit Wiederherstellen je Zeile (vorher waren archivierte Projekte nur via Undo-Toast erreichbar). Leeres Projekt: Shell-`LageZone` bekommt „Material ablegen"-Button (vorher nur Drag&Drop). **Sprint 2 (Pipeline-Sichtbarkeit):** expliziter „Material wird ausgewertet"-Banner im Projekt-Body (via `useProjectPipeline.isProcessing`), „Klärung öffnen" zusätzlich im immer sichtbaren Sticky-Header, Spinner-Keyframe-Bug (`cogni-orb-rotate-slow` nirgends definiert) in `ProjectScreen` + `ImpactPipelinePanel` auf Tailwind `animate-spin` gefixt. Tests 97/97 grün. **Bewusst gestrichen:** Monetarisierung (nie geplant), Universal-Overlay ⌘+Space (kein Entity-Overlay im UI — Entität bleibt persistent rechts an der Seite, separate UI-Phase).
-- **2026-05-30 — Empfehlung-First-Drilldown (M1 Stufe 1)** Konflikt-Bühne umgebaut von neutralem A/B-Vergleich zu „cogni empfiehlt X (Quelle, Begründung) — [Übernehmen] [Korrigieren] [Offen lassen]". Korrigieren expandiert in die alte A/B-Wahl als Sub-State. `deriveEmpfehlung` schreibt Bausteine („N Tage neuer · direkte Quelle statt abgeleiteter") statt Prozentwerte. `payload.empfehlungBlock` als strukturierter Slot in `sessionFactories.buildKonfliktSession`. KonfliktPopover bleibt als Tier-1-Schnellbestätigung, Sprache deckungsgleich. Files: `FaktDrillOverlay.tsx`, `sessionFactories.ts`, `mappers/konflikte.ts`. Sprach-Restposten-Audit erledigt — drei Strings bereits clean. Build-Drift aus Lovable-Hand-Off (`useProjectData`, `submitNote`, `VerlaufFeed`) bleibt separater Block.
 - **2026-05-24 — Redesign abgeschlossen + Doku-Konsolidierung** Pässe 1–6 + Audit-Fixbatch durch (Sidebar, Hero, Mittelfeld, Substanz, BatchReview, FaktDrill, Readonly-Sessions, `deriveSignal`, Material/Review-Buttons, Sidebar `onCreateProject`, `escalate`-Payload). `.lovable/plan.md` und `docs/redesign/REVIEW.md` gelöscht — visuelle Quelle bleiben `prototype/` + `screenshots/`.
 - **2026-05-22 — K1+K2+K4 aus MainCompass** Migration `delta_type unclear`, Persona-E2E `04-vier-rollen-smoke`, Graphiti-Retry-Loop mit Cron. Risiken offen: Migrations apply + Vault-Secret manuell.
 - **2026-05-22 — Test-Overhaul Vitest 70 → 89** Neue Tests für `deriveSignal`, `loadSession`, `assignment` (Deno), `factRules` (Deno). Drift-Fixes in sessionFactories/projectViewModel/gapDetector/projectScoring/commitFact.

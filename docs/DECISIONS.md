@@ -2,26 +2,28 @@
 
 Format: `[YYYY-MM-DD] Problem → Choice → Reason`
 
-## 2026-05-30 — Empfehlung-First-Drilldown (M1, Stufe 1)
+## 2026-06-02 — Entity-Core als eigenständiges Kernmodul (Spec + Refactor-Roadmap)
 
-- `2026-05-30` **Empfehlung dominiert, Vergleich ist sekundär**: Konflikt-Drilldown war neutrale A/B-Bühne mit „cogni empfiehlt …" als 12.5px-Fußnote, Default-Selection nur A → **`FaktDrillOverlay.renderConflict` zweistufig**: Variante A (Empfehlung-First) zeigt den empfohlenen Fakt 36px groß, Quelle + Begründung darunter, Sekundärzeile „Im Vergleich: …", Footer „Übernehmen / Korrigieren / Offen lassen"; Variante B (klassische A/B-Gegenüberstellung) erscheint erst, wenn User „Korrigieren" drückt oder cogni keine Empfehlung hat (`empfehlungBlock === null`). Slot `payload.empfehlungBlock` mit `winnerSide/winnerFact/winnerQuelle/winnerDatum/winnerMode/loserFact/loserQuelle/loserDatum/begruendung` ist in `sessionFactories.buildKonfliktSession` zentral gebaut. Reason: Review-First bedeutet „cogni hat entschieden, du bestätigst" — nicht „cogni stellt dir zwei Optionen vor und wartet". Der bestehende neutrale Vergleich bleibt als Fallback, weil bei ähnlicher Confidence + ähnlichem Alter wirklich der User entscheiden muss.
+Die Entität (Orb/Avatar = Gesicht der App) war gewachsen statt entworfen: Zustand lebt als `useState` in
+`Index.tsx` und wird von außen gesetzt (Realtime-Listener/`useIntake`/Dialog-Effekt), Verhalten verteilt,
+Eingebot dreifach (FacePill-2×2, InputOverlay, HomePrompt), `components/entity/` mit 7 fremden Komponenten
+vermischt, null Tests. Entscheidung: Refactor zu einem **in sich geschlossenen Modul** mit reinem testbarem
+Gehirn (`src/lib/entity/`), Signal-Interface nach außen, Singleton-`EntityProvider` (ein Gehirn/eine Subscription),
+formalem Verhaltensvertrag (Standardset vs. Charakter-`manifest`), Zwei-Achsen-Ausdruck (State×Mode → Bewegung/
+Farbe/Sprache) und Hybrid-Composer. Volle Spec: `docs/entity-core.md`.
 
-- `2026-05-30` **Empfehlungs-Text als Bausteine, nicht als Prozentwerte**: `deriveEmpfehlung` schrieb „Höhere Zuverlässigkeit (87 %) — cogni bevorzugt diese Version" → **Bausteine kombinieren**: Recency („N Tage neuer"), Mode-Übergang („direkte Quelle statt abgeleiteter" / „direkte Quelle"), Fallback „aus zuverlässigerer Quelle". Reason: Prozentwerte sind Maschinen-Stimme, Bausteine sind Berater-Stimme; der User entscheidet auf „direkte Quelle" + „5 Tage neuer", nicht auf „87 %".
-
-- `2026-05-30` **Empfehlungs-Slot nur für Konflikt gefüllt**: Gap/Dependency/Decision haben keine Recommendation-Logik im Detector → **Slot ist im Box-Payload-Schema vorgesehen, aber leer für andere Objekttypen**. Reason: Pattern für künftige Detektor-Heuristiken angelegt; Befüllung ohne echte Logik wäre Augenwischerei. Triggers Wave 3.
-
-## 2026-05-26 — UX-Konzepttreue: Sprache, Drilldowns, Lage
-
-
-- `2026-05-26` **UI-Sprachregel**: Pipeline-Vokabular und interne IDs gehören nicht ins sichtbare UI → **Sprachschicht beim Mapper, nicht beim Render-Point** → `toHandlungsbedarf`/`sessionFactories` setzen `quelle` als fachliche Kategorie („Widerspruch"/„Offene Frage"/„Abhängigkeit"/„Hinweis"/„Thema"/„Dokument"), nicht als `Konflikt #abc` o. ä. Reason: Internes Maschinenprotokoll im User-Pfad erzeugt Anstrengung statt Klarheit; eine PM-App muss in Projektsprache reden, nicht in Pipeline-Sprache. Restposten (drei Toast-Strings + ein EVENT_LABELS-Fallback) sind als Loop in `NOW.md` markiert, nicht in dieser Runde gefixt.
-
-- `2026-05-26` **Lage ≠ Verlauf**: `project_state_snapshots.summary` lieferte Commit-Log-Sätze („Termin übernommen — 11 bestätigte Erkenntnisse"), die fälschlich als Lagetext gerendert wurden → **`humanizeSnapshotSummary` filtert generische Commit-Log-Muster** (3 Regex: `^Snapshot nach …`, `übernommen.*enthält`, `^X übernommen|verworfen|aktualisiert`) und gibt `undefined` zurück, wenn der Satz Verlauf statt Zustand ist; `buildProjectViewModel` baut den Lagetext dann aus dem aktuellen Zustand (Widersprüche, Blocker, offene Fragen, „Stand ist konsistent" als Ruhefall). Reason: Lage muss „wie steht es gerade" beantworten, nicht „was wurde zuletzt committed" — das ist die Aufgabe des Verlauf-Feeds.
-
-- `2026-05-26` **Drill-Routing nach Objekttyp statt generischem Review**: jeder Klick öffnete bisher `buildHandlungsbedarfSession`, also denselben „Wissen + Antwortfeld"-Frame, egal ob Widerspruch, Lücke, Abhängigkeit oder Dokument → **objektbezogene Factories**: `buildKonfliktSession` (A/B-Gegenüberstellung im `FaktDrillOverlay`), `buildGapSession` (Antwortfeld + `asks`), neue `buildDependencySession` (Quelle/Ziel-Kontextbox + Auflöse-Eingabe), `buildThemaSession`/`buildDokumentSession` als readonly-Inspect, `buildHandlungsbedarfSession` bleibt Default für `entscheidung/aufgabe/offener_punkt/feedback`. `HandlungsbedarfList.ActionRow.handleClick` dispatcht nach `item.objektTyp`. Reason: Konflikt-Vergleich braucht andere Bühne als „Lücke füllen" braucht andere Bühne als „Dokument ansehen" — die Generalisierung war Pseudo-Sparsamkeit und produzierte den „immer derselbe Screen"-Eindruck.
-
-- `2026-05-26` **Overlay-Surfaces solid, nicht transparent**: shadcn-`dialog`/`alert-dialog`/`dropdown-menu` rendern teilweise über hellen Projekt-Screens und waren mit `bg-background`/`bg-popover` (HSL-Tokens) + halbtransparenten Glas-Tints unlesbar → **Cogni-Tokens direkt**: `bg-[var(--surface-1)]` + `border-[var(--hair-2)]` + `shadow-[var(--shadow-pop)]` + `rounded-2xl` (Dialog/AlertDialog/Dropdown). Overlay-Backdrop bleibt `color-mix(in oklab, var(--surface-0) 82%, transparent) + backdrop-blur-xl`. Reason: shadcn-HSL-Bridge funktionierte gut für Komponenten-Innenleben, aber Floating-Surfaces über fremdem Hintergrund brauchen einen harten Cogni-Surface-Anker; jede Indirektion via `bg-popover` führte zu Drift im Day-Theme.
-
-- `2026-05-26` **Substanz als Wissensfläche, nicht als Tabelle**: Themen-Karten zeigten nur Titel + drei Zahlen, kein semantischer Kontext → **Themen-Karten enthalten jetzt Beschreibung + erste 2 Items als Mini-Zeilen + lesbaren Zähler** („3 Entscheidungen · 2 offen · 1 Dokument"); Dokument-Reihen mit Typ-Chip + Version + Datum, ohne Vollscreen-Review beim Click (readonly-Inspect via `buildDokumentSession`). Reason: Substanz war als „Wissenslandkarte" konzipiert, nicht als Datenbank-View; die Lese-Mini-Zeilen geben den Karten Substanz ohne neuen Daten-Layer.
+- `2026-06-02` **Modulgrenze**: andere Module reden nur über Inputs (Signale) / Outputs (`vm`/`controller`),
+  öffentliche API via Barrel `src/lib/entity/index.ts`, keine Tiefimporte, kein externes `setEntityState`.
+- `2026-06-02` **Ordner-Hygiene (Phase A)**: 7 Nicht-Entity-Komponenten verlassen `components/entity/`
+  (AccountDrawer/MobileNavSheet/SideGrid/IntakeSessionsPanel → `home/`; ProjectTile/CreateProjectDialog
+  → `project/`). `RecentAssets` war abgelöster Altcode (früheres rechtes SideGrid-Panel, ersetzt durch
+  `IntakeSessionsPanel`; von niemandem mehr importiert) → **gelöscht**. Die übrigen 6 sind (transitiv) live
+  (`Index` → AccountDrawer, MobileNavSheet → SideGrid/IntakeSessionsPanel → ProjectTile; CreateProjectDialog
+  in Index + ProjectScreen).
+- `2026-06-02` **Verbindliche Look-/Bewegungs-Vorlage**: lokale Codebeispiele `../entitaet/` (Button_Orb =
+  Bewegungs-Signaturen, Orby = Morph/Weichheit, Siri Orb = Ist-Stand) — präzise Werte in `docs/entity-core.md`.
+- `2026-06-02` **Phasen**: A (Hygiene) + 0 (Gehirn-Gerüst) in dieser Session umgesetzt; 1–7 folgen inkrementell,
+  jede einzeln auslieferbar (visuell zunächst identisch). 6 EntityStates unverändert → Presets/OrbLab/DB gültig.
 
 ## 2026-05-24 — Redesign abgeschlossen + Doku-Konsolidierung
 
@@ -296,9 +298,3 @@ aber die geteilten `corsHeaders` — Verhalten unverändert.
 - `2026-05-18` **DB-Migration**: `box_type` um `condition, exclusion, assumption, suggestion, question, note, relation, attribute, risk, unclear` erweitert. Bestehende Werte unverändert, Migration additiv.
 - `2026-05-18` **UI-Renderer-Matrix** (`src/components/dialog/parts/ReviewRow.tsx`): pro Modalität eigene Default-Aktion + Aktionsleiste. `RefToken` zeigt `attaches_to` als Mini-Chip. Eingabefeld nur bei `gap/eingabe/frage` mit `asks`. Sprechhandlungs-Boxen (Bedingung, Annahme, …) bekommen `Übernehmen / Bezug ändern / Verwerfen` ohne Eingabezwang.
 - `2026-05-18` **Kein neues Designsystem** — Modalität ist Daten-/UX-Vertrag, nicht Optik. Architektur (Token-System, ProjectViewModel-Vertrag, Edge-Function-Hülle) unangetastet.
-
-[2026-06-01] Empfehlungs-Vertrag über alle Drilldown-Objekte → Einheitlicher `Empfehlung`-Slot in `types.ts`, deterministische Heuristik in den Mappern (kein erfundenes KI-Signal), `FaktDrillOverlay` rendert eine gemeinsame Bühne → Ein visueller Vertrag für Konflikt/Gap/Dependency/Entscheidung, ohne LLM-Abhängigkeit.
-
-[2026-06-01] Verlauf-Notiz nutzt `submitNote` statt neuer `note-create` Edge Function → submitNote schreibt bereits `assets` mit `file_type='note'` und triggert `intake-trigger` → Redundanz vermieden, ein Pipeline-Pfad statt zwei.
-
-[2026-06-01] `AtmosphereStripe` als eigene Komponente → Spiegelt Projekt-Lebenszustand (offen/review-warm), reine Anzeige ohne Logik-Verschiebung → Spatial Continuity ohne neue Datenflüsse.

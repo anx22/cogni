@@ -6,7 +6,7 @@
 // =============================================================================
 import type { ReactNode } from "react";
 import Entity from "./Entity";
-import AccountDrawer from "./AccountDrawer";
+import AccountDrawer from "@/components/home/AccountDrawer";
 import { useSelectedCharacter } from "./useSelectedCharacter";
 import type { EntityState } from "./orbPresets";
 
