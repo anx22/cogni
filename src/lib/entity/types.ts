@@ -83,11 +83,14 @@ export interface ResolvedCapabilities {
   motion: MotionCapability[];
 }
 
-/** Charakter-Manifest (Phase 0: Capability-Teil; expressionTune/signatures/
- *  voiceProfile kommen in späteren Phasen dazu). */
+/** Charakter-Manifest. Capability-Vertrag + Forward-Slots für spätere Phasen. */
 export interface CharacterManifest {
   id: CharacterId;
   label: string;
   motion?: MotionCapability[];
   suppressCore?: MotionCapability[];
+  /** Phase 4: überschreibt Signatur/Intensität/Tone je EntityState. */
+  expressionTune?: Partial<Record<EntityState, Partial<ExpressionVM>>>;
+  /** Phase 6: Sprachprofil (Register, Vokabular-Bias, Präsentations-Override). */
+  voiceProfile?: { register?: string; vocabularyBias?: string };
 }

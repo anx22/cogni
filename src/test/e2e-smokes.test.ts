@@ -67,8 +67,17 @@ vi.mock("@/integrations/supabase/client", () => {
     supabase: {
       auth: {
         getUser: () => Promise.resolve({ data: { user: { id: "u1" } }, error: null }),
+        getSession: () => Promise.resolve({ data: { session: null } }),
+        onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
       },
       from: builder,
+      channel: () => ({
+        on: function () {
+          return this;
+        },
+        subscribe: () => {},
+      }),
+      removeChannel: () => {},
       storage: {
         from: (bucket: string) => ({
           upload: (path: string) => {
@@ -104,6 +113,9 @@ vi.mock("@/lib/devlog/devlog", () => ({
     error: vi.fn(),
     db: vi.fn(),
     info: vi.fn(),
+    auth: vi.fn(),
+    realtime: vi.fn(),
+    ui: vi.fn(),
   },
 }));
 
@@ -112,8 +124,10 @@ vi.mock("@/lib/pipeline/pollAolRun", () => ({
   pollAolRunByAsset: () => Promise.resolve({ status: "completed", snapshot: null }),
 }));
 
+import React from "react";
 import { useIntake } from "@/lib/intake/useIntake";
 import { useAssetActions, useFactActions } from "@/lib/object-actions/useObjectActions";
+import { EntityProvider } from "@/lib/entity";
 
 beforeEach(() => {
   rec.invokes = [];
@@ -124,7 +138,9 @@ beforeEach(() => {
 
 describe("E2E Smoke: Note → Verstehen", () => {
   it("legt Asset an und triggert intake-trigger", async () => {
-    const { result } = renderHook(() => useIntake());
+    const wrapper = ({ children }: { children: React.ReactNode }) =>
+      React.createElement(EntityProvider, null, children);
+    const { result } = renderHook(() => useIntake(), { wrapper });
     await act(async () => {
       await result.current.intake({ type: "text", text: "kurze Notiz für QA", label: "Notiz" });
     });

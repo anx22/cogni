@@ -5,33 +5,29 @@
 //  Auf Projekt: Entity allein — Drop-Target, Review-Signal, Intake-Eingang.
 // =============================================================================
 import type { ReactNode } from "react";
-import Entity from "./Entity";
+import EntityRoot from "./EntityRoot";
 import AccountDrawer from "@/components/home/AccountDrawer";
-import { useSelectedCharacter } from "./useSelectedCharacter";
-import type { EntityState } from "./orbPresets";
+import { useEntity } from "@/lib/entity";
 
 interface EntityRailProps {
-  entityState: EntityState;
   onCoreClick: () => void;
   onDrop: (files: File[]) => void;
   onReviewClick?: () => void;
   onPickInputMode?: () => void;
-  busy?: boolean;
   showAccount?: boolean;
   children?: ReactNode;
 }
 
 const EntityRail = ({
-  entityState,
   onCoreClick,
   onDrop,
   onReviewClick,
   onPickInputMode,
-  busy = false,
   showAccount = false,
   children,
 }: EntityRailProps) => {
-  const { characterId } = useSelectedCharacter();
+  const { state, characterId } = useEntity();
+  const busy = state === "processing" || state === "review-ready";
 
   return (
     <aside
@@ -59,8 +55,8 @@ const EntityRail = ({
           borderBottom: children ? "1px solid var(--hair)" : undefined,
         }}
       >
-        <Entity
-          state={entityState}
+        <EntityRoot
+          state={state}
           onDrop={onDrop}
           onReviewClick={onReviewClick ?? (() => {})}
           onClick={onCoreClick}

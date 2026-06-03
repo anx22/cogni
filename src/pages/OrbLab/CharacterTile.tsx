@@ -5,7 +5,7 @@
 
 import { useMemo } from "react";
 import { CHARACTERS } from "@/components/entity/characters/registry";
-import { ORB_PRESETS_DEFAULT, samplePreset } from "@/components/entity/orbPresets";
+import { ORB_PRESETS_DEFAULT, samplePreset } from "@/components/entity/presets/orbPresets";
 import type { CharacterId } from "@/components/entity/characters/types";
 import { Check } from "lucide-react";
 

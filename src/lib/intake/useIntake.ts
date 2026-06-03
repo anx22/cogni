@@ -7,6 +7,7 @@ import { devlog } from "@/lib/devlog/devlog";
 import { sanitizeStorageName } from "./sanitizeStorageName";
 import { pollAolRun, pollAolRunByAsset, type AolRunSnapshot } from "@/lib/pipeline/pollAolRun";
 import { submitNote } from "./submitNote";
+import { useEntity, entitySignal, type EntitySignal } from "@/lib/entity";
 
 /**
  * Beobachtet einen Pipeline-Lauf (entweder per run_id oder per asset_id) und
@@ -15,7 +16,7 @@ import { submitNote } from "./submitNote";
  */
 function trackPipeline(
   source: { runId?: string | null; assetId?: string | null },
-  setEntityState?: (s: "idle" | "hover" | "processing" | "review-ready" | "failed") => void,
+  dispatch?: (sig: EntitySignal) => void,
 ) {
   const onUpdate = (snap: AolRunSnapshot) => {
     devlog.edge("pipeline progress", {
@@ -35,22 +36,20 @@ function trackPipeline(
     if (res.status === "failed") {
       const msg = res.snapshot?.error?.message ?? "Analyse fehlgeschlagen";
       toast.error("Analyse fehlgeschlagen", { description: msg.slice(0, 160) });
-      setEntityState?.("failed");
+      dispatch?.(entitySignal.intakeFailed());
     } else if (res.status === "timeout") {
       toast.warning("Dauert etwas länger", {
         description: "Die Analyse läuft noch — die Box erscheint gleich.",
       });
     }
-    // 'completed' wird via Realtime auf dialog_sessions in Index.tsx
+    // 'completed' wird via Realtime auf dialog_sessions in useEntitySources
     // zu 'review-ready' — hier nichts zusätzlich tun.
   });
 }
 
-type EntityState = "idle" | "hover" | "processing" | "review-ready" | "failed";
 type AssetType = Database["public"]["Enums"]["asset_type"];
 
 interface UseIntakeOptions {
-  setEntityState?: (s: EntityState) => void;
   setLastImpact?: (s: string) => void;
   onIntake?: (payload: IntakePayload) => void;
   /**
@@ -71,7 +70,8 @@ function fileTypeFromName(name: string): AssetType {
 }
 
 export function useIntake(options: UseIntakeOptions = {}) {
-  const { setEntityState, setLastImpact, onIntake, projectId } = options;
+  const { setLastImpact, onIntake, projectId } = options;
+  const { controller } = useEntity();
 
   const intake = useCallback(
     async (payload: IntakePayload) => {
@@ -90,7 +90,7 @@ export function useIntake(options: UseIntakeOptions = {}) {
         return;
       }
 
-      setEntityState?.("processing");
+      controller.signal(entitySignal.intakeStarted(payload.type));
 
       try {
         if (payload.type === "file" && payload.files?.length) {
@@ -142,7 +142,7 @@ export function useIntake(options: UseIntakeOptions = {}) {
                 if (res.error) devlog.error("intake-process invoke error", res.error);
                 else devlog.edge("intake-process responded", res.data);
               });
-            trackPipeline({ assetId }, setEntityState);
+            trackPipeline({ assetId }, controller.signal);
           }
           const label = `${payload.files.length} ${payload.files.length === 1 ? "Datei" : "Dateien"}`;
           toast(`${label} aufgenommen`, { description: "wird verarbeitet" });
@@ -178,14 +178,14 @@ export function useIntake(options: UseIntakeOptions = {}) {
               }
               devlog.edge("intake-trigger responded", res.data);
               const runId = (res.data as { run_id?: string } | null)?.run_id ?? null;
-              trackPipeline({ runId, assetId: data.id }, setEntityState);
+              trackPipeline({ runId, assetId: data.id }, controller.signal);
             });
         } else if (payload.type === "text" && payload.text) {
           const result = await submitNote(payload.text, { projectId: projectId ?? null });
           if (!result) throw new Error("Notiz konnte nicht gespeichert werden");
           toast("Notiz aufgenommen", { description: "wird analysiert" });
           setLastImpact?.("Notiz aufgenommen");
-          trackPipeline({ runId: result.runId, assetId: result.assetId }, setEntityState);
+          trackPipeline({ runId: result.runId, assetId: result.assetId }, controller.signal);
         }
 
         onIntake?.(payload);
@@ -193,14 +193,14 @@ export function useIntake(options: UseIntakeOptions = {}) {
         const msg = err instanceof Error ? err.message : "Fehler";
         devlog.error(`intake failed: ${msg}`, err);
         toast.error(msg);
-        setEntityState?.("failed");
+        controller.signal(entitySignal.intakeFailed());
         return;
       }
 
       // Kein blinder Timeout mehr — der Zustand wird ab jetzt aus
-      // Realtime-Events (assets/dialog_sessions) in Index.tsx gesteuert.
+      // Realtime-Events (assets/dialog_sessions) in useEntitySources gesteuert.
     },
-    [setEntityState, setLastImpact, onIntake, projectId],
+    [controller, setLastImpact, onIntake, projectId],
   );
 
   return { intake };

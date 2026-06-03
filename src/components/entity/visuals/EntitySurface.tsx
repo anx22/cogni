@@ -11,7 +11,7 @@
 
 import type { CSSProperties, FC } from "react";
 import { cn } from "@/lib/utils";
-import type { SampledSurface } from "./orbPresets";
+import type { SampledSurface } from "../presets/orbPresets";
 
 interface EntitySurfaceProps {
   /** Orb diameter in px (the surface is sized as orbSize * surface.scale). */
