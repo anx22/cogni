@@ -27,7 +27,7 @@ Belastbare Basis steht. Vision-Kern ~90% implementiert, UI-Sprache und Drill-Rou
 - **Frontend**: 4 Rollen, AssetOrbit, Realtime, Day/Night-Theme, Geist-Font, shadcn-Bridge auf `--surface-1`/`--hair-2`/`--shadow-pop`.
 - **UI-Sprache enttechnisiert**: keine `Konflikt #abc`/`Gap #abc`/`Dependency #abc`/`Thema #…`/`Dokument #…` mehr sichtbar; Lagetext aus Zustand, nicht aus Commit-Log.
 - **Redesign durch** (Pässe 1–6 + Audit-Fixbatch): Sidebar, Hero, Mittelfeld, Substanz, BatchReview, FaktDrill — Quelle: `docs/redesign/`.
-- **Tests**: Vitest 89/89 grün, Deno-Suiten pro Detector, 19/19 EFs mit Boundary + Logger, RLS überall.
+- **Tests**: Vitest 114/114 grün, Deno-Suiten pro Detector, 19/19 EFs mit Boundary + Logger, RLS überall.
 
 ---
 
@@ -46,7 +46,8 @@ Statt Backlog-Friedhof: drei Sprints, jeder mit klarem Outcome. Reihenfolge M1 �
 Spatial-Continuity-Geste komplettieren. Heute bricht „Entity ist immer da" ab, sobald ein Projekt offen ist.
 
 - **Stufe 1 erledigt (2026-06-01):** `AtmosphereStripe` als eigene Komponente — spiegelt Lebenszustand des Projekts (offen / review-warm via `is-active`). Hängt an `project.handlungsbedarf`.
-- ~~Universal-Overlay (⌘+Space)~~ **gestrichen (2026-06-02):** Es gibt kein Entity-Overlay im UI. Ziel ist stattdessen die persistente Entität rechts an der Seite (Main + Projektdetail) — eigene UI-Phase, noch nicht reincommittet.
+- ~~Universal-Overlay (⌘+Space)~~ **gestrichen (2026-06-02):** Es gibt kein Entity-Overlay im UI. Ziel ist stattdessen die persistente Entität rechts an der Seite (Main + Projektdetail).
+- **Stufe 4 erledigt (2026-06-03) — Entität persistent rechts:** neue `EntityRail`-Komponente (lg+, 220px) trägt die Entität (96px) + optionalen Content-Slot. **Home:** Entität wandert aus dem Zentrum in die rechte Schiene, `ImpactPipelinePanel` liegt als Content darunter, AccountDrawer oben in der Rail; die Mitte wird zur reinen Intake-Bühne (AssetOrbit + HomePrompt). **Projekt:** `EntityRail` rechts statt Mini-Entität in der linken Sidebar — state-bewusst (idle/processing/review-ready), Drop → Intake ans Projekt, Klick bei review-ready → Review öffnen. Damit begleitet die Entität jeden Screen. **M2 abgeschlossen.**
 - **Stufe 2 erledigt (2026-06-02):** AssetOrbit-Retry für `failed`-Chips — `retryIntake.ts` als gemeinsame lib-Funktion, failed-Chip zeigt RotateCcw-Icon und ist klickbar. `IntakeSessionsPanel` nutzt dieselbe Funktion.
 - **Stufe 3 erledigt (2026-06-02):** Realtime-Hook `useProjectPipeline` — `AtmosphereStripe` erhält `isProcessing` prop, `.is-processing`-CSS (1.6s, sig-action-Farbe) unterscheidet aktive Pipeline-Läufe von offenem Handlungsbedarf.
 
@@ -74,13 +75,14 @@ Readonly-Reste auflösen: Verlauf-Notiz, Feedback-Button, Impact-Pfeile. Damit i
 
 - **Graphiti-Sync-Retry** — Cron `*/30 min`, `inspect-graphiti diagnose` für Top-Reasons.
 - **Test-Coverage halten** — neue Funktion = Pure-Test, Drift in DECISIONS.
-- **Sprach-Restposten** — bei Audit 2026-05-30 nochmal geprüft: `useIntake.ts:36-40`, `IntakeSessionsPanel.tsx:156`, `ImpactPipelinePanel.tsx:35-41` sind bereits in Projektsprache. Loop geschlossen.
+- **Sprach-Restposten** — Audit 2026-06-03: Terminologie auf „Analyse" vereinheitlicht (war Mischung aus „Pipeline"/„Verstehens-Lauf"/„Erkenntnis"). 14 Strings in 7 Dateien. Loop geschlossen.
 - **Pre-existing Build-Fehler aus Lovable-Hand-Off** — `useProjectData` Migrations-Drift, `submitNote` DevLogCategory, `VerlaufFeed`. Brauchen klare Backend-Entscheidung, kein blinder Fix.
 
 ---
 
 ## Recently completed
 
+- **2026-06-03 — M2 abgeschlossen (Entität persistent rechts) + QA-Härtung Commit-Pfad + Vercel-Import** auf `dev`. **Entität persistent (M2 Stufe 4):** neue `EntityRail` (lg+, 220px) trägt die Entität auf Home und Projekt rechts an der Seite — Home: Mitte wird Intake-Bühne, `ImpactPipelinePanel` als Content-Slot, AccountDrawer in der Rail; Projekt: ersetzt Mini-Entität, state-bewusst + Drop-/Review-Eingang. **QA F3/R5:** reine Commit-Routing-Entscheidung aus `DialogProvider.commitBox` in getestetes `src/lib/dialog/commitRoute.ts` (`planCommitRoute`) herausgelöst — 17 neue Pure-Tests decken readonly-Gate, Konflikt-Resolve, Topic-Merge, Intake-Note und commit-fact ab; Seiteneffekte unverändert im Provider. **Terminologie:** auf „Analyse" vereinheitlicht (14 Strings/7 Dateien). **Infra:** `vercel.json` + Deploy-Workflow, Cogni läuft jetzt auf `cogny.vercel.app` (Import aus Lovable-Embedded-Hosting). Tests 114/114 grün, tsc 0.
 - **2026-06-02 — Funktional-Sprint 1+2 (Fundament + Pipeline-Sichtbarkeit)** auf `dev`. **Sprint 1 (Fundament):** Archiv-Lifecycle repariert — `ProjectScreen` reicht `project.status` an `ProjectHeaderActions` (zeigt korrekt „Wiederherstellen"), „Archiviert"-Badge im Header, neuer Lazy-Hook `useArchivedProjects` + ausklappbarer Archiv-Bereich in `AppSidebar` mit Wiederherstellen je Zeile (vorher waren archivierte Projekte nur via Undo-Toast erreichbar). Leeres Projekt: Shell-`LageZone` bekommt „Material ablegen"-Button (vorher nur Drag&Drop). **Sprint 2 (Pipeline-Sichtbarkeit):** expliziter „Material wird ausgewertet"-Banner im Projekt-Body (via `useProjectPipeline.isProcessing`), „Klärung öffnen" zusätzlich im immer sichtbaren Sticky-Header, Spinner-Keyframe-Bug (`cogni-orb-rotate-slow` nirgends definiert) in `ProjectScreen` + `ImpactPipelinePanel` auf Tailwind `animate-spin` gefixt. Tests 97/97 grün. **Bewusst gestrichen:** Monetarisierung (nie geplant), Universal-Overlay ⌘+Space (kein Entity-Overlay im UI — Entität bleibt persistent rechts an der Seite, separate UI-Phase).
 - **2026-05-30 — Empfehlung-First-Drilldown (M1 Stufe 1)** Konflikt-Bühne umgebaut von neutralem A/B-Vergleich zu „cogni empfiehlt X (Quelle, Begründung) — [Übernehmen] [Korrigieren] [Offen lassen]". Korrigieren expandiert in die alte A/B-Wahl als Sub-State. `deriveEmpfehlung` schreibt Bausteine („N Tage neuer · direkte Quelle statt abgeleiteter") statt Prozentwerte. `payload.empfehlungBlock` als strukturierter Slot in `sessionFactories.buildKonfliktSession`. KonfliktPopover bleibt als Tier-1-Schnellbestätigung, Sprache deckungsgleich. Files: `FaktDrillOverlay.tsx`, `sessionFactories.ts`, `mappers/konflikte.ts`. Sprach-Restposten-Audit erledigt — drei Strings bereits clean. Build-Drift aus Lovable-Hand-Off (`useProjectData`, `submitNote`, `VerlaufFeed`) bleibt separater Block.
 - **2026-05-24 — Redesign abgeschlossen + Doku-Konsolidierung** Pässe 1–6 + Audit-Fixbatch durch (Sidebar, Hero, Mittelfeld, Substanz, BatchReview, FaktDrill, Readonly-Sessions, `deriveSignal`, Material/Review-Buttons, Sidebar `onCreateProject`, `escalate`-Payload). `.lovable/plan.md` und `docs/redesign/REVIEW.md` gelöscht — visuelle Quelle bleiben `prototype/` + `screenshots/`.
