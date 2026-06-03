@@ -66,16 +66,31 @@ entity_aliases(id, entity_id→entities, alias, normalized, source, created_at)
 ### S5 — Feedback-Schleife minimal schließen
 - Resolver liest `entity_link_rejections` → kein Re-Vorschlag desselben Falsch-Matches.
 - Akzeptierte Aliasse wachsen → deterministische Auflösung verbessert sich.
+- **Erweitert (Gap C, spezifiziert): Fakt-Level-Reject als Negativ-Signal.** `reject` erfasst Grund-Taxonomie (`falsch`/`Duplikat`/`irrelevant`/`Beleg fehlt`) → vereinheitlichte Negatives-Schicht (mit `entity_link_rejections`); Extraktion/Resolver liest sie → kein Re-Vorschlag. Heute verschwindet ein abgelehnter Fakt spurlos.
 - Zurückgestellt (L1): Prompt-Tuning aus `corrections`, Confidence-Rekalibrierung.
 
 ### S6 — Cross-Project-Identitäts-Signal (UI)
 - „Dieser Stakeholder erscheint in N Projekten" — Read in bestehende `useProject`/`useProjects` falten, kein neuer Roundtrip.
 - Verzahnt mit M2-Präsenz. Der Magic-Moment.
 
+## S0 — Beleg-Verankerung (Gap A, vorgezogen, aktiv)
+- Agent liefert schon `evidence` (Zitat) — heute nur im Konflikt-Drill gezeigt, kein model/prompt-Version.
+- (a) Zitat per Substring-Match auf ein `parsed_documents.segments[]`-Element abbilden → **stabile Segment-Referenz** (`element_id` falls vorhanden, sonst Array-Index; Unstructured-Elemente tragen `element_id`, Notiz/Link-Segmente Index 0).
+- (b) Beleg-Referenz + Modell (`google/gemini-2.5-pro`) + Prompt-Version **first-class in `provenance`** (proposed → canonical).
+- (c) Beleg-Zitat an **jeder** Review-Card zeigen (heute nur `FaktDrillOverlay`-Konflikt). Segment-Referenz → später „im Dokument zeigen".
+- Owner-Entscheid: Segment-Referenz statt Offsets/Rohtext — highlightbar genug, DSGVO-schonend (kein Rohtext-Speichern). Best Practice: Anchor-to-Source / Citation-Grounding.
+
+## S7 — Einheitlicher Fakt-Status (Gap B, abgeleitet, spätere Stufe)
+- Status heute über 4 Tabellen verstreut.
+- Reine `factStatus()`-Ableitung (Funktion/View) aus `valid_until`/`superseded_by` + offenen `contradictions`: `active | superseded | contradicted | deprecated | needs_review`.
+- **Keine gespeicherte Spalte** → kein Drift (bitemporale Best Practice). Workflow-State `needs_review` orthogonal.
+- Speist UI-Badges, Resolver, Projektzustand.
+
 ## Owner-Entscheidungen (gesetzt)
 - Generische `entities`-Tabelle (statt persons/orgs/topics aktivieren).
 - Graphiti-getriebene Resolution **+ deterministischer lokaler Guard** (Robustheits-Leitplanke).
 - Zwei geordnete Blöcke: billige Bedeutungs-Fixes (S1/S2) vor der Identitäts-Schicht (S3–S6).
+- Delta-Lücken (2026-06-03): Beleg via **Segment-Referenz** · Fakt-Status **abgeleitet** · Reject als **Negativ-Signal mit Grund**. Einbettung: **nur Evidence (S0) vorgezogen**, Status (S7) + Reject (S5) spätere Stufen.
 
 ## Leitplanken (Anti-Bloat — verbindlich)
 - Keine separate Review-Inbox (Dialog-Overlay + Projekt-Screen sind die Review-Oberfläche).
