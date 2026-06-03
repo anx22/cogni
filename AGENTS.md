@@ -15,24 +15,16 @@ Drei Außenmodi: Entität, Projekt, Dialog-Overlay. Keine Sidebar, keine Dashboa
 - **Warum so entschieden?** → `docs/DECISIONS.md`
 - **Seam-Inventar (lebende QA-Karte)** → `docs/qa-seam-inventar.md`
 - **Entity-Kernmodul (Spec + Refactor-Roadmap)** → `docs/entity-core.md`
+- **M4-Detailspec (S0–S9)** → `docs/m4-spec.md`
 
-## Memory (`mem://`)
-
-Detailwissen liegt in Project-Memory. Index ist immer im Kontext. Wichtigste Files:
-
-- `mem://strategy/observability-und-anbindung` — volle API-Nutzung aller Services
-- `mem://features/techstack` — Datenfluss-Architektur
-- `mem://features/graphiti-semantik` — Spiegel-Vertrag
-- `mem://features/railway-zugriff`, `mem://features/langsmith-zugriff`
-
-## Service-Schicht (Stand 2026-05-14)
+## Service-Schicht
 
 Lovable Cloud (Supabase) = kanonisch · Graphiti/Neo4j = Spiegel · Unstructured = Parsing ·
 AOL-Service auf Railway = LangGraph-Kontext · LangSmith = Prompts/Traces · Lovable AI Gateway = Modelle.
 
 ## Aktueller Sprint
 
-Siehe `docs/NOW.md`. Basis + Welle B + UI-Redesign durch. Aktiv: Prototyp-Finalisierung in drei Milestones (Provenance, Entity-Präsenz, Antwort-Loops). Visuelle Quelle: `docs/redesign/prototype/` + `docs/redesign/screenshots/`.
+Siehe `docs/NOW.md`. M1–M3 + Entity-Core durch. Aktiv: M4 (Bedeutungs-Integrität) + Wave 3 (Lebendiges System). Visuelle Quelle: `docs/redesign/prototype/` + `docs/redesign/screenshots/`.
 
 ## Regeln (immer)
 
