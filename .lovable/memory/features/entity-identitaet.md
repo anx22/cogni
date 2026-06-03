@@ -32,6 +32,7 @@ Graph Deko bleibt:
 - REGEL: nie still bei `fact_type === 'decision'` · `modality ∈ {risk, exclusion, condition, assumption}`
   · `delta_type ∈ {replace, contradict, merge}` · `against_fact_id` auf decision/deadline/status.
 - TEST: Matrix-Unit `fact_type × modality × delta_type`.
+- **Impact-Achse (gefaltet, Gap #4):** zusätzlich nie still bei hoher Tragweite (Fakt betrifft mehrere Projekte/Entities oder Budget-/Architektur-Bezug, abgeleitet) → S1 deckt Confidence + Risk + Impact. Kein neues Schema.
 
 ### S2 — „Anders" / Related-not-same (klein)
 - WO: `commitRoute.planCommitRoute` + `commit-fact/kernel.ts` + DialogProvider + Box-Render.
@@ -85,6 +86,17 @@ entity_aliases(id, entity_id→entities, alias, normalized, source, created_at)
 - Reine `factStatus()`-Ableitung (Funktion/View) aus `valid_until`/`superseded_by` + offenen `contradictions`: `active | superseded | contradicted | deprecated | needs_review`.
 - **Keine gespeicherte Spalte** → kein Drift (bitemporale Best Practice). Workflow-State `needs_review` orthogonal.
 - Speist UI-Badges, Resolver, Projektzustand.
+
+## S8 — Aktions-Set: Needs-source + Escalate (Gap #7, aktiv)
+- Commit kennt nur `confirm`/`reject`; `escalate:true` aus `FaktDrillOverlay` wird vom Kernel ignoriert (toter Pfad); „Beleg fehlt" ist nur Reject-Grund.
+- **Needs-source** = blockierender Wartezustand: Fakt mit schwachem/keinem Beleg (nutzt S0-Segment-Referenz) wartet statt Commit/Reject.
+- **Escalate** zu echtem zurückgestelltem Review-Zustand verdrahten (Kernel respektiert es, Box bleibt offen + markiert).
+- Schließt Aktions-Lücke + latenten Bug. Split bleibt bewusst gestrichen.
+
+## S9 — Pre-commit Supersede/Contradict-Emission (Gap #9, spätere Stufe)
+- Heute: Linker emittiert nie `replace`; Ersetzungen/Widersprüche erst post-commit von Detektoren erkannt.
+- Resolver markiert eindeutige Ersetzung/Widerspruch schon **vor** dem Commit als `replace`/`contradict` → Review-Case erscheint sofort als Supersede/Konflikt (Empfehlung-First).
+- Größerer Umbau → spätere Stufe; post-commit-Detektoren + S1/S7 bleiben Sicherheitsnetz.
 
 ## Owner-Entscheidungen (gesetzt)
 - Generische `entities`-Tabelle (statt persons/orgs/topics aktivieren).
