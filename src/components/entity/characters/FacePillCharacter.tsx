@@ -53,6 +53,12 @@ const STATE_TUNE: Record<EntityState, Tune> = {
 export const FacePillCharacter: Character = {
   id: "face-pill",
   label: "Face Pill",
+  manifest: {
+    id: "face-pill",
+    label: "Face Pill",
+    suppressCore: ["pointer-follow"],
+    motion: ["tilt-3d", "eyes", "custom-morph"],
+  },
   render: (props) => <FacePill {...props} />,
 };
 

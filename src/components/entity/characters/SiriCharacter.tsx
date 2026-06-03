@@ -9,6 +9,7 @@ import type { Character } from "./types";
 export const SiriCharacter: Character = {
   id: "siri",
   label: "Siri",
+  manifest: { id: "siri", label: "Siri" },
   render: ({ size, sample }) => (
     <>
       <EntitySurface orbSize={size} surface={sample.surface} />

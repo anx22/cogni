@@ -27,3 +27,4 @@ export { entitySignal } from "./signals";
 export { EntityProvider } from "./EntityProvider";
 export { useEntity } from "./useEntity";
 export type { EntityContextValue, EntityController } from "./entityContext";
+export { composeCapabilities, STANDARD_CAPABILITIES, DEFAULT_MOTION } from "./capabilities";

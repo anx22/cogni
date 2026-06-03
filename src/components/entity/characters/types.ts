@@ -5,6 +5,7 @@
 import type { ReactNode } from "react";
 import type { EntityState, SampledPreset } from "../presets/orbPresets";
 import type { InputMode } from "../InputPills";
+import type { CharacterManifest } from "@/lib/entity";
 
 export type CharacterId = "siri" | "face-pill";
 
@@ -19,5 +20,6 @@ export interface CharacterRenderProps {
 export interface Character {
   id: CharacterId;
   label: string;
+  manifest: CharacterManifest;
   render: (props: CharacterRenderProps) => ReactNode;
 }
