@@ -33,7 +33,7 @@ Belastbare Basis steht. Vision-Kern ~90% implementiert, UI-Sprache und Drill-Rou
 
 ## Achse 3 — Drei Milestones zum Prototyp
 
-Statt Backlog-Friedhof: Sprints mit klarem Outcome. Reihenfolge M1 ✅ → M2 ✅ → M3 ✅ → **Entity-Core Phase 1–7 (Fundament, aktiv)** → M4 (priorisiert).
+Statt Backlog-Friedhof: Sprints mit klarem Outcome. Reihenfolge M1 ✅ → M2 ✅ → M3 ✅ → **Entity-Core Phase 1–7 (Fundament, aktiv)** → M4 (priorisiert) → **Wave 3 (Lebendiges System)**.
 
 ### M1 — Provenance & Empfehlung schließen
 
@@ -91,6 +91,14 @@ Phasen einzeln auslieferbar, visuell zunächst identisch.
 - **0** Gehirn-Gerüst (`src/lib/entity/` machine/signals/interaction/signalMapping/deriveExpression/capabilities + Barrel + 36 Tests) — ✅ 2026-06-02 (auf dev)
 - **1–7** Provider+Sources (`EntityRail`/Index auf `useEntity()`) · Orchestrator/Visuals · Capability-Vertrag+A11y · Ausdrucks-Engine · Unified Composer · Kommunikation+Orbit · Mehrfach-Mount-Reuse. **Kein ⌘+Space-Overlay** (gestrichen, s. M2) — Wiederverwendung über die persistente `EntityRail` + weitere Mount-Punkte.
 
+### Wave 3 — Lebendiges System (geplant, nach M4)
+
+> Quelle: 10x-Analyse `docs/10x/session-1.md`. Diese drei machen den Projektzustand **lebendig** und holen den Nutzer zurück — auf bestehenden Flächen (EntityVoice, AtmosphereStripe, EntityRail), **kein Dashboard**. Build-Reihenfolge: LS-1 → LS-3 → LS-2 (billig zuerst, Pulse zuletzt wegen Noise-Design).
+
+- **LS-1 — Wissen altert (Confidence Decay).** _Was:_ Fakten, die lange nicht revalidiert wurden, markiert das System selbst als „prüfen". _Auftritt:_ sanftes Prüf-Item im **Handlungsbedarf** („Diese Entscheidung ist 8 Monate alt — noch gültig?"); dezentes Alters-Zeichen in **Substanz** (gedämpfte Opazität, kein Rot). _Ansatz:_ `pg_cron` auf `canonical_facts` (Alter + letzter Review-Timestamp) → `gap_signal` Typ `stale_fact`; nährt M4-S7 (`needs_review`). _Default:_ Fakt > 120 Tage ohne Revalidierung (pro `fact_type` justierbar), nur decision/deadline (Anti-Noise). _Aufwand:_ niedrig.
+- **LS-2 — Project Pulse (das System kommt zu dir).** _Was:_ cogni meldet sich von selbst, wenn ein Projekt verrottet. _Auftritt:_ **Entität + EntityVoice** beim App-Open — ruhige Eigen-Aussage („In Projekt Y wartet seit 14 Tagen eine Entscheidung"), kein Toast/Banner. _Ansatz:_ täglicher `pg_cron` pro Projekt: Gap ohne Aktivität > 14 T · Konflikt ohne Commit > 7 T · letzte Nutzeraktion > 21 T → Push-Event in die EntityVoice-Realtime-Queue. _Harte Schranke:_ **max. 1 Alert / Projekt / Woche.** _Aufwand:_ mittel; Design-Kern = Noise-Management. _Abhängigkeit:_ stabiler Projektzustand.
+- **LS-3 — Cross-Project Review-Badge.** _Was:_ immer sichtbar, wie viele Erkenntnisse projektübergreifend auf Review warten. _Auftritt:_ ruhige Zahl an der **EntityRail/Sidebar** oder als Entitäts-Zustand („3 offene Erkenntnisse warten") — **kein** lautes rotes Badge. _Ansatz:_ Cross-Project-Query auf `review_cases` (`box_state = 'proposed'`) + 1 dezente Komponente. _Aufwand:_ sehr niedrig. _Vorsicht:_ leise Intelligenz, nicht Notification-Ästhetik.
+
 ### Langfristig (Wave 3 — bewusst zurückgestellt)
 
 | #   | Aufgabe                                      | Trigger                                                                  |
@@ -98,8 +106,17 @@ Phasen einzeln auslieferbar, visuell zunächst identisch.
 | L1  | LLM-Heuristiken in Detektoren                | Wenn deterministischer Recall zu niedrig wird                            |
 | L2  | React Query (Caching + Mutations)            | Wenn Realtime + manuelle Re-Fetches racen                                |
 | L3  | Reference-Token-Auflösung                    | Wenn Dependency-Detector zu viele False Positives                        |
-| L4  | Voice/Mail-Sync (V2)                         | Nach Prototyp-Freigabe                                                   |
+| L4  | Voice/Mail-Sync (V2) — inkl. Email-Direct-Connect (10x #4, Adoptions-Wette) | Nach Prototyp-Freigabe; stärkster Adoptions-Hebel, senkt Intake-Hemmschwelle |
 | L5  | Dokument-/Quellen-Preview + Versionshistorie | `buildDokumentSession`/`buildSourceSession` „folgt"-Versprechen einlösen |
+| L6  | AOL-Lernring: `/aol/confirm` → Graphiti (TODO D4) | Wenn die Reasoning-Schicht aus Reviews lernen soll (Invalidation bei Reject + Decision-Kontext). Mirror schreibt Fakten bereits — offen ist der LangGraph-Ring. 10x #1 |
+| L7  | Export „Project Briefing" (Markdown/PDF)     | Wenn externer Output / ROI-Nachweis gebraucht wird; liest bestehendes ViewModel. 10x #6 |
+| L8  | Projekt-Gesundheits-Score                    | Wenn Multi-Projekt-Triage akut wird; baut auf `AtmosphereStripe`/`deriveSignal`. 10x #10 |
+| L9  | Async AOL-Run + PostgresSaver (TODO D2)      | Wenn große Dokumente / parallele Uploads Timeouts erzeugen. 10x #2 |
+| L10 | Dokument-Diff / Version-Delta                | Bei iterativen Versions-Uploads (Angebote/Specs/Protokolle). 10x #9 |
+| L11 | Keyboard-Nav J/K im BatchReview              | Bei Review-Volumen / Power-Usern (~20 Z.). 10x #7 |
+| L12 | AOL `/health` echte Reachability-Checks      | Beim nächsten AOL-Debugging (kein User-Value). 10x #14 |
+| L13 | Wöchentlicher Digest (cron + Email)          | Nach 3+ Monaten echter Nutzung. 10x #15 |
+| L14 | Demo-Daten entfernen + sauberer Leer-State   | Vor erstem echten User-Test (`demoProject(s).ts` noch aktiv). 10x #12 |
 
 ---
 

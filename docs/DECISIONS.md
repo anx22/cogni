@@ -2,6 +2,10 @@
 
 Format: `[YYYY-MM-DD] Problem → Choice → Reason`
 
+## 2026-06-03 — 10x-Analyse: Triage & Wave-3-Auswahl
+
+- `2026-06-03` **10x-Analyse (`docs/10x/session-1.md`) bewertet & einsortiert**: 15 Chancen lagen verwaist (untracked, vor M1–M4 entstanden) → nach ROI × Vision-Fit bewertet und in den Fahrplan gehoben. **Jetzt geplant (Wave 3 „Lebendiges System", aktive Stufen LS-1/2/3):** Confidence Decay · Project Pulse · Cross-Project Review-Badge — die machen den Zustand lebendig + holen den Nutzer zurück, auf bestehenden Flächen, kein Dashboard. **Backlog (Langfristig L6–L14):** AOL-Lernring (TODO D4), Export-Briefing, Gesundheits-Score (Owner: „advanced later"), Async AOL (D2), Doc-Diff, Keyboard J/K, Health-Checks, Digest, Demo-Daten-Cleanup. **Erledigt seit 18.05.:** Auto-Konfliktlösung (#8 = M1 Empfehlung-First), ImpactPipelinePanel (#11 = M2). **Wette (L4):** Email-Direct-Connect (#4) — stärkster Adoptions-Hebel, aber V2/Privacy/OAuth → bewusst geparkt. Reason (Owner-Entscheid): lebendiger Projektzustand + Retention zuerst (billig, vision-tragend), die output-/infra-lastigen Hebel folgen nach M4; nichts geht verloren, nichts vorschnell gebaut. Kalibrierung: 10x-Flaggschiff #1 war überzeichnet — `commit-fact` spiegelt Fakten bereits nach Graphiti, offen ist nur der AOL-Lernring.
+
 ## 2026-06-03 — Bedeutungs-Integrität & Entity-Identität (M4)
 
 - `2026-06-03` **Risk-Gate im Silent-Commit**: `canSilent` (`understandRun.ts`) gated nur auf `confidence ≥ 0.9` + kein Konflikt/`asks`/unclear → eine hochkonfidente Entscheidung committet still, ohne Review → **Helper `isRisky()` in `factRules.ts`**: niemals still bei `fact_type === 'decision'`, `modality ∈ {risk, exclusion, condition, assumption}`, `delta_type ∈ {replace, contradict, merge}` oder gesetztem `against_fact_id` auf decision/deadline/status-Typ. Reason: Review-First (Achse 1 §4) gilt gerade für Bedeutung. Confidence misst Extraktions-Sicherheit, nicht Tragweite — ein sicher extrahierter „Wir nehmen Neo4j" darf nicht stiller sein als eine unsichere Notiz. Reine Funktion, Matrix-Unit-Test.
