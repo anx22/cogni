@@ -182,17 +182,18 @@ nutzt `useEntityDetached` (lokal, keine Sources). Andere Module reden via `contr
 
 ## Phasen (je einzeln auslieferbar)
 
-- **A — Ordner-Hygiene** (mechanisch): 7 Fremd-Dateien raus; Importpfade; CI grün. ✅ _erste Umsetzung dieser Session_
+- **A — Ordner-Hygiene** (mechanisch): 7 Fremd-Dateien raus; Importpfade; CI grün. ✅ 2026-06-02 (auf dev)
 - **0 — Gehirn-Gerüst** (additiv): `lib/entity/{types,machine,interaction,signals,signalMapping,deriveExpression,
-capabilities}` + Tests + Barrel. ✅ _erste Umsetzung dieser Session_
+capabilities}` + Tests + Barrel. ✅ 2026-06-02 (auf dev)
 - **1 — Provider + Sources** (Home): Realtime/Intake/Dialog → `useEntitySources` (eine Subscription, Dedup+Timer);
-  Index adoptiert `useEntity()`.
+  Index adoptiert `useEntity()`. **`EntityRail` (M2) wird erster `useEntity()`-Konsument** — nicht daran vorbeibauen.
 - **2 — Orchestrator umbenennen + Visuals verschieben** (visuell identisch).
 - **3 — Capability-Vertrag + A11y** (visuell identisch).
 - **4 — Ausdrucks-Engine** (visuelles Upgrade): Signaturen, Intensität, Modus-Paletten, OrbLab-Achse.
 - **5 — Unified Composer** (eine Eingabefläche; Index + ProjectScreen; alle InputOverlay-Features).
 - **6 — Kommunikation + Orbit + ein Signal-Stream**.
-- **7 (M2) — Universal-Overlay** (⌘+Space) — beweist die Architektur.
+- **7 — Mehrfach-Mount-Reuse**: dieselbe `useEntity()`-Quelle an weiteren Mount-Punkten (z.B. `EntityRail` auf
+  jedem Screen) — beweist die Architektur. **Kein ⌘+Space-Overlay** (vom Treiber gestrichen; M2 = persistente `EntityRail`).
 
 ## Tests (Vitest, Vorbild `src/lib/project/`)
 

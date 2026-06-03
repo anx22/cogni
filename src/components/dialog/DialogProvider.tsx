@@ -6,34 +6,16 @@ import { DialogContext } from "./dialogContext";
 import { supabase } from "@/integrations/supabase/client";
 import { loadDialogSession } from "@/lib/dialog/loadSession";
 import { submitNote } from "@/lib/intake/submitNote";
+import { planCommitRoute } from "@/lib/dialog/commitRoute";
 import { devlog } from "@/lib/devlog/devlog";
 import { toast } from "sonner";
 
 /**
- * `__submitIntent` markiert Eingabe-Boxen in Factory-Sessions, deren Antwort
- * nicht via commit-fact persistiert wird, sondern als Notiz durch die
- * Verstehens-Pipeline fließt (Handlungsbedarf-Antwort, Feedback, Rückfrage,
- * Korrektur) — oder über eine eigene Edge Function (topic_merge).
- * Siehe sessionFactories.ts.
+ * `__submitIntent` / `__conflictIntent` markieren Boxen in Factory-Sessions.
+ * Die reine Routing-Entscheidung lebt in `@/lib/dialog/commitRoute`
+ * (`planCommitRoute`) und ist dort getestet; hier bleiben nur die
+ * Seiteneffekte. Siehe sessionFactories.ts.
  */
-type SubmitIntent =
-  | {
-      kind: "intake_note";
-      projectId?: string | null;
-      contextHint?: string;
-      sourceRef?: { type: string; id?: string; quelle?: string };
-    }
-  | {
-      kind: "topic_merge";
-      candidateId: string;
-      sourceTopicId: string;
-      targetTopicId: string;
-    };
-
-type ConflictIntent = {
-  kind: "resolve_conflict";
-  contradictionId: string;
-};
 
 // eslint-disable-next-line react-refresh/only-export-components -- gewollter Hook-Re-Export, alle Caller importieren `useDialog` von hier.
 export { useDialog } from "./dialogContext";
@@ -96,140 +78,144 @@ export const DialogProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
       const box = session?.boxes.find((b) => b.id === boxId);
-      const reviewCaseId = box?.payload?.__reviewCaseId as string | undefined;
-
       const previousState = box?.state;
       updateBoxState(boxId, decision === "confirm" ? "bestaetigt" : "verworfen");
 
-      if (!reviewCaseId) {
-        // Factory-Sessions ohne Backend-Review-Case.
+      // Reine Routing-Entscheidung (getestet in commitRoute.test.ts).
+      const route = planCommitRoute({
+        readonly,
+        payload: box?.payload ?? null,
+        decision,
+        userDecision,
+        sessionProjectId: session?.projectId ?? null,
+      });
+      const revert = () => {
+        if (previousState) updateBoxState(boxId, previousState);
+      };
 
-        // Konflikt-Auflösung: markiert Widerspruch in DB als resolved.
-        const conflictIntent = box?.payload?.__conflictIntent as ConflictIntent | undefined;
-        if (conflictIntent?.kind === "resolve_conflict") {
-          if (decision === "confirm") {
-            const auswahl = (userDecision?.auswahl as "A" | "B") ?? null;
-            try {
-              await supabase
-                .from("contradictions")
-                .update({ resolved: true })
-                .eq("id", conflictIntent.contradictionId);
-              const label =
-                auswahl === "A"
-                  ? "Erste Version"
-                  : auswahl === "B"
-                    ? "Zweite Version"
-                    : "Widerspruch";
-              toast.success(`${label} bestätigt`, { description: "Widerspruch aufgelöst" });
-              devlog.edge("resolve-conflict ok", {
-                contradictionId: conflictIntent.contradictionId,
-                auswahl,
-              });
-            } catch (err) {
-              if (previousState) updateBoxState(boxId, previousState);
-              devlog.error("resolve-conflict failed", err);
-              toast.error("Konnte Widerspruch nicht auflösen");
-            }
-          } else {
-            toast.info("Widerspruch bleibt offen");
+      switch (route.kind) {
+        case "resolve_conflict": {
+          try {
+            await supabase
+              .from("contradictions")
+              .update({ resolved: true })
+              .eq("id", route.contradictionId);
+            toast.success(`${route.label} bestätigt`, { description: "Widerspruch aufgelöst" });
+            devlog.edge("resolve-conflict ok", {
+              contradictionId: route.contradictionId,
+              auswahl: route.auswahl,
+            });
+          } catch (err) {
+            revert();
+            devlog.error("resolve-conflict failed", err);
+            toast.error("Konnte Widerspruch nicht auflösen");
           }
           return;
         }
 
-        // Wenn die Box ein __submitIntent trägt UND bestätigt wurde, route
-        // die User-Eingabe durch die passende Pipeline.
-        const intent = box?.payload?.__submitIntent as SubmitIntent | undefined;
-        if (intent?.kind === "topic_merge") {
-          const aktion = (userDecision?.aktion as string | undefined) ?? null;
-          // confirm + "Zusammenführen" → merge; confirm + "Getrennt lassen"
-          // oder reject → reject. Wir senden in beiden Fällen einen Call,
-          // damit der candidate-status entsprechend gesetzt wird.
-          const efDecision: "merge" | "reject" =
-            decision === "confirm" && aktion === "Zusammenführen" ? "merge" : "reject";
+        case "keep_conflict_open":
+          toast.info("Widerspruch bleibt offen");
+          return;
+
+        case "topic_merge": {
           try {
             const { data, error } = await supabase.functions.invoke("topic-merge", {
-              body: { candidate_id: intent.candidateId, decision: efDecision },
+              body: { candidate_id: route.candidateId, decision: route.efDecision },
             });
             if (error) throw error;
             if (data && data.ok === false) {
-              if (previousState) updateBoxState(boxId, previousState);
+              revert();
               toast.error(data.error ?? "Konnte Merge nicht ausführen");
               return;
             }
-            toast.success(efDecision === "merge" ? "Themen zusammengeführt" : "Getrennt belassen");
+            toast.success(
+              route.efDecision === "merge" ? "Themen zusammengeführt" : "Getrennt belassen",
+            );
             devlog.edge("topic-merge ok", {
-              candidateId: intent.candidateId,
-              efDecision,
+              candidateId: route.candidateId,
+              efDecision: route.efDecision,
             });
           } catch (err) {
-            if (previousState) updateBoxState(boxId, previousState);
+            revert();
             devlog.error("topic-merge failed", err);
             toast.error("Konnte Merge nicht ausführen");
           }
           return;
         }
-        if (decision === "confirm" && intent?.kind === "intake_note") {
-          const text =
-            (userDecision?.text as string | undefined) ??
-            (userDecision?.antwort as string | undefined) ??
-            "";
-          if (!text.trim()) {
-            devlog.warn("ui", "__submitIntent: kein text in userDecision", { boxId });
-            return;
-          }
+
+        case "intake_note_empty":
+          devlog.warn("ui", "__submitIntent: kein text in userDecision", { boxId });
+          return;
+
+        case "intake_note": {
           try {
-            const result = await submitNote(text, {
-              projectId: intent.projectId ?? session?.projectId ?? null,
-              contextHint: intent.contextHint,
-              sourceRef: intent.sourceRef,
+            const result = await submitNote(route.text, {
+              projectId: route.projectId,
+              contextHint: route.contextHint,
+              sourceRef: route.sourceRef,
             });
             if (result) {
               toast.success("Antwort aufgenommen", { description: "wird analysiert" });
               devlog.edge("submit-intent intake_note ok", { boxId, assetId: result.assetId });
             } else {
-              if (previousState) updateBoxState(boxId, previousState);
+              revert();
               toast.error("Konnte Antwort nicht speichern");
             }
           } catch (err) {
-            if (previousState) updateBoxState(boxId, previousState);
+            revert();
             devlog.error("submit-intent intake_note failed", err);
             toast.error("Konnte Antwort nicht speichern");
           }
-        }
-        return;
-      }
-      try {
-        const { data, error } = await supabase.functions.invoke("commit-fact", {
-          body: { review_case_id: reviewCaseId, decision, user_decision: userDecision ?? null },
-        });
-        if (error) throw error;
-        if (data && data.ok === false) {
-          if (previousState) updateBoxState(boxId, previousState);
-          if (data.code === "NEEDS_ASSIGNMENT") {
-            const assignment = session?.boxes.find((b) => b.type === "zuordnung");
-            if (assignment) {
-              const el = document.getElementById(`dialog-box-${assignment.id}`);
-              el?.scrollIntoView({ behavior: "smooth", block: "start" });
-              el?.classList.add("ring-2", "ring-primary/60", "rounded-xl");
-              setTimeout(
-                () => el?.classList.remove("ring-2", "ring-primary/60", "rounded-xl"),
-                2400,
-              );
-            }
-            toast.message("Erst Projekt wählen", {
-              description: "Entscheide zuerst die Zuordnungsbox oben.",
-            });
-          } else {
-            toast.error(data.error ?? "Konnte Entscheidung nicht speichern");
-          }
-          devlog.edge("commit-fact blocked", { reviewCaseId, code: data.code });
           return;
         }
-        devlog.edge("commit-fact ok", { reviewCaseId, decision });
-      } catch (err) {
-        if (previousState) updateBoxState(boxId, previousState);
-        devlog.error("commit-fact failed", err);
-        toast.error("Konnte Entscheidung nicht speichern");
+
+        case "commit_fact": {
+          try {
+            const { data, error } = await supabase.functions.invoke("commit-fact", {
+              body: {
+                review_case_id: route.reviewCaseId,
+                decision,
+                user_decision: userDecision ?? null,
+              },
+            });
+            if (error) throw error;
+            if (data && data.ok === false) {
+              revert();
+              if (data.code === "NEEDS_ASSIGNMENT") {
+                const assignment = session?.boxes.find((b) => b.type === "zuordnung");
+                if (assignment) {
+                  const el = document.getElementById(`dialog-box-${assignment.id}`);
+                  el?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  el?.classList.add("ring-2", "ring-primary/60", "rounded-xl");
+                  setTimeout(
+                    () => el?.classList.remove("ring-2", "ring-primary/60", "rounded-xl"),
+                    2400,
+                  );
+                }
+                toast.message("Erst Projekt wählen", {
+                  description: "Entscheide zuerst die Zuordnungsbox oben.",
+                });
+              } else {
+                toast.error(data.error ?? "Konnte Entscheidung nicht speichern");
+              }
+              devlog.edge("commit-fact blocked", {
+                reviewCaseId: route.reviewCaseId,
+                code: data.code,
+              });
+              return;
+            }
+            devlog.edge("commit-fact ok", { reviewCaseId: route.reviewCaseId, decision });
+          } catch (err) {
+            revert();
+            devlog.error("commit-fact failed", err);
+            toast.error("Konnte Entscheidung nicht speichern");
+          }
+          return;
+        }
+
+        // ignore_readonly wird oben bereits abgefangen; noop = bewusst nichts.
+        default:
+          return;
       }
     },
     [session, updateBoxState, readonly],

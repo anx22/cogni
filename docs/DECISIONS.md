@@ -2,28 +2,68 @@
 
 Format: `[YYYY-MM-DD] Problem → Choice → Reason`
 
+## 2026-06-03 — Bedeutungs-Integrität & Entity-Identität (M4)
+
+- `2026-06-03` **Risk-Gate im Silent-Commit**: `canSilent` (`understandRun.ts`) gated nur auf `confidence ≥ 0.9` + kein Konflikt/`asks`/unclear → eine hochkonfidente Entscheidung committet still, ohne Review → **Helper `isRisky()` in `factRules.ts`**: niemals still bei `fact_type === 'decision'`, `modality ∈ {risk, exclusion, condition, assumption}`, `delta_type ∈ {replace, contradict, merge}` oder gesetztem `against_fact_id` auf decision/deadline/status-Typ. Reason: Review-First (Achse 1 §4) gilt gerade für Bedeutung. Confidence misst Extraktions-Sicherheit, nicht Tragweite — ein sicher extrahierter „Wir nehmen Neo4j" darf nicht stiller sein als eine unsichere Notiz. Reine Funktion, Matrix-Unit-Test.
+
+- `2026-06-03` **„Anders" / Related-not-same als Identitäts-Aktion**: Review kennt nur Übernehmen/Korrigieren/Offen-lassen → es fehlt „nicht dieselbe Entität, nur ähnlich" → **kontextuelle Aktion**, nur sichtbar wenn confirm-Kandidat vorliegt (`delta_type === 'confirm'` && `against_fact_id`); committet als **neuer** Fakt (delta `add`) und markiert den Review-Case session-intern. Reason: „Ähnlich = Gleich" ist die häufigste Wissens-Korruption in KGs. Ohne diesen Ausweg merged der Reviewer entweder falsch oder lehnt korrekte Fakten ab.
+
+- `2026-06-03` **Negativ-Link in eigener Tabelle, nicht in `change_events`** (Korrektur nach Codex-Review PR #12): `change_events.event_type` ist `public.delta_type` (`confirm/add/replace/contradict/merge/discard`) — ein erfundenes `link_rejected` würde am Enum-Insert scheitern → **dediziertes `entity_link_rejections`** (`subject_norm`/`proposed_fact_id` × `rejected_entity_id`, `reason`, `created_at`), das **mit S3** landet. Reason: das Negativ-Link-Gedächtnis wird ohnehin erst vom Resolver (S4/S5) gelesen; eine eigene winzige Tabelle hält `delta_type` sauber (Fact-Delta ≠ Identitäts-Entscheid) und ist genau die Datenbasis der Feedback-Schleife. S2 bleibt dadurch migrationsfrei.
+
+- `2026-06-03` **Generische `entities`-Tabelle statt persons/orgs/topics aktivieren**: `persons`/`organizations`/`topics` existieren, werden beim Commit aber nie geschrieben — Identität ist faktisch nicht modelliert → **eine generische `entities` + `entity_aliases`** (bounded `entity_type`: person/organization/topic/tool/artifact), nullable `entity_id` auf `canonical_facts` + `proposed_facts`, Backfill aus bestehenden Fakten. Reason (Owner-Entscheid): einheitliche Identitäts-Schicht ist zukunftssicherer als drei Sonderpfade; akzeptierter Preis = Migration bestehender Referenzen. **Anti-Bloat-Leitplanke:** Entities tragen nur Identität — Statements/Beziehungen bleiben im getypten Fact-Modell (`decisions`/`dependencies`/`contradictions`). Kein generischer Prädikat-Graph, keine 200 Relationstypen.
+
+- `2026-06-03` **Graphiti-getriebene Resolution + deterministischer lokaler Guard**: Dedup („Max Müller" = „M. Müller") braucht eine Auflösungs-Engine → **Graphiti-Suche primär (semantisch), aber lokaler Guard zuerst** (normalisierter Name + E-Mail-exakt gegen `entity_aliases`, `pg_trgm`-Index). Output `{ match, candidates[], matched_via: 'local'|'graphiti'|'none' }`, `matched_via` wird geloggt. `linker.ts` **wird ersetzt** durch den Resolver, nicht ergänzt. Reason (Owner-Entscheid Graphiti-primär): semantisch stärkste Auflösung. **Robustheits-Leitplanke (ergänzt):** Graphiti ist fail-soft — ein stiller Leerlauf bei Ausfall würde genau die Duplikate erzeugen, die wir verhindern wollen; der lokale Guard fängt das Loch und macht offensichtliche Treffer netzfrei + testbar. `matched_via`-Telemetrie, weil wir aus dem 422-Drama gelernt haben: messen statt vertrauen.
+
+- `2026-06-03` **Feedback-Schleife minimal, nicht als Lern-Pipeline**: Korrekturen/Negativ-Links lagen bisher write-only → **Resolver konsumiert `entity_link_rejections`** (schlägt Falsch-Match nicht erneut vor); akzeptierte Aliasse wachsen → deterministische Auflösung verbessert sich. Reason: schließt die Schleife mit vorhandenen Daten, ohne Prompt-Lernen/Confidence-Rekalibrierung (bleibt L1, zurückgestellt). Autopilot für Verarbeitung, Review für Bedeutung, Provenance für Vertrauen — ohne Enterprise-Lernmaschine.
+
+- `2026-06-03` **Beleg-Verankerung via Segment-Referenz (nicht Offsets/Rohtext)**: Beleg lag nur als Zitat-String in `content`/`review_cases.context`, nur im Konflikt-Drill gezeigt, kein model/prompt-Version → **Zitat per Substring-Match auf ein `parsed_documents.segments[]`-Element abbilden, stabile Referenz (`element_id`/Index) + Modell + Prompt-Version first-class in `provenance`**, Beleg an jeder Review-Card sichtbar. Reason (Owner-Entscheid): Segment-Ebene ist „highlightbar genug", vermeidet dauerhafte Rohtext-Haltung (DSGVO) und Offset-Komplexität. Best Practice: Anchor-to-Source / Citation-Grounding (Anthropic Citations, AEVS). Als aktive Stufe S0 vorgezogen.
+
+- `2026-06-03` **Einheitlicher Fakt-Status abgeleitet, nicht gespeichert**: Status über 4 Tabellen verstreut (`proposed_facts.status` · `valid_from/until/superseded_by` · `decisions.status` · `box_state`) → **reine `factStatus()`-Ableitung** (Funktion/View) aus `valid_until`/`superseded_by` + offenen `contradictions` (`active|superseded|contradicted|deprecated|needs_review`). Reason (Owner-Entscheid): bitemporale Best Practice — eine Quelle der Wahrheit, kein Drift zwischen Statusspalte und temporalen Feldern; Workflow-States (`needs_review`) bleiben orthogonal. Spätere M4-Stufe (S7).
+
+- `2026-06-03` **Reject als bewahrtes Negativ-Signal mit Grund**: ein abgelehnter Fakt verschwand spurlos → **Grund-Taxonomie (`falsch`/`Duplikat`/`irrelevant`/`Beleg fehlt`) in vereinheitlichter Negatives-Schicht** (mit `entity_link_rejections`), von Extraktion/Resolver gelesen → kein Re-Vorschlag. Reason (Owner-Entscheid): rejected = Hard Negative / Edge-Case; der Grund bestimmt den Downstream-Nutzen (Dedup jetzt, Eval/Routing später). In S5 gefaltet.
+
+- `2026-06-03` **Einbettung: nur Evidence vorgezogen**: von den drei Delta-Lücken wird **Beleg-Verankerung als aktive Stufe S0 vorgezogen** (höchster ROI, unabhängig von der Entity-Arbeit); Fakt-Status (S7) und Reject-Signal (in S5) sind voll spezifiziert, aber spätere Stufen. Reason (Owner-Entscheid): sichtbarer Nutzen sofort, ohne Schema-Risiko der größeren Schichten.
+
 ## 2026-06-02 — Entity-Core als eigenständiges Kernmodul (Spec + Refactor-Roadmap)
 
-Die Entität (Orb/Avatar = Gesicht der App) war gewachsen statt entworfen: Zustand lebt als `useState` in
-`Index.tsx` und wird von außen gesetzt (Realtime-Listener/`useIntake`/Dialog-Effekt), Verhalten verteilt,
-Eingebot dreifach (FacePill-2×2, InputOverlay, HomePrompt), `components/entity/` mit 7 fremden Komponenten
-vermischt, null Tests. Entscheidung: Refactor zu einem **in sich geschlossenen Modul** mit reinem testbarem
-Gehirn (`src/lib/entity/`), Signal-Interface nach außen, Singleton-`EntityProvider` (ein Gehirn/eine Subscription),
-formalem Verhaltensvertrag (Standardset vs. Charakter-`manifest`), Zwei-Achsen-Ausdruck (State×Mode → Bewegung/
-Farbe/Sprache) und Hybrid-Composer. Volle Spec: `docs/entity-core.md`.
+Die Entität (Orb/Avatar = Gesicht der App) war gewachsen statt entworfen: Zustand als `useState` in `Index.tsx`,
+von außen gesetzt; Verhalten verteilt; Eingebot dreifach; `components/entity/` mit 7 fremden Komponenten vermischt;
+null Tests. Entscheidung: Refactor zu einem **in sich geschlossenen Modul** mit reinem testbarem Gehirn
+(`src/lib/entity/`), Signal-Interface, Singleton-`EntityProvider`, Verhaltensvertrag (Standardset vs. `manifest`),
+Zwei-Achsen-Ausdruck und Hybrid-Composer. Volle Spec: `docs/entity-core.md`.
 
-- `2026-06-02` **Modulgrenze**: andere Module reden nur über Inputs (Signale) / Outputs (`vm`/`controller`),
-  öffentliche API via Barrel `src/lib/entity/index.ts`, keine Tiefimporte, kein externes `setEntityState`.
-- `2026-06-02` **Ordner-Hygiene (Phase A)**: 7 Nicht-Entity-Komponenten verlassen `components/entity/`
-  (AccountDrawer/MobileNavSheet/SideGrid/IntakeSessionsPanel → `home/`; ProjectTile/CreateProjectDialog
-  → `project/`). `RecentAssets` war abgelöster Altcode (früheres rechtes SideGrid-Panel, ersetzt durch
-  `IntakeSessionsPanel`; von niemandem mehr importiert) → **gelöscht**. Die übrigen 6 sind (transitiv) live
-  (`Index` → AccountDrawer, MobileNavSheet → SideGrid/IntakeSessionsPanel → ProjectTile; CreateProjectDialog
-  in Index + ProjectScreen).
-- `2026-06-02` **Verbindliche Look-/Bewegungs-Vorlage**: lokale Codebeispiele `../entitaet/` (Button_Orb =
-  Bewegungs-Signaturen, Orby = Morph/Weichheit, Siri Orb = Ist-Stand) — präzise Werte in `docs/entity-core.md`.
-- `2026-06-02` **Phasen**: A (Hygiene) + 0 (Gehirn-Gerüst) in dieser Session umgesetzt; 1–7 folgen inkrementell,
-  jede einzeln auslieferbar (visuell zunächst identisch). 6 EntityStates unverändert → Presets/OrbLab/DB gültig.
+- `2026-06-02` **Modulgrenze**: Inputs (Signale) / Outputs (`vm`/`controller`) statt Hardcoding; öffentliche API
+  via Barrel `@/lib/entity`, keine Tiefimporte, kein externes `setEntityState`.
+- `2026-06-02` **Ordner-Hygiene (Phase A)**: 7 Nicht-Entity-Komponenten raus aus `components/entity/`
+  (→ `home/`: AccountDrawer/MobileNavSheet/SideGrid/IntakeSessionsPanel; → `project/`: ProjectTile/CreateProjectDialog).
+  `RecentAssets` (abgelöster Altcode, kein Importeur) gelöscht.
+- `2026-06-02` **Phase A + 0 umgesetzt & auf `dev` gemerged**: `src/lib/entity/` (machine/signals/interaction/
+  signalMapping/deriveExpression/capabilities + Barrel) + 36 Tests. Beim Merge dev's vorbestehenden Fehler behoben:
+  `Index.tsx` rendert `<AccountDrawer/>` ohne Import → Import aus `@/components/home/AccountDrawer` ergänzt; `EntityRail`-
+  Import auf neuen Pfad gezogen. Verifiziert: tsc 0, Vitest grün. Phasen 1–7 folgen inkrementell (Spec).
+- `2026-06-02` **Abstimmung mit M2**: ⌘+Space-Overlay ist gestrichen (M2 = persistente `EntityRail`); Entity-Core
+  Phase 1 nimmt `EntityRail`/`Index` als ersten `useEntity()`-Konsumenten auf, statt daran vorbeizubauen.
+
+## 2026-05-30 — Empfehlung-First-Drilldown (M1, Stufe 1)
+
+- `2026-05-30` **Empfehlung dominiert, Vergleich ist sekundär**: Konflikt-Drilldown war neutrale A/B-Bühne mit „cogni empfiehlt …" als 12.5px-Fußnote, Default-Selection nur A → **`FaktDrillOverlay.renderConflict` zweistufig**: Variante A (Empfehlung-First) zeigt den empfohlenen Fakt 36px groß, Quelle + Begründung darunter, Sekundärzeile „Im Vergleich: …", Footer „Übernehmen / Korrigieren / Offen lassen"; Variante B (klassische A/B-Gegenüberstellung) erscheint erst, wenn User „Korrigieren" drückt oder cogni keine Empfehlung hat (`empfehlungBlock === null`). Slot `payload.empfehlungBlock` mit `winnerSide/winnerFact/winnerQuelle/winnerDatum/winnerMode/loserFact/loserQuelle/loserDatum/begruendung` ist in `sessionFactories.buildKonfliktSession` zentral gebaut. Reason: Review-First bedeutet „cogni hat entschieden, du bestätigst" — nicht „cogni stellt dir zwei Optionen vor und wartet". Der bestehende neutrale Vergleich bleibt als Fallback, weil bei ähnlicher Confidence + ähnlichem Alter wirklich der User entscheiden muss.
+
+- `2026-05-30` **Empfehlungs-Text als Bausteine, nicht als Prozentwerte**: `deriveEmpfehlung` schrieb „Höhere Zuverlässigkeit (87 %) — cogni bevorzugt diese Version" → **Bausteine kombinieren**: Recency („N Tage neuer"), Mode-Übergang („direkte Quelle statt abgeleiteter" / „direkte Quelle"), Fallback „aus zuverlässigerer Quelle". Reason: Prozentwerte sind Maschinen-Stimme, Bausteine sind Berater-Stimme; der User entscheidet auf „direkte Quelle" + „5 Tage neuer", nicht auf „87 %".
+
+- `2026-05-30` **Empfehlungs-Slot nur für Konflikt gefüllt**: Gap/Dependency/Decision haben keine Recommendation-Logik im Detector → **Slot ist im Box-Payload-Schema vorgesehen, aber leer für andere Objekttypen**. Reason: Pattern für künftige Detektor-Heuristiken angelegt; Befüllung ohne echte Logik wäre Augenwischerei. Triggers Wave 3.
+
+## 2026-05-26 — UX-Konzepttreue: Sprache, Drilldowns, Lage
+
+
+- `2026-05-26` **UI-Sprachregel**: Pipeline-Vokabular und interne IDs gehören nicht ins sichtbare UI → **Sprachschicht beim Mapper, nicht beim Render-Point** → `toHandlungsbedarf`/`sessionFactories` setzen `quelle` als fachliche Kategorie („Widerspruch"/„Offene Frage"/„Abhängigkeit"/„Hinweis"/„Thema"/„Dokument"), nicht als `Konflikt #abc` o. ä. Reason: Internes Maschinenprotokoll im User-Pfad erzeugt Anstrengung statt Klarheit; eine PM-App muss in Projektsprache reden, nicht in Pipeline-Sprache. Restposten (drei Toast-Strings + ein EVENT_LABELS-Fallback) sind als Loop in `NOW.md` markiert, nicht in dieser Runde gefixt.
+
+- `2026-05-26` **Lage ≠ Verlauf**: `project_state_snapshots.summary` lieferte Commit-Log-Sätze („Termin übernommen — 11 bestätigte Erkenntnisse"), die fälschlich als Lagetext gerendert wurden → **`humanizeSnapshotSummary` filtert generische Commit-Log-Muster** (3 Regex: `^Snapshot nach …`, `übernommen.*enthält`, `^X übernommen|verworfen|aktualisiert`) und gibt `undefined` zurück, wenn der Satz Verlauf statt Zustand ist; `buildProjectViewModel` baut den Lagetext dann aus dem aktuellen Zustand (Widersprüche, Blocker, offene Fragen, „Stand ist konsistent" als Ruhefall). Reason: Lage muss „wie steht es gerade" beantworten, nicht „was wurde zuletzt committed" — das ist die Aufgabe des Verlauf-Feeds.
+
+- `2026-05-26` **Drill-Routing nach Objekttyp statt generischem Review**: jeder Klick öffnete bisher `buildHandlungsbedarfSession`, also denselben „Wissen + Antwortfeld"-Frame, egal ob Widerspruch, Lücke, Abhängigkeit oder Dokument → **objektbezogene Factories**: `buildKonfliktSession` (A/B-Gegenüberstellung im `FaktDrillOverlay`), `buildGapSession` (Antwortfeld + `asks`), neue `buildDependencySession` (Quelle/Ziel-Kontextbox + Auflöse-Eingabe), `buildThemaSession`/`buildDokumentSession` als readonly-Inspect, `buildHandlungsbedarfSession` bleibt Default für `entscheidung/aufgabe/offener_punkt/feedback`. `HandlungsbedarfList.ActionRow.handleClick` dispatcht nach `item.objektTyp`. Reason: Konflikt-Vergleich braucht andere Bühne als „Lücke füllen" braucht andere Bühne als „Dokument ansehen" — die Generalisierung war Pseudo-Sparsamkeit und produzierte den „immer derselbe Screen"-Eindruck.
+
+- `2026-05-26` **Overlay-Surfaces solid, nicht transparent**: shadcn-`dialog`/`alert-dialog`/`dropdown-menu` rendern teilweise über hellen Projekt-Screens und waren mit `bg-background`/`bg-popover` (HSL-Tokens) + halbtransparenten Glas-Tints unlesbar → **Cogni-Tokens direkt**: `bg-[var(--surface-1)]` + `border-[var(--hair-2)]` + `shadow-[var(--shadow-pop)]` + `rounded-2xl` (Dialog/AlertDialog/Dropdown). Overlay-Backdrop bleibt `color-mix(in oklab, var(--surface-0) 82%, transparent) + backdrop-blur-xl`. Reason: shadcn-HSL-Bridge funktionierte gut für Komponenten-Innenleben, aber Floating-Surfaces über fremdem Hintergrund brauchen einen harten Cogni-Surface-Anker; jede Indirektion via `bg-popover` führte zu Drift im Day-Theme.
+
+- `2026-05-26` **Substanz als Wissensfläche, nicht als Tabelle**: Themen-Karten zeigten nur Titel + drei Zahlen, kein semantischer Kontext → **Themen-Karten enthalten jetzt Beschreibung + erste 2 Items als Mini-Zeilen + lesbaren Zähler** („3 Entscheidungen · 2 offen · 1 Dokument"); Dokument-Reihen mit Typ-Chip + Version + Datum, ohne Vollscreen-Review beim Click (readonly-Inspect via `buildDokumentSession`). Reason: Substanz war als „Wissenslandkarte" konzipiert, nicht als Datenbank-View; die Lese-Mini-Zeilen geben den Karten Substanz ohne neuen Daten-Layer.
 
 ## 2026-05-24 — Redesign abgeschlossen + Doku-Konsolidierung
 
@@ -298,3 +338,9 @@ aber die geteilten `corsHeaders` — Verhalten unverändert.
 - `2026-05-18` **DB-Migration**: `box_type` um `condition, exclusion, assumption, suggestion, question, note, relation, attribute, risk, unclear` erweitert. Bestehende Werte unverändert, Migration additiv.
 - `2026-05-18` **UI-Renderer-Matrix** (`src/components/dialog/parts/ReviewRow.tsx`): pro Modalität eigene Default-Aktion + Aktionsleiste. `RefToken` zeigt `attaches_to` als Mini-Chip. Eingabefeld nur bei `gap/eingabe/frage` mit `asks`. Sprechhandlungs-Boxen (Bedingung, Annahme, …) bekommen `Übernehmen / Bezug ändern / Verwerfen` ohne Eingabezwang.
 - `2026-05-18` **Kein neues Designsystem** — Modalität ist Daten-/UX-Vertrag, nicht Optik. Architektur (Token-System, ProjectViewModel-Vertrag, Edge-Function-Hülle) unangetastet.
+
+[2026-06-01] Empfehlungs-Vertrag über alle Drilldown-Objekte → Einheitlicher `Empfehlung`-Slot in `types.ts`, deterministische Heuristik in den Mappern (kein erfundenes KI-Signal), `FaktDrillOverlay` rendert eine gemeinsame Bühne → Ein visueller Vertrag für Konflikt/Gap/Dependency/Entscheidung, ohne LLM-Abhängigkeit.
+
+[2026-06-01] Verlauf-Notiz nutzt `submitNote` statt neuer `note-create` Edge Function → submitNote schreibt bereits `assets` mit `file_type='note'` und triggert `intake-trigger` → Redundanz vermieden, ein Pipeline-Pfad statt zwei.
+
+[2026-06-01] `AtmosphereStripe` als eigene Komponente → Spiegelt Projekt-Lebenszustand (offen/review-warm), reine Anzeige ohne Logik-Verschiebung → Spatial Continuity ohne neue Datenflüsse.
