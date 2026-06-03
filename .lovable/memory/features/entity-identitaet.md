@@ -36,8 +36,10 @@ Graph Deko bleibt:
 ### S2 — „Anders" / Related-not-same (klein)
 - WO: `commitRoute.planCommitRoute` + `commit-fact/kernel.ts` + DialogProvider + Box-Render.
 - Aktion nur sichtbar bei confirm-Kandidat (`delta_type === 'confirm'` && `against_fact_id`).
-- Effekt: committet als **neuer** Fakt + Negativ-Link `change_events.event_type='link_rejected'`.
-- Kein neues Schema. Saat für S5.
+- Effekt: committet als **neuer** Fakt (delta `add` statt `confirm`) + markiert Review-Case session-intern.
+- **Kein neues Schema** in S2 (nur vorhandene Enums). Achtung: `change_events.event_type` IST `public.delta_type`
+  (`confirm/add/replace/contradict/merge/discard`) — kein freier Wert wie `link_rejected` möglich.
+- Persistentes Negativ-Link-Gedächtnis → `entity_link_rejections` (landet mit S3, gelesen in S5).
 
 ### S3 — Entity-Identitäts-Schicht (groß, der Kern)
 ```
@@ -50,6 +52,7 @@ entity_aliases(id, entity_id→entities, alias, normalized, source, created_at)
 - Cross-Project: entities user-scoped → spannen Projekte natürlich.
 - Backfill aus bestehenden stakeholder/topic-`canonical_facts`.
 - `pg_trgm` GIN auf `entity_aliases.normalized`.
+- `entity_link_rejections(id, user_id, subject_norm | proposed_fact_id, rejected_entity_id, reason, created_at)` — Negativ-Link aus S2, gelesen vom Resolver (S5).
 - **Anti-Bloat:** Entities = nur Identität. Statements bleiben im getypten Fact-Modell. Kein Prädikat-Graph.
 
 ### S4 — Entity-Resolver ersetzt `linker.ts`
@@ -61,7 +64,7 @@ entity_aliases(id, entity_id→entities, alias, normalized, source, created_at)
 - Observability: `matched_via` loggen (messen statt vertrauen — Lehre aus 422).
 
 ### S5 — Feedback-Schleife minimal schließen
-- Resolver liest `link_rejected` → kein Re-Vorschlag desselben Falsch-Matches.
+- Resolver liest `entity_link_rejections` → kein Re-Vorschlag desselben Falsch-Matches.
 - Akzeptierte Aliasse wachsen → deterministische Auflösung verbessert sich.
 - Zurückgestellt (L1): Prompt-Tuning aus `corrections`, Confidence-Rekalibrierung.
 
