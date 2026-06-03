@@ -21,3 +21,4 @@ Live-Stimme unter dem Kern (EntityVoice) — keine Toasts/Banner für Intelligen
 - [Verstehens-Loop](mem://features/verstehens-loop) — Phase 7+7.5: End-to-End Loop, Hardening, Live-Stimme
 - [Projektzuordnung](mem://features/projekt-zuordnung) — Lexikalisches Scoring + Agent-Tie-Breaker, Schwellen, Zuordnungsbox
 - [Manueller Eingriff](mem://features/manueller-eingriff) — Manuelle Eingaben sind Ausnahme, nur visuell gekennzeichnet
+- [Entity-Identität](mem://features/entity-identitaet) — M4: Risk-Gate, „Anders"-Aktion, generische entities-Schicht, Graphiti-Resolver + lokaler Guard, Cross-Project-Identität
