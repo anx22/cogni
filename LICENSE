@@ -1,0 +1,56 @@
+COGNI — Proprietary Source-Available License
+
+Copyright (c) 2025-present  animatex.de / Michael Nemetz. All rights reserved.
+
+---
+
+## What you may do
+
+- Read and study the source code.
+- Submit contributions (pull requests, issues, proposals) subject to the
+  Contributor License Agreement below.
+
+## What you may not do
+
+Without explicit written permission from the copyright holder, you may not:
+
+- Use, run, execute, or deploy this software or any part of it, for any
+  purpose — commercial or non-commercial.
+- Copy, modify, merge, sublicense, or distribute this software or any
+  derivative work.
+- Fork this repository for any purpose other than submitting a contribution
+  back to this project.
+- Incorporate any part of this software into another product or service.
+
+## Contributor License Agreement (CLA)
+
+By submitting a contribution (pull request, patch, or any other code or
+content) to this repository, you agree to the following:
+
+1. You grant the copyright holder a perpetual, irrevocable, worldwide,
+   royalty-free, exclusive license to use, copy, modify, sublicense, and
+   distribute your contribution as part of this software under any license
+   the copyright holder chooses.
+
+2. You confirm that you have the right to grant this license — the
+   contribution is your original work and does not violate any third-party
+   rights.
+
+3. You understand that your contribution becomes part of a proprietary
+   codebase and will not be relicensed under any open-source license on
+   your behalf.
+
+## No Warranty
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND. THE
+COPYRIGHT HOLDER SHALL NOT BE LIABLE FOR ANY DAMAGES ARISING FROM THE
+USE OR INABILITY TO USE THIS SOFTWARE.
+
+## Termination
+
+Any use in violation of this license terminates your rights immediately
+and without notice.
+
+---
+
+Source visible. Contributions welcome. Usage by permission only.

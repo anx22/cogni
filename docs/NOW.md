@@ -13,7 +13,7 @@
 4. **Review immer, kein Auto-Commit** — jeder kanonische Fakt geht durch User-Decision.
 5. **Quelle + Delta an jeder Erkenntnis** — `source_marker` + `delta_type` durchgehend.
 6. **Vier Rollen pro Projekt** — Lage · Handlungsbedarf · Verlauf · Substanz.
-7. **Ein Interaktionspunkt** — Dialog-Overlay. Keine Sidebar, kein Dashboard.
+7. **Ein Entscheidungspunkt** — Dialog-Overlay für alle Reviews. Orientierung über persistente `AppSidebar` (Projektliste), kein Dashboard.
 
 ---
 
@@ -62,7 +62,7 @@ Readonly-Reste auflösen: Verlauf-Notiz, Feedback-Button, Impact-Pfeile. Damit i
 
 ### M4 — Bedeutungs-Integrität & Entity-Identität
 
-> Quelle: KG/RAG-Kern-Review 2026-06-03 (Abgleich gegen Standard-Pattern Proposal→Review→Canonical + Provenance + Confidence/Risk-Routing + Entity-Identity + Feedback-Loop). Detail: `mem://features/entity-identitaet`.
+> Quelle: KG/RAG-Kern-Review 2026-06-03 (Abgleich gegen Standard-Pattern Proposal→Review→Canonical + Provenance + Confidence/Risk-Routing + Entity-Identity + Feedback-Loop). Detail: `docs/m4-spec.md`.
 > **Abgrenzung:** M2 ist Entity-**Präsenz** (visuell, `EntityRail`). M4 ist Entity-**Identität** (semantisch: dieselbe Person/Org/Thema über Quellen + Projekte). Verschiedene Schichten — M4 macht das Cross-Project-Versprechen aus Achse 1 §2 erst echt.
 
 Review-First steht, Provenance ist sichtbar (Evidenz-Blockquote im `FaktDrillOverlay`). Was fehlt, sind mehrere Bedeutungs-Schichten, ohne die der Graph Deko bleibt:
@@ -93,7 +93,7 @@ Phasen einzeln auslieferbar, visuell zunächst identisch.
 
 ### Wave 3 — Lebendiges System (geplant, nach M4)
 
-> Quelle: 10x-Analyse `docs/10x/session-1.md`. Diese drei machen den Projektzustand **lebendig** und holen den Nutzer zurück — auf bestehenden Flächen (EntityVoice, AtmosphereStripe, EntityRail), **kein Dashboard**. Build-Reihenfolge: LS-1 → LS-3 → LS-2 (billig zuerst, Pulse zuletzt wegen Noise-Design).
+> Quelle: 10x-Analyse (2026-05-18, aufgelöst — Erkenntnisse hier eingearbeitet). Diese drei machen den Projektzustand **lebendig** und holen den Nutzer zurück — auf bestehenden Flächen (EntityVoice, AtmosphereStripe, EntityRail), **kein Dashboard**. Build-Reihenfolge: LS-1 → LS-3 → LS-2 (billig zuerst, Pulse zuletzt wegen Noise-Design).
 
 - **LS-1 — Wissen altert (Confidence Decay).** _Was:_ Fakten, die lange nicht revalidiert wurden, markiert das System selbst als „prüfen". _Auftritt:_ sanftes Prüf-Item im **Handlungsbedarf** („Diese Entscheidung ist 8 Monate alt — noch gültig?"); dezentes Alters-Zeichen in **Substanz** (gedämpfte Opazität, kein Rot). _Ansatz:_ `pg_cron` auf `canonical_facts` (Alter + letzter Review-Timestamp) → `gap_signal` Typ `stale_fact`; nährt M4-S7 (`needs_review`). _Default:_ Fakt > 120 Tage ohne Revalidierung (pro `fact_type` justierbar), nur decision/deadline (Anti-Noise). _Aufwand:_ niedrig.
 - **LS-2 — Project Pulse (das System kommt zu dir).** _Was:_ cogni meldet sich von selbst, wenn ein Projekt verrottet. _Auftritt:_ **Entität + EntityVoice** beim App-Open — ruhige Eigen-Aussage („In Projekt Y wartet seit 14 Tagen eine Entscheidung"), kein Toast/Banner. _Ansatz:_ täglicher `pg_cron` pro Projekt: Gap ohne Aktivität > 14 T · Konflikt ohne Commit > 7 T · letzte Nutzeraktion > 21 T → Push-Event in die EntityVoice-Realtime-Queue. _Harte Schranke:_ **max. 1 Alert / Projekt / Woche.** _Aufwand:_ mittel; Design-Kern = Noise-Management. _Abhängigkeit:_ stabiler Projektzustand.
