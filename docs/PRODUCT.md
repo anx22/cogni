@@ -16,7 +16,7 @@ Dateimanagement-Gefühl.
 
 1. **Entität-Screen** — universeller Eingang, Intake, Status, Review-Einstieg.
 2. **Projekt-Screen** — verdichteter Zustand in vier festen Rollen (Lage, Handlungsbedarf, Verlauf, Substanz).
-3. **Dialog-Overlay** — Vollbild-Review aus 8 Box-Typen × 6 Zuständen, Minimalprinzip 1–2 Boxen pro Anlass.
+3. **Dialog-Overlay** — Vollbild-Review aus 18 Box-Typen × 6 Zuständen, Minimalprinzip 1–2 Boxen pro Anlass.
 
 ## Kanonischer Datenfluss
 
@@ -45,7 +45,7 @@ Sprachaufnahme, Antworten aus dem Overlay.
 2. **Preparation** — Typ erkennen, Text extrahieren, Metadaten.
 3. **Extraction** (Welle A live) — Personen/Orgs/Themen/Entscheidungen/Termine/Aufgaben/Gaps/Dependencies.
    AOL-Service lädt projekt­spezifischen Graph-Kontext aus Graphiti und gibt ihn als `graph_hint` mit.
-4. **Linking** (Welle B geplant) — Match gegen Graph statt Title-Match.
+4. **Linking** (Welle B live) — Match gegen Graph statt reinem Title-Match.
 5. **Review Assembly** — Cases + Boxen bauen.
 6. **Commit** — nach Review in kanonischen Zustand; jeder Commit spiegelt asynchron nach Graphiti.
 7. **Project State Build** — Lage/Handlungsbedarf/Verlauf/Substanz aktualisieren.
@@ -61,10 +61,10 @@ Sprachaufnahme, Antworten aus dem Overlay.
 ## Was es nicht ist
 
 - Kein klassisches PM-Tool, kein Dateimanager, kein Graph-Viewer, kein Dashboard.
-- Keine klassische Sidebar, keine gleichrangigen Bento-Kacheln über Rollen hinweg.
+- Keine gleichrangigen Bento-Kacheln über Rollen hinweg, kein Dashboard.
 - Keine Live-Mail-Sync, keine Team-Kollaboration, keine autonomen Hintergrundimporte (nicht in V1).
 
 ## Designhaltung
 
 Dunkel, glasartig, ruhig, technisch. Große Typografie, dezente Verläufe, viel Ruhefläche,
-starke Zentrierung. Orientierung über Zustandswechsel statt Navigations-Chrome.
+starke Zentrierung. Orientierung über die persistente Projekt-Sidebar (`AppSidebar`) + Zustandswechsel zwischen den drei Außenmodi.

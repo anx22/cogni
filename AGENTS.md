@@ -5,7 +5,7 @@
 ## Was ist das?
 
 PM-App: rohe Inputs → Verstehen → Review → kanonischer Projektzustand + Knowledge Graph.
-Drei Außenmodi: Entität, Projekt, Dialog-Overlay. Keine Sidebar, keine Dashboard-Ästhetik.
+Drei Außenmodi: Entität, Projekt, Dialog-Overlay. Persistente `AppSidebar` (Projektliste) zur Orientierung, keine Dashboard-Ästhetik.
 
 ## Routing
 

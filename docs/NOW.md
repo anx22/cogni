@@ -13,7 +13,7 @@
 4. **Review immer, kein Auto-Commit** — jeder kanonische Fakt geht durch User-Decision.
 5. **Quelle + Delta an jeder Erkenntnis** — `source_marker` + `delta_type` durchgehend.
 6. **Vier Rollen pro Projekt** — Lage · Handlungsbedarf · Verlauf · Substanz.
-7. **Ein Interaktionspunkt** — Dialog-Overlay. Keine Sidebar, kein Dashboard.
+7. **Ein Entscheidungspunkt** — Dialog-Overlay für alle Reviews. Orientierung über persistente `AppSidebar` (Projektliste), kein Dashboard.
 
 ---
 
@@ -62,7 +62,7 @@ Readonly-Reste auflösen: Verlauf-Notiz, Feedback-Button, Impact-Pfeile. Damit i
 
 ### M4 — Bedeutungs-Integrität & Entity-Identität
 
-> Quelle: KG/RAG-Kern-Review 2026-06-03 (Abgleich gegen Standard-Pattern Proposal→Review→Canonical + Provenance + Confidence/Risk-Routing + Entity-Identity + Feedback-Loop). Detail: `mem://features/entity-identitaet`.
+> Quelle: KG/RAG-Kern-Review 2026-06-03 (Abgleich gegen Standard-Pattern Proposal→Review→Canonical + Provenance + Confidence/Risk-Routing + Entity-Identity + Feedback-Loop). Detail: `docs/m4-spec.md`.
 > **Abgrenzung:** M2 ist Entity-**Präsenz** (visuell, `EntityRail`). M4 ist Entity-**Identität** (semantisch: dieselbe Person/Org/Thema über Quellen + Projekte). Verschiedene Schichten — M4 macht das Cross-Project-Versprechen aus Achse 1 §2 erst echt.
 
 Review-First steht, Provenance ist sichtbar (Evidenz-Blockquote im `FaktDrillOverlay`). Was fehlt, sind mehrere Bedeutungs-Schichten, ohne die der Graph Deko bleibt:
