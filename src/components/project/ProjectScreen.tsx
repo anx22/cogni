@@ -9,6 +9,7 @@ import SubstanzSection from "./SubstanzSection";
 import ProjectHeaderActions from "./ProjectHeaderActions";
 import AtmosphereStripe from "./AtmosphereStripe";
 import AppSidebar from "@/components/sidebar/AppSidebar";
+import EntityRail from "@/components/entity/EntityRail";
 import CreateProjectDialog from "@/components/entity/CreateProjectDialog";
 import InputOverlay from "@/components/entity/InputOverlay";
 import { useIntake } from "@/lib/intake/useIntake";
@@ -140,6 +141,20 @@ const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
   const signal = project ? deriveSignal(project) : "calm";
   const { isProcessing } = useProjectPipeline(realProjectId);
 
+  const entityStateForRail = openReviewSessionId
+    ? "review-ready"
+    : isProcessing
+      ? "processing"
+      : ("idle" as const);
+
+  const handleEntityClick = () => {
+    if (openReviewSessionId) {
+      handleOpenReview();
+    } else {
+      setIntakeOpen(true);
+    }
+  };
+
   return (
     <div className="flex overflow-hidden bg-c-surface-0 relative" style={{ height: "100dvh" }}>
       <AppSidebar
@@ -147,7 +162,6 @@ const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
         activeProjectId={realProjectId ?? undefined}
         onProjectSelect={handleProjectSelect}
         onCreateProject={userId ? () => setCreateOpen(true) : undefined}
-        showMiniEntity
         onEntityClick={onBack}
       />
 
@@ -345,6 +359,15 @@ const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
           onCreated={(id) => navigate(`/projekt/${id}`)}
         />
       )}
+
+      {/* Entity persistent rechts */}
+      <EntityRail
+        entityState={entityStateForRail}
+        onCoreClick={handleEntityClick}
+        onDrop={handleDrop}
+        onReviewClick={handleOpenReview}
+        busy={isProcessing}
+      />
     </div>
   );
 };

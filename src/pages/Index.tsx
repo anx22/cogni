@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import Entity from "@/components/entity/Entity";
-import { useSelectedCharacter } from "@/components/entity/useSelectedCharacter";
+import EntityRail from "@/components/entity/EntityRail";
 import EntityVoice from "@/components/entity/EntityVoice";
 import AppSidebar from "@/components/sidebar/AppSidebar";
 import HomePrompt from "@/components/home/HomePrompt";
@@ -10,7 +9,6 @@ import MobileNavSheet from "@/components/entity/MobileNavSheet";
 import HomeDropOverlay from "@/components/entity/HomeDropOverlay";
 import AssetOrbit from "@/components/entity/AssetOrbit";
 import InputOverlay from "@/components/entity/InputOverlay";
-import AccountDrawer from "@/components/entity/AccountDrawer";
 import CreateProjectDialog from "@/components/entity/CreateProjectDialog";
 import { useProjects } from "@/lib/project/useProjects";
 import { useIntake } from "@/lib/intake/useIntake";
@@ -37,7 +35,6 @@ const Index = () => {
   const autoOpenedRef = useRef<Set<string>>(new Set());
 
   const { intake } = useIntake({ setEntityState });
-  const { characterId } = useSelectedCharacter();
   const voice = useEntityVoice(session?.user?.id);
   const { projects: liveProjects, error: projectsError, reload: reloadProjects } = useProjects();
 
@@ -189,21 +186,11 @@ const Index = () => {
         showMiniEntity={false}
       />
 
-      {/* Home-Stack: Entity oben (flex-1, mittig), Prompt + Voice darunter im Footer */}
+      {/* Home-Stack: Intake-Bühne in der Mitte, AssetOrbit-Chips floating */}
       <main className="relative flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
-        {/* Entität-Bühne — füllt verfügbaren Raum, zentriert */}
+        {/* Chip-Orbit — positioniert relativ zur Fläche (kein Entity mehr hier) */}
         <div className="relative flex-1 min-h-0 flex items-center justify-center">
           <AssetOrbit />
-          <Entity
-            state={entityState}
-            onDrop={handleDrop}
-            onReviewClick={handleReviewClick}
-            onClick={handleCoreClick}
-            busy={busy}
-            character={characterId}
-            onPickInputMode={() => setOverlayOpen(true)}
-            size="clamp(220px, 38vh, 320px)"
-          />
         </div>
 
         {/* Eingabe-Slot (HomePrompt oder InputOverlay) */}
@@ -228,20 +215,31 @@ const Index = () => {
           )}
         </div>
 
-        {/* Voice + Hint — fester Footer-Slot, reserviert Platz */}
+        {/* Voice + Hint — fester Footer-Slot */}
         <div className="shrink-0 flex flex-col items-center justify-end pb-4 px-4 min-h-[64px]">
           <EntityVoice voice={voice} onRetry={handleRetry} />
           {!voice.text && !overlayOpen && (
             <p className="t-small opacity-50 mt-1 ink-4 text-center motion-safe:animate-float-in">
-              Klick auf den Kern oder lege etwas hier ab — Datei, Link, Notiz
+              Lege etwas ab oder tippe — Datei, Link, Notiz
             </p>
           )}
         </div>
       </main>
 
-      <ImpactPipelinePanel />
+      {/* Entity persistent rechts */}
+      <EntityRail
+        entityState={entityState}
+        onCoreClick={handleCoreClick}
+        onDrop={handleDrop}
+        onReviewClick={handleReviewClick}
+        onPickInputMode={() => setOverlayOpen(true)}
+        busy={busy}
+        showAccount
+      >
+        <ImpactPipelinePanel />
+      </EntityRail>
 
-      <div className="absolute top-6 right-6 flex items-center gap-4 z-40">
+      <div className="absolute top-4 right-4 flex items-center gap-4 z-40 lg:hidden">
         <AccountDrawer />
       </div>
 
