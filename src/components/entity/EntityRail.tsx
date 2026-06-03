@@ -5,7 +5,7 @@
 //  Auf Projekt: Entity allein — Drop-Target, Review-Signal, Intake-Eingang.
 // =============================================================================
 import type { ReactNode } from "react";
-import Entity from "./Entity";
+import EntityRoot from "./EntityRoot";
 import AccountDrawer from "@/components/home/AccountDrawer";
 import { useEntity } from "@/lib/entity";
 
@@ -55,7 +55,7 @@ const EntityRail = ({
           borderBottom: children ? "1px solid var(--hair)" : undefined,
         }}
       >
-        <Entity
+        <EntityRoot
           state={state}
           onDrop={onDrop}
           onReviewClick={onReviewClick ?? (() => {})}

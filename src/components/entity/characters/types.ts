@@ -3,7 +3,7 @@
 // =============================================================================
 
 import type { ReactNode } from "react";
-import type { EntityState, SampledPreset } from "../orbPresets";
+import type { EntityState, SampledPreset } from "../presets/orbPresets";
 import type { InputMode } from "../InputPills";
 
 export type CharacterId = "siri" | "face-pill";

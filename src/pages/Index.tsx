@@ -1,13 +1,13 @@
 import { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import EntityRail from "@/components/entity/EntityRail";
-import EntityVoice from "@/components/entity/EntityVoice";
+import EntityVoiceLine from "@/components/entity/EntityVoiceLine";
 import AppSidebar from "@/components/sidebar/AppSidebar";
 import HomePrompt from "@/components/home/HomePrompt";
 import ImpactPipelinePanel from "@/components/home/ImpactPipelinePanel";
 import MobileNavSheet from "@/components/home/MobileNavSheet";
 import HomeDropOverlay from "@/components/entity/HomeDropOverlay";
-import AssetOrbit from "@/components/entity/AssetOrbit";
+import AssetOrbit from "@/components/entity/satellites/AssetOrbit";
 import InputOverlay from "@/components/entity/InputOverlay";
 import AccountDrawer from "@/components/home/AccountDrawer";
 import CreateProjectDialog from "@/components/project/CreateProjectDialog";
@@ -147,7 +147,7 @@ const Index = () => {
 
         {/* Voice + Hint — fester Footer-Slot */}
         <div className="shrink-0 flex flex-col items-center justify-end pb-4 px-4 min-h-[64px]">
-          <EntityVoice voice={voice} onRetry={handleRetry} />
+          <EntityVoiceLine voice={voice} onRetry={handleRetry} />
           {!voice.text && !overlayOpen && (
             <p className="t-small opacity-50 mt-1 ink-4 text-center motion-safe:animate-float-in">
               Lege etwas ab oder tippe — Datei, Link, Notiz

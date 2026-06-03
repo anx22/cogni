@@ -7,7 +7,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Dices, RotateCcw, X } from "lucide-react";
-import Entity from "@/components/entity/Entity";
+import EntityRoot from "@/components/entity/EntityRoot";
 import { CHARACTER_LIST } from "@/components/entity/characters/registry";
 import { useSelectedCharacter } from "@/components/entity/useSelectedCharacter";
 import { CharacterTile } from "./OrbLab/CharacterTile";
@@ -22,7 +22,7 @@ import {
   type SampledPreset,
   type SurfaceBlend,
   type SurfaceRange,
-} from "@/components/entity/orbPresets";
+} from "@/components/entity/presets/orbPresets";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -287,7 +287,7 @@ const OrbLab = () => {
             <Card className="bg-card/30 border-border/50 lg:sticky lg:top-6">
               <CardContent className="flex flex-col items-center gap-5 py-8">
                 <div className="flex items-center justify-center" style={{ minHeight: size + 40 }}>
-                  <Entity
+                  <EntityRoot
                     state={state}
                     size={`${size}px`}
                     presetOverride={sample}

@@ -1,5 +1,5 @@
 // =============================================================================
-//  EntityVoice — die "Stimme" der Intelligenz unter dem Kern.
+//  EntityVoiceLine — die "Stimme" der Intelligenz unter dem Kern.
 // -----------------------------------------------------------------------------
 //  Großer, dünner Text, schwebt mittig. Soft-Fade zwischen Sätzen.
 //  tone="working" → warmes Amber, damit das Denken auch sprachlich heiß wirkt.
@@ -14,7 +14,7 @@ interface Props {
   onRetry?: (assetId: string) => void;
 }
 
-const EntityVoice = ({ voice, onRetry }: Props) => {
+const EntityVoiceLine = ({ voice, onRetry }: Props) => {
   const [shown, setShown] = useState<VoiceState>(voice);
   const [visible, setVisible] = useState(true);
 
@@ -64,4 +64,4 @@ const EntityVoice = ({ voice, onRetry }: Props) => {
   );
 };
 
-export default EntityVoice;
+export default EntityVoiceLine;

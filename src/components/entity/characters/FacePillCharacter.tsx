@@ -9,7 +9,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from "react";
 import { cn } from "@/lib/utils";
 import type { Character } from "./types";
-import type { EntityState } from "../orbPresets";
+import type { EntityState } from "../presets/orbPresets";
 import { INPUT_MODES } from "../InputPills";
 import type { InputMode } from "../InputPills";
 

@@ -9,7 +9,7 @@ import {
   samplePreset,
   type EntityState,
   type OrbPresetRange,
-} from "@/components/entity/orbPresets";
+} from "@/components/entity/presets/orbPresets";
 import type { CharacterId } from "@/components/entity/characters/types";
 
 interface Props {

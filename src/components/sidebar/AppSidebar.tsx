@@ -8,7 +8,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Archive, ChevronRight, RotateCcw } from "lucide-react";
 import type { DemoProject, ProjectSignal } from "@/data/demoProjects";
-import Entity from "@/components/entity/Entity";
+import EntityRoot from "@/components/entity/EntityRoot";
 import { useArchivedProjects } from "@/lib/project/useArchivedProjects";
 import { useProjectActions } from "@/lib/object-actions/useObjectActions";
 
@@ -88,7 +88,7 @@ const AppSidebar = ({
               pointerEvents: "none",
             }}
           >
-            <Entity size="56px" />
+            <EntityRoot size="56px" />
           </span>
           <span className="flex flex-col min-w-0">
             <span

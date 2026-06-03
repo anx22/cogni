@@ -1,5 +1,5 @@
 // =============================================================================
-//  Entity — visuelle Entität. Sample-basiert (Re-Roll bei State-Wechsel) und
+//  EntityRoot — visuelle Entität. Sample-basiert (Re-Roll bei State-Wechsel) und
 //  delegiert das eigentliche Visual an einen austauschbaren Character.
 //
 //  Touch-Verhalten: kein Text-Select / iOS-Callout / Tap-Highlight. Beim
@@ -15,12 +15,12 @@ import {
   ORB_PRESETS_DEFAULT,
   type EntityState,
   type SampledPreset,
-} from "./orbPresets";
+} from "./presets/orbPresets";
 import { CHARACTERS, DEFAULT_CHARACTER_ID } from "./characters/registry";
 import type { CharacterId } from "./characters/types";
 import type { InputMode } from "./InputPills";
 
-interface EntityProps {
+interface EntityRootProps {
   state?: EntityState;
   onDrop?: (files: File[]) => void;
   onClick?: () => void;
@@ -145,7 +145,7 @@ function usePointerFollow(ref: React.RefObject<HTMLElement>) {
   }, [ref]);
 }
 
-const Entity = ({
+const EntityRoot = ({
   state = "idle",
   onDrop,
   onClick,
@@ -155,7 +155,7 @@ const Entity = ({
   presetOverride,
   character = DEFAULT_CHARACTER_ID,
   onPickInputMode,
-}: EntityProps) => {
+}: EntityRootProps) => {
   const { presets } = useOrbPresets();
   const [internal, setInternal] = useState<EntityState>(state);
   const [sample, setSample] = useState<SampledPreset>(() =>
@@ -261,4 +261,4 @@ const Entity = ({
   );
 };
 
-export default Entity;
+export default EntityRoot;
