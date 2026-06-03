@@ -12,6 +12,7 @@ import OrbLab from "./pages/OrbLab.tsx";
 import PipelineHealth from "./pages/PipelineHealth.tsx";
 import { DialogProvider } from "./components/dialog/DialogProvider";
 import { ManualOverridesProvider } from "./lib/dialog/manualOverrides";
+import { EntityProvider } from "./lib/entity";
 import DevLogPanel from "./components/devlog/DevLogPanel";
 import { attachGlobalErrorHandlers, devlog } from "./lib/devlog/devlog";
 import { attachPipelineSink } from "./lib/devlog/pipelineSink";
@@ -46,16 +47,18 @@ const App = () => {
           <BrowserRouter>
             <ManualOverridesProvider>
               <DialogProvider>
-                <GlobalCommandMenu />
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/projekt/:id" element={<Project />} />
-                  <Route path="/auth" element={<Auth />} />
-                  <Route path="/orb-lab" element={<OrbLab />} />
-                  <Route path="/pipeline-health" element={<PipelineHealth />} />
-                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
+                <EntityProvider>
+                  <GlobalCommandMenu />
+                  <Routes>
+                    <Route path="/" element={<Index />} />
+                    <Route path="/projekt/:id" element={<Project />} />
+                    <Route path="/auth" element={<Auth />} />
+                    <Route path="/orb-lab" element={<OrbLab />} />
+                    <Route path="/pipeline-health" element={<PipelineHealth />} />
+                    {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </EntityProvider>
               </DialogProvider>
             </ManualOverridesProvider>
             <DevLogPanel />

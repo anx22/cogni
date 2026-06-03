@@ -24,3 +24,6 @@ export type {
 } from "./types";
 
 export { entitySignal } from "./signals";
+export { EntityProvider } from "./EntityProvider";
+export { useEntity, useEntityDetached } from "./useEntity";
+export type { EntityContextValue, EntityController } from "./entityContext";

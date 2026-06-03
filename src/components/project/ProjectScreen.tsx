@@ -26,6 +26,7 @@ import { useDialog } from "@/components/dialog/DialogProvider";
 import { hasOpenSessionForProject } from "@/lib/dialog/loadSession";
 import { useRealtimeTables, type RealtimeListener } from "@/lib/realtime/useRealtimeTables";
 import { deriveSignal, SIGNAL_DOT_CLASS, SIGNAL_LABEL } from "@/lib/project/deriveSignal";
+import { useEntity } from "@/lib/entity";
 
 interface ProjectScreenProps {
   onBack: () => void;
@@ -140,16 +141,11 @@ const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
 
   const signal = project ? deriveSignal(project) : "calm";
   const { isProcessing } = useProjectPipeline(realProjectId);
-
-  const entityStateForRail = openReviewSessionId
-    ? "review-ready"
-    : isProcessing
-      ? "processing"
-      : ("idle" as const);
+  const { state: entityState, controller } = useEntity();
 
   const handleEntityClick = () => {
-    if (openReviewSessionId) {
-      handleOpenReview();
+    if (entityState === "review-ready") {
+      controller.openPendingSession();
     } else {
       setIntakeOpen(true);
     }
@@ -362,11 +358,9 @@ const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
 
       {/* Entity persistent rechts */}
       <EntityRail
-        entityState={entityStateForRail}
         onCoreClick={handleEntityClick}
         onDrop={handleDrop}
-        onReviewClick={handleOpenReview}
-        busy={isProcessing}
+        onReviewClick={() => controller.openPendingSession()}
       />
     </div>
   );

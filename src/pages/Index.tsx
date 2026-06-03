@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import EntityRail from "@/components/entity/EntityRail";
 import EntityVoice from "@/components/entity/EntityVoice";
@@ -19,23 +19,20 @@ import { supabase } from "@/integrations/supabase/client";
 import { devlog } from "@/lib/devlog/devlog";
 import { useDialog } from "@/components/dialog/DialogProvider";
 import { useEntityVoice } from "@/lib/voice/useEntityVoice";
-import { useRealtimeTables, type RealtimeListener } from "@/lib/realtime/useRealtimeTables";
 import { useBodyScrollLock } from "@/lib/ui/useBodyScrollLock";
 import { useDropZone } from "@/lib/intake/useDropZone";
 import { toast } from "sonner";
-import type { EntityState } from "@/components/entity/orbPresets";
+import { useEntity } from "@/lib/entity";
 
 const Index = () => {
   const navigate = useNavigate();
   const { session, loading } = useAuth();
-  const [entityState, setEntityState] = useState<EntityState>("idle");
   const [overlayOpen, setOverlayOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
-  const { openSessionFromDB, session: dialogSession } = useDialog();
-  const pendingSessionId = useRef<string | null>(null);
-  const autoOpenedRef = useRef<Set<string>>(new Set());
+  const { openSessionFromDB } = useDialog();
+  const { state: entityState, controller } = useEntity();
 
-  const { intake } = useIntake({ setEntityState });
+  const { intake } = useIntake();
   const voice = useEntityVoice(session?.user?.id);
   const { projects: liveProjects, error: projectsError, reload: reloadProjects } = useProjects();
 
@@ -45,78 +42,11 @@ const Index = () => {
     if (!loading && !session) navigate("/auth", { replace: true });
   }, [loading, session, navigate]);
 
-  // Realtime: Asset-Status spiegelt sich auf den Kern + Auto-Open neuer Sessions.
-  const userId = session?.user?.id;
-  const realtimeListeners = useMemo<RealtimeListener[]>(() => {
-    if (!userId) return [];
-    const filter = `user_id=eq.${userId}`;
-    return [
-      {
-        table: "assets",
-        event: "INSERT",
-        filter,
-        handler: (payload) => {
-          const row = payload.new as { id?: string; file_type?: string };
-          devlog.realtime(`assets INSERT → ${row.file_type}`, { id: row.id });
-          setEntityState("processing");
-        },
-      },
-      {
-        table: "assets",
-        event: "UPDATE",
-        filter,
-        handler: (payload) => {
-          const row = payload.new as {
-            id?: string;
-            understanding_status?: string;
-            processing_status?: string;
-          };
-          if (row.processing_status === "processing" || row.understanding_status === "running") {
-            setEntityState("processing");
-          } else if (
-            row.understanding_status === "failed" ||
-            row.understanding_status === "rate_limited" ||
-            row.understanding_status === "payment_required"
-          ) {
-            setEntityState("failed");
-          } else if (row.understanding_status === "empty") {
-            setTimeout(() => setEntityState("idle"), 1500);
-          }
-        },
-      },
-      {
-        table: "dialog_sessions",
-        event: "INSERT",
-        filter,
-        handler: (payload) => {
-          const row = payload.new as { id?: string; status?: string; trigger_type?: string };
-          devlog.realtime(`dialog_session INSERT → ${row.status}`, { id: row.id });
-          if (row.status === "open" && row.id && row.trigger_type === "intake") {
-            if (autoOpenedRef.current.has(row.id)) return;
-            autoOpenedRef.current.add(row.id);
-            pendingSessionId.current = row.id;
-            setEntityState("review-ready");
-            setTimeout(() => {
-              if (pendingSessionId.current === row.id) {
-                openSessionFromDB(row.id!);
-                pendingSessionId.current = null;
-                setEntityState("idle");
-              }
-            }, 1400);
-          }
-        },
-      },
-    ];
-  }, [userId, openSessionFromDB]);
-
-  useRealtimeTables(userId ? `index-realtime-${userId}` : null, realtimeListeners);
-
-  // Wenn Dialog manuell geschlossen wird → Kern beruhigen.
+  // Auto-open: EntitySources feuert nach 1400 ms — openSessionFromDB als Handler.
   useEffect(() => {
-    if (!dialogSession && entityState === "review-ready") {
-      setEntityState("idle");
-    }
-  }, [dialogSession, entityState]);
+    controller.setAutoOpenHandler(openSessionFromDB);
+    return () => controller.setAutoOpenHandler(null);
+  }, [controller, openSessionFromDB]);
 
   const handleDrop = useCallback(
     (files: File[]) => {
@@ -144,30 +74,29 @@ const Index = () => {
     setCreateOpen(true);
   }, [session?.user]);
 
-  const handleReviewClick = useCallback(async () => {
-    if (pendingSessionId.current) {
-      await openSessionFromDB(pendingSessionId.current);
-      pendingSessionId.current = null;
-      setEntityState("idle");
-    }
-  }, [openSessionFromDB]);
+  const handleReviewClick = useCallback(() => {
+    controller.openPendingSession();
+  }, [controller]);
 
   const handleCoreClick = useCallback(() => {
     if (busy && entityState !== "review-ready") return;
-    if (pendingSessionId.current) {
-      handleReviewClick();
+    if (entityState === "review-ready") {
+      controller.openPendingSession();
     } else {
       setOverlayOpen(true);
     }
-  }, [entityState, handleReviewClick, busy]);
+  }, [entityState, busy, controller]);
 
-  const handleRetry = useCallback(async (assetId: string) => {
-    devlog.edge("retry intake-understand", { assetId });
-    setEntityState("processing");
-    await supabase.functions.invoke("intake-understand", {
-      body: { asset_id: assetId, retry: true },
-    });
-  }, []);
+  const handleRetry = useCallback(
+    async (assetId: string) => {
+      devlog.edge("retry intake-understand", { assetId });
+      controller.signal({ kind: "intake.progress" });
+      await supabase.functions.invoke("intake-understand", {
+        body: { asset_id: assetId, retry: true },
+      });
+    },
+    [controller],
+  );
 
   // Lock body scroll on Home — kein Bounce in Safari, voller Touch für die Entität.
   useBodyScrollLock(true);
@@ -229,12 +158,10 @@ const Index = () => {
 
       {/* Entity persistent rechts */}
       <EntityRail
-        entityState={entityState}
         onCoreClick={handleCoreClick}
         onDrop={handleDrop}
         onReviewClick={handleReviewClick}
         onPickInputMode={() => setOverlayOpen(true)}
-        busy={busy}
         showAccount
       >
         <ImpactPipelinePanel />
