@@ -7,9 +7,7 @@ import { devlog } from "@/lib/devlog/devlog";
 import { sanitizeStorageName } from "./sanitizeStorageName";
 import { pollAolRun, pollAolRunByAsset, type AolRunSnapshot } from "@/lib/pipeline/pollAolRun";
 import { submitNote } from "./submitNote";
-import { useEntity } from "@/lib/entity";
-import { entitySignal } from "@/lib/entity";
-import type { EntitySignal } from "@/lib/entity";
+import { useEntity, entitySignal, type EntitySignal } from "@/lib/entity";
 
 /**
  * Beobachtet einen Pipeline-Lauf (entweder per run_id oder per asset_id) und
