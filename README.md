@@ -2,36 +2,64 @@
 
 <br />
 
-# ◈ COGNI
-
-### Your projects don't have a source of truth.&ensp;They have a pile.
+# ◈ &nbsp; C O G N I
 
 <br />
 
 [![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red?style=flat-square)](./LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Supabase](https://img.shields.io/badge/Supabase-postgres%20%2B%20realtime-3ECF8E?style=flat-square&logo=supabase&logoColor=black)](https://supabase.com)
-[![Status](https://img.shields.io/badge/Status-Early_Development-f59e0b?style=flat-square)]()
+[![Status](https://img.shields.io/badge/Status-Early%20Development-f59e0b?style=flat-square)]()
 
 <br />
 
-![Cogni Entity Screen](./docs/assets/entity-screen.png)
+**Your projects don't have a source of truth.**
+**They have a pile.**
 
 <br />
 
 </div>
 
+![Cogni — Entity Screen](./docs/assets/entity-screen.png)
+
+<br />
+
 ---
 
-> _Raw material flows in every day — emails, PDFs, meeting notes, forwarded decks, voice memos._  
-> _Your current tools file it. Maybe tag it. Nobody ever synthesizes it._  
-> _Projects don't fail from lack of information._  
-> _They fail because nobody knows what's **actually true right now**._
+<div align="center">
 
-**Cogni** is an agentic project intelligence — a central entity that reads raw project material from any source, extracts facts, detects contradictions and gaps, and builds a reliable project state.
+_AI wrote your code. Designed your UI. Answered your questions._
+_Now it builds your project truth._
 
-Nothing becomes truth until you've reviewed and committed it.  
-**No auto-commit. No hallucinated confidence. No false completeness.**
+</div>
+
+<br />
+
+```
+  2020 ── AI writes your code
+  2022 ── AI designs your interfaces
+  2024 ── AI answers your questions
+  2026 ── AI builds your project truth    ◂ we are here
+```
+
+<br />
+
+The last knowledge-work frontier isn't generation. It's **understanding** —
+tracking what actually changed, what's in conflict, what's missing,
+and what's true _right now_, across all your active projects.
+
+---
+
+## Not another PM tool
+
+|               | The old model      | ◈ Cogni                                      |
+| :------------ | :----------------- | :------------------------------------------- |
+| **Input**     | Upload & forget    | Everything read, extracted, cross-referenced |
+| **Conflicts** | Silently ignored   | Surfaced as first-class `ConflictBox`        |
+| **Gaps**      | Unknown unknowns   | Named, classified, flagged with severity     |
+| **Truth**     | Dashboard guessing | Review → Commit → Canonical state            |
+| **AI role**   | Summaries & chat   | Structured project intelligence              |
+| **Control**   | Auto-everything    | Nothing canonical without your review        |
 
 ---
 
@@ -43,81 +71,139 @@ Nothing becomes truth until you've reviewed and committed it.
 
 </div>
 
-At the center of Cogni lives **the Entity** — not a chatbot, not a dashboard, not another input form.
+<br />
 
-A presence that listens, processes, surfaces what changed, and then waits for your judgment.
+<div align="center">
 
-Drop a PDF. Paste an email thread. Record a 30-second voice update. The Entity handles all of it through a single intake surface — recognizes the type, extracts meaning, cross-references what it already knows across all your projects, and constructs a review session for you.
+**Not a chatbot. Not a dashboard. Not a form.**
+**A presence that reads, understands, and waits.**
 
-Then it asks.
-
-<details>
-<summary><strong>▶ For nerds: Inside the intake pipeline</strong></summary>
+</div>
 
 <br />
 
-Every input type — `.eml`, PDF, DOCX, PPTX, pasted text, voice memo, URL — enters the same pipeline with identical provenance standards. No special path for "quick notes."
+<table>
+<tr>
+<td width="50%" valign="top">
+
+**It accepts everything**
+
+```
+ PDF  · DOCX · PPTX
+ .eml · paste · URL
+ voice memo · free text
+ short status updates
+ replies to its questions
+```
+
+</td>
+<td width="50%" valign="top">
+
+**It understands across projects**
+
+```
+ → parse & partition
+ → extract facts
+ → cross-reference graph
+ → detect conflict + gaps
+ → build review session
+ → wait for your commit
+```
+
+</td>
+</tr>
+</table>
+
+<details>
+<summary><strong>▶ For nerds: The intake pipeline</strong></summary>
+
+<br />
+
+Every input type — `.eml`, PDF, pasted text, voice memo — enters the same pipeline with identical provenance. No shortcuts for "quick notes."
 
 ```typescript
-type IntakeRecord = {
-  id: string;
-  type: "file" | "text" | "voice" | "url" | "paste";
-  source: AssetRef;
-  receivedAt: ISODateString;
-  processingState: "pending" | "extracted" | "proposed" | "committed" | "rejected";
-};
-
 type ProposedFact = {
   intakeId: string;
-  content: FactContent;
   delta: "confirms" | "expands" | "replaces" | "contradicts" | "unclear";
   confidence: number;
   provenance: {
     source: AssetRef;
     extractedAt: ISODateString;
-    extractionRun: string;
-    graphHint?: GraphitiContext; // cross-project knowledge injected at intake time
+    graphHint?: GraphitiContext; // cross-project knowledge at intake time
   };
   gapSignals: GapSignal[];
   dependencySignals: DependencySignal[];
 };
 ```
 
-No proposed fact ever directly mutates project state.  
-Every fact waits for a **Review Commit**.
+No proposed fact ever directly mutates project state. Every fact waits for a **Review Commit**.
 
 </details>
 
 ---
 
-## Three Screens. One Flow.
+## Three screens. One flow.
 
-Cogni has exactly three surfaces:
-
-**`Entity Screen`** — The global entry point. Everything comes in here.  
-**`Project Screen`** — Four fixed roles. A synthesized project state, not a raw file list.  
-**`Dialog Overlay`** — The review room. Where proposed facts become truth.
+```
+┌─────────────────────┐     ┌─────────────────────┐     ┌─────────────────────┐
+│                     │     │                     │     │                     │
+│   01  Entity        │ ──▶ │   02  Dialog        │ ──▶ │   03  Project       │
+│       Screen        │     │       Overlay       │     │       Screen        │
+│                     │     │                     │     │                     │
+│  Universal intake   │     │  Review · Commit    │     │  Ground truth       │
+│  Everything in.     │     │  Reject · Merge     │     │  Four fixed roles   │
+│                     │     │  Correct · Defer    │     │                     │
+└─────────────────────┘     └─────────────────────┘     └─────────────────────┘
+```
 
 <br />
 
-<div align="center">
+<table>
+<tr>
+<td width="25%" valign="top" align="center">
+
+**Situation**
+
+Reconstructed state now.
+Active conflicts.
+Next hard deadline.
+Last delta.
+
+</td>
+<td width="25%" valign="top" align="center">
+
+**Action Required**
+
+Open points.
+Decisions pending.
+Blockers.
+Gaps that matter.
+
+</td>
+<td width="25%" valign="top" align="center">
+
+**History**
+
+What changed.
+What was confirmed.
+What was committed.
+The full delta log.
+
+</td>
+<td width="25%" valign="top" align="center">
+
+**Substance**
+
+Topics.
+Documents + versions.
+Source references.
+The depth layer.
+
+</td>
+</tr>
+</table>
 
 ![Project Screen](./docs/assets/project-screen.png)
-
-</div>
-
-<br />
-
-<div align="center">
-
-| Role                | What it shows                                                            |
-| :------------------ | :----------------------------------------------------------------------- |
-| **Situation**       | Reconstructed state · active conflicts · next hard deadline · last delta |
-| **Action Required** | Open points · decisions pending · blockers · gaps with consequences      |
-| **History**         | Timeline of changes · confirmed decisions · commits · milestones         |
-| **Substance**       | Topics · documents with versions · source references                     |
-
-</div>
 
 <details>
 <summary><strong>▶ For nerds: The canonical data flow</strong></summary>
@@ -126,58 +212,62 @@ Cogni has exactly three surfaces:
 
 ```mermaid
 flowchart TD
-    A["Raw Input\nemail · PDF · voice · text · URL"] --> B["Intake Record\n+ Asset Storage\n→ Supabase"]
-    B --> C["Unstructured\nDocument Intelligence\nparse · partition · normalize"]
+    A["Raw Input\nemail · PDF · voice · text · URL"] --> B["Intake Record → Supabase"]
+    B --> C["Unstructured\nparse · partition · normalize"]
     C --> D["Graphiti / Cognee\nTemporal Knowledge Graph\ngraph_hint · cross-project context"]
-    D --> E["Proposed Facts\n+ Review Cases\n→ Supabase"]
-    E --> F{"Dialog Overlay\nreview · confirm\nreject · merge · correct"}
-    F -->|"COMMIT"| G["Canonical Project State\nSingle source of truth"]
+    D --> E["Proposed Facts + Review Cases → Supabase"]
+    E --> F{"Dialog Overlay\nreview · confirm · reject · merge"}
+    F -->|"COMMIT"| G["Canonical Project State\nSingle source of truth in Supabase"]
     G --> H["Entity Screen"]
-    G --> I["Project Screen\nSituation · Actions · History · Substance"]
+    G --> I["Project Screen · Situation · Actions · History · Substance"]
 
     style G fill:#0f172a,color:#e2e8f0,stroke:#334155
     style F fill:#1e1b4b,color:#e2e8f0,stroke:#4338ca
 ```
 
-**Hard coupling rule:** The graph layer is never the master. Supabase holds the truth.  
-The UI never reads from raw tool output — only from committed project state.
+```
+Coupling rule:  App → Supabase as truth
+                   → Unstructured as document service
+                   → Graphiti/Cognee as knowledge engine
+                   → back to Supabase → App
+```
 
-```
-App  →  Supabase as truth
-     →  Unstructured as document service
-     →  Graphiti/Cognee as knowledge engine
-     →  back to Supabase
-     →  App
-```
+The graph layer is never the master. The UI never reads from raw tool output.
 
 </details>
 
 ---
 
-## Why "No Auto-Commit"?
-
-Because project intelligence that auto-commits isn't intelligence — it's noise with confidence.
+## The Review Principle
 
 <div align="center">
 
-![Dialog Overlay — Conflict Resolution](./docs/assets/dialog-conflict.png)
+**Project intelligence that auto-commits**
+**isn't intelligence — it's noise with confidence.**
 
 </div>
 
 <br />
 
-Cogni models **uncertainty as a first-class state**. Every extracted fact carries a delta:
+![Dialog Overlay — Conflict Resolution](./docs/assets/dialog-conflict.png)
 
-| Delta         | Meaning                                             |
-| :------------ | :-------------------------------------------------- |
-| `confirms`    | Consistent with existing knowledge                  |
-| `expands`     | New information, no contradiction                   |
-| `replaces`    | Supersedes an older fact                            |
-| `contradicts` | Collision with existing knowledge → **ConflictBox** |
-| `unclear`     | System is uncertain → **GapBox** or deferred        |
+<br />
 
-Conflicts are not edge cases. Gaps are not UI badges.  
-They are **core functional states** — the reason this thing exists.
+Every extracted fact is tagged with a **delta** before it ever reaches your project state:
+
+| Delta         | Signal                             | Surfaces as           |
+| :------------ | :--------------------------------- | :-------------------- |
+| `confirms`    | Consistent with existing knowledge | ✓ Proposed as-is      |
+| `expands`     | New, no contradiction              | ✓ Proposed as-is      |
+| `replaces`    | Supersedes an older fact           | ⚠ Delta annotation    |
+| `contradicts` | Collision with existing knowledge  | 🔴 ConflictBox        |
+| `unclear`     | System uncertain                   | 🟡 GapBox or deferred |
+
+<br />
+
+> Conflicts are not edge cases.
+> Gaps are not decorative badges.
+> They are **the core reason this product exists**.
 
 <details>
 <summary><strong>▶ For nerds: Gap & Conflict modeling</strong></summary>
@@ -185,58 +275,49 @@ They are **core functional states** — the reason this thing exists.
 <br />
 
 ```typescript
-// Gaps are first-class objects with operational consequences
 type GapSignal = {
-  id: string;
-  description: string;
-  affectedFacts: string[];
   severity: "blocking" | "significant" | "minor";
-  triggerBackQuestion: boolean; // true only when the gap has operational consequences
-  // the Entity never asks noise questions
+  triggerBackQuestion: boolean; // only true when gap has operational consequences
+  // no noise questions
 };
 
-// Contradictions surface in the Dialog Overlay — never silently resolved
 type Contradiction = {
-  existingFact: FactRef;
-  incomingFact: ProposedFact;
   conflictType: "version_clash" | "value_conflict" | "ownership_conflict" | "temporal_overlap";
   resolutionOptions: ("accept_new" | "keep_existing" | "merge" | "defer")[];
 };
 ```
 
-The system models **reconstructed reality** — not absolute truth.  
-`Situation` on the Project Screen is an inference, not a ground truth.  
-The UI never suggests more certainty than the underlying data supports.
+The system models **reconstructed reality**, not absolute truth. `Situation` is an inference. The UI never suggests more certainty than the data supports.
 
 </details>
 
 ---
 
-## Tech Stack
+## Stack
 
-| Layer                     | Technology                     | Responsibility                               |
-| :------------------------ | :----------------------------- | :------------------------------------------- |
-| **UI / Experience**       | React · TypeScript · Tailwind  | Product shell — renders committed state only |
-| **Canonical State**       | Supabase · Postgres · Realtime | Single source of truth                       |
-| **Document Intelligence** | Unstructured                   | Parse · partition · normalize                |
-| **Knowledge Graph**       | Graphiti _or_ Cognee           | Context · relations · temporal retrieval     |
-| **Entity**                | Custom orb · Framer Motion     | The face of the product                      |
+| Layer                     | Technology                     | Why                                                  |
+| :------------------------ | :----------------------------- | :--------------------------------------------------- |
+| **UI / Experience**       | React · TypeScript · Tailwind  | Renders committed state only — never raw tool output |
+| **Canonical State**       | Supabase · Postgres · Realtime | Single source of truth. Period.                      |
+| **Document Intelligence** | Unstructured                   | Parse, partition, normalize — not interpret          |
+| **Knowledge Graph**       | Graphiti _or_ Cognee           | Temporal context · relations · fact invalidation     |
+| **The Entity**            | Custom orb · Framer Motion     | The face of everything                               |
 
 <details>
-<summary><strong>▶ For nerds: Why not one unified AI platform?</strong></summary>
+<summary><strong>▶ For nerds: Hard boundary rules</strong></summary>
 
 <br />
 
-Each layer has a hard responsibility boundary — by design:
+```
+Supabase        = canonical truth.     Never graph logic.
+Unstructured    = document structure.  Never project meaning.
+Graphiti/Cognee = context/retrieval.   Never canonical state.
+UI              = committed state.     Never raw tool output.
+```
 
-- **Supabase** = canonical truth. Never graph logic.
-- **Unstructured** = document structure. Never project meaning.
-- **Graphiti/Cognee** = context and retrieval. Never canonical state.
-- **UI** = committed project state. Never raw tool output.
+A unified platform that owns everything would require trusting it with project truth — which breaks the review model entirely.
 
-A unified AI platform that owns everything would require trusting it with project truth — which breaks the core model. _Review before commit_ is only meaningful if these boundaries hold.
-
-**The open decision:** Graphiti (stricter temporal graph, explicit fact invalidation, contradiction modeling) vs. Cognee (tighter pipeline integration, graph + vector + relational in one). Being evaluated on real data.
+**Open decision:** Graphiti (stricter temporal graph, explicit fact invalidation) vs. Cognee (tighter pipeline, graph + vector + relational in one). Being evaluated on real data.
 
 </details>
 
@@ -244,45 +325,41 @@ A unified AI platform that owns everything would require trusting it with projec
 
 ## Status
 
-> ⚠️ **Early development.** Architecture locked. V1 pipeline in progress.
-
 ```
-[ intake → extraction → review → commit → project state ]
-  ████████░░░░░░░░░░░░░░░░   Entity core + pipeline: Phase 1 / 9
+V1 scope:  intake → extraction → review → commit → project state
+
+           ████████░░░░░░░░░░░░░░░░   Entity core: Phase 1 of 9
 ```
 
-Current focus → [`docs/NOW.md`](./docs/NOW.md)  
-Full architecture → [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md)  
-Product spec → [`docs/PRODUCT.md`](./docs/PRODUCT.md)
+| Doc                                              | What's in it                         |
+| :----------------------------------------------- | :----------------------------------- |
+| [`docs/NOW.md`](./docs/NOW.md)                   | Current focus + active decisions     |
+| [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) | Full system architecture             |
+| [`docs/PRODUCT.md`](./docs/PRODUCT.md)           | Product spec + principles            |
+| [`AGENTS.md`](./AGENTS.md)                       | Start here if you want to contribute |
 
 ---
 
 ## Contributing
 
-The source is visible. Contributions — bug reports, proposals, pull requests — are welcome.
-
-**Before contributing:** All contributions require acceptance of the [Contributor License Agreement](./LICENSE#contributor-license-agreement-cla) embedded in the license file. By submitting a PR, you confirm your agreement.
-
-Start here for technical context: **[`AGENTS.md`](./AGENTS.md)**
-
----
-
-## In One Sentence
-
-_Outside: radically reduced. Inside: highly structured._
+Source visible. Contributions welcome — bugs, proposals, pull requests.  
+All contributions require the embedded [CLA](./LICENSE).  
+By submitting a PR, you confirm your agreement.
 
 ---
 
 ## License
 
-[Proprietary — Source Visible](./LICENSE)
-
-The source is public for transparency and collaboration.  
-No usage rights are granted. Forking requires explicit written permission.  
-Contributions transfer copyright to the project owner via CLA.
+[Proprietary — Source Visible](./LICENSE) &nbsp;·&nbsp; Source is public for transparency.  
+No usage rights granted. No forking without permission. Contributions transfer copyright via CLA.
 
 ---
 
 <div align="center">
+
+_Outside: radically reduced. Inside: highly structured._
+
+<br />
 <sub>Built in the open. Structured with conviction.</sub>
+
 </div>
