@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import DeltaTag from "./shared/DeltaTag";
+import FeedbackButton from "./shared/FeedbackButton";
 import { useDialog } from "@/components/dialog/DialogProvider";
 import { buildVerlaufSession } from "@/lib/dialog/sessionFactories";
 import { submitNote } from "@/lib/intake/submitNote";
@@ -194,19 +195,7 @@ const VerlaufFeed = ({ verlauf, projectId }: VerlaufFeedProps) => {
         </div>
 
         {verlauf.map((e) => (
-          <button
-            key={e.id}
-            type="button"
-            onClick={() => openDialog(buildVerlaufSession(e))}
-            className="w-full text-left flex relative group"
-            style={{
-              gap: 14,
-              background: "transparent",
-              border: "none",
-              cursor: "pointer",
-              padding: 0,
-            }}
-          >
+          <div key={e.id} className="flex relative group" style={{ gap: 14 }}>
             <span
               aria-hidden
               style={{
@@ -221,7 +210,17 @@ const VerlaufFeed = ({ verlauf, projectId }: VerlaufFeedProps) => {
                 zIndex: 1,
               }}
             />
-            <div className="flex-1 min-w-0">
+            <button
+              type="button"
+              onClick={() => openDialog(buildVerlaufSession(e))}
+              className="flex-1 min-w-0 text-left"
+              style={{
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
+                padding: 0,
+              }}
+            >
               <div className="flex items-center" style={{ gap: 8 }}>
                 <span className="mono tabular" style={{ fontSize: 11, color: "var(--ink-3)" }}>
                   {e.datum}
@@ -234,8 +233,11 @@ const VerlaufFeed = ({ verlauf, projectId }: VerlaufFeedProps) => {
               >
                 {e.inhalt}
               </div>
-            </div>
-          </button>
+            </button>
+            <span className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity shrink-0">
+              <FeedbackButton context={`Verlauf: ${e.inhalt}`} projectId={projectId} label="" />
+            </span>
+          </div>
         ))}
         {verlauf.length === 0 && (
           <p style={{ fontSize: 13, color: "var(--ink-3)", fontStyle: "italic" }}>

@@ -35,6 +35,9 @@ User-Review (Dialog-Overlay)
 - **Hooks** in `src/lib/<domain>/`. Komponenten importieren Hooks, nie Supabase direkt aus dem View.
 - **Edge Functions** in `supabase/functions/<name>/index.ts` (kein Sub-Folder). Shared-Code in `supabase/functions/_shared/`.
 - **Pipeline-Trace** ausschließlich in `pipeline_events` (per `createLogger`), kein paralleles Log-System.
+- **Entity-Core** (`src/lib/entity/` + `src/components/entity/`) ist ein geschlossenes Modul: öffentliche API
+  nur via Barrel `@/lib/entity`, keine Tiefimporte; andere Module reden über Signale (Input) + `vm`/`controller`
+  (Output), nie via `setEntityState`/Hardcoding. Spec: `docs/entity-core.md`. Nur Entity-Kern im `entity/`-Ordner.
 
 ## Golden Principles
 
@@ -56,6 +59,26 @@ User-Review (Dialog-Overlay)
 - **CI** `.github/workflows/qa.yml` — Lint, Typecheck, Test, Build, Smoke (`console.log`-Verbot).
 - **Nightly** `.github/workflows/qa-nightly.yml` — `test-data-sweep` 03:17 UTC.
 - **Pre-commit** Husky + lint-staged → ESLint (`--max-warnings 0`-Regeln scharf, `no-explicit-any` warn).
+
+## Projekt-Zuordnung
+
+Drei Signale, ein Commit-Pfad:
+
+1. **Explizit** — `assets.project_id` bereits gesetzt (User hat im Projekt-Screen abgelegt). Keine Zuordnungsbox.
+2. **Lexikalisch** (`projectScoring.ts`) — Projektname +3 · Stakeholder-Name +2 · Themenname +2 · Org-Domain +1.
+3. **Agentisch** (`callSuggestAssignment`) — Tie-Breaker; bekommt Rohtext + kompakte Projektliste + lexikalische Hints.
+
+Schwellen (`agentConfig.ts`): `ASSIGNMENT_CONFIDENT_THRESHOLD = 3` (auto, wenn Agent Confidence ≥ 0.6) · `ASSIGNMENT_UNCERTAIN_THRESHOLD = 1` (Auswahlbox) · 0 + Agent leer → „Neues Projekt anlegen".
+
+Zuordnungsbox hat `priority: 1000` — erscheint immer vor Wissens-Boxen. `commit-fact` propagiert Wahl auf Session-Metadaten, Asset und alle `proposed_facts` der `extraction_run_id`.
+
+## Understanding Pipeline — Schlüsseldateien
+
+- **Zentrale Steuerung:** `supabase/functions/_shared/agentConfig.ts` — `AGENT_MODEL`, Prompts, `EXTRACT_FACTS_TOOL`, `SUGGEST_ASSIGNMENT_TOOL`, `mapToBoxType()`, Schwellen, `MAX_INPUT_CHARS`, `MAX_FACTS_PER_RUN`.
+- **Provider-Adapter:** `_shared/agentClient.ts` — `callExtractFacts()` + `callSuggestAssignment()`. Bei Modell-Wechsel: nur diese Datei.
+- **Box-Mapping:** `src/lib/dialog/boxMapping.ts` — DB-`box_type` → UI-String.
+- **Session laden:** `src/lib/dialog/loadSession.ts` — DB-`box_state` → UI-Deutsch; Zuordnungsbox bekommt spezielles Payload.
+- **Härtung:** `assets.understanding_status` (pending/running/empty/review_ready/failed/rate_limited/payment_required) ist UI-Wahrheit. `understanding_attempt` zählt Retries. Unique-Index auf `proposed_facts(user_id, extraction_run_id)`.
 
 ## Kapazitäten
 

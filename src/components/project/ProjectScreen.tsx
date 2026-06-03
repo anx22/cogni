@@ -10,7 +10,7 @@ import ProjectHeaderActions from "./ProjectHeaderActions";
 import AtmosphereStripe from "./AtmosphereStripe";
 import AppSidebar from "@/components/sidebar/AppSidebar";
 import EntityRail from "@/components/entity/EntityRail";
-import CreateProjectDialog from "@/components/entity/CreateProjectDialog";
+import CreateProjectDialog from "@/components/project/CreateProjectDialog";
 import InputOverlay from "@/components/entity/InputOverlay";
 import { useIntake } from "@/lib/intake/useIntake";
 import { detectFromDrop } from "@/lib/intake/detectInputType";

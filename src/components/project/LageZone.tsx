@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { Flag, Upload, Sparkles, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import StakeholderPopover from "./shared/StakeholderPopover";
+import FeedbackButton from "./shared/FeedbackButton";
 import type { ProjectViewModel } from "@/lib/project/types";
 
 type Project = ProjectViewModel;
@@ -242,18 +243,26 @@ const LageZone = ({
         </div>
 
         {/* Eyebrow */}
-        <div className="t-micro" style={{ color: "var(--ink-3)", marginBottom: 14 }}>
-          Lage
-          <span
-            style={{
-              color: "var(--ink-4)",
-              textTransform: "none",
-              letterSpacing: 0,
-              marginLeft: 6,
-              fontWeight: 400,
-            }}
-          >
-            · zuletzt aktualisiert {project.stats.letzteAenderung}
+        <div
+          className="group flex items-baseline justify-between t-micro"
+          style={{ color: "var(--ink-3)", marginBottom: 14 }}
+        >
+          <span>
+            Lage
+            <span
+              style={{
+                color: "var(--ink-4)",
+                textTransform: "none",
+                letterSpacing: 0,
+                marginLeft: 6,
+                fontWeight: 400,
+              }}
+            >
+              · zuletzt aktualisiert {project.stats.letzteAenderung}
+            </span>
+          </span>
+          <span className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+            <FeedbackButton context="Lage" projectId={project.id} />
           </span>
         </div>
 

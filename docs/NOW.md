@@ -13,7 +13,7 @@
 4. **Review immer, kein Auto-Commit** — jeder kanonische Fakt geht durch User-Decision.
 5. **Quelle + Delta an jeder Erkenntnis** — `source_marker` + `delta_type` durchgehend.
 6. **Vier Rollen pro Projekt** — Lage · Handlungsbedarf · Verlauf · Substanz.
-7. **Ein Interaktionspunkt** — Dialog-Overlay. Keine Sidebar, kein Dashboard.
+7. **Ein Entscheidungspunkt** — Dialog-Overlay für alle Reviews. Orientierung über persistente `AppSidebar` (Projektliste), kein Dashboard.
 
 ---
 
@@ -27,13 +27,13 @@ Belastbare Basis steht. Vision-Kern ~90% implementiert, UI-Sprache und Drill-Rou
 - **Frontend**: 4 Rollen, AssetOrbit, Realtime, Day/Night-Theme, Geist-Font, shadcn-Bridge auf `--surface-1`/`--hair-2`/`--shadow-pop`.
 - **UI-Sprache enttechnisiert**: keine `Konflikt #abc`/`Gap #abc`/`Dependency #abc`/`Thema #…`/`Dokument #…` mehr sichtbar; Lagetext aus Zustand, nicht aus Commit-Log.
 - **Redesign durch** (Pässe 1–6 + Audit-Fixbatch): Sidebar, Hero, Mittelfeld, Substanz, BatchReview, FaktDrill — Quelle: `docs/redesign/`.
-- **Tests**: Vitest 89/89 grün, Deno-Suiten pro Detector, 19/19 EFs mit Boundary + Logger, RLS überall.
+- **Tests**: Vitest 114/114 grün, Deno-Suiten pro Detector, 19/19 EFs mit Boundary + Logger, RLS überall.
 
 ---
 
 ## Achse 3 — Drei Milestones zum Prototyp
 
-Statt Backlog-Friedhof: drei Sprints, jeder mit klarem Outcome. Reihenfolge M1 → M2 → M3.
+Statt Backlog-Friedhof: Sprints mit klarem Outcome. Reihenfolge M1 ✅ → M2 ✅ → M3 ✅ → **Entity-Core Phase 1–7 (Fundament, aktiv)** → M4 (priorisiert) → **Wave 3 (Lebendiges System)**.
 
 ### M1 — Provenance & Empfehlung schließen
 
@@ -46,27 +46,77 @@ Statt Backlog-Friedhof: drei Sprints, jeder mit klarem Outcome. Reihenfolge M1 �
 Spatial-Continuity-Geste komplettieren. Heute bricht „Entity ist immer da" ab, sobald ein Projekt offen ist.
 
 - **Stufe 1 erledigt (2026-06-01):** `AtmosphereStripe` als eigene Komponente — spiegelt Lebenszustand des Projekts (offen / review-warm via `is-active`). Hängt an `project.handlungsbedarf`.
-- ~~Universal-Overlay (⌘+Space)~~ **gestrichen (2026-06-02):** Es gibt kein Entity-Overlay im UI. Ziel ist stattdessen die persistente Entität rechts an der Seite (Main + Projektdetail) — eigene UI-Phase, noch nicht reincommittet.
+- ~~Universal-Overlay (⌘+Space)~~ **gestrichen (2026-06-02):** Es gibt kein Entity-Overlay im UI. Ziel ist stattdessen die persistente Entität rechts an der Seite (Main + Projektdetail).
+- **Stufe 4 erledigt (2026-06-03) — Entität persistent rechts:** neue `EntityRail`-Komponente (lg+, 220px) trägt die Entität (96px) + optionalen Content-Slot. **Home:** Entität wandert aus dem Zentrum in die rechte Schiene, `ImpactPipelinePanel` liegt als Content darunter, AccountDrawer oben in der Rail; die Mitte wird zur reinen Intake-Bühne (AssetOrbit + HomePrompt). **Projekt:** `EntityRail` rechts statt Mini-Entität in der linken Sidebar — state-bewusst (idle/processing/review-ready), Drop → Intake ans Projekt, Klick bei review-ready → Review öffnen. Damit begleitet die Entität jeden Screen. **M2 abgeschlossen.**
 - **Stufe 2 erledigt (2026-06-02):** AssetOrbit-Retry für `failed`-Chips — `retryIntake.ts` als gemeinsame lib-Funktion, failed-Chip zeigt RotateCcw-Icon und ist klickbar. `IntakeSessionsPanel` nutzt dieselbe Funktion.
 - **Stufe 3 erledigt (2026-06-02):** Realtime-Hook `useProjectPipeline` — `AtmosphereStripe` erhält `isProcessing` prop, `.is-processing`-CSS (1.6s, sig-action-Farbe) unterscheidet aktive Pipeline-Läufe von offenem Handlungsbedarf.
 
-### M3 — Antwort-Loops schließen
+### M3 — Antwort-Loops schließen ✅
 
-Readonly-Reste auflösen: Verlauf-Notiz, Feedback-Button, Impact-Pfeile. Damit ist der Prototyp ein geschlossener Kreis.
+Readonly-Reste auflösen: Verlauf-Notiz, Feedback-Button, Impact-Pfeile. Damit ist der Prototyp ein geschlossener Kreis. **M3 abgeschlossen (2026-06-03).**
 
 - **Stufe 1 erledigt (2026-06-01):** Inline-„Notiz hinzufügen" im `VerlaufFeed`. Nutzt bestehende `submitNote` mit `sourceRef.type = "verlauf"` — keine neue Edge Function nötig, das `assets`/`intake-trigger`-Routing schließt den Kreis. Optimistic UI + Toast-Feedback.
-- `feedback-create` Pfad (Feedback-Button konsolidiert).
 - **Stufe 2 erledigt (2026-06-02):** ImpactPipelinePanel-Impact-Rows und Active-Item navigieren per Klick zum Projekt (`/projekt/:id`). `ImpactItem` + `ActivePipelineItem` tragen `projectId`, `loadActive` selektiert `project_id` mit.
-- Readonly-Hints aus Dialog-Sessions entfernen, sobald Backend live.
+- **Stufe 3 erledigt (2026-06-03) — Feedback-Loop konsolidiert + flächendeckend:** `FeedbackButton` routet über `buildFeedbackSession` → `__submitIntent: intake_note` → `submitNote` → `intake-trigger` (kein separater `feedback-create`-EF nötig, konsistent mit der 2026-06-01-Entscheidung). Jetzt nicht mehr nur in `SubstanzSection`, sondern gemäß Produktprinzip auch in `LageZone` (Eyebrow, hover-revealed) und pro `VerlaufFeed`-Eintrag (hover-revealed, Icon-only). Damit ist Feedback als durchgehender Layer auf Lage + Verlauf + Substanz sichtbar.
+- **Readonly-Hints — geklärt, kein offener M3-Punkt:** die verbliebenen readonly-Sessions (`buildThemaSession`/`buildDokumentSession`/`buildVerlaufSession`/`buildSourceSession`) sind legitime Inspect-Sessions. Die „folgt"-Versprechen in `buildDokumentSession` (Vorschau/Versionshistorie) + `buildSourceSession` (Quellen-Vorschau) sind **echte zurückgestellte Features** (Dokument-Preview), kein zu löschender Platzhalter → wandert nach Wave 3 (s. L5).
+
+### M4 — Bedeutungs-Integrität & Entity-Identität
+
+> Quelle: KG/RAG-Kern-Review 2026-06-03 (Abgleich gegen Standard-Pattern Proposal→Review→Canonical + Provenance + Confidence/Risk-Routing + Entity-Identity + Feedback-Loop). Detail: `docs/m4-spec.md`.
+> **Abgrenzung:** M2 ist Entity-**Präsenz** (visuell, `EntityRail`). M4 ist Entity-**Identität** (semantisch: dieselbe Person/Org/Thema über Quellen + Projekte). Verschiedene Schichten — M4 macht das Cross-Project-Versprechen aus Achse 1 §2 erst echt.
+
+Review-First steht, Provenance ist sichtbar (Evidenz-Blockquote im `FaktDrillOverlay`). Was fehlt, sind mehrere Bedeutungs-Schichten, ohne die der Graph Deko bleibt:
+
+- **Stufe 0 — Beleg-Verankerung (vorgezogen, aktiv).** Der Agent liefert schon `evidence` (Zitat), gezeigt wird es aber nur im Konflikt-Drill; kein model/prompt-Version. → (a) nach Extraktion das Zitat per Substring-Match auf ein `parsed_documents.segments[]`-Element abbilden und eine **stabile Segment-Referenz** speichern (`element_id` falls vorhanden, sonst Array-Index); (b) Beleg-Referenz + Modell (`google/gemini-2.5-pro`) + Prompt-Version **first-class in `provenance`** führen (proposed → canonical); (c) Beleg-Zitat an **jeder** Review-Card zeigen, nicht nur im Konflikt-Drill. Segment-Referenz erlaubt später „im Dokument zeigen". Owner-Entscheid: Segment-Referenz statt Offsets/Rohtext (DSGVO-schonend, kein Rohtext-Speichern). Best Practice: Anchor-to-Source / Citation-Grounding.
+- **Stufe 1 — Risk-Gate im Silent-Commit (klein, sofort).** `canSilent` (`understandRun.ts`) gated nur auf `confidence ≥ 0.9` + kein Konflikt/`asks`/unclear. Bedeutungstragende Fakten rutschen still durch. → Helper `isRisky()` in `factRules.ts`: nie still bei `fact_type === 'decision'`, `modality ∈ {risk, exclusion, condition, assumption}`, `delta_type ∈ {replace, contradict, merge}` oder gesetztem `against_fact_id` auf decision/deadline/status. **Impact-Achse (gefaltet, 2026-06-03):** zusätzlich nie still bei hoher Tragweite — Fakt betrifft mehrere Projekte/Entities oder hat Budget-/Architektur-Bezug (aus Inhalt/`modality` abgeleitet, kein neues Schema). Damit deckt S1 Confidence **+ Risk + Impact** ab. Reine Funktion, Matrix-Unit-Test. Verhindert stillen semantischen Drift.
+- **Stufe 2 — „Anders" / Related-not-same (klein).** Aktuell nur Übernehmen/Korrigieren/Offen-lassen. Es fehlt die wichtigste Identitäts-Aktion: „nicht dieselbe Entität". → Aktion nur sichtbar, wenn ein confirm-Kandidat vorliegt (`delta_type === 'confirm'` && `against_fact_id`). Committet als **neuer** Fakt (delta `add` statt `confirm`) und markiert den Review-Case session-intern als „anders entschieden". Pfad über `commitRoute.planCommitRoute` + `commit-fact/kernel.ts`. **Kein neues Schema** in dieser Stufe — der Insert nutzt nur vorhandene Enums. Das _persistente_ Negativ-Link-Gedächtnis (cross-run) landet mit S3 (`entity_link_rejections`), weil es erst der Resolver in S4/S5 liest. Verhindert die häufigste Wissens-Korruption (Ähnlich ≠ Gleich).
+- **Stufe 3 — Entity-Identitäts-Schicht (groß, der Kern).** Generische `entities` + `entity_aliases` (bounded `entity_type`: person/organization/topic/tool/artifact). Nullable `entity_id` auf `canonical_facts` + `proposed_facts`. Backfill aus bestehenden stakeholder/topic-Fakten. `pg_trgm`-Index auf `entity_aliases.normalized`. Dazu die winzige `entity_link_rejections`-Tabelle (Negativ-Link-Gedächtnis aus S2; `subject_norm` / `proposed_fact_id` × `rejected_entity_id`, `reason`). **Anti-Bloat:** Entities = nur Identität; Statements bleiben im getypten Fact-Modell, kein generischer Prädikat-Graph.
+- **Stufe 4 — Entity-Resolver ersetzt `linker.ts`.** Graphiti-primär (semantisch) **+ deterministischer lokaler Guard** (normalisierter Name + E-Mail-exakt gegen `entity_aliases`) als Fallback, damit Graphiti-Ausfall nicht still Duplikate erzeugt. Output `{ match, candidates[], matched_via: 'local'|'graphiti'|'none' }` — `matched_via` wird geloggt (messen, nicht vertrauen). Mehrdeutig → Review-Card mit Kandidaten + „Anders" (Stufe 2). Eindeutig → confirm-Vorschlag. Kein Match → neue Entity beim Commit.
+- **Stufe 5 — Feedback-Schleife minimal schließen.** Resolver liest `entity_link_rejections` → schlägt denselben Falsch-Match nicht erneut vor. Akzeptierte Aliasse wachsen → deterministische Auflösung wird besser. Leichter als L1 (kein Prompt-Lernen — das bleibt zurückgestellt). **Erweitert (spezifiziert, nicht vorgezogen): Fakt-Level-Reject als Negativ-Signal** — heute verschwindet ein abgelehnter Fakt spurlos; künftig erfasst `reject` eine Grund-Taxonomie (`falsch` / `Duplikat` / `irrelevant` / `Beleg fehlt`) in der **vereinheitlichten Negatives-Schicht** (zusammen mit `entity_link_rejections`); Extraktion/Resolver liest sie → kein Re-Vorschlag. Best Practice: rejected = Hard Negative / Edge-Case mit Grund.
+- **Stufe 6 — Cross-Project-Identitäts-Signal (UI).** „Dieser Stakeholder erscheint in 3 Projekten" — Read in bestehende `useProject`/`useProjects` falten (kein neuer Roundtrip). Verzahnt mit M2-Präsenz; das ist der Magic-Moment.
+- **Stufe 7 — Einheitlicher Fakt-Status (abgeleitet, spätere Stufe).** Status heute über 4 Tabellen verstreut (`proposed_facts.status`, `valid_from/until/superseded_by`, `decisions.status`, `box_state`). → reine **`factStatus()`-Ableitung** (Funktion/View) aus `valid_until`/`superseded_by` + offenen `contradictions`: `active | superseded | contradicted | deprecated | needs_review`. **Keine gespeicherte Spalte** → kein Drift (bitemporale Best Practice; Owner-Entscheid). Speist UI-Badges, Resolver, Projektzustand.
+- **Stufe 8 — Aktions-Set vervollständigen: Needs-source + Escalate (aktiv).** Der Commit-Pfad kennt nur `confirm`/`reject`; `escalate:true` aus `FaktDrillOverlay` wird vom Kernel **ignoriert** (toter Pfad), und „Beleg fehlt" ist nur ein Reject-Grund. → (a) **Needs-source** als echte blockierende Aktion: Fakt mit schwachem/keinem Beleg (nutzt S0-Segment-Referenz) geht in einen Wartezustand statt Commit/Reject; (b) **Escalate** zu einem echten zurückgestellten Review-Zustand verdrahten (Kernel respektiert es, Box bleibt offen + markiert). Schließt eine Aktions-Lücke **und** einen latenten Bug.
+- **Stufe 9 — Pre-commit Supersede/Contradict-Emission (spätere Stufe).** Heute emittiert der Linker nie `replace`; Ersetzungen/Widersprüche werden erst **nach** dem Commit von den Detektoren erkannt. → Resolver markiert eindeutige „neuer Wert ersetzt alten" / „widerspricht" schon **vor** dem Commit als `replace`/`contradict`-Delta → der Review-Case erscheint sofort als Supersede/Konflikt (Empfehlung-First) statt erst danach. Größerer Umbau → spätere Stufe; S1/S7 + post-commit-Detektoren bleiben Sicherheitsnetz.
+
+Reihenfolge: **S0 (Beleg)** → S1 (inkl. Impact) → S2 → **S8 (Needs-source + Escalate)** → S3 → S4 → S5 (inkl. Reject-Signal) → S6 → S7 (Status, später) → S9 (pre-commit Supersede, später). Owner-Entscheidungen 2026-06-03: generische `entities`-Tabelle · Graphiti-Resolution mit lokalem Guard · Beleg via Segment-Referenz · abgeleiteter Fakt-Status · Reject als Negativ-Signal · **Impact in S1 gefaltet · Needs-source + Escalate aktiv · pre-commit Supersede spätere Stufe** (siehe `DECISIONS.md`).
+
+### Entity-Core (Kernmodul-Refactor) — Fundament für Entity-Präsenz (M2) + Identität (M4)
+
+Die Entität (Gesicht der App) wird zum in sich geschlossenen Modul mit reinem Gehirn, Signal-Interface,
+Singleton-Provider und Hybrid-Composer. Volle Spec: `docs/entity-core.md` (Entscheidung: DECISIONS 2026-06-02).
+Macht „Ein Eingang" (Säule 1) sauber und die persistente Entität (`EntityRail`, M2) zu einem `useEntity()`-Konsumenten.
+Phasen einzeln auslieferbar, visuell zunächst identisch.
+
+- **A** Ordner-Hygiene (7 Fremd-Dateien raus aus `components/entity/`, `RecentAssets` gelöscht) — ✅ 2026-06-02 (auf dev)
+- **0** Gehirn-Gerüst (`src/lib/entity/` machine/signals/interaction/signalMapping/deriveExpression/capabilities + Barrel + 36 Tests) — ✅ 2026-06-02 (auf dev)
+- **1–7** Provider+Sources (`EntityRail`/Index auf `useEntity()`) · Orchestrator/Visuals · Capability-Vertrag+A11y · Ausdrucks-Engine · Unified Composer · Kommunikation+Orbit · Mehrfach-Mount-Reuse. **Kein ⌘+Space-Overlay** (gestrichen, s. M2) — Wiederverwendung über die persistente `EntityRail` + weitere Mount-Punkte.
+
+### Wave 3 — Lebendiges System (geplant, nach M4)
+
+> Quelle: 10x-Analyse (2026-05-18, aufgelöst — Erkenntnisse hier eingearbeitet). Diese drei machen den Projektzustand **lebendig** und holen den Nutzer zurück — auf bestehenden Flächen (EntityVoice, AtmosphereStripe, EntityRail), **kein Dashboard**. Build-Reihenfolge: LS-1 → LS-3 → LS-2 (billig zuerst, Pulse zuletzt wegen Noise-Design).
+
+- **LS-1 — Wissen altert (Confidence Decay).** _Was:_ Fakten, die lange nicht revalidiert wurden, markiert das System selbst als „prüfen". _Auftritt:_ sanftes Prüf-Item im **Handlungsbedarf** („Diese Entscheidung ist 8 Monate alt — noch gültig?"); dezentes Alters-Zeichen in **Substanz** (gedämpfte Opazität, kein Rot). _Ansatz:_ `pg_cron` auf `canonical_facts` (Alter + letzter Review-Timestamp) → `gap_signal` Typ `stale_fact`; nährt M4-S7 (`needs_review`). _Default:_ Fakt > 120 Tage ohne Revalidierung (pro `fact_type` justierbar), nur decision/deadline (Anti-Noise). _Aufwand:_ niedrig.
+- **LS-2 — Project Pulse (das System kommt zu dir).** _Was:_ cogni meldet sich von selbst, wenn ein Projekt verrottet. _Auftritt:_ **Entität + EntityVoice** beim App-Open — ruhige Eigen-Aussage („In Projekt Y wartet seit 14 Tagen eine Entscheidung"), kein Toast/Banner. _Ansatz:_ täglicher `pg_cron` pro Projekt: Gap ohne Aktivität > 14 T · Konflikt ohne Commit > 7 T · letzte Nutzeraktion > 21 T → Push-Event in die EntityVoice-Realtime-Queue. _Harte Schranke:_ **max. 1 Alert / Projekt / Woche.** _Aufwand:_ mittel; Design-Kern = Noise-Management. _Abhängigkeit:_ stabiler Projektzustand.
+- **LS-3 — Cross-Project Review-Badge.** _Was:_ immer sichtbar, wie viele Erkenntnisse projektübergreifend auf Review warten. _Auftritt:_ ruhige Zahl an der **EntityRail/Sidebar** oder als Entitäts-Zustand („3 offene Erkenntnisse warten") — **kein** lautes rotes Badge. _Ansatz:_ Cross-Project-Query auf `review_cases` (`box_state = 'proposed'`) + 1 dezente Komponente. _Aufwand:_ sehr niedrig. _Vorsicht:_ leise Intelligenz, nicht Notification-Ästhetik.
 
 ### Langfristig (Wave 3 — bewusst zurückgestellt)
 
-| #   | Aufgabe                           | Trigger                                           |
-| --- | --------------------------------- | ------------------------------------------------- |
-| L1  | LLM-Heuristiken in Detektoren     | Wenn deterministischer Recall zu niedrig wird     |
-| L2  | React Query (Caching + Mutations) | Wenn Realtime + manuelle Re-Fetches racen         |
-| L3  | Reference-Token-Auflösung         | Wenn Dependency-Detector zu viele False Positives |
-| L4  | Voice/Mail-Sync (V2)              | Nach Prototyp-Freigabe                            |
+| #   | Aufgabe                                      | Trigger                                                                  |
+| --- | -------------------------------------------- | ------------------------------------------------------------------------ |
+| L1  | LLM-Heuristiken in Detektoren                | Wenn deterministischer Recall zu niedrig wird                            |
+| L2  | React Query (Caching + Mutations)            | Wenn Realtime + manuelle Re-Fetches racen                                |
+| L3  | Reference-Token-Auflösung                    | Wenn Dependency-Detector zu viele False Positives                        |
+| L4  | Voice/Mail-Sync (V2) — inkl. Email-Direct-Connect (10x #4, Adoptions-Wette) | Nach Prototyp-Freigabe; stärkster Adoptions-Hebel, senkt Intake-Hemmschwelle |
+| L5  | Dokument-/Quellen-Preview + Versionshistorie | `buildDokumentSession`/`buildSourceSession` „folgt"-Versprechen einlösen |
+| L6  | AOL-Lernring: `/aol/confirm` → Graphiti (TODO D4) | Wenn die Reasoning-Schicht aus Reviews lernen soll (Invalidation bei Reject + Decision-Kontext). Mirror schreibt Fakten bereits — offen ist der LangGraph-Ring. 10x #1 |
+| L7  | Export „Project Briefing" (Markdown/PDF)     | Wenn externer Output / ROI-Nachweis gebraucht wird; liest bestehendes ViewModel. 10x #6 |
+| L8  | Projekt-Gesundheits-Score                    | Wenn Multi-Projekt-Triage akut wird; baut auf `AtmosphereStripe`/`deriveSignal`. 10x #10 |
+| L9  | Async AOL-Run + PostgresSaver (TODO D2)      | Wenn große Dokumente / parallele Uploads Timeouts erzeugen. 10x #2 |
+| L10 | Dokument-Diff / Version-Delta                | Bei iterativen Versions-Uploads (Angebote/Specs/Protokolle). 10x #9 |
+| L11 | Keyboard-Nav J/K im BatchReview              | Bei Review-Volumen / Power-Usern (~20 Z.). 10x #7 |
+| L12 | AOL `/health` echte Reachability-Checks      | Beim nächsten AOL-Debugging (kein User-Value). 10x #14 |
+| L13 | Wöchentlicher Digest (cron + Email)          | Nach 3+ Monaten echter Nutzung. 10x #15 |
+| L14 | Demo-Daten entfernen + sauberer Leer-State   | Vor erstem echten User-Test (`demoProject(s).ts` noch aktiv). 10x #12 |
 
 ---
 
@@ -74,13 +124,15 @@ Readonly-Reste auflösen: Verlauf-Notiz, Feedback-Button, Impact-Pfeile. Damit i
 
 - **Graphiti-Sync-Retry** — Cron `*/30 min`, `inspect-graphiti diagnose` für Top-Reasons.
 - **Test-Coverage halten** — neue Funktion = Pure-Test, Drift in DECISIONS.
-- **Sprach-Restposten** — bei Audit 2026-05-30 nochmal geprüft: `useIntake.ts:36-40`, `IntakeSessionsPanel.tsx:156`, `ImpactPipelinePanel.tsx:35-41` sind bereits in Projektsprache. Loop geschlossen.
+- **Sprach-Restposten** — Audit 2026-06-03: Terminologie auf „Analyse" vereinheitlicht (war Mischung aus „Pipeline"/„Verstehens-Lauf"/„Erkenntnis"). 14 Strings in 7 Dateien. Loop geschlossen.
 - **Pre-existing Build-Fehler aus Lovable-Hand-Off** — `useProjectData` Migrations-Drift, `submitNote` DevLogCategory, `VerlaufFeed`. Brauchen klare Backend-Entscheidung, kein blinder Fix.
 
 ---
 
 ## Recently completed
 
+- **2026-06-03 — M3 abgeschlossen (Antwort-Loops geschlossen)** auf `dev`. Feedback-Layer konsolidiert + flächendeckend: `FeedbackButton` (über `submitNote`/`intake_note`, kein separater EF) jetzt zusätzlich in `LageZone` (Eyebrow, hover-revealed) und pro `VerlaufFeed`-Eintrag (Icon-only, hover-revealed) — vorher nur in `SubstanzSection`. Damit ist Feedback als durchgehender Layer auf Lage+Verlauf+Substanz sichtbar (Produktprinzip erfüllt). Readonly-Hints geklärt: Dokument-/Quellen-Preview ist echtes zurückgestelltes Feature (→ L5), kein offener M3-Punkt. Tests 150/150 grün, tsc 0.
+- **2026-06-03 — M2 abgeschlossen (Entität persistent rechts) + QA-Härtung Commit-Pfad + Vercel-Import** auf `dev`. **Entität persistent (M2 Stufe 4):** neue `EntityRail` (lg+, 220px) trägt die Entität auf Home und Projekt rechts an der Seite — Home: Mitte wird Intake-Bühne, `ImpactPipelinePanel` als Content-Slot, AccountDrawer in der Rail; Projekt: ersetzt Mini-Entität, state-bewusst + Drop-/Review-Eingang. **QA F3/R5:** reine Commit-Routing-Entscheidung aus `DialogProvider.commitBox` in getestetes `src/lib/dialog/commitRoute.ts` (`planCommitRoute`) herausgelöst — 17 neue Pure-Tests decken readonly-Gate, Konflikt-Resolve, Topic-Merge, Intake-Note und commit-fact ab; Seiteneffekte unverändert im Provider. **Terminologie:** auf „Analyse" vereinheitlicht (14 Strings/7 Dateien). **Infra:** `vercel.json` + Deploy-Workflow, Cogni läuft jetzt auf `cogny.vercel.app` (Import aus Lovable-Embedded-Hosting). Tests 114/114 grün, tsc 0.
 - **2026-06-02 — Funktional-Sprint 1+2 (Fundament + Pipeline-Sichtbarkeit)** auf `dev`. **Sprint 1 (Fundament):** Archiv-Lifecycle repariert — `ProjectScreen` reicht `project.status` an `ProjectHeaderActions` (zeigt korrekt „Wiederherstellen"), „Archiviert"-Badge im Header, neuer Lazy-Hook `useArchivedProjects` + ausklappbarer Archiv-Bereich in `AppSidebar` mit Wiederherstellen je Zeile (vorher waren archivierte Projekte nur via Undo-Toast erreichbar). Leeres Projekt: Shell-`LageZone` bekommt „Material ablegen"-Button (vorher nur Drag&Drop). **Sprint 2 (Pipeline-Sichtbarkeit):** expliziter „Material wird ausgewertet"-Banner im Projekt-Body (via `useProjectPipeline.isProcessing`), „Klärung öffnen" zusätzlich im immer sichtbaren Sticky-Header, Spinner-Keyframe-Bug (`cogni-orb-rotate-slow` nirgends definiert) in `ProjectScreen` + `ImpactPipelinePanel` auf Tailwind `animate-spin` gefixt. Tests 97/97 grün. **Bewusst gestrichen:** Monetarisierung (nie geplant), Universal-Overlay ⌘+Space (kein Entity-Overlay im UI — Entität bleibt persistent rechts an der Seite, separate UI-Phase).
 - **2026-05-30 — Empfehlung-First-Drilldown (M1 Stufe 1)** Konflikt-Bühne umgebaut von neutralem A/B-Vergleich zu „cogni empfiehlt X (Quelle, Begründung) — [Übernehmen] [Korrigieren] [Offen lassen]". Korrigieren expandiert in die alte A/B-Wahl als Sub-State. `deriveEmpfehlung` schreibt Bausteine („N Tage neuer · direkte Quelle statt abgeleiteter") statt Prozentwerte. `payload.empfehlungBlock` als strukturierter Slot in `sessionFactories.buildKonfliktSession`. KonfliktPopover bleibt als Tier-1-Schnellbestätigung, Sprache deckungsgleich. Files: `FaktDrillOverlay.tsx`, `sessionFactories.ts`, `mappers/konflikte.ts`. Sprach-Restposten-Audit erledigt — drei Strings bereits clean. Build-Drift aus Lovable-Hand-Off (`useProjectData`, `submitNote`, `VerlaufFeed`) bleibt separater Block.
 - **2026-05-24 — Redesign abgeschlossen + Doku-Konsolidierung** Pässe 1–6 + Audit-Fixbatch durch (Sidebar, Hero, Mittelfeld, Substanz, BatchReview, FaktDrill, Readonly-Sessions, `deriveSignal`, Material/Review-Buttons, Sidebar `onCreateProject`, `escalate`-Payload). `.lovable/plan.md` und `docs/redesign/REVIEW.md` gelöscht — visuelle Quelle bleiben `prototype/` + `screenshots/`.
