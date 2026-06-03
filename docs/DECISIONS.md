@@ -106,5 +106,5 @@ Format: `[YYYY-MM-DD] Entscheidung — Reason`
 - `2026-05-13` **AOL-Service nur Read über Graphiti**: Schreibpfade ausschließlich in Cloud-Edge-Functions.
 - `2026-05-12` **Projekt-Zuordnung**: Lexikalisches Scoring + Assignment-Agent als Tie-Breaker.
 - `2026-05-12` **Manuelle Eingaben**: nur `SourceMarker.manuell=true`, kein eigenes Datenmodell.
-- `2026-05-11` **Keine klassische Sidebar**: Orientierung über Zustandswechsel.
+- `2026-05-11` **Keine klassische Sidebar**: Orientierung über Zustandswechsel. **Revidiert 2026-05-18**: persistente `AppSidebar` (Projektliste, Home + Projekt-Detail) eingeführt — User-Test zeigte fehlende Projekt-Übersicht, Zustandswechsel allein reichte nicht. Vision-Doks 2026-06-03 entsprechend angepasst.
 - `2026-05-11` **Entity-Visual: CSS-Gradients** statt Canvas — Theme-Tokens nutzbar, ruhige Performance.
