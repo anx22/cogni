@@ -2,7 +2,7 @@
 
 > Vorwärts-Sicht (Zukunft). Gegenwart: `NOW.md` · Begründungen: `DECISIONS.md` · M4-Detail: `m4-spec.md` · Entity-Core-Detail: `entity-core.md`.
 
-**Sequenz:** M1 ✅ → M2 ✅ → M3 ✅ → **Entity-Core ✅** → **M4 (priorisiert, aktiv)** → **Wave 3** → Langfrist-Backlog (L1–L15).
+**Sequenz:** M1 ✅ → M2 ✅ → M3 ✅ → **Entity-Core ✅** → **UI-Politur (aktiv)** → **M4 (priorisiert)** → **Wave 3** → Langfrist-Backlog (L1–L15).
 
 ---
 
@@ -25,6 +25,39 @@ Die Entität (Gesicht der App) wird zum in sich geschlossenen Modul: reines Gehi
 - **5–7** Unified Composer · Kommunikation (ein Signal-Stream) · Mehrfach-Mount-Reuse — ✅ 2026-06-04. Kein ⌘+Space-Overlay (gestrichen).
 
 **→ Entity-Core vollständig abgeschlossen.**
+
+---
+
+## Entity-UI & Review-Flow — Politur (aktiv)
+
+> Quelle: Live-Test-Feedback (Composer-Morph, Orb, Voice, Drop, Verarbeitung, Review/Zuordnung). **Grounding-Pflicht — Originale studieren, nicht improvisieren:**
+>
+> - **`../ui_design/shell/`** — Home/Composer-Ziel (`Tag _ Text eingef_gt.png` = Karte + Inline-Entity-Highlights + „ERKANNT"-Streifen + Aktionen _Offen lassen · Erst speichern · Review öffnen →_ + AssetOrbit-Ring + rechtes PIPELINE-Panel).
+> - **`../ui_design/Overlays/`** — Drill-Ziel (`A_Batch`, `B_Konflikt expanded`, `F_Gap` als .html+.png): Größenhierarchie, Führung, Kontrast.
+> - **`../entitaet/Orby/Orby.css`** — Morph-**Technik**: explizite `width`/`height`+`border-radius` `transition: all .6s` (kein `max-height`!), Glas `blur(50px)`.
+> - **`docs/redesign/prototype/dialog-overlay.jsx`** + `tokens.css` — Drill-CSS/Token-Referenz.
+
+**Erledigt:** Zuordnung-Render+editierbarer Titel · Voice auf ProjectScreen · escalate-Session-Progress · **Zuordnung select→confirm** (kein Sofort-Commit beim Klick).
+
+**P0 — kaputt / Daten-Integrität**
+
+- ✅ Sofort-Commit bei Zuordnung → select→confirm
+- ☐ **Busy-Lock-Bug** — nach 1 Drop gesperrt, erst Reload entsperrt (`busy`-State hängt; `Index.tsx`/`useEntitySources`-Timer/`useDropZone`).
+- ☐ **Voice verifizieren** — „spricht nicht / keine schwebenden Texte" (Home-Verarbeitung + ProjectScreen; `useEntityCommunication`-Trigger + `EntityVoiceLine`-Mount).
+
+**P1 — Kern-Gefühl & Führung**
+
+- ☐ **Morph neu (Orby-Technik)** — `width`/`height`/`radius`-Transition + Glas statt `max-height`; saubere Karte. `EntityComposer.tsx`/`composerTokens.css`.
+- ☐ **Drill-Führung & Hierarchie** — systemisch über `renderGeneric()` (alle Box-Typen), Größenkontraste + führende Frage + Banner (Vorlage `dialog-overlay.jsx`/Overlays).
+- ☐ **„Was wurde verstanden" zeigen** — Quelle + Delta + Beleg vor/bei Entscheidung (PRODUCT-Versprechen); Drill-Header erweitern (`loadSession` liefert `deltaType`).
+- ☐ **Verarbeitung = echte Queue** — Busy-Hard-Lock raus, weiter droppen, AssetOrbit-Ring zeigt Queue (`Index.tsx`/`satellites/AssetOrbit.tsx`).
+- _Abgrenzung:_ „ERKANNT"-Streifen braucht Pipeline-Daten (nach Intake) → spätere Stufe.
+
+**P2 — visuelle Politur**
+
+- ☐ Kontrast/Farben durchgängig (`--d-hair`→`--d-hair-2`+; blasse Flächen) · ☐ Orb-Idle-Atmung dämpfen (`expression/signatures.ts`) · ☐ Drop-Hinweis-Position (`HomeDropOverlay` relativ zur Orb-Bühne).
+
+**Infra:** CI rot (`bun --frozen-lockfile` vs `bun-version:latest` — `qa.yml` pinnen/Lockfile neu) · Vercel dev-Preview aktivieren · Deploy je Batch per `dev → main`.
 
 ---
 
