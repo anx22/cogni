@@ -31,3 +31,9 @@ export { useEntity } from "./useEntity";
 export type { EntityContextValue, EntityController } from "./entityContext";
 export { composeCapabilities, STANDARD_CAPABILITIES, DEFAULT_MOTION } from "./capabilities";
 export { deriveExpression } from "./deriveExpression";
+
+// Achse 2 — Interaction (Composer treibt den Mode über controller.interact).
+export { classifyInput, type InteractionAction } from "./interaction";
+
+// Dritte Säule — Kommunikation (Utterance liegt im ViewModel via useEntity().utterance).
+export type { Utterance, UtteranceTone } from "./communication/types";

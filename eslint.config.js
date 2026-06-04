@@ -57,4 +57,24 @@ export default tseslint.config(
       "no-console": "off",
     },
   },
+  {
+    // Modulgrenze Entity-Kern: externe Module importieren das Gehirn NUR über
+    // den Barrel @/lib/entity. Das Modul selbst (lib/entity + components/entity)
+    // darf intern relativ/tief importieren.
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: ["src/lib/entity/**", "src/components/entity/**"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@/lib/entity/*"],
+              message: "Entity-Kern nur über den Barrel importieren: @/lib/entity",
+            },
+          ],
+        },
+      ],
+    },
+  },
 );

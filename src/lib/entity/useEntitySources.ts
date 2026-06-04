@@ -17,16 +17,33 @@ import {
 } from "./signalMapping";
 import { entitySignal } from "./signals";
 import type { EntitySignal } from "./types";
+import {
+  assetInsertTriggers,
+  assetUpdateTriggers,
+  proposedInsertTriggers,
+  dialogInsertTriggers,
+  dialogUpdateInputs,
+  type DialogRowLike as CommDialogRow,
+} from "./communication/triggerMapping";
+import type { CommunicationInput } from "./communication/types";
 
 export function useEntitySources(
   dispatch: (sig: EntitySignal) => void,
   autoOpenHandlerRef: RefObject<((sessionId: string) => void) | null>,
+  onUtterance?: (input: CommunicationInput) => void,
 ): { openPendingSession: () => void } {
   const { session } = useAuth();
   const userId = session?.user?.id;
 
   const dispatchRef = useRef(dispatch);
   dispatchRef.current = dispatch;
+
+  const utterRef = useRef(onUtterance);
+  utterRef.current = onUtterance;
+  const emit = (inputs: CommunicationInput[]) => {
+    if (!utterRef.current) return;
+    for (const input of inputs) utterRef.current(input);
+  };
 
   const pendingSessionIdRef = useRef<string | null>(null);
   const autoOpenedRef = useRef<Set<string>>(new Set());
@@ -63,6 +80,7 @@ export function useEntitySources(
         handler: (payload) => {
           const row = payload.new as AssetRowLike;
           devlog.realtime(`assets INSERT → ${row.file_type}`, { id: row.id });
+          emit(assetInsertTriggers(row));
           const sig = assetRowToSignal("INSERT", row);
           if (sig) dispatchRef.current(sig);
         },
@@ -73,6 +91,7 @@ export function useEntitySources(
         filter,
         handler: (payload) => {
           const row = payload.new as AssetRowLike;
+          emit(assetUpdateTriggers(row));
           const sig = assetRowToSignal("UPDATE", row);
           if (!sig) return;
           if (sig.kind === "intake.empty") {
@@ -88,6 +107,12 @@ export function useEntitySources(
         },
       },
       {
+        table: "proposed_facts",
+        event: "INSERT",
+        filter,
+        handler: () => emit(proposedInsertTriggers()),
+      },
+      {
         table: "dialog_sessions",
         event: "INSERT",
         filter,
@@ -96,6 +121,7 @@ export function useEntitySources(
           devlog.realtime(`dialog_session INSERT → ${row.status}`, { id: row.id });
           const sig = dialogRowToSignal("INSERT", row);
           if (!sig || sig.kind !== "review.ready") return;
+          emit(dialogInsertTriggers(payload.new as CommDialogRow));
           if (autoOpenedRef.current.has(sig.sessionId)) return;
           autoOpenedRef.current.add(sig.sessionId);
           pendingSessionIdRef.current = sig.sessionId;
@@ -118,6 +144,7 @@ export function useEntitySources(
         filter,
         handler: (payload) => {
           const row = payload.new as DialogRowLike;
+          emit(dialogUpdateInputs(payload.new as CommDialogRow));
           const sig = dialogRowToSignal("UPDATE", row);
           if (sig) dispatchRef.current(sig);
         },

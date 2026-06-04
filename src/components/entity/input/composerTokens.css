@@ -1,0 +1,75 @@
+/* =============================================================================
+   Entity-Composer — kontinuierlicher Morph (Spec docs/entity-core.md §Composer).
+   EINE Shell: ruhende Leiste verwandelt sich fließend ins Panel (kein Swap).
+   Vorbild Orby: card { transition: all .6s } + Inhalts-Crossfade.
+   ============================================================================= */
+
+:root {
+  --entity-ease-morph: cubic-bezier(0.175, 0.885, 0.32, 1.1);
+  --entity-ease-snap: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.entity-composer-shell {
+  width: 100%;
+  max-width: 28rem;
+  overflow: hidden;
+  border: 1px solid hsl(var(--border) / 0.25);
+  background: hsl(var(--surface-1) / 0.5);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border-radius: 9999px;
+  padding: 0.7rem 1rem;
+  box-shadow: 0 12px 40px -28px rgba(0, 0, 0, 0.6);
+  transition:
+    max-width 0.45s var(--entity-ease-morph),
+    border-radius 0.45s var(--entity-ease-morph),
+    padding 0.45s var(--entity-ease-morph),
+    box-shadow 0.45s var(--entity-ease-morph);
+}
+
+.entity-composer-shell.is-open {
+  max-width: 36rem;
+  border-radius: 1.25rem;
+  padding: 1.25rem;
+  box-shadow: 0 24px 70px -30px rgba(0, 0, 0, 0.65);
+}
+
+/* Ruhende Leiste — klappt beim Öffnen weg. */
+.composer-resting {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  max-height: 1.75rem;
+  opacity: 1;
+  transition:
+    max-height 0.3s var(--entity-ease-morph),
+    opacity 0.22s ease;
+}
+
+.entity-composer-shell.is-open .composer-resting {
+  max-height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Panel — fährt beim Öffnen auf (leicht verzögert für den Crossfade). */
+.composer-panel {
+  max-height: 0;
+  opacity: 0;
+  transition:
+    max-height 0.45s var(--entity-ease-morph),
+    opacity 0.3s ease 0.06s;
+}
+
+.entity-composer-shell.is-open .composer-panel {
+  max-height: 32rem;
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .entity-composer-shell,
+  .composer-resting,
+  .composer-panel {
+    transition: none;
+  }
+}

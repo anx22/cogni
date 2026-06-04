@@ -11,7 +11,7 @@ import AtmosphereStripe from "./AtmosphereStripe";
 import AppSidebar from "@/components/sidebar/AppSidebar";
 import EntityRail from "@/components/entity/EntityRail";
 import CreateProjectDialog from "@/components/project/CreateProjectDialog";
-import InputOverlay from "@/components/entity/InputOverlay";
+import EntityComposer from "@/components/entity/input/EntityComposer";
 import { useIntake } from "@/lib/intake/useIntake";
 import { detectFromDrop } from "@/lib/intake/detectInputType";
 import { useProject } from "@/lib/project/useProject";
@@ -333,13 +333,14 @@ const ProjectScreen = ({ onBack, projectId }: ProjectScreenProps) => {
             onClick={() => setIntakeOpen(false)}
           >
             <div className="w-full max-w-xl" onClick={(e) => e.stopPropagation()}>
-              <InputOverlay
-                open={intakeOpen}
-                onClose={() => setIntakeOpen(false)}
-                onSubmit={(payload) => {
-                  intake(payload);
-                  setIntakeOpen(false);
+              <EntityComposer
+                open
+                onOpenChange={(o) => {
+                  if (!o) setIntakeOpen(false);
                 }}
+                signalOrb={false}
+                collapseOnBlur={false}
+                onSubmit={(payload) => intake(payload)}
                 contextHint={`Wird direkt an „${project?.name ?? "dieses Projekt"}" angehängt.`}
               />
             </div>

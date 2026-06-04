@@ -3,30 +3,35 @@
 // -----------------------------------------------------------------------------
 //  Großer, dünner Text, schwebt mittig. Soft-Fade zwischen Sätzen.
 //  tone="working" → warmes Amber, damit das Denken auch sprachlich heiß wirkt.
+//  Quelle: useEntity().utterance (dritte Säule, EIN Signal-Stream) — keine
+//  eigene Subscription mehr.
 // =============================================================================
 
 import { useEffect, useState } from "react";
 import { RotateCw } from "lucide-react";
-import type { VoiceState } from "@/lib/voice/useEntityVoice";
+import { useEntity, type Utterance } from "@/lib/entity";
 
 interface Props {
-  voice: VoiceState;
   onRetry?: (assetId: string) => void;
 }
 
-const EntityVoiceLine = ({ voice, onRetry }: Props) => {
-  const [shown, setShown] = useState<VoiceState>(voice);
+const EMPTY: Utterance = { text: "", tone: "calm" };
+
+const EntityVoiceLine = ({ onRetry }: Props) => {
+  const { utterance } = useEntity();
+  const [shown, setShown] = useState<Utterance>(utterance ?? EMPTY);
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
-    if (voice.text === shown.text) return;
+    const next = utterance ?? EMPTY;
+    if (next.text === shown.text) return;
     setVisible(false);
     const t = setTimeout(() => {
-      setShown(voice);
+      setShown(next);
       setVisible(true);
     }, 200);
     return () => clearTimeout(t);
-  }, [voice, shown.text]);
+  }, [utterance, shown.text]);
 
   if (!shown.text) return null;
 
