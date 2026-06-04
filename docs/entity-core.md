@@ -191,8 +191,9 @@ nutzt `useEntityDetached` (lokal, keine Sources). Andere Module reden via `contr
 capabilities}` + Tests + Barrel. ✅ 2026-06-02 (auf dev)
 - **1 — Provider + Sources** (Home): Realtime/Intake/Dialog → `useEntitySources` (eine Subscription, Dedup+Timer);
   Index adoptiert `useEntity()`. **`EntityRail` (M2) wird erster `useEntity()`-Konsument** — nicht daran vorbeibauen.
-- **2 — Orchestrator umbenennen + Visuals verschieben** (visuell identisch).
-- **3 — Capability-Vertrag + A11y** (visuell identisch).
+  ✅ 2026-06-04 (auf dev)
+- **2 — Orchestrator umbenennen + Visuals verschieben** (visuell identisch). ✅ 2026-06-04 (auf dev)
+- **3 — Capability-Vertrag + A11y** (visuell identisch). ✅ 2026-06-04 (auf dev)
 - **4 — Ausdrucks-Engine** (erstes visuelles Upgrade): Signaturen, Intensität, Modus-Paletten, OrbLab-Achse.
   ✅ 2026-06-04 (auf dev). `expression/{signatures,useMotionSignature,SignatureLayer}` + `MOTION_SIGNATURES`
   (Referenz-Keyframes va-core-\* als WAA-Keyframes), `palette` im VM (`SIGNATURE_PALETTE`), `preset.mode.<mode>`
