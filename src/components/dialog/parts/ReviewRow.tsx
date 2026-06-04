@@ -21,6 +21,7 @@ import { useState } from "react";
 import type { DialogBox } from "@/lib/dialog/types";
 import { END_STATES } from "@/lib/dialog/types";
 import ConfirmDestructive from "@/components/shared/ConfirmDestructive";
+import AssignmentOptions from "./AssignmentOptions";
 import { useDialog } from "@/components/dialog/dialogContext";
 
 // -----------------------------------------------------------------------------
@@ -259,18 +260,7 @@ const ReviewRow = ({ box, projectName, blocked, onConfirm, onReject }: ReviewRow
   //  ZUORDNUNG (kritisches Gate, eigene laute Variante)
   // -------------------------------------------------------------------------
   if (box.type === "zuordnung" && !isFinal) {
-    const candidates = (box.payload?.candidates ?? []) as Array<{
-      project_id: string;
-      name: string;
-    }>;
-    const recommended = box.payload?.recommended_project_id as string | undefined;
-    const suggestedNewName = box.payload?.suggested_new_name as string | undefined;
     const reason = (box.payload?.agent_reason as string | undefined) ?? null;
-    const allProjects = (box.payload?.all_projects ?? []) as Array<{
-      project_id: string;
-      name: string;
-    }>;
-    const list = candidates.length > 0 ? candidates : allProjects.slice(0, 6);
 
     return (
       <>
@@ -326,53 +316,8 @@ const ReviewRow = ({ box, projectName, blocked, onConfirm, onReject }: ReviewRow
           </button>
         </div>
         {expanded && (
-          <div className="dlg2-expand" style={{ paddingLeft: 109 }}>
-            {list.length === 0 && !suggestedNewName && (
-              <div style={{ fontSize: 13, color: "var(--d-ink-3)" }}>
-                Keine Vorschläge — leg ein neues Projekt im Hauptmenü an.
-              </div>
-            )}
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {list.map((c) => {
-                const isRec = c.project_id === recommended;
-                return (
-                  <button
-                    key={c.project_id}
-                    type="button"
-                    className="dlg2-chip-opt"
-                    style={{
-                      height: 32,
-                      padding: "0 14px",
-                      fontSize: 13,
-                      borderColor: isRec ? "var(--d-warn)" : "var(--d-hair-2)",
-                      color: isRec ? "var(--d-warn)" : "var(--d-ink-2)",
-                      fontWeight: isRec ? 600 : 400,
-                      background: isRec ? "var(--d-warn-soft)" : "transparent",
-                    }}
-                    onClick={() => onConfirm({ project_id: c.project_id })}
-                    title={isRec ? "Von der Analyse empfohlen" : undefined}
-                  >
-                    {isRec && <span style={{ marginRight: 6 }}>★</span>}
-                    {c.name}
-                  </button>
-                );
-              })}
-              {suggestedNewName && (
-                <button
-                  type="button"
-                  className="dlg2-chip-opt"
-                  style={{
-                    height: 32,
-                    padding: "0 14px",
-                    fontSize: 13,
-                    borderStyle: "dashed",
-                  }}
-                  onClick={() => onConfirm({ new_project_name: suggestedNewName })}
-                >
-                  + Neues Projekt: „{suggestedNewName}"
-                </button>
-              )}
-            </div>
+          <div className="dlg2-expand" style={{ paddingLeft: 109, paddingRight: 24 }}>
+            <AssignmentOptions payload={box.payload} onPick={onConfirm} />
           </div>
         )}
       </>
