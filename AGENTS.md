@@ -16,7 +16,6 @@ Drei Außenmodi: Entität, Projekt, Dialog-Overlay. Persistente `AppSidebar` (Pr
 - **Seam-Inventar (lebende QA-Karte)** → `docs/qa-seam-inventar.md`
 - **Entity-Kernmodul (Spec + Refactor-Roadmap)** → `docs/entity-core.md`
 - **M4-Detailspec (S0–S9)** → `docs/m4-spec.md`
-- **Branch- & Release-Prozess** → `docs/WORKFLOW.md`
 
 ## Service-Schicht
 

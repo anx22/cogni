@@ -71,6 +71,14 @@ Direkt-Push auf `dev` erlaubt. `main` nur über PR von `dev`.
 - **Nightly** `.github/workflows/qa-nightly.yml` — `test-data-sweep` 03:17 UTC.
 - **Pre-commit** Husky + lint-staged → ESLint (`--max-warnings 0`-Regeln scharf, `no-explicit-any` warn).
 
+| Zweck            | Command                |
+| :--------------- | :--------------------- |
+| Typecheck        | `bunx tsc --noEmit`    |
+| Unit-Tests       | `bunx vitest run`      |
+| Lint             | `npm run lint`         |
+| Format prüfen    | `npm run format:check` |
+| E2E (Playwright) | `npm run test:e2e`     |
+
 ## Projekt-Zuordnung
 
 Drei Signale, ein Commit-Pfad:
