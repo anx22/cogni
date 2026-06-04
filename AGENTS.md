@@ -21,3 +21,11 @@ Drei Außenmodi: Entität, Projekt, Dialog-Overlay. Persistente `AppSidebar` (Pr
 
 Lovable Cloud (Supabase) = kanonisch · Graphiti/Neo4j = Spiegel · Unstructured = Parsing ·
 AOL-Service auf Railway = LangGraph-Kontext · LangSmith = Prompts/Traces · Lovable AI Gateway = Modelle.
+
+## Schlüsseldateien
+
+- **Pipeline-Steuerung** `supabase/functions/_shared/agentConfig.ts` — Modell, Prompts, Tools, Schwellen, `mapToBoxType()`
+- **Provider-Adapter** `_shared/agentClient.ts` — `callExtractFacts()` + `callSuggestAssignment()`. Bei Modell-Wechsel: nur diese Datei.
+- **Box-Mapping** `src/lib/dialog/boxMapping.ts` — DB-`box_type` → UI-String
+- **Session laden** `src/lib/dialog/loadSession.ts` — DB-`box_state` → UI-Deutsch; Zuordnungsbox-Payload
+- **Asset-Status** `assets.understanding_status` (`pending/running/empty/review_ready/failed/rate_limited/payment_required`) ist UI-Wahrheit

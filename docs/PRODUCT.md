@@ -50,6 +50,16 @@ Sprachaufnahme, Antworten aus dem Overlay.
 6. **Commit** — nach Review in kanonischen Zustand; jeder Commit spiegelt asynchron nach Graphiti.
 7. **Project State Build** — Lage/Handlungsbedarf/Verlauf/Substanz aktualisieren.
 
+## Projekt-Zuordnung
+
+Drei Signale, ein Commit-Pfad:
+
+1. **Explizit** — `assets.project_id` bereits gesetzt (User hat im Projekt-Screen abgelegt). Keine Zuordnungsbox.
+2. **Lexikalisch** (`projectScoring.ts`) — Projektname +3 · Stakeholder-Name +2 · Themenname +2 · Org-Domain +1.
+3. **Agentisch** (`callSuggestAssignment`) — Tie-Breaker; bekommt Rohtext + kompakte Projektliste + lexikalische Hints.
+
+Schwellen (`agentConfig.ts`): `ASSIGNMENT_CONFIDENT_THRESHOLD = 3` (auto, Agent Confidence ≥ 0.6) · `ASSIGNMENT_UNCERTAIN_THRESHOLD = 1` (Auswahlbox) · 0 + Agent leer → „Neues Projekt anlegen". Zuordnungsbox hat `priority: 1000` — erscheint immer vor Wissens-Boxen.
+
 ## Harte Prinzipien
 
 - Außen extrem reduziert, innen hochstrukturiert.
