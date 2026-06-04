@@ -79,7 +79,11 @@ export const DialogProvider = ({ children }: { children: ReactNode }) => {
       }
       const box = session?.boxes.find((b) => b.id === boxId);
       const previousState = box?.state;
-      updateBoxState(boxId, decision === "confirm" ? "bestaetigt" : "verworfen");
+      const isEscalate = userDecision?.escalate === true;
+      updateBoxState(
+        boxId,
+        isEscalate ? "eskaliert" : decision === "confirm" ? "bestaetigt" : "verworfen",
+      );
 
       // Reine Routing-Entscheidung (getestet in commitRoute.test.ts).
       const route = planCommitRoute({
@@ -88,12 +92,30 @@ export const DialogProvider = ({ children }: { children: ReactNode }) => {
         decision,
         userDecision,
         sessionProjectId: session?.projectId ?? null,
+        escalate: isEscalate,
       });
       const revert = () => {
         if (previousState) updateBoxState(boxId, previousState);
       };
 
       switch (route.kind) {
+        case "escalate": {
+          try {
+            const { error } = await supabase
+              .from("review_cases")
+              .update({ box_state: "escalated" })
+              .eq("id", route.reviewCaseId);
+            if (error) throw error;
+            toast.info("Zurückgestellt", { description: "Kann später erneut geöffnet werden" });
+            devlog.edge("escalate ok", { reviewCaseId: route.reviewCaseId });
+          } catch (err) {
+            revert();
+            devlog.error("escalate failed", err);
+            toast.error("Konnte nicht zurückstellen");
+          }
+          return;
+        }
+
         case "resolve_conflict": {
           try {
             await supabase
