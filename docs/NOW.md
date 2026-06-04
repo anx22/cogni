@@ -21,7 +21,7 @@ Belastbare Basis steht. Vision-Kern ~90% implementiert, UI-Sprache am Prototyp a
 ✅ **M2** — `EntityRail` persistent rechts (2026-06-03) → Details: `DECISIONS.md`
 ✅ **M3** — Antwort-Loops geschlossen, Feedback flächendeckend (2026-06-03) → Details: `DECISIONS.md`
 
-**Entity-Core** — Phase A+0 ✅ · Phase 1–7 aktiv → Spec: `docs/entity-core.md`
+**Entity-Core** — aktiv → Spec: `docs/entity-core.md`
 
 **M4 — Bedeutungs-Integrität & Entity-Identität** → Detailspec: `docs/m4-spec.md`
 Reihenfolge: **S0** (Beleg) → S1 → S2 → **S8** → S3 → S4 → S5 → S6 → S7/S9 (später)
