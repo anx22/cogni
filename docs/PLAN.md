@@ -2,7 +2,7 @@
 
 > Vorwärts-Sicht (Zukunft). Gegenwart: `NOW.md` · Begründungen: `DECISIONS.md` · M4-Detail: `m4-spec.md` · Entity-Core-Detail: `entity-core.md`.
 
-**Sequenz:** M1 ✅ → M2 ✅ → M3 ✅ → **Entity-Core Phase 1–7 (aktiv)** → **M4 (priorisiert)** → **Wave 3** → Langfrist-Backlog (L1–L14).
+**Sequenz:** M1 ✅ → M2 ✅ → M3 ✅ → **Entity-Core Phase 5–7** (1–4 ✅) → **M4 (priorisiert)** → **Wave 3** → Langfrist-Backlog (L1–L14).
 
 ---
 

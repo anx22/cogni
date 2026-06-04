@@ -11,7 +11,7 @@ Belastbare Basis steht. Vision-Kern ~90% implementiert, UI-Sprache am Prototyp a
 
 - **Pipeline 7/7** · **Detektoren 5/5** · **Dialog 18 BoxTypes** · **4 Rollen-Frontend**
 - **Tests**: 162/162 Vitest · Deno-Suiten pro Detector · 19/19 EFs mit Boundary + Logger · RLS überall
-- Aktiv: **Entity-Core Phase 1–7** · **M4 (Bedeutungs-Integrität)** · **Wave 3 (Lebendiges System)**
+- Aktiv: **Entity-Core Phase 5–7** (1–4 ✅) · **M4 (Bedeutungs-Integrität)** · **Wave 3 (Lebendiges System)**
 
 ---
 
