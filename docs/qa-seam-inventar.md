@@ -1,124 +1,75 @@
-# QA Seam-Inventar — Phase 1 Bestandsaufnahme
+# QA-SEAM-MAP
 
-Stand: 2026-05-14. Lebt mit der Codebase. Quelle: statische Analyse über `rg`.
-
-Legende:
-
-- **LOG**: ✅ devlog/console mit Kontext · ⚠ nur ad-hoc · ❌ keiner
-- **TRY**: ✅ try/catch um Schreib-Pfad · ⚠ teilweise · ❌ ungeschützter await
-- **SCHEMA**: ✅ Validierung · ⚠ implizit über TS-Typ · ❌ keine Boundary-Validierung
-- **TEST**: ✅ vorhanden · ❌ keiner
-- **R**: Risiko 1–5 (5 = höchstes)
+> **Lebendes Kontroll-Instrument.** Kein Backlog, keine Phasen, kein Fortschritts-Tracking.
+> Zwei Fragen: Was muss jede Seam garantieren? Was ist gerade offen?
+>
+> **Pflege:** Aktualisieren wenn eine Seam neu entsteht, umgebaut wird oder sich ein Risiko ändert.
+> Historische Entscheidungen gehören in `DECISIONS.md`, erledigte Arbeit in `NOW.md §Recently completed`.
+>
+> **Pflicht-Lektüre für Sessions die anfassen:** Edge Functions · Dialog/Commit-Pfad · Entity-Core · Intake-Pipeline
 
 ---
 
-## 1. Frontend-Seams (`src/lib/**`)
+## 1. Offene Risiken
 
-| #   | Seam                          | Datei                                       | Eingabe → Ausgabe                                                         | LOG       | TRY          | SCHEMA    | TEST | R     |
-| --- | ----------------------------- | ------------------------------------------- | ------------------------------------------------------------------------- | --------- | ------------ | --------- | ---- | ----- |
-| F1  | `useIntake.intake`            | `lib/intake/useIntake.ts`                   | `IntakePayload` → `assets` row + storage upload + invoke `intake-process` | ✅ devlog | ✅ try/catch | ⚠ TS-only | ❌   | 4     |
-| F2  | `useIntake.intake` (URL/Note) | dito                                        | text/url → invoke `intake-process`                                        | ✅ devlog | ✅           | ⚠         | ❌   | 3     |
-| F3  | `useDialog.commitFact`        | `components/dialog/dialogContext`           | review_case decision → invoke `commit-fact`                               | ⚠ ad-hoc  | teilweise    | ❌        | ❌   | **5** |
-| F4  | `useDialog.loadSession`       | `lib/dialog/loadSession.ts`                 | `session_id` → vollständiger Box-State                                    | ⚠         | ⚠            | ❌        | ❌   | 3     |
-| F5  | `useProject`                  | `lib/project/useProject.ts`                 | `projectId` → `ProjectViewModel` (8 Joins)                                | ⚠         | ⚠            | ❌        | ❌   | 3     |
-| F6  | `useProjects`                 | `lib/project/useProjects.ts`                | `userId` → `DemoProject[]` mit Counts                                     | ⚠         | ⚠            | ❌        | ❌   | 2     |
-| F7  | `useProjectActions`           | `lib/object-actions/useObjectActions.ts`    | id → `project-delete` / rename / archive                                  | ⚠         | ⚠            | ❌        | ❌   | 4     |
-| F8  | `useObjectActions` (asset)    | dito                                        | id → `asset-delete`                                                       | ⚠         | ⚠            | ❌        | ❌   | 4     |
-| F9  | `useVoiceRecorder`            | `lib/voice/useVoiceRecorder.ts`             | blob → `voice-transcribe`                                                 | ⚠         | ⚠            | ❌        | ❌   | 2     |
-| F10 | `IntakeSessionsPanel`         | `components/entity/IntakeSessionsPanel.tsx` | userId → realtime sub auf `dialog_sessions`                               | ❌        | ❌           | ❌        | ❌   | 3     |
+Stand: 2026-06-04. Sortiert nach Schadenspotenzial × Eintrittswahrscheinlichkeit.
 
-Beobachtungen:
-
-- `devlog` ist konsequent in `useIntake`, sonst nur sporadisch.
-- Kein globaler `ErrorBoundary` (nur devlog hat einen unhandledrejection-Hook intern).
-- Keine Boundary-Validation (zod o.ä.) — Typen kommen rein aus generierten `Database`-Types.
+| #    | Seam                                                   | Risiko                                                                                                                                                                                                                                    | Warum es offen ist                                                                                            | R     |
+| :--- | :----------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------ | :---- |
+| OR-1 | `commit-fact` → Kernel                                 | `escalate:true`-Flag wird vom Kernel ignoriert (toter Pfad) — `FaktDrillOverlay` sendet es, `planCommitRoute` respektiert es nicht. Review-Box bleibt nach Klick scheinbar committed, ist es nicht.                                       | M4 S8 spezifiziert, noch nicht implementiert. Explizit in `DECISIONS.md` + `NOW.md` als latenter Bug geführt. | **5** |
+| OR-2 | `EntityProvider` / `EntityRail`                        | Entity-Core Phase 1 (Provider + Subscription-Singleton) noch nicht abgeschlossen. `EntityRail` hängt an Phase-0-Outputs, nicht am fertigen Provider. Mehrfach-Mount kann Racing-Subscriptions erzeugen sobald weitere Mounts hinzukommen. | Entity-Core Phase 1–7 läuft. Phase 0 ✅, Phase 1 aktiv.                                                       | **4** |
+| OR-3 | `intake-understand` → `proposed_facts`                 | M4 S0 (Beleg-Verankerung): `evidence`-Zitat wird extrahiert aber nur im Konflikt-Drill gezeigt. Modell-Name + Prompt-Version fehlen in `provenance`. Jede Review-Card sollte Beleg tragen — tut sie noch nicht.                           | M4 S0 spezifiziert als `aktiv`, noch nicht deployed.                                                          | **4** |
+| OR-4 | Build-Drift (3 Stellen)                                | `useProjectData` Migrations-Drift · `submitNote` DevLogCategory · `VerlaufFeed` — brauchen klare Backend-Entscheidung, kein blinder Fix. Können stille Laufzeitfehler erzeugen.                                                           | Explizit in `NOW.md §Aktive Loops` geführt.                                                                   | **3** |
+| OR-5 | `graphiti-reconcile` → `canonical_facts.graphiti_uuid` | Idempotenz-Vertrag (gleicher Fakt zweimal reconciled = kein Duplikat) nicht durch automatisierten Test abgesichert. K4-Retry-Loop existiert, schreibt aber erneut wenn `graphiti_uuid` schon gesetzt.                                     | Phase 1 (2026-05-14) identifiziert, kein expliziter Test-Eintrag in `DECISIONS.md`.                           | **3** |
 
 ---
 
-## 2. Edge-Seams (`supabase/functions/**`)
+## 2. Seam-Vertragsregister
 
-| #   | Function             | LOC | awaits | try/catch | console.\* | LOG | TRY | SCHEMA | TEST | R     |
-| --- | -------------------- | --- | ------ | --------- | ---------- | --- | --- | ------ | ---- | ----- |
-| E1  | `intake-trigger`     | 169 | 4      | 3/3       | 2          | ⚠   | ✅  | ❌     | ❌   | 3     |
-| E2  | `intake-process`     | 118 | 4      | 1/2       | 4          | ⚠   | ⚠   | ❌     | ❌   | 4     |
-| E3  | `intake-understand`  | 543 | 11     | 4/4       | 3          | ⚠   | ✅  | ❌     | ❌   | **5** |
-| E4  | `aol-callback`       | 107 | 0      | 1/1       | 1          | ❌  | ✅  | ❌     | ❌   | 4     |
-| E5  | `commit-fact`        | 643 | 25     | 3/4       | 6          | ⚠   | ⚠   | ❌     | ❌   | **5** |
-| E6  | `graphiti-reconcile` | 212 | 6      | 2/3       | 1          | ⚠   | ✅  | ❌     | ❌   | 4     |
-| E7  | `asset-delete`       | 76  | 6      | 2/2       | 0          | ❌  | ✅  | ❌     | ❌   | 3     |
-| E8  | `project-delete`     | 99  | 4      | 2/2       | 0          | ❌  | ✅  | ❌     | ❌   | 3     |
-| E9  | `voice-transcribe`   | 111 | 0      | 1/1       | 2          | ⚠   | ✅  | ❌     | ❌   | 2     |
-| E10 | `railway-admin`      | 600 | 1      | 6/8       | 0          | ❌  | ✅  | ❌     | ❌   | 2     |
-| E11 | `inspect-pipeline`   | 99  | 0      | 2/2       | 0          | ❌  | ✅  | –      | ❌   | 1     |
-| E12 | `inspect-graphiti`   | 81  | 0      | 2/2       | 0          | ❌  | ✅  | –      | ❌   | 1     |
-| E13 | `inspect-langsmith`  | 77  | 0      | 2/2       | 0          | ❌  | ✅  | –      | ❌   | 1     |
-| E14 | `inspect-railway`    | 97  | 0      | 2/2       | 0          | ❌  | ✅  | –      | ❌   | 1     |
+> Ein **Vertrag** beschreibt was eine Seam _immer_ garantieren muss — unabhängig von aktuellem Implementierungsstand.
+> Verletzung eines Vertrags = Bug, kein Backlog-Eintrag.
+> Spalte **Verletzung erkennen** zeigt das konkrete Signal im laufenden System.
 
-Hinweis: `try/catch`-Spalte zeigt `try-Blöcke / catch-Blöcke`. `commit-fact` hat 3/4 → ein Catch ohne sichtbares Try (vermutlich verschachtelt). `intake-process` hat 1/2.
+### 2a. Pipeline — Edge Functions
 
----
+| Seam                        | Garantiert                                                                                                                                                                                                                | Verletzung erkennen                                                                                  | R                                                                   |
+| :-------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | :--------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------ | --- |
+| **E: `intake-trigger`**     | Jede Anfrage landet in `pipeline_events` mit `asset_id` + `correlation_id`. `mode='explicit'                                                                                                                              | 'assignment'`-Entscheidung ist geloggt.                                                              | Kein `pipeline_events`-Row für ein Asset das in `assets` auftaucht. | 3   |
+| **E: `intake-process`**     | Unstructured-Aufruf hat eigene `pipeline_events`-Stage. Fehler von Unstructured werden differenziert geloggt (Timeout vs. 4xx vs. 5xx).                                                                                   | Unstructured-Fehler erscheint nur als generisches 500 ohne Stage-Marker.                             | 4                                                                   |
+| **E: `intake-understand`**  | Jeder `proposed_facts`-Insert trägt: `extraction_run_id`, `modality`, `confidence`, `evidence`, `provenance.model`, `provenance.prompt_version`. Kein Insert ohne diese Felder.                                           | `proposed_facts`-Row ohne `modality` oder ohne `extraction_run_id`.                                  | **5**                                                               |
+| **E: `aol-callback`**       | Jede Status-Transition (`processing → review_ready → committed`) schreibt einen `pipeline_events`-Row mit `level + status_before + status_after`.                                                                         | Transition passiert aber kein `pipeline_events`-Eintrag mit `status_before`.                         | 4                                                                   |
+| **E: `commit-fact`**        | Kein `canonical_facts`-Insert ohne vorherigen `review_case` mit `decision = accepted`. `escalate:true` blockiert den Commit und hält den Review-Case offen. Jeder Insert schreibt `pipeline_events` mit `correlation_id`. | `canonical_facts`-Row ohne `review_case_id`. Oder: `escalate:true` gesendet, Row trotzdem committed. | **5**                                                               |
+| **E: `graphiti-reconcile`** | Idempotent: gleicher `canonical_fact_id` zweimal = kein zweiter `/messages`-Call, kein zweiter `graphiti_sync_log`-Row mit `status='ok'`.                                                                                 | Zwei `graphiti_sync_log`-Rows für dieselbe `canonical_fact_id` mit `status='ok'`.                    | 3                                                                   |
 
-## 3. DB-Schreibseams (Verträge zur Persistenz)
+### 2b. Frontend — Hooks & Komponenten
 
-22 Inserts/Updates/Deletes über alle Edge Functions. Hot-Spots nach Risiko:
+| Seam                                  | Garantiert                                                                                                                                              | Verletzung erkennen                                                                | R     |
+| :------------------------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------ | :--------------------------------------------------------------------------------- | :---- |
+| **F: `useIntake.intake`**             | Drei Stages (Storage-Upload → DB-Insert → Invoke) sind als separate `pipeline_events`-Stages erkennbar über dieselbe `correlation_id`.                  | Storage-Upload erfolgreich, aber kein `pipeline_events`-Row mit Stage `db_insert`. | 4     |
+| **F: `commitRoute.planCommitRoute`**  | Einziger Ort der entscheidet _welche_ Commit-Aktion ausgeführt wird. Kein direkter DB-Write außerhalb. `escalate:true` → kein Commit, Box bleibt offen. | `commit-fact`-Aufruf der nicht durch `planCommitRoute` geroutet wurde.             | **5** |
+| **F: `useEntity` / `EntityProvider`** | Singleton — exakt eine Supabase-Subscription unabhängig vom Mount-Count. `useEntityDetached` (OrbLab) ist die einzige legale Ausnahme.                  | Zwei simultane Realtime-Subscriptions auf denselben Entity-Channel.                | 4     |
+| **F: `retryIntake`**                  | Gleiche Provenance-Standards wie Erst-Intake: `asset_id` bleibt erhalten, kein neuer `assets`-Row.                                                      | Retry erzeugt doppelten `assets`-Row für dasselbe Original-Asset.                  | 3     |
+| **F: `FeedbackButton → submitNote`**  | Feedback-Intent läuft über `submitNote` + `__submitIntent: intake_note` → `intake-trigger`. Kein separater Edge-Function-Pfad.                          | Direkter Supabase-Insert in `feedback`-Tabelle aus dem Frontend.                   | 3     |
 
-| #   | Tabelle                   | Geschrieben in                      | Operation                     | R     |
-| --- | ------------------------- | ----------------------------------- | ----------------------------- | ----- |
-| D1  | `canonical_facts`         | `commit-fact`                       | INSERT (~621)                 | **5** |
-| D2  | `change_events`           | `commit-fact`                       | INSERT (229)                  | 4     |
-| D3  | `graphiti_sync_log`       | `commit-fact`, `graphiti-reconcile` | INSERT (191/558/621)          | **5** |
-| D4  | `proposed_facts`          | `commit-fact`, `intake-understand`  | UPDATE/DELETE (239/252/57/60) | 4     |
-| D5  | `review_cases`            | `intake-understand`                 | INSERT (427)                  | 4     |
-| D6  | `project_state_snapshots` | `commit-fact`                       | INSERT (420)                  | 3     |
-| D7  | `parsed_documents`        | `intake-understand`, `asset-delete` | INSERT/DELETE (68/59/62)      | 3     |
-| D8  | `dependencies`            | `commit-fact`                       | INSERT (213)                  | 3     |
-| D9  | `gap_signals`             | `commit-fact`                       | INSERT (201)                  | 3     |
-| D10 | `corrections`             | `commit-fact`                       | INSERT (189)                  | 3     |
-| D11 | `sources`                 | `intake-understand`, `asset-delete` | INSERT/DELETE (77/60/63)      | 2     |
-| D12 | `aol_runs`                | `intake-trigger`, `asset-delete`    | INSERT/DELETE (64)            | 3     |
-| D13 | `assets`                  | `asset-delete`                      | DELETE (66)                   | 3     |
-| D14 | `projects`                | `project-delete`                    | DELETE (88)                   | 3     |
+### 2c. Externe Service-Seams
 
-Kein einziger Insert läuft durch eine zentrale Validierungs-Funktion. Schema-Drift wird nur durch `Database`-TS-Types abgefangen — Runtime-Drift bleibt unsichtbar.
+| Seam                          | Garantiert                                                                                                                                                                                  | Verletzung erkennen                                                                | R                     |
+| :---------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | :--------------------------------------------------------------------------------- | :-------------------- | ----------------------------------------------------------------------------------- | ----- |
+| **X: Graphiti `/messages`**   | Jeder Call trägt `client_uuid` für Idempotenz. Fehler von Graphiti brechen den Commit nicht (async, fail-soft). `matched_via: 'local'                                                       | 'graphiti'                                                                         | 'none'` wird geloggt. | Commit scheitert wegen Graphiti-Timeout. Oder: `/messages`-Call ohne `client_uuid`. | **5** |
+| **X: AOL-Service `/aol/run`** | AOL liest Graphiti (read-only). Kein Schreibpfad von AOL nach Supabase — ausschließlich über Cloud-Edge-Functions. `graph_hint` ist optional: Fehler → Fallback ohne Kontext, kein Abbruch. | AOL schreibt direkt in Supabase. Oder: AOL-Fehler bricht Intake ab statt Fallback. | 4                     |
+| **X: Unstructured**           | Parsing-Fehler sind differenziert (`timeout` / `unsupported_format` / `api_error`) in `pipeline_events` erkennbar. Kein Parsing-Fehler verhindert den Intake-Record selbst.                 | Unstructured-Fehler → `assets`-Row landet nie in der DB.                           | 3                     |
 
 ---
 
-## 4. Externe-Service-Seams (ausgehende `fetch`)
+## Systemweite Vertrags-Invarianten
 
-| Ziel                           | aufgerufen aus                                                              | Auth                          | LOG | TRY | R     |
-| ------------------------------ | --------------------------------------------------------------------------- | ----------------------------- | --- | --- | ----- |
-| aol-service                    | `intake-trigger`, `intake-process`, `commit-fact`, `_shared/agentClient`    | `AOL_SERVICE_TOKEN`           | ⚠   | ✅  | 4     |
-| Graphiti `/messages` `/search` | `commit-fact`, `graphiti-reconcile`, `_shared/graphiti`, `inspect-graphiti` | `GRAPHITI_SERVICE_TOKEN`      | ⚠   | ✅  | **5** |
-| Railway GraphQL                | `railway-admin`, `inspect-railway`                                          | `RAILWAY_API_TOKEN`           | ❌  | ✅  | 2     |
-| LangSmith                      | `inspect-langsmith`, `_shared/promptHub`                                    | `LANGSMITH_API_KEY`+workspace | ❌  | ✅  | 3     |
-| OpenAI                         | `voice-transcribe`                                                          | `OPENAI_API_KEY`              | ⚠   | ✅  | 2     |
-| Unstructured                   | `intake-process` (vermutet)                                                 | `UNSTRUCTURED_API_KEY`        | ⚠   | ⚠   | 3     |
+Diese gelten für **alle** Seams ohne Ausnahme. Verletzung = sofortiger Bug.
 
----
-
-## 5. Top-10 unbeobachtete Seams (Priorität für Phase 2)
-
-Sortiert nach Schaden×Häufigkeit:
-
-1. **E5 commit-fact → D1/D2/D3 (canonical_facts/change_events/graphiti_sync_log)** — 25 awaits, 6 console-Ausgaben ohne Struktur, keine zentrale Validierung. Bricht hier etwas, korrumpiert es die kanonische Wahrheit. **R5**
-2. **E5 commit-fact → Graphiti `/messages`** — Mirror-Vertrag hängt an String-Matching auf `source_description`. Kein strukturiertes Log mit `correlation_id`. **R5**
-3. **E3 intake-understand → D5 review_cases / D7 parsed_documents** — 11 awaits, Stub-Pfad für Notes/URLs nur teilweise validiert. **R5**
-4. **F3 useDialog.commitFact** — Frontend-Seite des Commit-Pfads. Keine eigene Logging-Spur. **R5**
-5. **E6 graphiti-reconcile** — schreibt `canonical_facts.graphiti_uuid`. Idempotenz nicht getestet. **R4**
-6. **E4 aol-callback** — kein Log, nur 1 try/catch über die ganze Status-Transition `processing → review_ready → committed`. **R4**
-7. **E2 intake-process → Unstructured** — 4 awaits, 1 try, externe Latenz/Fehler nicht differenziert sichtbar. **R4**
-8. **F1 useIntake.intake (Storage+Insert+Invoke)** — devlog ist da, aber die drei Schritte sind nicht als Stages markiert; kein Korrelations-ID-Sammelpunkt. **R4**
-9. **F7/F8 useProjectActions/asset-delete** — destruktiv, ohne strukturiertes Log. **R4**
-10. **E1 intake-trigger** — entscheidet `mode='explicit' vs assignment`. Falscher Branch = unsichtbares Asset. **R3**
-
----
-
-## 6. Was Phase 2 als Erstes liefern muss
-
-Aus dieser Tabelle leiten sich die ersten drei Schritte aus QA-PLAN.md Phase 2 direkt ab:
-
-1. `_shared/logger.ts` + Migration `pipeline_events` mit Indexen auf `(asset_id)`, `(run_id)`, `(fn, ts desc)`.
-2. Logger einziehen in der Reihenfolge: **commit-fact → intake-understand → aol-callback → graphiti-reconcile**.
-3. ErrorBoundary + `unhandledrejection` im Frontend; Devlog-Sink schreibt zusätzlich ein `pipeline_events`-Row mit `level=error`.
-
-✅ Phase 1 abgeschlossen — Karte liegt vor, Top-10-Liste priorisiert. Bereit für Phase 2 nach Freigabe.
+```
+1. HARD  withErrorBoundary()  — jede Edge Function. Kein ungewrappter Deno.serve-Handler.
+2. HARD  createLogger()       — jede Pipeline-Stage. Kein console.log. CI blockt Pushes.
+3. HARD  correlation_id       — jeder pipeline_events-Row trägt asset_id oder run_id.
+4. HARD  RLS                  — jede neue Tabelle. User-Daten via auth.uid(), nie via FK.
+5. HARD  Review vor Commit    — kein canonical_facts-Insert ohne review_case.decision=accepted.
+6. HARD  Kein Direkt-Supabase — Frontend spricht nur über src/lib/<domain>/-Hooks, nie direkt.
+```
