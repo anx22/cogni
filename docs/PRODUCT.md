@@ -63,6 +63,7 @@ Schwellen (`agentConfig.ts`): `ASSIGNMENT_CONFIDENT_THRESHOLD = 3` (auto, Agent 
 ## Harte Prinzipien
 
 - Außen extrem reduziert, innen hochstrukturiert.
+- **UI-Sprache bleibt menschlich** — keine technischen IDs / Pipeline-Begriffe an der Oberfläche (kein `Konflikt #abc`, `Gap #abc`); Lagetext entsteht aus dem Zustand, nicht aus dem Commit-Log.
 - Review immer vorhanden — **kein Auto-Commit**.
 - Jede Erkenntnis hat Quelle und Delta.
 - Konflikte und Lücken sind Kern, nicht Nebenfunktion.
