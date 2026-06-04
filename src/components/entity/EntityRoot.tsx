@@ -20,8 +20,10 @@ import type { CharacterId } from "./characters/types";
 import type { InputMode } from "./InputPills";
 import { composeCapabilities, deriveExpression, type InteractionMode } from "@/lib/entity";
 import { usePointerFollow } from "./behaviors/usePointerFollow";
+import { useMeasuredOrbPx } from "./behaviors/useMeasuredOrbPx";
 import { useA11yShell } from "./behaviors/useA11yShell";
 import { SignatureLayer } from "./expression/SignatureLayer";
+import type { CharacterInteraction } from "./characters/types";
 
 interface EntityRootProps {
   state?: EntityState;
@@ -36,6 +38,12 @@ interface EntityRootProps {
   character?: CharacterId;
   /** Interaction-Mode (Achse 2). Prägt zusammen mit dem State die Signatur. */
   mode?: InteractionMode;
+  /**
+   * Interaktions-Tiefe. "full" = normaler App-Mount (Click/A11y, volle Hot-Area).
+   * "self" = Config-Vorschau (OrbLab): KEIN Click/Overlay, FacePill-Hot-Area auf
+   * die Komponente begrenzt. "static" = reines Standbild (Tiles).
+   */
+  interaction?: CharacterInteraction;
   /** Wird aufgerufen, wenn ein Charakter einen Input-Mode-Picker hat (face-pill). */
   onPickInputMode?: (mode: InputMode) => void;
 }
@@ -50,8 +58,10 @@ const EntityRoot = ({
   presetOverride,
   character = DEFAULT_CHARACTER_ID,
   mode = "resting",
+  interaction = "full",
   onPickInputMode,
 }: EntityRootProps) => {
+  const isInteractive = interaction === "full";
   const { presets } = useOrbPresets();
   const [internal, setInternal] = useState<EntityState>(state);
   const [sample, setSample] = useState<SampledPreset>(() =>
@@ -124,16 +134,27 @@ const EntityRoot = ({
   );
 
   const handleClick = useCallback(() => {
+    if (!isInteractive) return;
     if (state === "review-ready") {
       onReviewClick?.();
       return;
     }
     onClick?.();
-  }, [state, onClick, onReviewClick]);
+  }, [isInteractive, state, onClick, onReviewClick]);
 
   const a11y = useA11yShell(state, handleClick);
   const active = presetOverride ?? sample;
-  const orbPx = Number.parseInt(size.replace("px", ""), 10) || 320;
+  // Einfache px-Größen (Rail/Sidebar/Lab-Vorschau) direkt aus dem String — robust
+  // ohne Messung. Responsive Größen (clamp/vmin, z.B. Home) misst der
+  // ResizeObserver, weil parseInt sie nicht auflösen kann.
+  const parsedPx = Number.parseInt(size, 10);
+  const isPlainPx = Number.isFinite(parsedPx) && /^\s*\d+(?:\.\d+)?px\s*$/.test(size);
+  const measuredPx = useMeasuredOrbPx(
+    wrapperRef,
+    Number.isFinite(parsedPx) ? parsedPx : 96,
+    !isPlainPx,
+  );
+  const orbPx = isPlainPx ? parsedPx : measuredPx;
 
   const wrapperStyle: CSSProperties = {
     width: size,
@@ -151,6 +172,7 @@ const EntityRoot = ({
     size: orbPx,
     sample: active,
     onPickInputMode,
+    interaction,
   });
 
   return (
@@ -161,8 +183,8 @@ const EntityRoot = ({
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      onClick={handleClick}
-      {...a11y}
+      onClick={isInteractive ? handleClick : undefined}
+      {...(isInteractive ? a11y : {})}
     >
       {wantsSignature ? (
         <SignatureLayer signature={vm.signature}>{characterNode}</SignatureLayer>

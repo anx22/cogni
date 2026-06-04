@@ -3,13 +3,15 @@ import { composeCapabilities, STANDARD_CAPABILITIES } from "./capabilities";
 import type { CharacterManifest } from "./types";
 
 describe("capabilities — composeCapabilities", () => {
-  it("Siri (leeres Manifest) → ganzes Standardset + Default-Pointer-Follow", () => {
+  it("Siri (leeres Manifest) → ganzes Standardset, KEIN Pointer-Follow per Default", () => {
     const r = composeCapabilities({ id: "siri", label: "Siri" });
     expect(r.standard).toEqual(STANDARD_CAPABILITIES);
-    expect(r.motion).toContain("pointer-follow");
+    // Pointer-Follow ist opt-in → Siri folgt der Maus nicht.
+    expect(r.motion).not.toContain("pointer-follow");
+    expect(r.motion).toEqual([]);
   });
 
-  it("FacePill suppress't pointer-follow, ergänzt Erweiterungen", () => {
+  it("FacePill: kein Pointer-Follow, eigene Bewegungs-Erweiterungen", () => {
     const m: CharacterManifest = {
       id: "face-pill",
       label: "Face Pill",
@@ -19,6 +21,11 @@ describe("capabilities — composeCapabilities", () => {
     const r = composeCapabilities(m);
     expect(r.motion).not.toContain("pointer-follow");
     expect(r.motion).toEqual(expect.arrayContaining(["tilt-3d", "eyes", "custom-morph"]));
+  });
+
+  it("Pointer-Follow ist opt-in via manifest.motion", () => {
+    const r = composeCapabilities({ id: "siri", label: "Siri", motion: ["pointer-follow"] });
+    expect(r.motion).toContain("pointer-follow");
   });
 
   it("Standardset ist immer präsent", () => {

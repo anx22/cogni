@@ -1,14 +1,20 @@
 // =============================================================================
 //  FacePillCharacter — Squircle-Pill mit blinzelnden Augen, Smiley bei Hover,
-//  3D-Tilt nach Mausposition (großzügige Hot-Area), 4 organisch schwebende
-//  Blur-Bälle (Lissajous). Im offenen Zustand 4 Input-Mode-Buttons in 2×2.
-//  Schließen via Klick auf Pill, Outside-Click, Esc oder Auto-Timeout.
+//  3D-Tilt nach Mausposition, rotierendem 4-Farben-Bälle-Kreuz hinter Glas.
+//  Morph (geschlossen → offen) präzise nach Orby-Fremdcode (uiverse
+//  serious-mule-50): content 12rem² → 260×160, bg-balls border-radius 48→20,
+//  Augen-Opacity 1→0, Panel-Opacity 0→1; card 0.6s ease, Inhalt 0.3s ease.
+//
+//  `interaction`:
+//   · "full"   — Home: volle Hot-Area (size*2), Open/Picker.
+//   · "self"   — OrbLab-Vorschau: Hot-Area auf die Komponente begrenzt.
+//   · "static" — Tiles: reines Standbild (kein Sensor, keine Buttons, kein Open).
 // =============================================================================
 /* eslint-disable react-refresh/only-export-components */
 
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from "react";
 import { cn } from "@/lib/utils";
-import type { Character } from "./types";
+import type { Character, CharacterInteraction } from "./types";
 import type { EntityState } from "../presets/orbPresets";
 import { INPUT_MODES } from "../InputPills";
 import type { InputMode } from "../InputPills";
@@ -67,36 +73,47 @@ interface FacePillProps {
   size: number;
   sample: { colors: { bg: string; c1: string; c2: string; c3: string } };
   onPickInputMode?: (mode: InputMode) => void;
+  interaction?: CharacterInteraction;
 }
 
-const FacePill = ({ state, size, sample, onPickInputMode }: FacePillProps) => {
+const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
+
+const FacePill = ({
+  state,
+  size,
+  sample,
+  onPickInputMode,
+  interaction = "full",
+}: FacePillProps) => {
+  const interactive = interaction !== "static";
   const [open, setOpen] = useState(false);
   const [hovering, setHovering] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const closeTimer = useRef<number | null>(null);
-  // Captured at pointerEnter (card is flat, wrapper at rest) — used as stable
-  // reference in handlePointerMove so the tilt calc isn't affected by in-flight
-  // translate3d on the ancestor wrapper or the card's own perspective transform.
+  // Captured at pointerEnter (card flat, wrapper at rest) — stabile Tilt-Referenz.
   const restRect = useRef<DOMRect | null>(null);
   const tune = STATE_TUNE[state] ?? STATE_TUNE.idle;
   const { c1, c2, c3, bg } = sample.colors;
 
-  // Skalierung (12rem = 192px Original)
+  // Skalierung (12rem = 192px Original).
   const k = size / 192;
   const closedSide = 192 * k;
-  const openW = 280 * k;
-  const openH = 200 * k;
+  // Orby: content 12rem² → 260×160.
+  const openW = 260 * k;
+  const openH = 160 * k;
   const w = open ? openW : closedSide;
   const h = open ? openH : closedSide;
-  const radius = (open ? 36 : 48) * k;
+  const radius = 48 * k; // 3rem konstant (Orby content-card)
+  const ballsRadius = (open ? 20 : 48) * k; // Orby: bg-balls 3rem → 20px
 
   const eyeW = 26 * k;
   const eyeH = 52 * k;
   const eyeGap = 32 * k;
   const smileySize = 60 * k;
-  const ballSize = 110 * k;
-  const ballBlur = 32 * k;
+  const ballSize = 96 * k; // 6rem
+  const ballBlur = 30 * k;
+  const glassBlur = 50 * k; // backdrop-filter blur(50px)
   const tz = 45 * k;
 
   const showSmile = tune.eyeMode === "smile" || hovering;
@@ -114,14 +131,12 @@ const FacePill = ({ state, size, sample, onPickInputMode }: FacePillProps) => {
     if (open) return;
     const card = cardRef.current;
     if (!card) return;
-    // Use restRect (captured at pointerEnter when card is flat & wrapper at rest).
-    // Calling getBoundingClientRect() here would return the animated position,
-    // causing a feedback loop: tilt → position shift → recalculate → different tilt.
     const rect = restRect.current ?? card.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width;
     const y = (e.clientY - rect.top) / rect.height;
-    const rx = clamp(-(y - 0.5) * 30, -22, 22);
-    const ry = clamp((x - 0.5) * 30, -22, 22);
+    // Orby: rotateX/Y ±15°.
+    const rx = clamp(-(y - 0.5) * 30, -15, 15);
+    const ry = clamp((x - 0.5) * 30, -15, 15);
     card.style.transition = "transform 80ms linear";
     card.style.transform = `perspective(1000px) rotateX(${rx}deg) rotateY(${ry}deg) translateZ(${tz}px)`;
   };
@@ -139,7 +154,7 @@ const FacePill = ({ state, size, sample, onPickInputMode }: FacePillProps) => {
     closeTimer.current = window.setTimeout(() => setOpen(false), AUTO_CLOSE_MS);
   };
 
-  // Outside-Click + Esc + initialer Auto-Close beim Öffnen
+  // Outside-Click + Esc + initialer Auto-Close beim Öffnen.
   useEffect(() => {
     if (!open) {
       clearAutoClose();
@@ -165,7 +180,9 @@ const FacePill = ({ state, size, sample, onPickInputMode }: FacePillProps) => {
     };
   }, [open]);
 
-  const speedVar = { ["--orbit-speed" as string]: tune.speedMul } as CSSProperties;
+  // Bälle-Kreuz rotiert als Ganzes (Orby: rotate-background-balls 10s linear,
+  // Hover pausiert). speedMul aus STATE_TUNE moduliert das Tempo.
+  const ballsSpin = `face-pill-balls-rotate ${(10 / tune.speedMul).toFixed(2)}s linear infinite`;
 
   return (
     <div
@@ -173,7 +190,7 @@ const FacePill = ({ state, size, sample, onPickInputMode }: FacePillProps) => {
       className="absolute inset-0 grid place-items-center"
       style={{ width: size, height: size, perspective: `${1000 * k}px` }}
     >
-      {/* Glow-Pad hinter der Card */}
+      {/* Glow-Pad hinter der Card (Orby ::after grauer Pad) */}
       <div
         aria-hidden
         className="absolute rounded-[2.6rem] bg-card/40 blur-2xl pointer-events-none"
@@ -188,73 +205,56 @@ const FacePill = ({ state, size, sample, onPickInputMode }: FacePillProps) => {
       <div
         ref={cardRef}
         onClick={(e) => {
-          if (open) return;
+          if (!interactive || open) return;
           e.stopPropagation();
           setOpen(true);
         }}
         className={cn(
           "relative select-none overflow-hidden",
-          "border border-white/10 bg-background/30 backdrop-blur-xl",
-          "shadow-[0_20px_60px_-15px_rgba(0,0,0,0.6),inset_0_0_20px_rgba(255,255,255,0.05)]",
+          "border border-white/10 bg-background/30",
+          "shadow-[0_10px_40px_-8px_rgba(0,0,60,0.45),inset_0_0_20px_rgba(255,255,255,0.06)]",
           tune.pulseCard && "animate-[face-pill-breathe_1.2s_ease-in-out_infinite]",
           tune.glowBurst && "animate-[face-pill-glow_800ms_ease-out]",
-          open ? "cursor-default" : "cursor-pointer",
+          interactive && !open ? "cursor-pointer" : "cursor-default",
         )}
         style={{
           width: w,
           height: h,
           borderRadius: radius,
+          // Orby: card 0.6s ease.
+          transition: "width 0.6s ease, height 0.6s ease, border-radius 0.6s ease",
           transformStyle: "preserve-3d",
+          backdropFilter: `blur(${glassBlur}px)`,
+          WebkitBackdropFilter: `blur(${glassBlur}px)`,
           willChange: "transform",
         }}
       >
-        {/* Bälle-Layer */}
+        {/* Bälle-Layer — rotierendes 4-Farben-Kreuz (N/S/W/O) */}
         <div
           aria-hidden
           className="absolute inset-0 overflow-hidden pointer-events-none"
-          style={{ borderRadius: radius, ...speedVar }}
+          style={{
+            borderRadius: ballsRadius,
+            transition: "border-radius 0.3s ease",
+          }}
         >
-          <Orbit
-            name="a"
-            size={ballSize}
-            blur={ballBlur}
-            color={c1 || "#ec4899"}
-            duration={18}
-            delay={0}
-            paused={hovering}
-            filter={tune.ballFilter}
-          />
-          <Orbit
-            name="b"
-            size={ballSize}
-            blur={ballBlur}
-            color={c2 || "#9147ff"}
-            duration={22}
-            delay={-7}
-            paused={hovering}
-            filter={tune.ballFilter}
-          />
-          <Orbit
-            name="c"
-            size={ballSize}
-            blur={ballBlur}
-            color={c3 || "#34d399"}
-            duration={16}
-            delay={-3}
-            paused={hovering}
-            filter={tune.ballFilter}
-          />
-          <Orbit
-            name="d"
-            size={ballSize}
-            blur={ballBlur}
-            color={bg || "#05e0f5"}
-            duration={20}
-            delay={-11}
-            paused={hovering}
-            filter={tune.ballFilter}
-          />
-          <div className="absolute inset-0 bg-[hsl(var(--foreground)/0.05)]" />
+          <div
+            className="face-pill-balls absolute left-1/2 top-1/2"
+            style={{
+              transform: "translate(-50%, -50%)",
+              width: ballSize * 2,
+              height: ballSize * 2,
+              animation: ballsSpin,
+              animationPlayState: hovering ? "paused" : "running",
+              filter: tune.ballFilter !== "none" ? tune.ballFilter : undefined,
+              willChange: "transform",
+            }}
+          >
+            <Ball pos="top" size={ballSize} blur={ballBlur} color={c1 || "#9147ff"} />
+            <Ball pos="bottom" size={ballSize} blur={ballBlur} color={c2 || "#34d399"} />
+            <Ball pos="left" size={ballSize} blur={ballBlur} color={c3 || "#ec4899"} />
+            <Ball pos="right" size={ballSize} blur={ballBlur} color={bg || "#05e0f5"} />
+          </div>
         </div>
 
         {/* Augen / Smiley */}
@@ -280,55 +280,55 @@ const FacePill = ({ state, size, sample, onPickInputMode }: FacePillProps) => {
           )}
         </div>
 
-        {/* Open-State: 2×2 Input-Mode-Buttons */}
-        <div
-          className={cn(
-            "absolute inset-0 z-20 grid grid-cols-2 grid-rows-2 gap-2 p-3",
-            "transition-opacity duration-300",
-            open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none",
-          )}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {INPUT_MODES.map(({ id, label, Icon }) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => {
-                onPickInputMode?.(id);
-                setOpen(false);
-              }}
-              className={cn(
-                "flex h-full w-full flex-col items-center justify-center gap-1.5 rounded-2xl",
-                "border border-white/15 bg-background/40 backdrop-blur-md",
-                "text-foreground/90 transition-colors",
-                "hover:border-primary/60 hover:bg-primary/20 hover:text-primary",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
-              )}
-            >
-              <Icon className="size-5" />
-              <span className="text-xs tracking-wide">{label}</span>
-            </button>
-          ))}
-        </div>
+        {/* Open-State: 2×2 Input-Mode-Buttons (Inhalt — wandert in Phase 5 in den Composer) */}
+        {interactive && (
+          <div
+            className={cn(
+              "absolute inset-0 z-20 grid grid-cols-2 grid-rows-2 gap-2 p-3",
+              "transition-opacity duration-300",
+              open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none",
+            )}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {INPUT_MODES.map(({ id, label, Icon }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => {
+                  onPickInputMode?.(id);
+                  setOpen(false);
+                }}
+                className={cn(
+                  "flex h-full w-full flex-col items-center justify-center gap-1.5 rounded-2xl",
+                  "border border-white/15 bg-background/40 backdrop-blur-md",
+                  "text-foreground/90 transition-colors",
+                  "hover:border-primary/60 hover:bg-primary/20 hover:text-primary",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
+                )}
+              >
+                <Icon className="size-5" />
+                <span className="text-xs tracking-wide">{label}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Hot-Area: nur Pointer-Tracking, fängt KEINE Klicks (lässt Geschwister-UI frei) */}
-      {!open && (
+      {/* Hot-Area: Pointer-Tracking. "full" = size*2 (großzügig, Home),
+          "self" = nur über der Komponente (OrbLab). "static" = kein Sensor. */}
+      {interactive && !open && (
         <div
           className="absolute pointer-events-none"
-          style={{
-            width: size * 2,
-            height: size * 2,
-            left: -size / 2,
-            top: -size / 2,
-          }}
-          // pointer events for hover/move are captured by the inner sensor below
+          style={
+            interaction === "self"
+              ? { width: size, height: size, left: 0, top: 0 }
+              : { width: size * 2, height: size * 2, left: -size / 2, top: -size / 2 }
+          }
         >
           <div
             className="absolute inset-0"
             style={{ pointerEvents: "auto", cursor: "pointer" }}
             onPointerEnter={() => {
-              // Capture stable rect before any tilt or wrapper-translation begins.
               restRect.current = cardRef.current?.getBoundingClientRect() ?? null;
               setHovering(true);
             }}
@@ -347,33 +347,9 @@ const FacePill = ({ state, size, sample, onPickInputMode }: FacePillProps) => {
       )}
 
       <style>{`
-        @keyframes face-pill-orbit-a {
-          0%   { transform: translate(-32%, -48%) scale(1); }
-          25%  { transform: translate(22%, -42%)  scale(1.08); }
-          50%  { transform: translate(38%, 12%)   scale(0.94); }
-          75%  { transform: translate(-12%, 30%)  scale(1.05); }
-          100% { transform: translate(-32%, -48%) scale(1); }
-        }
-        @keyframes face-pill-orbit-b {
-          0%   { transform: translate(28%, 30%)   scale(1.02); }
-          20%  { transform: translate(-20%, 20%)  scale(0.96); }
-          45%  { transform: translate(-36%, -28%) scale(1.1); }
-          70%  { transform: translate(10%, -36%)  scale(0.98); }
-          100% { transform: translate(28%, 30%)   scale(1.02); }
-        }
-        @keyframes face-pill-orbit-c {
-          0%   { transform: translate(-40%, 8%)   scale(0.98); }
-          30%  { transform: translate(8%, 32%)    scale(1.06); }
-          55%  { transform: translate(34%, -10%)  scale(0.92); }
-          80%  { transform: translate(-4%, -32%)  scale(1.04); }
-          100% { transform: translate(-40%, 8%)   scale(0.98); }
-        }
-        @keyframes face-pill-orbit-d {
-          0%   { transform: translate(18%, -34%)  scale(1.04); }
-          25%  { transform: translate(36%, 6%)    scale(0.95); }
-          50%  { transform: translate(0%, 36%)    scale(1.08); }
-          75%  { transform: translate(-34%, 4%)   scale(1.0); }
-          100% { transform: translate(18%, -34%)  scale(1.04); }
+        @keyframes face-pill-balls-rotate {
+          from { transform: translate(-50%, -50%) rotate(360deg); }
+          to   { transform: translate(-50%, -50%) rotate(0deg); }
         }
         @keyframes face-pill-blink {
           0%, 46%, 50%, 96%, 100% { transform: scaleY(1); }
@@ -386,49 +362,44 @@ const FacePill = ({ state, size, sample, onPickInputMode }: FacePillProps) => {
         @keyframes face-pill-glow {
           0% { box-shadow: 0 0 0 rgba(255,255,255,0); }
           50% { box-shadow: 0 0 60px rgba(255,255,255,0.4); }
-          100% { box-shadow: 0 20px 60px -15px rgba(0,0,0,0.6); }
+          100% { box-shadow: 0 10px 40px -8px rgba(0,0,60,0.45); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .face-pill-balls { animation: none !important; }
         }
       `}</style>
     </div>
   );
 };
 
-// ----- Einzelner organisch schwebender Ball -----
-const Orbit = ({
-  name,
+// ----- Einzelner Ball (fixe Himmelsrichtung im rotierenden Kreuz) -----
+const Ball = ({
+  pos,
   size,
   blur,
   color,
-  duration,
-  delay,
-  paused,
-  filter,
 }: {
-  name: "a" | "b" | "c" | "d";
+  pos: "top" | "bottom" | "left" | "right";
   size: number;
   blur: number;
   color: string;
-  duration: number;
-  delay: number;
-  paused: boolean;
-  filter: string;
-}) => (
-  <span
-    className="absolute left-1/2 top-1/2 rounded-full"
-    style={{
-      width: size,
-      height: size,
-      marginLeft: -size / 2,
-      marginTop: -size / 2,
-      background: color,
-      filter: `blur(${blur}px) ${filter !== "none" ? filter : ""}`.trim(),
-      animation: `face-pill-orbit-${name} calc(${duration}s * var(--orbit-speed, 1)) ease-in-out infinite`,
-      animationDelay: `${delay}s`,
-      animationPlayState: paused ? "paused" : "running",
-      willChange: "transform",
-    }}
-  />
-);
+}) => {
+  const base: CSSProperties = {
+    position: "absolute",
+    width: size,
+    height: size,
+    borderRadius: "50%",
+    background: color,
+    filter: `blur(${blur}px)`,
+  };
+  const place: Record<typeof pos, CSSProperties> = {
+    top: { top: 0, left: "50%", transform: "translateX(-50%)" },
+    bottom: { bottom: 0, left: "50%", transform: "translateX(-50%)" },
+    left: { left: 0, top: "50%", transform: "translateY(-50%)" },
+    right: { right: 0, top: "50%", transform: "translateY(-50%)" },
+  };
+  return <span aria-hidden style={{ ...base, ...place[pos] }} />;
+};
 
 // ----- Auge -----
 const Eye = ({ w, h, mode }: { w: number; h: number; mode: EyeMode }) => {
@@ -451,7 +422,7 @@ const Eye = ({ w, h, mode }: { w: number; h: number; mode: EyeMode }) => {
       style={{
         width: w,
         height: h,
-        borderRadius: Math.min(w, h) * 0.45,
+        borderRadius: 16, // Orby: radius 16px
         transform: `scaleY(${scaleY})`,
         transformOrigin: "center",
         animation: animate ? `face-pill-blink 10s linear infinite` : undefined,
@@ -461,7 +432,7 @@ const Eye = ({ w, h, mode }: { w: number; h: number; mode: EyeMode }) => {
   );
 };
 
-// ----- Smiley -----
+// ----- Smiley (Orby Happy-SVG) -----
 const Smiley = ({ size }: { size: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={{ color: "#fff" }}>
     <path
@@ -470,5 +441,3 @@ const Smiley = ({ size }: { size: number }) => (
     />
   </svg>
 );
-
-const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));

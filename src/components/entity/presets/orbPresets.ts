@@ -78,6 +78,55 @@ export function sampleColor(cr: ColorRange): string {
   return oklch(rand(cr.l), rand(cr.c), rand(cr.h));
 }
 
+// ---- Farb-Harmonie-Generator -----------------------------------------------
+//  Reine Funktion: Basisfarbe (OKLCH) + Harmonie → drei Orb-Farben (c1/c2/c3)
+//  via Hue-Rotation. Rückgabe als exakte ColorRange (min===max), direkt
+//  persistierbar. Chroma wird auf ~0.16 gedeckelt (sRGB-Gamut-Schutz; OKLCH
+//  würde bei zu hoher Chroma clippen). `bg` bleibt in Nutzerhand.
+
+export type Harmony = "complementary" | "analogous" | "triadic" | "tetradic" | "monochrome";
+
+/** Hue-Rotation, modulo-sicher (immer 0–360). */
+export const rotateHue = (h: number, deg: number): number => (((h + deg) % 360) + 360) % 360;
+
+const exactRange = (l: number, c: number, h: number): ColorRange => ({
+  l: { min: l, max: l },
+  c: { min: c, max: c },
+  h: { min: h, max: h },
+});
+
+const HARMONY_HUE_OFFSETS: Record<Exclude<Harmony, "monochrome">, [number, number, number]> = {
+  complementary: [0, 180, 180],
+  analogous: [0, 30, -30],
+  triadic: [0, 120, -120],
+  tetradic: [90, 180, 270],
+};
+
+export function generatePalette(
+  base: { l: number; c: number; h: number },
+  harmony: Harmony,
+): { c1: ColorRange; c2: ColorRange; c3: ColorRange } {
+  const cap = (x: number) => Math.min(x, 0.16);
+  const c = cap(base.c);
+
+  if (harmony === "monochrome") {
+    const lo = Math.max(0, base.l - 12);
+    const hi = Math.min(100, base.l + 12);
+    return {
+      c1: exactRange(base.l, c, base.h),
+      c2: exactRange(lo, c, base.h),
+      c3: exactRange(hi, c, base.h),
+    };
+  }
+
+  const [o1, o2, o3] = HARMONY_HUE_OFFSETS[harmony];
+  return {
+    c1: exactRange(base.l, c, rotateHue(base.h, o1)),
+    c2: exactRange(base.l, c, rotateHue(base.h, o2)),
+    c3: exactRange(base.l, c, rotateHue(base.h, o3)),
+  };
+}
+
 export function sampleSurface(s: SurfaceRange): SampledSurface {
   return {
     scale: rand(s.scale),
