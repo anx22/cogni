@@ -10,7 +10,7 @@
 
 - ✅ **M1 — Provenance & Empfehlung** (2026-05-30/06-01) — Empfehlung-First-Drilldown, Empfehlungs-Vertrag über Konflikt/Gap/Dependency/Entscheidung. Details: `DECISIONS.md`.
 - ✅ **M2 — Entität bleibt präsent** (2026-06-03) — `EntityRail` persistent, `AtmosphereStripe`, Retry, Realtime-Pipeline. Details: `DECISIONS.md`.
-  - ⚠️ **Offener Backlog-Posten:** `EntityRail` gehört auf **ProjectScreen**, Home-Entität soll **zentral** bleiben (`hidden lg:flex` blendet sie aktuell unter 1024 px ganz aus). Rückbau mit nächstem Home-UI-Update — Platzierung vorher gemeinsam planen. Betrifft `src/pages/Index.tsx`, `EntityRail.tsx`, `ProjectScreen`.
+  - ✅ **Home-Center-Rückbau erledigt** (2026-06-04): Entität wieder zentral (`EntityRoot`), `EntityRail` nur noch auf ProjectScreen, `ImpactPipelinePanel` als rechtes Aside.
 - ✅ **M3 — Antwort-Loops** (2026-06-03) — Feedback flächendeckend (Lage+Verlauf+Substanz), Verlauf-Notiz, Impact-Pfeile. Details: `DECISIONS.md`.
 
 ---
@@ -21,7 +21,8 @@ Die Entität (Gesicht der App) wird zum in sich geschlossenen Modul: reines Gehi
 
 - **A** Ordner-Hygiene (7 Fremd-Dateien raus aus `components/entity/`, `RecentAssets` gelöscht) — ✅ 2026-06-02
 - **0** Gehirn-Gerüst (`src/lib/entity/` machine/signals/interaction/signalMapping/deriveExpression/capabilities + Barrel + 36 Tests) — ✅ 2026-06-02
-- **1–7** Provider+Sources (`EntityRail`/Index auf `useEntity()`) · Orchestrator/Visuals · Capability-Vertrag+A11y · Ausdrucks-Engine · Unified Composer · Kommunikation+Orbit · Mehrfach-Mount-Reuse — **aktiv**. Kein ⌘+Space-Overlay (gestrichen).
+- **1–4** Provider+Sources · Orchestrator/Visuals · Capability-Vertrag+A11y · Ausdrucks-Engine — ✅ 2026-06-04 (auf dev)
+- **5–7** Unified Composer · Kommunikation+Orbit · Mehrfach-Mount-Reuse — **aktiv**. Kein ⌘+Space-Overlay (gestrichen).
 
 ---
 
