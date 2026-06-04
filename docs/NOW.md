@@ -48,6 +48,7 @@ Spatial-Continuity-Geste komplettieren. Heute bricht „Entity ist immer da" ab,
 - **Stufe 1 erledigt (2026-06-01):** `AtmosphereStripe` als eigene Komponente — spiegelt Lebenszustand des Projekts (offen / review-warm via `is-active`). Hängt an `project.handlungsbedarf`.
 - ~~Universal-Overlay (⌘+Space)~~ **gestrichen (2026-06-02):** Es gibt kein Entity-Overlay im UI. Ziel ist stattdessen die persistente Entität rechts an der Seite (Main + Projektdetail).
 - **Stufe 4 erledigt (2026-06-03) — Entität persistent rechts:** neue `EntityRail`-Komponente (lg+, 220px) trägt die Entität (96px) + optionalen Content-Slot. **Home:** Entität wandert aus dem Zentrum in die rechte Schiene, `ImpactPipelinePanel` liegt als Content darunter, AccountDrawer oben in der Rail; die Mitte wird zur reinen Intake-Bühne (AssetOrbit + HomePrompt). **Projekt:** `EntityRail` rechts statt Mini-Entität in der linken Sidebar — state-bewusst (idle/processing/review-ready), Drop → Intake ans Projekt, Klick bei review-ready → Review öffnen. Damit begleitet die Entität jeden Screen. **M2 abgeschlossen.**
+  - **⚠️ Korrektur (2026-06-04, User) — BACKLOG, erst zusammen durchplanen:** Die persistente Rail rechts gilt **NUR für den Projekt-Detail-Screen**. Auf **Home gehört die Entität zentral in die Mitte** („Gesicht der App") — die Verschiebung aus dem Zentrum in die Rail (oben „Entität wandert aus dem Zentrum in die rechte Schiene") war ein **Missverständnis** und nie gewollt. Nebenbefund: `EntityRail` ist `hidden lg:flex` → unter 1024 px ist auf Home **gar keine** Entität sichtbar. Rückbau (Home-Center-Entität wieder mounten, Rail auf ProjectScreen beschränken) kommt mit dem **nächsten Home-UI-Update** — Platzierung/AssetOrbit-Verhältnis/Composer-Einbettung vorher gemeinsam planen. Betrifft `src/pages/Index.tsx`, `src/components/entity/EntityRail.tsx`, `ProjectScreen`.
 - **Stufe 2 erledigt (2026-06-02):** AssetOrbit-Retry für `failed`-Chips — `retryIntake.ts` als gemeinsame lib-Funktion, failed-Chip zeigt RotateCcw-Icon und ist klickbar. `IntakeSessionsPanel` nutzt dieselbe Funktion.
 - **Stufe 3 erledigt (2026-06-02):** Realtime-Hook `useProjectPipeline` — `AtmosphereStripe` erhält `isProcessing` prop, `.is-processing`-CSS (1.6s, sig-action-Farbe) unterscheidet aktive Pipeline-Läufe von offenem Handlungsbedarf.
 
@@ -89,7 +90,7 @@ Phasen einzeln auslieferbar, visuell zunächst identisch.
 
 - **A** Ordner-Hygiene (7 Fremd-Dateien raus aus `components/entity/`, `RecentAssets` gelöscht) — ✅ 2026-06-02 (auf dev)
 - **0** Gehirn-Gerüst (`src/lib/entity/` machine/signals/interaction/signalMapping/deriveExpression/capabilities + Barrel + 36 Tests) — ✅ 2026-06-02 (auf dev)
-- **1–7** Provider+Sources (`EntityRail`/Index auf `useEntity()`) · Orchestrator/Visuals · Capability-Vertrag+A11y · Ausdrucks-Engine · Unified Composer · Kommunikation+Orbit · Mehrfach-Mount-Reuse. **Kein ⌘+Space-Overlay** (gestrichen, s. M2) — Wiederverwendung über die persistente `EntityRail` + weitere Mount-Punkte.
+- **1** Provider+Sources (`EntityRail`/Index auf `useEntity()`) · **2** Orchestrator/Visuals · **3** Capability-Vertrag+A11y · **4** Ausdrucks-Engine — ✅ **1–4 auf dev** (Phase 4: 2026-06-04, Merge `20be026`: WAA-Signaturen via `SignatureLayer`, `palette` im VM, Modus-Paletten, OrbLab-Achse; tsc 0, vitest 157/157). · **5** Unified Composer · **6** Kommunikation+Orbit · **7** Mehrfach-Mount-Reuse. **Kein ⌘+Space-Overlay** (gestrichen, s. M2) — Wiederverwendung über die persistente `EntityRail` + weitere Mount-Punkte. **NB:** Rail nur Projekt-Detail (s. M2-Korrektur oben).
 
 ### Wave 3 — Lebendiges System (geplant, nach M4)
 
@@ -101,22 +102,22 @@ Phasen einzeln auslieferbar, visuell zunächst identisch.
 
 ### Langfristig (Wave 3 — bewusst zurückgestellt)
 
-| #   | Aufgabe                                      | Trigger                                                                  |
-| --- | -------------------------------------------- | ------------------------------------------------------------------------ |
-| L1  | LLM-Heuristiken in Detektoren                | Wenn deterministischer Recall zu niedrig wird                            |
-| L2  | React Query (Caching + Mutations)            | Wenn Realtime + manuelle Re-Fetches racen                                |
-| L3  | Reference-Token-Auflösung                    | Wenn Dependency-Detector zu viele False Positives                        |
-| L4  | Voice/Mail-Sync (V2) — inkl. Email-Direct-Connect (10x #4, Adoptions-Wette) | Nach Prototyp-Freigabe; stärkster Adoptions-Hebel, senkt Intake-Hemmschwelle |
-| L5  | Dokument-/Quellen-Preview + Versionshistorie | `buildDokumentSession`/`buildSourceSession` „folgt"-Versprechen einlösen |
-| L6  | AOL-Lernring: `/aol/confirm` → Graphiti (TODO D4) | Wenn die Reasoning-Schicht aus Reviews lernen soll (Invalidation bei Reject + Decision-Kontext). Mirror schreibt Fakten bereits — offen ist der LangGraph-Ring. 10x #1 |
-| L7  | Export „Project Briefing" (Markdown/PDF)     | Wenn externer Output / ROI-Nachweis gebraucht wird; liest bestehendes ViewModel. 10x #6 |
-| L8  | Projekt-Gesundheits-Score                    | Wenn Multi-Projekt-Triage akut wird; baut auf `AtmosphereStripe`/`deriveSignal`. 10x #10 |
-| L9  | Async AOL-Run + PostgresSaver (TODO D2)      | Wenn große Dokumente / parallele Uploads Timeouts erzeugen. 10x #2 |
-| L10 | Dokument-Diff / Version-Delta                | Bei iterativen Versions-Uploads (Angebote/Specs/Protokolle). 10x #9 |
-| L11 | Keyboard-Nav J/K im BatchReview              | Bei Review-Volumen / Power-Usern (~20 Z.). 10x #7 |
-| L12 | AOL `/health` echte Reachability-Checks      | Beim nächsten AOL-Debugging (kein User-Value). 10x #14 |
-| L13 | Wöchentlicher Digest (cron + Email)          | Nach 3+ Monaten echter Nutzung. 10x #15 |
-| L14 | Demo-Daten entfernen + sauberer Leer-State   | Vor erstem echten User-Test (`demoProject(s).ts` noch aktiv). 10x #12 |
+| #   | Aufgabe                                                                     | Trigger                                                                                                                                                                |
+| --- | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| L1  | LLM-Heuristiken in Detektoren                                               | Wenn deterministischer Recall zu niedrig wird                                                                                                                          |
+| L2  | React Query (Caching + Mutations)                                           | Wenn Realtime + manuelle Re-Fetches racen                                                                                                                              |
+| L3  | Reference-Token-Auflösung                                                   | Wenn Dependency-Detector zu viele False Positives                                                                                                                      |
+| L4  | Voice/Mail-Sync (V2) — inkl. Email-Direct-Connect (10x #4, Adoptions-Wette) | Nach Prototyp-Freigabe; stärkster Adoptions-Hebel, senkt Intake-Hemmschwelle                                                                                           |
+| L5  | Dokument-/Quellen-Preview + Versionshistorie                                | `buildDokumentSession`/`buildSourceSession` „folgt"-Versprechen einlösen                                                                                               |
+| L6  | AOL-Lernring: `/aol/confirm` → Graphiti (TODO D4)                           | Wenn die Reasoning-Schicht aus Reviews lernen soll (Invalidation bei Reject + Decision-Kontext). Mirror schreibt Fakten bereits — offen ist der LangGraph-Ring. 10x #1 |
+| L7  | Export „Project Briefing" (Markdown/PDF)                                    | Wenn externer Output / ROI-Nachweis gebraucht wird; liest bestehendes ViewModel. 10x #6                                                                                |
+| L8  | Projekt-Gesundheits-Score                                                   | Wenn Multi-Projekt-Triage akut wird; baut auf `AtmosphereStripe`/`deriveSignal`. 10x #10                                                                               |
+| L9  | Async AOL-Run + PostgresSaver (TODO D2)                                     | Wenn große Dokumente / parallele Uploads Timeouts erzeugen. 10x #2                                                                                                     |
+| L10 | Dokument-Diff / Version-Delta                                               | Bei iterativen Versions-Uploads (Angebote/Specs/Protokolle). 10x #9                                                                                                    |
+| L11 | Keyboard-Nav J/K im BatchReview                                             | Bei Review-Volumen / Power-Usern (~20 Z.). 10x #7                                                                                                                      |
+| L12 | AOL `/health` echte Reachability-Checks                                     | Beim nächsten AOL-Debugging (kein User-Value). 10x #14                                                                                                                 |
+| L13 | Wöchentlicher Digest (cron + Email)                                         | Nach 3+ Monaten echter Nutzung. 10x #15                                                                                                                                |
+| L14 | Demo-Daten entfernen + sauberer Leer-State                                  | Vor erstem echten User-Test (`demoProject(s).ts` noch aktiv). 10x #12                                                                                                  |
 
 ---
 
