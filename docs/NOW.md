@@ -42,16 +42,8 @@ LS-1 Confidence Decay · LS-3 Review-Badge · LS-2 Project Pulse — Reihenfolge
 
 ## Recently completed
 
+_Nur die letzten ~3 (je 1 Zeile). Ältere raus → Git (`git log --oneline -- docs/`), nicht DECISIONS._
+
 - **2026-06-04 — Entity-Politur (Home-Center + OrbLab-Overhaul + FacePill-Morph)** auf `dev`. **Home:** Entität wieder **zentral** (`EntityRoot`, viewport-relativ via Größen-Tier), `EntityRail` nur noch auf ProjectScreen, `ImpactPipelinePanel` als rechtes Aside zurück (Backlog-Posten erledigt). **Siri** folgt der Maus nicht mehr (`DEFAULT_MOTION=[]`, opt-in). **OrbLab** = Config-Mode (`interaction` full/self/static): kein Entity-Click, FacePill-Hot-Area auf die Komponente begrenzt, statische Tiles (behebt button-in-button). **Editor:** HSL-Labels, Farb-Harmonie-Generator (`generatePalette`), benannte Presets (`useOrbLibrary`), Größe Klein/Mittel/Groß (viewport-relativ, `useOrbSizeTier`+ResizeObserver), Würfeln raus, „Punkt-Halo" verständlich. **FacePill-Morph** an Orby-Fremdcode angeglichen (260×160, Glas, rotierendes Bälle-Kreuz, Augen→Inhalt-Crossfade) — Panel-Inhalt (2×2) wandert in Phase 5. **Entity-Core Phase 1–4** auf dev. 169/169 ✓, tsc 0.
 - **2026-06-04 — OR-1 fix (escalate-Flag)** `commitRoute.ts` + `DialogProvider.tsx` + 5 Tests. 162/162 ✓, tsc 0.
 - **2026-06-03 — M3 abgeschlossen** Feedback-Layer flächendeckend (Lage+Verlauf+Substanz). 150/150 ✓, tsc 0.
-
----
-
-## Pflege (Anti-Bloat)
-
-> NOW beschreibt nur die **Gegenwart** — Status/aktive Arbeit dürfen in heißen Phasen ausführlicher werden.
-> Der Deckel gilt nur für **Recently completed**:
->
-> - **Recently completed**: nur die letzten ~3, je 1 Zeile. Ältere fallen raus — Historie lebt in Git (`git log --oneline -- docs/`), **nicht** in DECISIONS.
-> - Wird ein Status zur Grundsatzentscheidung → `DECISIONS.md` (warum). Zukünftiges → `PLAN.md`.
