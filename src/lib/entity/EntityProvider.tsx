@@ -1,12 +1,16 @@
 // =============================================================================
 //  Entity-Core — Globaler Provider.
-//  Mountet Machine + Sources + Presets EINMAL; alle Consumer via useEntity().
+//  Mountet Machine + Sources + Presets + Kommunikation EINMAL;
+//  alle Consumer via useEntity(). Achse 1 (State) + Achse 2 (Interaction-Mode)
+//  + dritte Säule (Utterance) laufen aus EINEM Signal-Stream.
 // =============================================================================
 
-import { useMemo, useRef, type ReactNode } from "react";
+import { useCallback, useMemo, useReducer, useRef, type ReactNode } from "react";
 import { useEntityMachine } from "./useEntityMachine";
 import { useEntityPresets } from "./useEntityPresets";
 import { useEntitySources } from "./useEntitySources";
+import { useEntityCommunication } from "./communication/useEntityCommunication";
+import { reduceInteraction, type InteractionAction } from "./interaction";
 import { EntityContext, type EntityController, type EntityContextValue } from "./entityContext";
 import type { EntitySignal } from "./types";
 
@@ -16,25 +20,30 @@ interface EntityProviderProps {
 
 export function EntityProvider({ children }: EntityProviderProps) {
   const { state, dispatch } = useEntityMachine();
+  const [mode, interact] = useReducer(reduceInteraction, "resting");
   const autoOpenHandlerRef = useRef<((sessionId: string) => void) | null>(null);
 
-  const { openPendingSession } = useEntitySources(dispatch, autoOpenHandlerRef);
-  const { vm, characterId } = useEntityPresets(state);
+  const { utterance, pushInput } = useEntityCommunication();
+  const { openPendingSession } = useEntitySources(dispatch, autoOpenHandlerRef, pushInput);
+  const { vm, characterId } = useEntityPresets(state, mode);
+
+  const interactDispatch = useCallback((action: InteractionAction) => interact(action), []);
 
   const controller = useMemo<EntityController>(
     () => ({
       signal: (sig: EntitySignal) => dispatch(sig),
+      interact: interactDispatch,
       setAutoOpenHandler: (fn) => {
         autoOpenHandlerRef.current = fn;
       },
       openPendingSession,
     }),
-    [dispatch, openPendingSession],
+    [dispatch, interactDispatch, openPendingSession],
   );
 
   const value = useMemo<EntityContextValue>(
-    () => ({ state, vm, characterId, controller }),
-    [state, vm, characterId, controller],
+    () => ({ state, vm, characterId, utterance, controller }),
+    [state, vm, characterId, utterance, controller],
   );
 
   return <EntityContext.Provider value={value}>{children}</EntityContext.Provider>;

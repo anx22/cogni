@@ -21,7 +21,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { devlog } from "@/lib/devlog/devlog";
 import { useDialog } from "@/components/dialog/DialogProvider";
-import { useEntityVoice } from "@/lib/voice/useEntityVoice";
 import { useBodyScrollLock } from "@/lib/ui/useBodyScrollLock";
 import { useDropZone } from "@/lib/intake/useDropZone";
 import { toast } from "sonner";
@@ -33,12 +32,11 @@ const Index = () => {
   const [overlayOpen, setOverlayOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const { openSessionFromDB } = useDialog();
-  const { state: entityState, controller } = useEntity();
+  const { state: entityState, controller, utterance } = useEntity();
   const { characterId } = useSelectedCharacter();
   const { tier } = useOrbSizeTier();
 
   const { intake } = useIntake();
-  const voice = useEntityVoice(session?.user?.id);
   const { projects: liveProjects, error: projectsError, reload: reloadProjects } = useProjects();
 
   const busy = entityState === "processing" || entityState === "review-ready";
@@ -162,8 +160,8 @@ const Index = () => {
 
         {/* Voice + Hint — fester Footer-Slot */}
         <div className="shrink-0 flex flex-col items-center justify-end pb-4 px-4 min-h-[64px]">
-          <EntityVoiceLine voice={voice} onRetry={handleRetry} />
-          {!voice.text && !overlayOpen && (
+          <EntityVoiceLine onRetry={handleRetry} />
+          {!utterance?.text && !overlayOpen && (
             <p className="t-small opacity-50 mt-1 ink-4 text-center motion-safe:animate-float-in">
               Lege etwas ab oder tippe — Datei, Link, Notiz
             </p>
