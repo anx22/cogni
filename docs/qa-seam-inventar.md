@@ -1,18 +1,14 @@
 # QA-SEAM-MAP
 
-> **Lebendes Kontroll-Instrument.** Kein Backlog, keine Phasen, kein Fortschritts-Tracking.
-> Zwei Fragen: Was muss jede Seam garantieren? Was ist gerade offen?
->
-> **Pflege:** Aktualisieren wenn eine Seam neu entsteht, umgebaut wird oder sich ein Risiko ändert.
-> Historische Entscheidungen gehören in `DECISIONS.md`, erledigte Arbeit in `NOW.md §Recently completed`.
->
-> **Pflicht-Lektüre für Sessions die anfassen:** Edge Functions · Dialog/Commit-Pfad · Entity-Core · Intake-Pipeline
+> Kontroll-Instrument, kein Backlog. Verletzung eines Vertrags = Bug.
+> Pflege wenn Seam entsteht/umbaut/Risiko ändert. History → `DECISIONS.md`.
+> **Vor Arbeit an:** Edge Functions · Commit-Pfad · Entity-Core · Intake → §1 lesen.
 
 ---
 
 ## 1. Offene Risiken
 
-Stand: 2026-06-04. Sortiert nach Schadenspotenzial × Eintrittswahrscheinlichkeit.
+Stand: 2026-06-04 · Sortiert nach Schadenspotenzial × Eintrittswahrscheinlichkeit.
 
 | #    | Seam                                                   | Risiko                                                                                                                                                                                                                                    | Warum es offen ist                                                                                            | R     |
 | :--- | :----------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------ | :---- |
@@ -26,9 +22,7 @@ Stand: 2026-06-04. Sortiert nach Schadenspotenzial × Eintrittswahrscheinlichkei
 
 ## 2. Seam-Vertragsregister
 
-> Ein **Vertrag** beschreibt was eine Seam _immer_ garantieren muss — unabhängig von aktuellem Implementierungsstand.
-> Verletzung eines Vertrags = Bug, kein Backlog-Eintrag.
-> Spalte **Verletzung erkennen** zeigt das konkrete Signal im laufenden System.
+> Was eine Seam immer garantieren muss. Verletzung = Bug. Spalte „Verletzung erkennen" = konkretes Signal im laufenden System.
 
 ### 2a. Pipeline — Edge Functions
 
