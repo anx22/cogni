@@ -106,6 +106,30 @@ export const DialogProvider = ({ children }: { children: ReactNode }) => {
               .update({ box_state: "escalated" })
               .eq("id", route.reviewCaseId);
             if (error) throw error;
+            // Session-Progress nachziehen: escalate läuft am commit-fact-EF vorbei,
+            // der sonst updateSessionProgress() ruft. Logik gespiegelt (escalated
+            // zählt als resolved), damit eine voll-eskalierte Session nicht
+            // fälschlich „offen" bleibt (IntakeSessionsPanel / loadSession readonly).
+            const sessionId = session?.id;
+            if (sessionId) {
+              const { data: stats } = await supabase
+                .from("review_cases")
+                .select("box_state")
+                .eq("session_id", sessionId);
+              const total = stats?.length ?? 0;
+              const resolved =
+                stats?.filter((c) =>
+                  ["confirmed", "rejected", "escalated"].includes(c.box_state as string),
+                ).length ?? 0;
+              await supabase
+                .from("dialog_sessions")
+                .update({
+                  resolved_boxes: resolved,
+                  total_boxes: total,
+                  status: total > 0 && resolved >= total ? "completed" : "in_progress",
+                })
+                .eq("id", sessionId);
+            }
             toast.info("Zurückgestellt", { description: "Kann später erneut geöffnet werden" });
             devlog.edge("escalate ok", { reviewCaseId: route.reviewCaseId });
           } catch (err) {
