@@ -18,9 +18,10 @@ import {
 import { CHARACTERS, DEFAULT_CHARACTER_ID } from "./characters/registry";
 import type { CharacterId } from "./characters/types";
 import type { InputMode } from "./InputPills";
-import { composeCapabilities } from "@/lib/entity";
+import { composeCapabilities, deriveExpression, type InteractionMode } from "@/lib/entity";
 import { usePointerFollow } from "./behaviors/usePointerFollow";
 import { useA11yShell } from "./behaviors/useA11yShell";
+import { SignatureLayer } from "./expression/SignatureLayer";
 
 interface EntityRootProps {
   state?: EntityState;
@@ -33,6 +34,8 @@ interface EntityRootProps {
   presetOverride?: SampledPreset;
   /** Welcher Charakter gerendert wird. Default: "siri". */
   character?: CharacterId;
+  /** Interaction-Mode (Achse 2). Prägt zusammen mit dem State die Signatur. */
+  mode?: InteractionMode;
   /** Wird aufgerufen, wenn ein Charakter einen Input-Mode-Picker hat (face-pill). */
   onPickInputMode?: (mode: InputMode) => void;
 }
@@ -46,6 +49,7 @@ const EntityRoot = ({
   size = "320px",
   presetOverride,
   character = DEFAULT_CHARACTER_ID,
+  mode = "resting",
   onPickInputMode,
 }: EntityRootProps) => {
   const { presets } = useOrbPresets();
@@ -57,6 +61,15 @@ const EntityRoot = ({
   const caps = useMemo(() => composeCapabilities(Char.manifest), [Char]);
   const wrapperRef = useRef<HTMLDivElement>(null);
   usePointerFollow(wrapperRef, caps.motion.includes("pointer-follow"));
+
+  // Achsen-Komposition: der innere State (inkl. transientem Drag-„hover") + der
+  // Modus ergeben die aktuelle Bewegungs-Signatur.
+  const vm = useMemo(() => deriveExpression(internal, mode), [internal, mode]);
+
+  // Charaktere, die sich selbst morphen (custom-morph, z. B. FacePill), drücken
+  // ihren Zustand eigenständig aus und bekommen KEINE generische Transform-
+  // Signatur übergestülpt (Kollision mit Tilt-3d/Breathe). Siri & Co. ja.
+  const wantsSignature = !Char.manifest.motion?.includes("custom-morph");
 
   useEffect(() => {
     setInternal(state);
@@ -133,6 +146,13 @@ const EntityRoot = ({
     willChange: "transform",
   };
 
+  const characterNode = Char.render({
+    state: internal,
+    size: orbPx,
+    sample: active,
+    onPickInputMode,
+  });
+
   return (
     <div
       ref={wrapperRef}
@@ -144,12 +164,11 @@ const EntityRoot = ({
       onClick={handleClick}
       {...a11y}
     >
-      {Char.render({
-        state: internal,
-        size: orbPx,
-        sample: active,
-        onPickInputMode,
-      })}
+      {wantsSignature ? (
+        <SignatureLayer signature={vm.signature}>{characterNode}</SignatureLayer>
+      ) : (
+        characterNode
+      )}
     </div>
   );
 };

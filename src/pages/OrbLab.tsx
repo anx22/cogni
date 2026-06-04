@@ -16,6 +16,7 @@ import {
   useOrbPresets,
   samplePreset,
   ORB_PRESETS_DEFAULT,
+  INTERACTION_MODES,
   type EntityState,
   type OrbPresetRange,
   type Range,
@@ -23,6 +24,7 @@ import {
   type SurfaceBlend,
   type SurfaceRange,
 } from "@/components/entity/presets/orbPresets";
+import type { InteractionMode } from "@/lib/entity";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,6 +40,7 @@ import {
 } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatRelative } from "@/lib/format/relativeTime";
+import { cn } from "@/lib/utils";
 
 const STATES: EntityState[] = [
   "idle",
@@ -186,6 +189,7 @@ const OrbLab = () => {
   const { presets, loaded, setPreset, resetPreset } = useOrbPresets();
 
   const [state, setState] = useState<EntityState>("idle");
+  const [activeMode, setActiveMode] = useState<InteractionMode>("resting");
   const [size, setSize] = useState(320);
   const [seed, setSeed] = useState(0);
   const [savedAt, setSavedAt] = useState<number | null>(null);
@@ -289,6 +293,7 @@ const OrbLab = () => {
                 <div className="flex items-center justify-center" style={{ minHeight: size + 40 }}>
                   <EntityRoot
                     state={state}
+                    mode={activeMode}
                     size={`${size}px`}
                     presetOverride={sample}
                     character={characterId}
@@ -299,6 +304,9 @@ const OrbLab = () => {
                 <div className="flex items-center gap-2 flex-wrap justify-center">
                   <Badge variant="outline" className="font-normal">
                     {state}
+                    {activeMode !== "resting" && (
+                      <span className="text-muted-foreground"> × {activeMode}</span>
+                    )}
                   </Badge>
                   <Badge variant="outline" className="font-normal tabular-nums">
                     {sample.duration.toFixed(2)}s
@@ -361,6 +369,35 @@ const OrbLab = () => {
                       onSelect={setState}
                       seed={seed}
                     />
+                  ))}
+                </div>
+              </section>
+
+              {/* Modus-Achse — prägt die Bewegungs-Signatur (nur Live-Vorschau) */}
+              <section className="space-y-3">
+                <div className="flex items-baseline justify-between">
+                  <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                    Modus
+                  </div>
+                  <span className="text-[11px] text-muted-foreground">
+                    Achse 2 — wirkt auf die Signatur, solange der State ruhig ist
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {INTERACTION_MODES.map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setActiveMode(m)}
+                      className={cn(
+                        "rounded-lg border px-3 py-1.5 text-xs tracking-wide transition-colors",
+                        activeMode === m
+                          ? "border-primary/60 bg-primary/20 text-primary"
+                          : "border-border/50 bg-card/40 text-muted-foreground hover:text-foreground hover:border-border",
+                      )}
+                    >
+                      {m}
+                    </button>
                   ))}
                 </div>
               </section>

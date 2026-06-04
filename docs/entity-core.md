@@ -119,10 +119,14 @@ Formate (PDF/DOCX/PPTX/Bilder/EML), `contextHint`.
 Modi `listen|focus|scan|intake`. Lifecycle liefert Basis; bei `compose:*` + System idle/hover übernimmt
 Modus-Signatur+Palette; processing/failed/review-ready dominieren. Intensität (Single-Source-Map):
 `subtle: pulse,dim,focus` · `medium: rotate` · `strong: burst,tremor,listen,scan,intake`. `MotionSpec` je
-Signatur (transform/filter/duration/easing/loop/amplitude/reducedMotion), charakter-überschreibbar; `useMotionSignature`
-ist Single-Source für Bewegung + reduced-motion + `amplitudeSource`-Haken. Tokens: `--entity-ease-morph:
-cubic-bezier(0.175,0.885,0.32,1.1)`, `--entity-ease-snap: cubic-bezier(0.34,1.56,0.64,1)`, Blur-Reveal,
-Backdrop-Blur, Schatten-Halos. Modus-Paletten: `preset.mode.<mode>` (global), OrbLab States↔Modi-Achse.
+Signatur (WAA-Keyframes + reduced-Pose), charakter-überschreibbar; `useMotionSignature`/`resolveSignatureMotion`
+ist Single-Source für Bewegung + reduced-motion (`amplitudeSource`-Haken reserviert). **Umsetzung via Web
+Animations API** statt CSS-Klassen-Swap (`SignatureLayer`): beim Signatur-Wechsel weiche Bridge von der
+eingefrorenen Live-Pose (`getComputedStyle`+`commitStyles`) zurück zur Ruhe, dann nahtloser Loop — promise-
+basiert (`Animation.finished`), kein `transitionend`-Deadlock, race-safe per disposed-Flag (genau 1 Animation/
+Layer, auch bei schnellen Wechseln). Bridge-Ease = Orb-Transition `cubic-bezier(0.34,1.26,0.64,1)` 0.5 s. Tokens:
+`--entity-ease-morph: cubic-bezier(0.175,0.885,0.32,1.1)`, `--entity-ease-snap: cubic-bezier(0.34,1.56,0.64,1)`.
+Modus-Paletten: `preset.mode.<mode>` (global), OrbLab States↔Modi-Achse.
 
 ### Kommunikation — dritte Säule
 
@@ -189,7 +193,14 @@ capabilities}` + Tests + Barrel. ✅ 2026-06-02 (auf dev)
   Index adoptiert `useEntity()`. **`EntityRail` (M2) wird erster `useEntity()`-Konsument** — nicht daran vorbeibauen.
 - **2 — Orchestrator umbenennen + Visuals verschieben** (visuell identisch).
 - **3 — Capability-Vertrag + A11y** (visuell identisch).
-- **4 — Ausdrucks-Engine** (visuelles Upgrade): Signaturen, Intensität, Modus-Paletten, OrbLab-Achse.
+- **4 — Ausdrucks-Engine** (erstes visuelles Upgrade): Signaturen, Intensität, Modus-Paletten, OrbLab-Achse.
+  ✅ 2026-06-04 (auf dev). `expression/{signatures,useMotionSignature,SignatureLayer}` + `MOTION_SIGNATURES`
+  (Referenz-Keyframes va-core-\* als WAA-Keyframes), `palette` im VM (`SIGNATURE_PALETTE`), `preset.mode.<mode>`
+  (+ Test). **SignatureLayer treibt die Signatur über die Web Animations API** (nicht CSS-Klassen-Swap): Bridge
+  (Live-Pose→Ruhe via `commitStyles`) + Loop, race-safe (kein `transitionend`-Deadlock, keine Animations-
+  Akkumulation bei schnellen Wechseln — im Browser über `getAnimations()` verifiziert). Eigene Transform-Ebene
+  (`position:absolute`) getrennt vom Pointer-Follow. **custom-morph-Charaktere (FacePill) opten aus** (eigener
+  Ausdruck via STATE_TUNE). `tremor` zündet einmal beim Fehler-Eintritt und klingt aus (kein Dauer-Buzz).
 - **5 — Unified Composer** (eine Eingabefläche; Index + ProjectScreen; alle InputOverlay-Features).
 - **6 — Kommunikation + Orbit + ein Signal-Stream**.
 - **7 — Mehrfach-Mount-Reuse**: dieselbe `useEntity()`-Quelle an weiteren Mount-Punkten (z.B. `EntityRail` auf

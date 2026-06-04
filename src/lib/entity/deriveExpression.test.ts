@@ -9,6 +9,15 @@ describe("deriveExpression — Achsen & Intensität", () => {
     expect(e.tone).toBe("default");
   });
 
+  it("liefert eine oklch-Palette je Signatur", () => {
+    expect(deriveExpression("idle", "resting").palette.primary).toContain("oklch");
+    expect(deriveExpression("processing", "resting").palette.primary).toContain("oklch");
+    // Modus-Signatur prägt die Palette (compose:voice → listen → grün).
+    const voice = deriveExpression("idle", "compose:voice");
+    expect(voice.signature).toBe("listen");
+    expect(voice.palette.primary).toContain("oklch");
+  });
+
   it("processing → rotate/medium/working", () => {
     const e = deriveExpression("processing", "resting");
     expect(e.signature).toBe("rotate");
