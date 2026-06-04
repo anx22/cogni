@@ -45,10 +45,17 @@ export interface CommitRouteInput {
   userDecision?: Record<string, unknown>;
   /** Fallback-Projekt aus der Session für intake_note. */
   sessionProjectId?: string | null;
+  /**
+   * Wenn true: Fakt nicht committed/rejected, sondern in den
+   * zurückgestellten Eskalations-Zustand versetzt.
+   * Nur wirksam wenn reviewCaseId vorhanden — sonst noop.
+   */
+  escalate?: boolean;
 }
 
 export type CommitRoute =
   | { kind: "ignore_readonly" }
+  | { kind: "escalate"; reviewCaseId: string }
   | { kind: "resolve_conflict"; contradictionId: string; auswahl: "A" | "B" | null; label: string }
   | { kind: "keep_conflict_open" }
   | { kind: "topic_merge"; candidateId: string; efDecision: "merge" | "reject" }
@@ -71,11 +78,16 @@ const conflictLabel = (auswahl: "A" | "B" | null): string =>
  * Verändert nichts — der Aufrufer führt die Seiteneffekte aus.
  */
 export function planCommitRoute(input: CommitRouteInput): CommitRoute {
-  const { readonly, payload, decision, userDecision, sessionProjectId } = input;
+  const { readonly, payload, decision, userDecision, sessionProjectId, escalate } = input;
 
   if (readonly) return { kind: "ignore_readonly" };
 
   const reviewCaseId = payload?.__reviewCaseId;
+
+  // Eskalation: Review-Case zurückstellen, kein canonical_facts-Insert.
+  if (escalate && reviewCaseId) {
+    return { kind: "escalate", reviewCaseId };
+  }
 
   // Backend-Review-Case → commit-fact dominiert.
   if (reviewCaseId) {

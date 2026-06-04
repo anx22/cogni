@@ -39,6 +39,14 @@ User-Review (Dialog-Overlay)
   nur via Barrel `@/lib/entity`, keine Tiefimporte; andere Module reden über Signale (Input) + `vm`/`controller`
   (Output), nie via `setEntityState`/Hardcoding. Spec: `docs/entity-core.md`. Nur Entity-Kern im `entity/`-Ordner.
 
+## Branch-Flow
+
+```
+Feature-Branch  →  PR  →  dev  →  main
+```
+
+Kein Direkt-Push auf `dev` oder `main`. Alle Änderungen laufen über PR, damit CI und Review greifen.
+
 ## Golden Principles
 
 - **[HARD]** `console.log` in Edge Functions verboten (außer in `_shared/logger.ts`). CI-Smoke `qa.yml::smoke` blockt Pushes.

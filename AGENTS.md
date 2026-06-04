@@ -33,3 +33,4 @@ Siehe `docs/NOW.md`. M1–M3 + Entity-Core durch. Aktiv: M4 (Bedeutungs-Integrit
 - Vor jeder Antwort zu Infra/Status echte Daten ziehen (railway-admin, inspect-\*, supabase--read_query).
 - Strukturelle Entscheidung → Eintrag in `docs/DECISIONS.md`. Sprintwechsel → `docs/NOW.md` updaten.
 - **Edge Functions · Commit-Pfad · Entity-Core · Intake anfassen?** → erst `docs/qa-seam-inventar.md §1 Offene Risiken` lesen.
+- **Branch-Flow:** Feature-Branch → PR → `dev` → `main`. Kein Direkt-Push auf `dev` oder `main`.
