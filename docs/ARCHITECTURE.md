@@ -42,10 +42,10 @@ User-Review (Dialog-Overlay)
 ## Branch-Flow
 
 ```
-Feature-Branch  →  PR  →  dev  →  main
+dev  →  main  (via PR)
 ```
 
-Kein Direkt-Push auf `dev` oder `main`. Alle Änderungen laufen über PR, damit CI und Review greifen.
+Direkt-Push auf `dev` erlaubt. `main` nur über PR von `dev`.
 
 ## Golden Principles
 
