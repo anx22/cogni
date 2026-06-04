@@ -6,12 +6,11 @@ import { useOrbSizeTier } from "@/components/entity/useOrbSizeTier";
 import { ORB_TIER_HOME_SIZE } from "@/components/entity/presets/orbSizeTier";
 import EntityVoiceLine from "@/components/entity/EntityVoiceLine";
 import AppSidebar from "@/components/sidebar/AppSidebar";
-import HomePrompt from "@/components/home/HomePrompt";
 import ImpactPipelinePanel from "@/components/home/ImpactPipelinePanel";
 import MobileNavSheet from "@/components/home/MobileNavSheet";
 import HomeDropOverlay from "@/components/entity/HomeDropOverlay";
 import AssetOrbit from "@/components/entity/satellites/AssetOrbit";
-import InputOverlay from "@/components/entity/InputOverlay";
+import EntityComposer from "@/components/entity/input/EntityComposer";
 import AccountDrawer from "@/components/home/AccountDrawer";
 import CreateProjectDialog from "@/components/project/CreateProjectDialog";
 import { useProjects } from "@/lib/project/useProjects";
@@ -136,26 +135,14 @@ const Index = () => {
           />
         </div>
 
-        {/* Eingabe-Slot (HomePrompt oder InputOverlay) */}
-        <div className="shrink-0 flex justify-center px-4 pb-3">
-          {overlayOpen ? (
-            <div className="w-full max-w-xl z-30">
-              <InputOverlay
-                open={overlayOpen}
-                onClose={() => setOverlayOpen(false)}
-                onSubmit={intake}
-                contextHint="Wird global aufgenommen — Zuordnung kommt im Dialog."
-              />
-            </div>
-          ) : (
-            <HomePrompt
-              onUpload={() => setOverlayOpen(true)}
-              onPaste={() => setOverlayOpen(true)}
-              onLink={() => setOverlayOpen(true)}
-              onVoice={() => setOverlayOpen(true)}
-              onNote={() => setOverlayOpen(true)}
-            />
-          )}
+        {/* Eingabe-Slot — Unified Composer (ruhende Leiste, morpht bei Fokus) */}
+        <div className="shrink-0 flex justify-center px-4 pb-3 z-30">
+          <EntityComposer
+            open={overlayOpen}
+            onOpenChange={setOverlayOpen}
+            onSubmit={intake}
+            contextHint="Wird global aufgenommen — Zuordnung kommt im Dialog."
+          />
         </div>
 
         {/* Voice + Hint — fester Footer-Slot */}
