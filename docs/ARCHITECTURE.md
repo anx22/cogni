@@ -54,7 +54,10 @@ Direkt-Push auf `dev` erlaubt. `main` nur über PR von `dev`.
 - **[HARD]** Jede Stage in der Pipeline schreibt strukturiertes Log via `createLogger({fn, ...})` mit `correlation_id` (`asset_id` / `run_id`).
 - **[HARD]** Roles in separater Tabelle (`user_roles`), Check via `has_role()` SECURITY DEFINER. Niemals Rolle auf `profiles`.
 - **[HARD]** RLS auf jeder neuen Tabelle. User-bezogene Daten via `auth.uid()`-Filter, nicht via FK auf `auth.users`.
-- **[HARD]** Semantische Tailwind-Tokens. Keine Roh-Farben in Komponenten, keine `text-white`-Direktklassen.
+- **[HARD]** Semantische Tailwind-Tokens. Keine Roh-Farben in Komponenten, keine `text-white`-Direktklassen. `data-theme="day"|"night"` ist Theme-Quelle.
+- **[HARD]** `ProjectViewModel`-Vertrag (`src/lib/project/types.ts`) ist Schnittstelle UI↔Logik. Erweitern OK, umbenennen/entfernen nur mit Mapper-Migration.
+- **[HARD]** Keine `src/lib/**`-Eingriffe für reine Designwünsche.
+- **[PREFER]** Strukturelle Entscheidung → Eintrag in `docs/DECISIONS.md`. Sprintwechsel → `docs/NOW.md` aktualisieren.
 - **[PREFER]** Kernlogik aus `Deno.serve`-Closure in pure Funktionen ziehen (Vorbild: `commitFact()`, `handleCallback()`).
 - **[PREFER]** Mocked Supabase-Tests via `mockAdmin()` aus `_shared/testFixtures.ts`.
 - **[PREFER]** Frontend-Polling nutzt `pollAolRun` / `pollAolRunByAsset` aus `src/lib/pipeline/`.
