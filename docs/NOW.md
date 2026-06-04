@@ -1,7 +1,7 @@
 # NOW — MainCompass
 
 > Sessions-übergreifender Kompass für die **Gegenwart**. Erst hier lesen, dann gezielt weiter.
-> **Was kommt: `ROADMAP.md`** · Regeln: `ARCHITECTURE.md` · Vision: `PRODUCT.md` · Begründungen: `DECISIONS.md` · QA: `qa-seam-inventar.md`
+> **Zukunft: `PLAN.md`** · Vergangenheit: Git (`git log --oneline -- docs/`) · Regeln: `ARCHITECTURE.md` · Vision: `PRODUCT.md` · Warum: `DECISIONS.md` · QA: `qa-seam-inventar.md`
 
 ---
 

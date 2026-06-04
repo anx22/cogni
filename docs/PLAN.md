@@ -1,6 +1,6 @@
-# ROADMAP — Was kommt
+# PLAN — Was kommt
 
-> Vorwärts-Sicht. Gegenwart: `NOW.md` · Begründungen: `DECISIONS.md` · M4-Detail: `m4-spec.md` · Entity-Core-Detail: `entity-core.md`.
+> Vorwärts-Sicht (Zukunft). Gegenwart: `NOW.md` · Begründungen: `DECISIONS.md` · M4-Detail: `m4-spec.md` · Entity-Core-Detail: `entity-core.md`.
 
 **Sequenz:** M1 ✅ → M2 ✅ → M3 ✅ → **Entity-Core Phase 1–7 (aktiv)** → **M4 (priorisiert)** → **Wave 3** → Langfrist-Backlog (L1–L14).
 

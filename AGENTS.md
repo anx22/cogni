@@ -9,14 +9,25 @@ Drei Außenmodi: Entität, Projekt, Dialog-Overlay. Persistente `AppSidebar` (Pr
 
 ## Routing
 
+**Wissen (steht):**
+
 - **Was tut das Produkt?** → `docs/PRODUCT.md`
-- **Wie ist es gebaut?** → `docs/ARCHITECTURE.md`
+- **Wie ist es gebaut?** (Ist-Zustand) → `docs/ARCHITECTURE.md`
+- **Warum so entschieden?** (thematisch) → `docs/DECISIONS.md`
+
+**Zeit (bewegt sich):**
+
 - **Was läuft jetzt?** → `docs/NOW.md`
-- **Was kommt? (Roadmap + Backlog)** → `docs/ROADMAP.md`
-- **Warum so entschieden?** → `docs/DECISIONS.md`
-- **Seam-Inventar (lebende QA-Karte)** → `docs/qa-seam-inventar.md`
-- **Entity-Kernmodul (Spec + Refactor-Roadmap)** → `docs/entity-core.md`
+- **Was kommt?** (Roadmap + Backlog) → `docs/PLAN.md`
+- **Was wann geliefert?** → Git: `git log --oneline -- docs/` · alter Stand: `git show <commit>:<datei>`
+
+**Spezial-Specs:**
+
+- **Lebende QA-Karte** → `docs/qa-seam-inventar.md`
+- **Entity-Kernmodul** → `docs/entity-core.md`
 - **M4-Detailspec (S0–S9)** → `docs/m4-spec.md`
+
+> Vollständige chronologische Doku-Historie zusätzlich verbatim unter `docs/concept/veraltet/`.
 
 ## Service-Schicht
 
