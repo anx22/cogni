@@ -215,10 +215,21 @@ capabilities}` + Tests + Barrel. ✅ 2026-06-02 (auf dev)
   verständlich beschriftet. **FacePill-Morph** an Orby-Fremdcode angeglichen (Hülle: offen 260×160, Glas
   `blur(50px)`, rotierendes 4-Farben-Bälle-Kreuz, Augen→Inhalt-Crossfade, Tilt ±15°); **2×2-Inhalt bleibt →
   wandert in Phase 5** in den Composer.
-- **5 — Unified Composer** (eine Eingabefläche; Index + ProjectScreen; alle InputOverlay-Features).
-- **6 — Kommunikation + Orbit + ein Signal-Stream**.
-- **7 — Mehrfach-Mount-Reuse**: dieselbe `useEntity()`-Quelle an weiteren Mount-Punkten (z.B. `EntityRail` auf
-  jedem Screen) — beweist die Architektur. **Kein ⌘+Space-Overlay** (vom Treiber gestrichen; M2 = persistente `EntityRail`).
+- **5 — Unified Composer** ✅ 2026-06-04 (auf dev). `input/{EntityComposer, useComposer, composerTokens.css}` —
+  ruhende Leiste, morpht bei Fokus; ersetzt HomePrompt + InputOverlay + FacePill-2×2. Auto-Detect Text↔Link
+  (`detectFromText` bei Submit), Datei/Sprache als Affordanzen; alle InputOverlay-Features migriert (Paste-Preview
+  ≥100 Z., `useVoiceRecorder`, `partitionFiles`+Toasts, contextHint). Achse 2 verdrahtet: `controller.interact`
+  (open/pick/close) → `mode` im ExpressionVM → Orb reagiert auf `compose:*`. Kontrolliertes `open` → Orb =
+  Zweit-Einstieg. Index + ProjectScreen umgestellt; HomePrompt + InputOverlay gelöscht.
+- **6 — Kommunikation + ein Signal-Stream** ✅ 2026-06-04 (auf dev). `lib/entity/communication/` (types, vocabulary,
+  policy, utterances, triggerMapping, useEntityCommunication; 23 Tests). `deriveUtterance` rein; `agent_reason`-
+  Override bei review.ready; Anti-Repeat geseedet; Chattiness-Gating (`useNamespace("orb",user)`). **Dual-
+  Subscription gelöst:** `useEntityVoice` gelöscht — Voice läuft aus DEM `useEntitySources`-Stream (emittiert
+  zusätzlich Utterance-Trigger). `EntityVoiceLine` liest `useEntity().utterance`.
+- **7 — Mehrfach-Mount-Reuse** ✅ 2026-06-04 (auf dev). Integrationstest `EntityProvider.test.tsx`: ein Provider →
+  mehrere `useEntity()`-Konsumenten teilen State; ein Signal updatet alle Mounts (+ Achse-2-Mode). ESLint
+  `no-restricted-imports`-Guard: Entity-Kern extern nur über Barrel `@/lib/entity`. **Kein ⌘+Space-Overlay**
+  (gestrichen; M2 = persistente `EntityRail`).
 
 ## Tests (Vitest, Vorbild `src/lib/project/`)
 

@@ -11,7 +11,7 @@ Belastbare Basis steht. Vision-Kern ~90% implementiert, UI-Sprache am Prototyp a
 
 - **Pipeline 7/7** · **Detektoren 5/5** · **Dialog 18 BoxTypes** · **4 Rollen-Frontend**
 - **Tests**: 162/162 Vitest · Deno-Suiten pro Detector · 19/19 EFs mit Boundary + Logger · RLS überall
-- Aktiv: **Entity-Core Phase 5–7** (1–4 ✅) · **M4 (Bedeutungs-Integrität)** · **Wave 3 (Lebendiges System)**
+- Aktiv: **M4 (Bedeutungs-Integrität)** · **Wave 3 (Lebendiges System)** — **Entity-Core ✅ abgeschlossen**
 
 ---
 
@@ -21,7 +21,7 @@ Belastbare Basis steht. Vision-Kern ~90% implementiert, UI-Sprache am Prototyp a
 ✅ **M2** — `EntityRail` persistent rechts (2026-06-03) → Details: `DECISIONS.md`
 ✅ **M3** — Antwort-Loops geschlossen, Feedback flächendeckend (2026-06-03) → Details: `DECISIONS.md`
 
-**Entity-Core** — aktiv → Spec: `docs/entity-core.md`
+**Entity-Core** — ✅ alle Phasen (A,0–7) abgeschlossen → Spec: `docs/entity-core.md`
 
 **M4 — Bedeutungs-Integrität & Entity-Identität** → Detailspec: `docs/m4-spec.md`
 Reihenfolge: **S0** (Beleg) → S1 → S2 → **S8** → S3 → S4 → S5 → S6 → S7/S9 (später)
@@ -44,6 +44,6 @@ LS-1 Confidence Decay · LS-3 Review-Badge · LS-2 Project Pulse — Reihenfolge
 
 _Nur die letzten ~3 (je 1 Zeile). Ältere raus → Git (`git log --oneline -- docs/`), nicht DECISIONS._
 
-- **2026-06-04 — Entity-Politur** Home-Entität zentral (Rail nur ProjectScreen), Siri ohne Pointer-Follow, OrbLab Config-Mode + Editor-Overhaul (HSL, Generator, Presets, Größen-Tier), FacePill-Morph an Orby; Entity-Core Phase 1–4 auf `dev`. 169/169 ✓, tsc 0. Detail: `entity-core.md`.
-- **2026-06-04 — OR-1 fix (escalate-Flag)** `commitRoute.ts` + `DialogProvider.tsx` + 5 Tests. 162/162 ✓, tsc 0.
-- **2026-06-03 — M3 abgeschlossen** Feedback-Layer flächendeckend (Lage+Verlauf+Substanz). 150/150 ✓, tsc 0.
+- **2026-06-04 — Entity-Core abgeschlossen (Phase 5–7)** Unified Composer + Kommunikation (ein Signal-Stream, useEntityVoice gelöst) + Multi-Mount-Beweis + Modulgrenze-Guard. 194/194 ✓, tsc 0, build ✓. Detail: `entity-core.md`.
+- **2026-06-04 — Entity-Politur + Phase 1–4** Home-Entität zentral, Siri ohne Pointer-Follow, OrbLab Config-Mode, FacePill-Morph, Ausdrucks-Engine. Detail: `entity-core.md`.
+- **2026-06-04 — OR-1 fix (escalate-Flag)** `commitRoute.ts` + `DialogProvider.tsx` + 5 Tests. tsc 0.
