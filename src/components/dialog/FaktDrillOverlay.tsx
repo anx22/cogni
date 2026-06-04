@@ -8,6 +8,7 @@
 
 import { useDialog } from "./DialogProvider";
 import SessionHeader from "./parts/SessionHeader";
+import AssignmentOptions, { type AssignmentPayload } from "./parts/AssignmentOptions";
 import { END_STATES } from "@/lib/dialog/types";
 import { useState } from "react";
 import { ArrowLeft, AlertTriangle } from "lucide-react";
@@ -1362,6 +1363,51 @@ const FaktDrillOverlay = ({ onClose }: { onClose: () => void }) => {
     );
   };
 
+  const renderAssignment = () => {
+    const reason = box.payload?.agent_reason as string | undefined;
+    return (
+      <div
+        style={{
+          flex: 1,
+          padding: "32px 56px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 20,
+          overflowY: "auto",
+        }}
+      >
+        <div
+          style={{
+            padding: "22px 24px",
+            borderRadius: 16,
+            background: "var(--d-surf)",
+            border: "1px solid var(--d-hair-2)",
+          }}
+        >
+          <div
+            className="mono"
+            style={{
+              fontSize: 10,
+              color: "var(--d-ink-3)",
+              letterSpacing: ".06em",
+              textTransform: "uppercase",
+              marginBottom: 8,
+            }}
+          >
+            Was cogni vorschlägt
+          </div>
+          <p style={{ fontSize: 15, color: "var(--d-ink)", lineHeight: 1.5, margin: 0 }}>
+            {reason ?? "Wähle ein bestehendes Projekt oder leg ein neues an."}
+          </p>
+        </div>
+        <AssignmentOptions
+          payload={box.payload as unknown as AssignmentPayload}
+          onPick={(d) => commitBox(box.id, "confirm", d)}
+        />
+      </div>
+    );
+  };
+
   const hasGenericEmpfehlung =
     empBlock && empBlock.kind && empBlock.kind !== "konflikt" && !showCompare;
 
@@ -1380,7 +1426,9 @@ const FaktDrillOverlay = ({ onClose }: { onClose: () => void }) => {
           ? renderEmpfehlungBuehne()
           : box.type === "gap"
             ? renderGap()
-            : renderGeneric()}
+            : box.type === "zuordnung"
+              ? renderAssignment()
+              : renderGeneric()}
     </div>
   );
 };

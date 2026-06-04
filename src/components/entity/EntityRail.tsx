@@ -6,8 +6,10 @@
 // =============================================================================
 import type { ReactNode } from "react";
 import EntityRoot from "./EntityRoot";
+import EntityVoiceLine from "./EntityVoiceLine";
 import AccountDrawer from "@/components/home/AccountDrawer";
 import { useEntity } from "@/lib/entity";
+import { retryIntake } from "@/lib/intake/retryIntake";
 
 interface EntityRailProps {
   onCoreClick: () => void;
@@ -65,6 +67,11 @@ const EntityRail = ({
           onPickInputMode={onPickInputMode}
           size="96px"
         />
+      </div>
+
+      {/* Voice-Slot — die Entität spricht (kompakt für die schmale Schiene) */}
+      <div className="shrink-0 flex items-center justify-center px-3 py-2 min-h-[36px]">
+        <EntityVoiceLine compact onRetry={retryIntake} />
       </div>
 
       {/* Content-Slot */}

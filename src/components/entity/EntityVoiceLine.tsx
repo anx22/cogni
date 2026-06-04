@@ -13,11 +13,13 @@ import { useEntity, type Utterance } from "@/lib/entity";
 
 interface Props {
   onRetry?: (assetId: string) => void;
+  /** Kompakt für schmale Flächen (EntityRail): kleiner Text, umbruchfähig. */
+  compact?: boolean;
 }
 
 const EMPTY: Utterance = { text: "", tone: "calm" };
 
-const EntityVoiceLine = ({ onRetry }: Props) => {
+const EntityVoiceLine = ({ onRetry, compact = false }: Props) => {
   const { utterance } = useEntity();
   const [shown, setShown] = useState<Utterance>(utterance ?? EMPTY);
   const [visible, setVisible] = useState(true);
@@ -46,12 +48,16 @@ const EntityVoiceLine = ({ onRetry }: Props) => {
 
   return (
     <div
-      className={`flex items-center gap-3 transition-all duration-200 ${
-        visible ? "opacity-100 blur-0" : "opacity-0 blur-sm"
-      }`}
+      className={`flex items-center gap-2 transition-all duration-200 ${
+        compact ? "justify-center text-center" : "gap-3"
+      } ${visible ? "opacity-100 blur-0" : "opacity-0 blur-sm"}`}
     >
       <p
-        className={`text-2xl font-light tracking-wide ${toneColor}`}
+        className={
+          compact
+            ? `text-sm font-normal leading-snug ${toneColor}`
+            : `text-2xl font-light tracking-wide ${toneColor}`
+        }
         style={{ textShadow: "0 0 40px hsl(var(--background))" }}
       >
         {shown.text}
