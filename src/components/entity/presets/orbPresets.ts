@@ -6,6 +6,7 @@
 
 import { useMemo } from "react";
 import { useNamespace } from "@/lib/settings/useNamespace";
+import type { InteractionMode } from "@/lib/entity";
 
 export type EntityState =
   | "idle"
@@ -265,4 +266,89 @@ function mergePreset(def: OrbPresetRange, override: OrbPresetRange | undefined):
     duration: override.duration ?? def.duration,
     surface: { ...def.surface, ...(override.surface ?? {}) },
   };
+}
+
+// ---- Modus-Paletten (Achse 2) ----------------------------------------------
+//  Pro InteractionMode eine semantische Akzentfarbe (OKLCH-Range, gesampelt wie
+//  die State-Presets). Fundament für Phase 4+: vorerst global persistierbar
+//  (Namespace "orb", Keys `preset.mode.<mode>`), noch nicht an das Visual
+//  verdrahtet (Farbe kommt weiterhin aus den State-Presets).
+
+export interface ModePaletteRange {
+  primary: ColorRange;
+}
+
+export const INTERACTION_MODES: InteractionMode[] = [
+  "resting",
+  "open",
+  "compose:note",
+  "compose:link",
+  "compose:file",
+  "compose:voice",
+];
+
+export const ORB_MODE_PRESETS_DEFAULT: Record<InteractionMode, ModePaletteRange> = {
+  resting: {
+    primary: { l: { min: 74, max: 78 }, c: { min: 0.09, max: 0.11 }, h: { min: 190, max: 196 } },
+  },
+  open: {
+    primary: { l: { min: 76, max: 80 }, c: { min: 0.1, max: 0.13 }, h: { min: 188, max: 194 } },
+  },
+  "compose:note": {
+    primary: { l: { min: 72, max: 76 }, c: { min: 0.11, max: 0.14 }, h: { min: 160, max: 168 } },
+  },
+  "compose:link": {
+    primary: { l: { min: 74, max: 78 }, c: { min: 0.09, max: 0.11 }, h: { min: 190, max: 196 } },
+  },
+  "compose:file": {
+    primary: { l: { min: 72, max: 76 }, c: { min: 0.13, max: 0.16 }, h: { min: 160, max: 168 } },
+  },
+  "compose:voice": {
+    primary: { l: { min: 72, max: 76 }, c: { min: 0.14, max: 0.16 }, h: { min: 161, max: 165 } },
+  },
+};
+
+const modePresetKey = (mode: InteractionMode) => `preset.mode.${mode}`;
+
+export interface SampledModePalette {
+  primary: string;
+}
+
+export function sampleModePalette(p: ModePaletteRange): SampledModePalette {
+  return { primary: sampleColor(p.primary) };
+}
+
+export interface OrbModePalettesAPI {
+  palettes: Record<InteractionMode, ModePaletteRange>;
+  loaded: boolean;
+  setPalette: (mode: InteractionMode, value: ModePaletteRange) => void;
+  resetPalette: (mode: InteractionMode) => void;
+}
+
+/** Live, DB-backed Modus-Paletten. Fällt auf Defaults zurück. */
+export function useOrbModePalettePresets(): OrbModePalettesAPI {
+  const { values, setValue, loaded } = useNamespace<ModePaletteRange>("orb");
+
+  const palettes = useMemo(() => {
+    const out = {} as Record<InteractionMode, ModePaletteRange>;
+    for (const m of INTERACTION_MODES) {
+      out[m] = mergeModePalette(ORB_MODE_PRESETS_DEFAULT[m], values[modePresetKey(m)]);
+    }
+    return out;
+  }, [values]);
+
+  return {
+    palettes,
+    loaded,
+    setPalette: (mode, value) => setValue(modePresetKey(mode), value),
+    resetPalette: (mode) => setValue(modePresetKey(mode), ORB_MODE_PRESETS_DEFAULT[mode]),
+  };
+}
+
+export function mergeModePalette(
+  def: ModePaletteRange,
+  override: ModePaletteRange | undefined,
+): ModePaletteRange {
+  if (!override) return def;
+  return { primary: override.primary ?? def.primary };
 }

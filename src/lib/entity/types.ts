@@ -62,14 +62,23 @@ export type MotionSignature =
 export type Intensity = "subtle" | "medium" | "strong";
 export type ExpressionTone = "default" | "working" | "ready" | "alert";
 
-/** Ausdrucks-ViewModel (Bewegung). Palette kommt zur Laufzeit aus den Presets
- *  hinzu (spädere Phase) — die reine Ableitung liefert Signatur/Intensität/Tone. */
+/** Semantische Akzentfarbe des aktuellen Ausdrucks (Referenz-Tones je Signatur).
+ *  Vorerst informativ/Forward-Slot — die gerenderten Orb-Farben kommen weiterhin
+ *  aus den gesampleten Presets. */
+export interface OrbPalette {
+  /** CSS-oklch()-String. */
+  primary: string;
+}
+
+/** Ausdrucks-ViewModel. Reine Ableitung aus (state, mode):
+ *  Signatur/Intensität/Tone + semantische Palette. */
 export interface ExpressionVM {
   state: EntityState;
   mode: InteractionMode;
   signature: MotionSignature;
   intensity: Intensity;
   tone: ExpressionTone;
+  palette: OrbPalette;
 }
 
 export type CharacterId = "siri" | "face-pill";
