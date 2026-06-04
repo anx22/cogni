@@ -1,7 +1,7 @@
 # NOW — MainCompass
 
-> Sessions-übergreifender Kompass. Erst hier lesen, dann gezielt weiter.
-> Regeln: `ARCHITECTURE.md` · Vision: `PRODUCT.md` · Begründungen: `DECISIONS.md` · QA: `qa-seam-inventar.md`
+> Sessions-übergreifender Kompass für die **Gegenwart**. Erst hier lesen, dann gezielt weiter.
+> **Was kommt: `ROADMAP.md`** · Regeln: `ARCHITECTURE.md` · Vision: `PRODUCT.md` · Begründungen: `DECISIONS.md` · QA: `qa-seam-inventar.md`
 
 ---
 

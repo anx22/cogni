@@ -12,6 +12,7 @@ Drei Außenmodi: Entität, Projekt, Dialog-Overlay. Persistente `AppSidebar` (Pr
 - **Was tut das Produkt?** → `docs/PRODUCT.md`
 - **Wie ist es gebaut?** → `docs/ARCHITECTURE.md`
 - **Was läuft jetzt?** → `docs/NOW.md`
+- **Was kommt? (Roadmap + Backlog)** → `docs/ROADMAP.md`
 - **Warum so entschieden?** → `docs/DECISIONS.md`
 - **Seam-Inventar (lebende QA-Karte)** → `docs/qa-seam-inventar.md`
 - **Entity-Kernmodul (Spec + Refactor-Roadmap)** → `docs/entity-core.md`
