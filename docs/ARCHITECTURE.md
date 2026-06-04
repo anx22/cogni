@@ -58,7 +58,7 @@ Direkt-Push auf `dev` erlaubt. `main` nur über PR von `dev`.
 - **[HARD]** Semantische Tailwind-Tokens. Keine Roh-Farben in Komponenten, keine `text-white`-Direktklassen. `data-theme="day"|"night"` ist Theme-Quelle.
 - **[HARD]** `ProjectViewModel`-Vertrag (`src/lib/project/types.ts`) ist Schnittstelle UI↔Logik. Erweitern OK, umbenennen/entfernen nur mit Mapper-Migration.
 - **[HARD]** Keine `src/lib/**`-Eingriffe für reine Designwünsche.
-- **[PREFER]** Strukturelle Entscheidung → `docs/DECISIONS.md` (thematisch, das Warum). Sprintwechsel → `docs/NOW.md` aktualisieren — Deckel **~60 Zeilen**; ältere Erledigungen fallen raus (Historie = Git, **nicht** DECISIONS). Pflege-Regel steht in `NOW.md §Pflege`.
+- **[PREFER]** Strukturelle Entscheidung → `docs/DECISIONS.md` (thematisch, das Warum). Sprintwechsel → `docs/NOW.md` aktualisieren — **Recently completed** dort auf ~3 Einträge deckeln; ältere fallen raus (Historie = Git, **nicht** DECISIONS). Pflege-Regel: `NOW.md §Pflege`.
 - **[PREFER]** Kernlogik aus `Deno.serve`-Closure in pure Funktionen ziehen (Vorbild: `commitFact()`, `handleCallback()`).
 - **[PREFER]** Mocked Supabase-Tests via `mockAdmin()` aus `_shared/testFixtures.ts`.
 - **[PREFER]** Frontend-Polling nutzt `pollAolRun` / `pollAolRunByAsset` aus `src/lib/pipeline/`.

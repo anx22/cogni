@@ -50,8 +50,8 @@ LS-1 Confidence Decay · LS-3 Review-Badge · LS-2 Project Pulse — Reihenfolge
 
 ## Pflege (Anti-Bloat)
 
-> **Wird diese Datei länger als ~60 Zeilen, ist etwas falsch — ausmisten.** NOW beschreibt nur die **Gegenwart**.
+> NOW beschreibt nur die **Gegenwart** — Status/aktive Arbeit dürfen in heißen Phasen ausführlicher werden.
+> Der Deckel gilt nur für **Recently completed**:
 >
 > - **Recently completed**: nur die letzten ~3, je 1 Zeile. Ältere fallen raus — Historie lebt in Git (`git log --oneline -- docs/`), **nicht** in DECISIONS.
 > - Wird ein Status zur Grundsatzentscheidung → `DECISIONS.md` (warum). Zukünftiges → `PLAN.md`.
-> - Kein Backlog, keine Begründungen, keine Chronologie hier.
