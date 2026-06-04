@@ -44,7 +44,7 @@ export const StaticStatePreview = ({
         className="relative h-[72px] w-[72px] flex items-center justify-center pointer-events-none select-none"
         aria-hidden
       >
-        {character.render({ state, size: 64, sample })}
+        {character.render({ state, size: 64, sample, interaction: "static" })}
       </div>
       <div className="text-[10px] tracking-wide text-foreground/80">{state}</div>
     </button>

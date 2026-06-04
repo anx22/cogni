@@ -1,6 +1,9 @@
 import { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import EntityRail from "@/components/entity/EntityRail";
+import EntityRoot from "@/components/entity/EntityRoot";
+import { useSelectedCharacter } from "@/components/entity/useSelectedCharacter";
+import { useOrbSizeTier } from "@/components/entity/useOrbSizeTier";
+import { ORB_TIER_HOME_SIZE } from "@/components/entity/presets/orbSizeTier";
 import EntityVoiceLine from "@/components/entity/EntityVoiceLine";
 import AppSidebar from "@/components/sidebar/AppSidebar";
 import HomePrompt from "@/components/home/HomePrompt";
@@ -31,6 +34,8 @@ const Index = () => {
   const [createOpen, setCreateOpen] = useState(false);
   const { openSessionFromDB } = useDialog();
   const { state: entityState, controller } = useEntity();
+  const { characterId } = useSelectedCharacter();
+  const { tier } = useOrbSizeTier();
 
   const { intake } = useIntake();
   const voice = useEntityVoice(session?.user?.id);
@@ -116,11 +121,21 @@ const Index = () => {
         showMiniEntity={false}
       />
 
-      {/* Home-Stack: Intake-Bühne in der Mitte, AssetOrbit-Chips floating */}
+      {/* Home-Stack: Entität zentral (Herz der App), AssetOrbit-Chips drumherum */}
       <main className="relative flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
-        {/* Chip-Orbit — positioniert relativ zur Fläche (kein Entity mehr hier) */}
+        {/* Entitäts-Bühne — füllt verfügbaren Raum, zentriert */}
         <div className="relative flex-1 min-h-0 flex items-center justify-center">
           <AssetOrbit />
+          <EntityRoot
+            state={entityState}
+            size={ORB_TIER_HOME_SIZE[tier]}
+            onDrop={handleDrop}
+            onReviewClick={handleReviewClick}
+            onClick={handleCoreClick}
+            busy={busy}
+            character={characterId}
+            onPickInputMode={() => setOverlayOpen(true)}
+          />
         </div>
 
         {/* Eingabe-Slot (HomePrompt oder InputOverlay) */}
@@ -156,18 +171,11 @@ const Index = () => {
         </div>
       </main>
 
-      {/* Entity persistent rechts */}
-      <EntityRail
-        onCoreClick={handleCoreClick}
-        onDrop={handleDrop}
-        onReviewClick={handleReviewClick}
-        onPickInputMode={() => setOverlayOpen(true)}
-        showAccount
-      >
-        <ImpactPipelinePanel />
-      </EntityRail>
+      {/* Impact-Panel rechts (xl+) — die Entität ist zentral, nicht hier.
+          Die EntityRail gilt nur für den Projekt-Detail-Screen. */}
+      <ImpactPipelinePanel />
 
-      <div className="absolute top-4 right-4 flex items-center gap-4 z-40 lg:hidden">
+      <div className="absolute top-4 right-4 flex items-center gap-4 z-40">
         <AccountDrawer />
       </div>
 
