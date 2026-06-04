@@ -2,7 +2,7 @@
 
 > Vorwärts-Sicht (Zukunft). Gegenwart: `NOW.md` · Begründungen: `DECISIONS.md` · M4-Detail: `m4-spec.md` · Entity-Core-Detail: `entity-core.md`.
 
-**Sequenz:** M1 ✅ → M2 ✅ → M3 ✅ → **Entity-Core Phase 5–7** (1–4 ✅) → **M4 (priorisiert)** → **Wave 3** → Langfrist-Backlog (L1–L14).
+**Sequenz:** M1 ✅ → M2 ✅ → M3 ✅ → **Entity-Core Phase 5–7** (1–4 ✅) → **M4 (priorisiert)** → **Wave 3** → Langfrist-Backlog (L1–L15).
 
 ---
 
@@ -52,6 +52,7 @@ Macht das Cross-Project-Versprechen (Säule 2) erst echt. **Volle Detailspec mit
 > Quelle: 10x-Analyse (2026-05-18, aufgelöst). Diese drei machen den Projektzustand **lebendig** und holen den Nutzer zurück — auf bestehenden Flächen (EntityVoice, AtmosphereStripe, EntityRail), **kein Dashboard**. Build-Reihenfolge: LS-1 → LS-3 → LS-2 (billig zuerst, Pulse zuletzt wegen Noise-Design).
 
 - **LS-1 — Wissen altert (Confidence Decay).** _Was:_ Fakten, die lange nicht revalidiert wurden, markiert das System selbst als „prüfen". _Auftritt:_ sanftes Prüf-Item im **Handlungsbedarf** („Diese Entscheidung ist 8 Monate alt — noch gültig?"); dezentes Alters-Zeichen in **Substanz** (gedämpfte Opazität, kein Rot). _Ansatz:_ `pg_cron` auf `canonical_facts` (Alter + letzter Review-Timestamp) → `gap_signal` Typ `stale_fact`; nährt M4-S7 (`needs_review`). _Default:_ Fakt > 120 Tage ohne Revalidierung (pro `fact_type` justierbar), nur decision/deadline (Anti-Noise). _Aufwand:_ niedrig.
+  - _Später-Erweiterung:_ **periodischer Projekt-Lint** — ein ganzprojekt-Health-Pass (verwaiste Entities, stale Facts, fehlende Cross-Refs), nicht nur event-getrieben beim Commit. Andockend an LS-1 + M4-S7-Status. Quelle: Inbox/„LLM-Wiki-Pattern" (Lint als first-class Operation).
 - **LS-2 — Project Pulse (das System kommt zu dir).** _Was:_ cogni meldet sich von selbst, wenn ein Projekt verrottet. _Auftritt:_ **Entität + EntityVoice** beim App-Open — ruhige Eigen-Aussage („In Projekt Y wartet seit 14 Tagen eine Entscheidung"), kein Toast/Banner. _Ansatz:_ täglicher `pg_cron` pro Projekt: Gap ohne Aktivität > 14 T · Konflikt ohne Commit > 7 T · letzte Nutzeraktion > 21 T → Push-Event in die EntityVoice-Realtime-Queue. _Harte Schranke:_ **max. 1 Alert / Projekt / Woche.** _Aufwand:_ mittel; Design-Kern = Noise-Management. _Abhängigkeit:_ stabiler Projektzustand.
 - **LS-3 — Cross-Project Review-Badge.** _Was:_ immer sichtbar, wie viele Erkenntnisse projektübergreifend auf Review warten. _Auftritt:_ ruhige Zahl an der **EntityRail/Sidebar** oder als Entitäts-Zustand („3 offene Erkenntnisse warten") — **kein** lautes rotes Badge. _Ansatz:_ Cross-Project-Query auf `review_cases` (`box_state = 'proposed'`) + 1 dezente Komponente. _Aufwand:_ sehr niedrig. _Vorsicht:_ leise Intelligenz, nicht Notification-Ästhetik.
 
@@ -75,3 +76,4 @@ Macht das Cross-Project-Versprechen (Säule 2) erst echt. **Volle Detailspec mit
 | L12 | AOL `/health` echte Reachability-Checks                                     | Beim nächsten AOL-Debugging (kein User-Value). 10x #14                                                                                                                 |
 | L13 | Wöchentlicher Digest (cron + Email)                                         | Nach 3+ Monaten echter Nutzung. 10x #15                                                                                                                                |
 | L14 | Demo-Daten entfernen + sauberer Leer-State                                  | Vor erstem echten User-Test (`demoProject(s).ts` noch aktiv). 10x #12                                                                                                  |
+| L15 | **Query-Layer („Frag dein Projekt")**                                       | Strategischer Horizont: konversationelle, **belegte** Antworten aus kompiliertem Projektwissen (Provenance S0 + M4-Entities + temporaler Graph). cogni ingestiert heute exzellent, kann aber nichts gefragt werden — die fehlende dritte Operation. Erst nach M4 (Identität + Beleg stehen). Quelle: Inbox/LLM-Wiki-Pattern |
