@@ -191,8 +191,9 @@ nutzt `useEntityDetached` (lokal, keine Sources). Andere Module reden via `contr
 capabilities}` + Tests + Barrel. ✅ 2026-06-02 (auf dev)
 - **1 — Provider + Sources** (Home): Realtime/Intake/Dialog → `useEntitySources` (eine Subscription, Dedup+Timer);
   Index adoptiert `useEntity()`. **`EntityRail` (M2) wird erster `useEntity()`-Konsument** — nicht daran vorbeibauen.
-- **2 — Orchestrator umbenennen + Visuals verschieben** (visuell identisch).
-- **3 — Capability-Vertrag + A11y** (visuell identisch).
+  ✅ 2026-06-04 (auf dev)
+- **2 — Orchestrator umbenennen + Visuals verschieben** (visuell identisch). ✅ 2026-06-04 (auf dev)
+- **3 — Capability-Vertrag + A11y** (visuell identisch). ✅ 2026-06-04 (auf dev)
 - **4 — Ausdrucks-Engine** (erstes visuelles Upgrade): Signaturen, Intensität, Modus-Paletten, OrbLab-Achse.
   ✅ 2026-06-04 (auf dev). `expression/{signatures,useMotionSignature,SignatureLayer}` + `MOTION_SIGNATURES`
   (Referenz-Keyframes va-core-\* als WAA-Keyframes), `palette` im VM (`SIGNATURE_PALETTE`), `preset.mode.<mode>`
@@ -201,6 +202,19 @@ capabilities}` + Tests + Barrel. ✅ 2026-06-02 (auf dev)
   Akkumulation bei schnellen Wechseln — im Browser über `getAnimations()` verifiziert). Eigene Transform-Ebene
   (`position:absolute`) getrennt vom Pointer-Follow. **custom-morph-Charaktere (FacePill) opten aus** (eigener
   Ausdruck via STATE_TUNE). `tremor` zündet einmal beim Fehler-Eintritt und klingt aus (kein Dauer-Buzz).
+- **Politur** (✅ 2026-06-04, auf dev, nach Phase 4): Home-Entität wieder **zentral** (`Index.tsx` →
+  `<EntityRoot>`, viewport-relativ); **`EntityRail` nur auf ProjectScreen** (M2-Korrektur — war fälschlich auf
+  Home), `ImpactPipelinePanel` als rechtes Aside zurück. **Siri ohne Pointer-Follow**: `DEFAULT_MOTION=[]` →
+  pointer-follow ist opt-in via `manifest.motion`. **`interaction`-Vertrag** `full|self|static` auf
+  EntityRoot+CharacterRenderProps: OrbLab = Config-Mode (kein Entity-Click; FacePill-Hot-Area auf die Komponente
+  begrenzt; statische Tiles → behebt `<button>`-in-`<button>`). **Größen-Tier** Klein/Mittel/Groß (`orbSizeTier` +
+  `useOrbSizeTier`, user-scope `size.tier`; `useMeasuredOrbPx`/ResizeObserver für responsive clamp/vmin, plain-px
+  direkt). **OrbLab-Editor:** HSL-Labels (Farbton/Sättigung/Helligkeit), Farb-Harmonie-Generator `generatePalette`
+  (komplementär/analog/triadisch/tetradisch/monochrom, rein+getestet), benannte Presets `useOrbLibrary`
+  (`library.presets`), **Würfeln entfernt** (Range bleibt mit `min===max` → keine Migration), „Punkt-Halo"
+  verständlich beschriftet. **FacePill-Morph** an Orby-Fremdcode angeglichen (Hülle: offen 260×160, Glas
+  `blur(50px)`, rotierendes 4-Farben-Bälle-Kreuz, Augen→Inhalt-Crossfade, Tilt ±15°); **2×2-Inhalt bleibt →
+  wandert in Phase 5** in den Composer.
 - **5 — Unified Composer** (eine Eingabefläche; Index + ProjectScreen; alle InputOverlay-Features).
 - **6 — Kommunikation + Orbit + ein Signal-Stream**.
 - **7 — Mehrfach-Mount-Reuse**: dieselbe `useEntity()`-Quelle an weiteren Mount-Punkten (z.B. `EntityRail` auf

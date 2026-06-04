@@ -165,12 +165,16 @@ const ImpactPipelinePanel = () => {
   }, [projects, active]);
 
   return (
-    <div
+    <aside
+      className="hidden xl:flex flex-col shrink-0"
       style={{
-        padding: "24px 20px",
-        display: "flex",
-        flexDirection: "column",
-        gap: 22,
+        width: 280,
+        minWidth: 280,
+        height: "100vh",
+        borderLeft: "1px solid var(--hair)",
+        padding: "32px 24px",
+        gap: 24,
+        overflowY: "auto",
       }}
     >
       {/* Letzter Impact */}
@@ -328,7 +332,7 @@ const ImpactPipelinePanel = () => {
           </div>
         ))}
       </section>
-    </div>
+    </aside>
   );
 };
 

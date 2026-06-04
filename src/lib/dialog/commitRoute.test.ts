@@ -174,4 +174,39 @@ describe("planCommitRoute", () => {
   it("Factory-Box ohne Intent → noop", () => {
     expect(planCommitRoute(base({ payload: {} }))).toEqual({ kind: "noop" });
   });
+
+  describe("Eskalation", () => {
+    it("escalate:true + reviewCaseId → eskaliert, kein commit-fact", () => {
+      const route = planCommitRoute(
+        base({ payload: { __reviewCaseId: "rc-1" }, decision: "reject", escalate: true }),
+      );
+      expect(route).toEqual({ kind: "escalate", reviewCaseId: "rc-1" });
+    });
+
+    it("escalate:true ohne reviewCaseId → noop (kein Review-Case zum Eskalieren)", () => {
+      const route = planCommitRoute(base({ payload: {}, decision: "reject", escalate: true }));
+      expect(route).toEqual({ kind: "noop" });
+    });
+
+    it("escalate:true schlägt commit-fact (Eskalation hat Vorrang vor normalem Reject)", () => {
+      const route = planCommitRoute(
+        base({ payload: { __reviewCaseId: "rc-2" }, decision: "reject", escalate: true }),
+      );
+      expect(route.kind).toBe("escalate");
+    });
+
+    it("escalate:false → normaler commit-fact-Pfad bleibt", () => {
+      const route = planCommitRoute(
+        base({ payload: { __reviewCaseId: "rc-3" }, decision: "reject", escalate: false }),
+      );
+      expect(route).toEqual({ kind: "commit_fact", reviewCaseId: "rc-3", decision: "reject" });
+    });
+
+    it("readonly + escalate → readonly schlägt alles", () => {
+      const route = planCommitRoute(
+        base({ readonly: true, payload: { __reviewCaseId: "rc-4" }, escalate: true }),
+      );
+      expect(route).toEqual({ kind: "ignore_readonly" });
+    });
+  });
 });

@@ -44,6 +44,7 @@ export const CharacterTile = ({ id, active, onSelect }: Props) => {
           state: "idle",
           size: 80,
           sample,
+          interaction: "static",
         })}
       </div>
       <div className="text-xs tracking-wide text-foreground/90">{character.label}</div>

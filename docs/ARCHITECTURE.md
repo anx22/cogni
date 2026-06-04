@@ -9,6 +9,7 @@
 - **Pipeline-Orchestrator** AOL-Service (FastAPI + LangGraph, Railway). Knoten: `router → context_loader → condenser`. Liest Graphiti, schreibt nicht in Supabase.
 - **Modelle** Lovable AI Gateway (Tool-Calling, Gemini Flash für Voice/Extraktion).
 - **Prompts/Traces** LangSmith (EU, `x-tenant-id = LANGSMITH_WORKSPACE_ID`, Owner `-`).
+- **Deployment** Edge Functions deployen automatisch beim Schreiben in `supabase/functions/`. Secrets in Cloud konfiguriert, niemals in Code/Doku.
 
 ## Datenfluss
 
@@ -39,6 +40,14 @@ User-Review (Dialog-Overlay)
   nur via Barrel `@/lib/entity`, keine Tiefimporte; andere Module reden über Signale (Input) + `vm`/`controller`
   (Output), nie via `setEntityState`/Hardcoding. Spec: `docs/entity-core.md`. Nur Entity-Kern im `entity/`-Ordner.
 
+## Branch-Flow
+
+```
+dev  →  main  (via PR)
+```
+
+Direkt-Push auf `dev` erlaubt. `main` nur über PR von `dev`.
+
 ## Golden Principles
 
 - **[HARD]** `console.log` in Edge Functions verboten (außer in `_shared/logger.ts`). CI-Smoke `qa.yml::smoke` blockt Pushes.
@@ -46,7 +55,10 @@ User-Review (Dialog-Overlay)
 - **[HARD]** Jede Stage in der Pipeline schreibt strukturiertes Log via `createLogger({fn, ...})` mit `correlation_id` (`asset_id` / `run_id`).
 - **[HARD]** Roles in separater Tabelle (`user_roles`), Check via `has_role()` SECURITY DEFINER. Niemals Rolle auf `profiles`.
 - **[HARD]** RLS auf jeder neuen Tabelle. User-bezogene Daten via `auth.uid()`-Filter, nicht via FK auf `auth.users`.
-- **[HARD]** Semantische Tailwind-Tokens. Keine Roh-Farben in Komponenten, keine `text-white`-Direktklassen.
+- **[HARD]** Semantische Tailwind-Tokens. Keine Roh-Farben in Komponenten, keine `text-white`-Direktklassen. `data-theme="day"|"night"` ist Theme-Quelle.
+- **[HARD]** `ProjectViewModel`-Vertrag (`src/lib/project/types.ts`) ist Schnittstelle UI↔Logik. Erweitern OK, umbenennen/entfernen nur mit Mapper-Migration.
+- **[HARD]** Keine `src/lib/**`-Eingriffe für reine Designwünsche.
+- **[PREFER]** Strukturelle Entscheidung → `docs/DECISIONS.md` (thematisch, das Warum). Sprintwechsel → `docs/NOW.md` aktualisieren — **Recently completed** dort auf ~3 Einträge deckeln; ältere fallen raus (Historie = Git, **nicht** DECISIONS). Pflege-Regel: `NOW.md §Pflege`.
 - **[PREFER]** Kernlogik aus `Deno.serve`-Closure in pure Funktionen ziehen (Vorbild: `commitFact()`, `handleCallback()`).
 - **[PREFER]** Mocked Supabase-Tests via `mockAdmin()` aus `_shared/testFixtures.ts`.
 - **[PREFER]** Frontend-Polling nutzt `pollAolRun` / `pollAolRunByAsset` aus `src/lib/pipeline/`.
@@ -60,28 +72,10 @@ User-Review (Dialog-Overlay)
 - **Nightly** `.github/workflows/qa-nightly.yml` — `test-data-sweep` 03:17 UTC.
 - **Pre-commit** Husky + lint-staged → ESLint (`--max-warnings 0`-Regeln scharf, `no-explicit-any` warn).
 
-## Projekt-Zuordnung
-
-Drei Signale, ein Commit-Pfad:
-
-1. **Explizit** — `assets.project_id` bereits gesetzt (User hat im Projekt-Screen abgelegt). Keine Zuordnungsbox.
-2. **Lexikalisch** (`projectScoring.ts`) — Projektname +3 · Stakeholder-Name +2 · Themenname +2 · Org-Domain +1.
-3. **Agentisch** (`callSuggestAssignment`) — Tie-Breaker; bekommt Rohtext + kompakte Projektliste + lexikalische Hints.
-
-Schwellen (`agentConfig.ts`): `ASSIGNMENT_CONFIDENT_THRESHOLD = 3` (auto, wenn Agent Confidence ≥ 0.6) · `ASSIGNMENT_UNCERTAIN_THRESHOLD = 1` (Auswahlbox) · 0 + Agent leer → „Neues Projekt anlegen".
-
-Zuordnungsbox hat `priority: 1000` — erscheint immer vor Wissens-Boxen. `commit-fact` propagiert Wahl auf Session-Metadaten, Asset und alle `proposed_facts` der `extraction_run_id`.
-
-## Understanding Pipeline — Schlüsseldateien
-
-- **Zentrale Steuerung:** `supabase/functions/_shared/agentConfig.ts` — `AGENT_MODEL`, Prompts, `EXTRACT_FACTS_TOOL`, `SUGGEST_ASSIGNMENT_TOOL`, `mapToBoxType()`, Schwellen, `MAX_INPUT_CHARS`, `MAX_FACTS_PER_RUN`.
-- **Provider-Adapter:** `_shared/agentClient.ts` — `callExtractFacts()` + `callSuggestAssignment()`. Bei Modell-Wechsel: nur diese Datei.
-- **Box-Mapping:** `src/lib/dialog/boxMapping.ts` — DB-`box_type` → UI-String.
-- **Session laden:** `src/lib/dialog/loadSession.ts` — DB-`box_state` → UI-Deutsch; Zuordnungsbox bekommt spezielles Payload.
-- **Härtung:** `assets.understanding_status` (pending/running/empty/review_ready/failed/rate_limited/payment_required) ist UI-Wahrheit. `understanding_attempt` zählt Retries. Unique-Index auf `proposed_facts(user_id, extraction_run_id)`.
-
-## Kapazitäten
-
-- Edge Functions deployen automatisch beim Schreiben in `supabase/functions/`.
-- Secrets sind in Cloud konfiguriert, niemals in Code/Doku ablegen.
-- LOVABLE_API_KEY, GRAPHITI_SERVICE_TOKEN, AOL_SERVICE_TOKEN, AOL_CALLBACK_TOKEN, RAILWAY_API_TOKEN gesetzt.
+| Zweck            | Command                |
+| :--------------- | :--------------------- |
+| Typecheck        | `bunx tsc --noEmit`    |
+| Unit-Tests       | `bunx vitest run`      |
+| Lint             | `npm run lint`         |
+| Format prüfen    | `npm run format:check` |
+| E2E (Playwright) | `npm run test:e2e`     |

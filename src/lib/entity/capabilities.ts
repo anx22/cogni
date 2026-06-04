@@ -18,8 +18,13 @@ export const STANDARD_CAPABILITIES: StandardCapability[] = [
   "a11y-shell",
 ];
 
-/** Bewegung, die jeder Charakter per Default bekommt (außer er opt-outet). */
-export const DEFAULT_MOTION: MotionCapability[] = ["pointer-follow"];
+/**
+ * Bewegung, die jeder Charakter per Default bekommt.
+ * LEER: Pointer-Follow ist jetzt **opt-in** (nur wenn `manifest.motion` es führt) —
+ * die Siri-Entität soll dem Mauszeiger NICHT folgen. FacePill nutzt `tilt-3d`
+ * (eigene Reaktion). `usePointerFollow` bleibt verfügbar, läuft aber no-op.
+ */
+export const DEFAULT_MOTION: MotionCapability[] = [];
 
 export function composeCapabilities(manifest: CharacterManifest): ResolvedCapabilities {
   const suppress = new Set<MotionCapability>(manifest.suppressCore ?? []);

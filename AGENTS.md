@@ -9,27 +9,35 @@ Drei Außenmodi: Entität, Projekt, Dialog-Overlay. Persistente `AppSidebar` (Pr
 
 ## Routing
 
+**Wissen (steht):**
+
 - **Was tut das Produkt?** → `docs/PRODUCT.md`
-- **Wie ist es gebaut?** → `docs/ARCHITECTURE.md`
+- **Wie ist es gebaut?** (Ist-Zustand) → `docs/ARCHITECTURE.md`
+- **Warum so entschieden?** (thematisch) → `docs/DECISIONS.md`
+
+**Zeit (bewegt sich):**
+
 - **Was läuft jetzt?** → `docs/NOW.md`
-- **Warum so entschieden?** → `docs/DECISIONS.md`
-- **Seam-Inventar (lebende QA-Karte)** → `docs/qa-seam-inventar.md`
-- **Entity-Kernmodul (Spec + Refactor-Roadmap)** → `docs/entity-core.md`
+- **Was kommt?** (Roadmap + Backlog) → `docs/PLAN.md`
+- **Was wann geliefert?** → Git: `git log --oneline -- docs/` · alter Stand: `git show <commit>:<datei>`
+
+**Spezial-Specs:**
+
+- **Lebende QA-Karte** → `docs/qa-seam-inventar.md`
+- **Entity-Kernmodul** → `docs/entity-core.md`
 - **M4-Detailspec (S0–S9)** → `docs/m4-spec.md`
+
+> Vollständige chronologische Doku-Historie zusätzlich verbatim unter `docs/concept/veraltet/`.
 
 ## Service-Schicht
 
 Lovable Cloud (Supabase) = kanonisch · Graphiti/Neo4j = Spiegel · Unstructured = Parsing ·
 AOL-Service auf Railway = LangGraph-Kontext · LangSmith = Prompts/Traces · Lovable AI Gateway = Modelle.
 
-## Aktueller Sprint
+## Schlüsseldateien
 
-Siehe `docs/NOW.md`. M1–M3 + Entity-Core durch. Aktiv: M4 (Bedeutungs-Integrität) + Wave 3 (Lebendiges System). Visuelle Quelle: `docs/redesign/prototype/` + `docs/redesign/screenshots/`.
-
-## Regeln (immer)
-
-- Edge Functions in `withErrorBoundary` wrappen, `createLogger` statt `console.log`.
-- Roles in separater Tabelle, RLS überall, `has_role()` als SECURITY DEFINER.
-- Vor jeder Antwort zu Infra/Status echte Daten ziehen (railway-admin, inspect-\*, supabase--read_query).
-- Strukturelle Entscheidung → Eintrag in `docs/DECISIONS.md`. Sprintwechsel → `docs/NOW.md` updaten.
-- **Edge Functions · Commit-Pfad · Entity-Core · Intake anfassen?** → erst `docs/qa-seam-inventar.md §1 Offene Risiken` lesen.
+- **Pipeline-Steuerung** `supabase/functions/_shared/agentConfig.ts` — Modell, Prompts, Tools, Schwellen, `mapToBoxType()`
+- **Provider-Adapter** `_shared/agentClient.ts` — `callExtractFacts()` + `callSuggestAssignment()`. Bei Modell-Wechsel: nur diese Datei.
+- **Box-Mapping** `src/lib/dialog/boxMapping.ts` — DB-`box_type` → UI-String
+- **Session laden** `src/lib/dialog/loadSession.ts` — DB-`box_state` → UI-Deutsch; Zuordnungsbox-Payload
+- **Asset-Status** `assets.understanding_status` (`pending/running/empty/review_ready/failed/rate_limited/payment_required`) ist UI-Wahrheit
