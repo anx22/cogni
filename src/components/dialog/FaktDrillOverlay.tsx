@@ -611,6 +611,7 @@ const FaktDrillOverlay = ({ onClose }: { onClose: () => void }) => {
     const betrifft = box.payload?.betrifft as string | undefined;
     const lebensdauer = box.payload?.lebensdauer as string | undefined;
     const quelle = box.payload?.quelle as string | undefined;
+    const evidence = box.payload?.evidence as string | undefined;
     const suggestions = (box.payload?.suggestions as string[] | undefined) ?? [];
     const blockiert =
       (box.payload?.blockiert as Array<{ what: string; strong?: boolean }> | undefined) ?? [];
@@ -690,6 +691,23 @@ const FaktDrillOverlay = ({ onClose }: { onClose: () => void }) => {
                     VERSTANDEN:
                   </span>
                   {String(box.payload?.understood)}
+                </div>
+              )}
+              {evidence && (
+                <div
+                  style={{
+                    marginTop: 12,
+                    padding: "10px 14px",
+                    background: "var(--d-surf-3)",
+                    borderRadius: 8,
+                    fontSize: 12.5,
+                    color: "var(--d-ink-3)",
+                    fontStyle: "italic",
+                    lineHeight: 1.5,
+                    borderLeft: "2px solid var(--d-hair-2)",
+                  }}
+                >
+                  „{evidence}"
                 </div>
               )}
               {quelle && (

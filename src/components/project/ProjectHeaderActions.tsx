@@ -44,10 +44,7 @@ const ProjectHeaderActions = ({ projectId, projectName, status, onRequestRename 
             <MoreHorizontal className="w-5 h-5" />
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent
-          align="end"
-          className="min-w-[200px]"
-        >
+        <DropdownMenuContent align="end" className="min-w-[200px]">
           <DropdownMenuItem disabled={actions.pending} onClick={() => onRequestRename?.()}>
             Umbenennen
           </DropdownMenuItem>

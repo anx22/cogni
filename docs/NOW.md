@@ -10,7 +10,7 @@
 Belastbare Basis steht. Entity-Core live; Live-Test deckte UI-/Führungs-Schwächen auf.
 
 - **Pipeline 7/7** · **Detektoren 5/5** · **Dialog 18 BoxTypes** · **4 Rollen-Frontend**
-- **Tests**: 194/194 Vitest · Deno-Suiten pro Detector · 19/19 EFs mit Boundary + Logger · RLS überall
+- **Tests**: 205/205 Vitest · Deno-Suiten pro Detector · 19/19 EFs mit Boundary + Logger · RLS überall
 - Aktiv: **UI-Politur** (Composer-Morph · Drill-Führung · Busy/Voice · Kontrast) → Detail + Reihenfolge: `PLAN.md §Entity-UI & Review-Flow`. Danach **M4** · **Wave 3**.
 
 ---
@@ -25,7 +25,7 @@ Belastbare Basis steht. Entity-Core live; Live-Test deckte UI-/Führungs-Schwäc
 
 **M4 — Bedeutungs-Integrität & Entity-Identität** → Detailspec: `docs/m4-spec.md`
 Reihenfolge: **S0** (Beleg) → S1 → S2 → **S8** → S3 → S4 → S5 → S6 → S7/S9 (später)
-Stand: S8/escalate-Fix ✅ 2026-06-04 · S0 aktiv
+Stand: S8 inkl. Reopen ✅ 2026-06-05 · S0 (Beleg in Drills) aktiv
 
 **Wave 3 — Lebendiges System** (nach M4, auf bestehenden Flächen, kein Dashboard)
 LS-1 Confidence Decay · LS-3 Review-Badge · LS-2 Project Pulse — Reihenfolge: LS-1 → LS-3 → LS-2
@@ -36,7 +36,9 @@ LS-1 Confidence Decay · LS-3 Review-Badge · LS-2 Project Pulse — Reihenfolge
 
 - **Graphiti-Sync-Retry** — Cron `*/30 min`, `inspect-graphiti diagnose` für Top-Reasons.
 - **Test-Coverage halten** — neue Funktion = Pure-Test, Drift in DECISIONS.
-- **Pre-existing Build-Fehler** — `useProjectData` Migrations-Drift · `submitNote` DevLogCategory · `VerlaufFeed`. Backend-Entscheidung ausstehend, kein blinder Fix.
+- **Git-Hygiene** — Wahrheit = `origin/dev`; vor jedem Push fetchen (Lovable pusht parallel). Lokaler Lint == CI (eslint ignoriert `.claude/`).
+
+> Die früher hier gelistete „Pre-existing Build-Fehler"-Zeile (`useProjectData`/`submitNote`/`VerlaufFeed`) war veraltet — am 2026-06-05 auf `origin/dev` verifiziert: `tsc` 0, Lint 0 Errors, 205 Tests grün. Existiert nicht mehr.
 
 ---
 
@@ -44,9 +46,10 @@ LS-1 Confidence Decay · LS-3 Review-Badge · LS-2 Project Pulse — Reihenfolge
 
 _Nur die letzten ~3 (je 1 Zeile). Ältere raus → Git (`git log --oneline -- docs/`), nicht DECISIONS._
 
+- **2026-06-05 — Escalate-Reopen (S8 eingelöst)** Zurückgestellte Cases erscheinen im Handlungsbedarf (Prüfen-Lane) + echter Reopen-Pfad (`box_state` escalated→proposed, Session in_progress → Overlay editierbar). `deriveSessionProgress` als reine Single-Source (Dedup mit Escalate-Handler). +8 Tests, 205/205. `3443899`.
+- **2026-06-05 — Lint ehrlich + dev-Superset** eslint ignoriert `.claude/` (13 Phantom-Errors aus stalen Worktrees raus → lokaler Lint == CI); `react-router-dom ^6.30.4` per `main`→`dev` nachgezogen; 1 stale Worktree entfernt. `15f9840`.
 - **2026-06-05 — Drill-Führung + „Was verstanden" (P1)** `renderGeneric` Tone-Banner/führende Frage/28px; Delta+Quelle+VERSTANDEN in allen Drill-Varianten; `loadSession` nachgezogen. `a55fdd9`.
 - **2026-06-05 — Composer-Morph nach Orby-Technik (P1)** `max-height`-Ruckeln raus; Shell morpht via expliziter `height` + Crossfade. `47194bb`.
 - **2026-06-05 — Busy-Lock-Bug behoben (P0)** `review_ready` löste kein idle-Signal → Eingabe gesperrt bis Reload. Neues `intake.done`-Signal (nur `processing→idle`). 197/197. `354eec8`.
 - **2026-06-05 — Zuordnung select→confirm** Klick wählt nur, expliziter Button committet (kein Sofort-Commit, „Review vor Commit"). `c839026`.
-- **2026-06-04 — Entity-Core abgeschlossen (Phase 5–7)** Unified Composer + Kommunikation (ein Signal-Stream) + Multi-Mount-Beweis + Modulgrenze-Guard. 194/194 ✓. Detail: `entity-core.md`.
-- **2026-06-04 — Entity-Politur + Phase 1–4** Home-Entität zentral, Siri ohne Pointer-Follow, OrbLab Config-Mode, FacePill-Morph, Ausdrucks-Engine. Detail: `entity-core.md`.
+- **2026-06-04 — Entity-Core abgeschlossen (Phase 5–7)** Unified Composer + Kommunikation (ein Signal-Stream) + Multi-Mount-Beweis + Modulgrenze-Guard. Detail: `entity-core.md`.

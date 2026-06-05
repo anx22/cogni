@@ -86,6 +86,17 @@ export interface RawProjectData {
    *  (älterer Code/Test-Fixtures setzen das Feld evtl. nicht). */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   topicMergeCandidates?: any[];
+  /** Eskalierte (zurückgestellte) Review-Cases dieses Projekts. Optional
+   *  (Alt-Fixtures setzen es nicht → leer). Quelle: useProjectData-Join. */
+  zurueckgestellt?: EscalatedCaseRow[];
+}
+
+/** Schlanker Ausschnitt eines eskalierten review_cases (via dialog_sessions-Join). */
+export interface EscalatedCaseRow {
+  id: string;
+  title: string | null;
+  description: string | null;
+  session_id: string;
 }
 
 export interface ComposedProjectVM {
@@ -112,6 +123,7 @@ export function buildProjectViewModel(raw: RawProjectData): ComposedProjectVM {
     assets,
     stakeholders,
     topicMergeCandidates,
+    zurueckgestellt,
   } = raw;
 
   const konflikte = toKonflikte(contradictions, canonical);
@@ -126,6 +138,7 @@ export function buildProjectViewModel(raw: RawProjectData): ComposedProjectVM {
     feedbackRows,
     deps,
     topicMergeCandidates: topicMergeCandidates ?? [],
+    zurueckgestellt: zurueckgestellt ?? [],
   });
   const verlauf = toVerlauf(events);
 

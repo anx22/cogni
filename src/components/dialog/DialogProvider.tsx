@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { loadDialogSession } from "@/lib/dialog/loadSession";
 import { submitNote } from "@/lib/intake/submitNote";
 import { planCommitRoute } from "@/lib/dialog/commitRoute";
+import { deriveSessionProgress } from "@/lib/dialog/reopenEscalated";
 import { devlog } from "@/lib/devlog/devlog";
 import { toast } from "sonner";
 
@@ -116,17 +117,15 @@ export const DialogProvider = ({ children }: { children: ReactNode }) => {
                 .from("review_cases")
                 .select("box_state")
                 .eq("session_id", sessionId);
-              const total = stats?.length ?? 0;
-              const resolved =
-                stats?.filter((c) =>
-                  ["confirmed", "rejected", "escalated"].includes(c.box_state as string),
-                ).length ?? 0;
+              const progress = deriveSessionProgress(
+                (stats ?? []).map((c) => c.box_state as string),
+              );
               await supabase
                 .from("dialog_sessions")
                 .update({
-                  resolved_boxes: resolved,
-                  total_boxes: total,
-                  status: total > 0 && resolved >= total ? "completed" : "in_progress",
+                  resolved_boxes: progress.resolved,
+                  total_boxes: progress.total,
+                  status: progress.status,
                 })
                 .eq("id", sessionId);
             }

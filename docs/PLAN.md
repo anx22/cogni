@@ -65,20 +65,22 @@ Die Entität (Gesicht der App) wird zum in sich geschlossenen Modul: reines Gehi
 
 Macht das Cross-Project-Versprechen (Säule 2) erst echt. **Volle Detailspec mit Code-Pfaden: `docs/m4-spec.md`.** Begründungen: `DECISIONS.md` (2026-06-03).
 
+> **🔒 v1-Dogfood-Freeze (2026-06-05, Owner-Entscheidung):** v1 = der funktionierende Loop **+ S0 (Beleg im Review)**. **S1–S9 sind eingefroren**, bis ein echter Dogfood-Durchlauf gelaufen ist und die Reibung (→ `_INBOX`) triagiert wurde. Grund: _abschließen statt weiterbauen_ — der Loop muss sich erst im echten Gebrauch beweisen. S0 bleibt drin, weil sichtbare Belege den Review ehrlich machen (stärkt genau den Dogfood-Test).
+
 **Build-Reihenfolge:** S0 → S1 → S2 → **S8** → S3 → S4 → S5 → S6 → S7 (später) → S9 (später).
 
-| Stufe  | Kurz                                                                                                          | Status    |
-| :----- | :------------------------------------------------------------------------------------------------------------ | :-------- |
-| **S0** | Beleg-Verankerung (Zitat→Segment-Referenz, Modell+Prompt-Version in `provenance`, Beleg an jeder Review-Card) | aktiv     |
-| **S1** | Risk-Gate im Silent-Commit (`isRisky()` — nie still bei decision/risk/replace/Impact)                         | geplant   |
-| **S2** | „Anders"/Related-not-same (Identitäts-Aktion: nicht dieselbe Entität)                                         | geplant   |
-| **S8** | Aktions-Set: Needs-source + **Escalate** (escalate-Flag verdrahtet ✅ 2026-06-04)                             | teilweise |
-| **S3** | Entity-Identitäts-Schicht (`entities` + `entity_aliases`, der Kern)                                           | Spec      |
-| **S4** | Entity-Resolver ersetzt `linker.ts` (Graphiti-primär + lokaler Guard)                                         | Spec      |
-| **S5** | Feedback-Schleife (Resolver liest `entity_link_rejections`, Reject-Taxonomie)                                 | Spec      |
-| **S6** | Cross-Project-Identitäts-Signal UI („erscheint in 3 Projekten") — der Magic-Moment                            | Spec      |
-| **S7** | Einheitlicher Fakt-Status (`factStatus()`-Ableitung) — später                                                 | Spec      |
-| **S9** | Pre-commit Supersede/Contradict-Emission — später                                                             | Spec      |
+| Stufe  | Kurz                                                                                                                                       | Status    |
+| :----- | :----------------------------------------------------------------------------------------------------------------------------------------- | :-------- |
+| **S0** | Beleg-Verankerung (Zitat→Segment-Referenz, Modell+Prompt-Version in `provenance`, Beleg an jeder Review-Card)                              | aktiv     |
+| **S1** | Risk-Gate im Silent-Commit (`isRisky()` — nie still bei decision/risk/replace/Impact). _Erweiterung:_ `source_type` als Vertrauens-Signal einbeziehen — direkte Uploads > weitergeleitete Notizen (Quelle: Inbox/Deep-Research-Agents). | geplant   |
+| **S2** | „Anders"/Related-not-same (Identitäts-Aktion: nicht dieselbe Entität)                                                                      | geplant   |
+| **S8** | Aktions-Set: Needs-source + **Escalate inkl. Reopen** (eskalierte Cases erscheinen im Handlungsbedarf, voll wieder öffenbar ✅ 2026-06-05) | teilweise |
+| **S3** | Entity-Identitäts-Schicht (`entities` + `entity_aliases`, der Kern)                                                                        | Spec      |
+| **S4** | Entity-Resolver ersetzt `linker.ts` (Graphiti-primär + lokaler Guard)                                                                      | Spec      |
+| **S5** | Feedback-Schleife (Resolver liest `entity_link_rejections`, Reject-Taxonomie)                                                              | Spec      |
+| **S6** | Cross-Project-Identitäts-Signal UI („erscheint in 3 Projekten") — der Magic-Moment                                                         | Spec      |
+| **S7** | Einheitlicher Fakt-Status (`factStatus()`-Ableitung) — später                                                                              | Spec      |
+| **S9** | Pre-commit Supersede/Contradict-Emission — später                                                                                          | Spec      |
 
 ---
 

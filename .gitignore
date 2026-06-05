@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Temporaere Brand-Asset-Vorschauen (Magnific-Downloads, nicht versionieren)
+.brand-tmp/
