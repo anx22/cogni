@@ -1,69 +1,79 @@
 /* =============================================================================
    Entity-Composer — kontinuierlicher Morph (Spec docs/entity-core.md §Composer).
    EINE Shell: ruhende Leiste verwandelt sich fließend ins Panel (kein Swap).
-   Vorbild Orby: card { transition: all .6s } + Inhalts-Crossfade.
+   Technik nach Orby (entitaet/Orby/Orby.css): die Shell IST die morphende Box —
+   explizite height/border-radius mit transition (KEIN max-height, das ruckelt,
+   weil die Kurve über Leerraum statt über die echte Inhaltshöhe läuft).
+   Ruheleiste + Panel liegen absolut übereinander und werden per opacity
+   gecrossfadet (Orby: .eyes ↔ .container-ai-chat).
    ============================================================================= */
 
 :root {
   --entity-ease-morph: cubic-bezier(0.175, 0.885, 0.32, 1.1);
   --entity-ease-snap: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --entity-composer-h-resting: 3.1rem;
+  --entity-composer-h-open: 17rem;
 }
 
 .entity-composer-shell {
+  position: relative;
   width: 100%;
   max-width: 28rem;
+  height: var(--entity-composer-h-resting);
   overflow: hidden;
   border: 1px solid hsl(var(--border) / 0.25);
   background: hsl(var(--surface-1) / 0.5);
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
   border-radius: 9999px;
-  padding: 0.7rem 1rem;
   box-shadow: 0 12px 40px -28px rgba(0, 0, 0, 0.6);
+  /* Die morphende Box: height + max-width + radius + shadow auf einer Kurve. */
   transition:
-    max-width 0.45s var(--entity-ease-morph),
-    border-radius 0.45s var(--entity-ease-morph),
-    padding 0.45s var(--entity-ease-morph),
-    box-shadow 0.45s var(--entity-ease-morph);
+    max-width 0.55s var(--entity-ease-morph),
+    height 0.55s var(--entity-ease-morph),
+    border-radius 0.55s var(--entity-ease-morph),
+    box-shadow 0.55s var(--entity-ease-morph);
 }
 
 .entity-composer-shell.is-open {
   max-width: 36rem;
+  height: var(--entity-composer-h-open);
   border-radius: 1.25rem;
-  padding: 1.25rem;
   box-shadow: 0 24px 70px -30px rgba(0, 0, 0, 0.65);
 }
 
-/* Ruhende Leiste — klappt beim Öffnen weg. */
+/* Ruhende Leiste — absolut, reiner Opacity-Crossfade (Orby .eyes). */
 .composer-resting {
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  max-height: 1.75rem;
+  padding: 0 1.15rem;
   opacity: 1;
-  transition:
-    max-height 0.3s var(--entity-ease-morph),
-    opacity 0.22s ease;
+  transition: opacity 0.25s ease;
 }
 
 .entity-composer-shell.is-open .composer-resting {
-  max-height: 0;
   opacity: 0;
   pointer-events: none;
 }
 
-/* Panel — fährt beim Öffnen auf (leicht verzögert für den Crossfade). */
+/* Panel — absolut, fährt per Opacity ein (leicht verzögert für den Crossfade);
+   Höhe kommt von der Shell, überlanger Inhalt scrollt statt zu springen. */
 .composer-panel {
-  max-height: 0;
+  position: absolute;
+  inset: 0;
+  padding: 1.25rem;
+  overflow-y: auto;
   opacity: 0;
-  transition:
-    max-height 0.45s var(--entity-ease-morph),
-    opacity 0.3s ease 0.06s;
+  pointer-events: none;
+  transition: opacity 0.3s ease 0.1s;
 }
 
 .entity-composer-shell.is-open .composer-panel {
-  max-height: 32rem;
   opacity: 1;
+  pointer-events: auto;
 }
 
 @media (prefers-reduced-motion: reduce) {
