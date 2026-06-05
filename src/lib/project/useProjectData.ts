@@ -102,7 +102,20 @@ export function useProjectData(projectId: string | null | undefined): UseProject
           .from("project_stakeholder_links")
           .select("id, role, person_id, organization_id, persons(name, role), organizations(name)")
           .eq("project_id", projectId),
-        (supabase as unknown as { from: (t: string) => { select: (s: string) => { eq: (k: string, v: string) => { eq: (k: string, v: string) => Promise<{ data: unknown[] | null; error: unknown }> } } } })
+        (
+          supabase as unknown as {
+            from: (t: string) => {
+              select: (s: string) => {
+                eq: (
+                  k: string,
+                  v: string,
+                ) => {
+                  eq: (k: string, v: string) => Promise<{ data: unknown[] | null; error: unknown }>;
+                };
+              };
+            };
+          }
+        )
           .from("topic_merge_candidates")
           .select(
             "*, source:source_topic_id(id, name, description), target:target_topic_id(id, name, description)",
