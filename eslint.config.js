@@ -20,6 +20,7 @@ export default tseslint.config(
   {
     ignores: [
       "dist",
+      ".claude",
       "src/components/ui/**",
       "src/integrations/supabase/types.ts",
       "tailwind.config.ts",
