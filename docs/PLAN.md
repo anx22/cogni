@@ -47,7 +47,7 @@ Die Entität (Gesicht der App) wird zum in sich geschlossenen Modul: reines Gehi
 
 **P1 — Kern-Gefühl & Führung**
 
-- ☐ **Morph neu (Orby-Technik)** — `width`/`height`/`radius`-Transition + Glas statt `max-height`; saubere Karte. `EntityComposer.tsx`/`composerTokens.css`.
+- ✅ **Morph neu (Orby-Technik)** (`47194bb`, dev) — Shell ist die morphende Box (explizite `height` 3.1↔17rem + `radius` + `max-width` auf einer Kurve); Ruheleiste/Panel absolut + Opacity-Crossfade; `max-height` raus. Reines CSS. _Optik live prüfen._
 - ☐ **Drill-Führung & Hierarchie** — systemisch über `renderGeneric()` (alle Box-Typen), Größenkontraste + führende Frage + Banner (Vorlage `dialog-overlay.jsx`/Overlays).
 - ☐ **„Was wurde verstanden" zeigen** — Quelle + Delta + Beleg vor/bei Entscheidung (PRODUCT-Versprechen); Drill-Header erweitern (`loadSession` liefert `deltaType`).
 - ☐ **Verarbeitung = echte Queue** — Busy-Hard-Lock raus, weiter droppen, AssetOrbit-Ring zeigt Queue (`Index.tsx`/`satellites/AssetOrbit.tsx`).
