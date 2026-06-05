@@ -44,6 +44,7 @@ LS-1 Confidence Decay · LS-3 Review-Badge · LS-2 Project Pulse — Reihenfolge
 
 _Nur die letzten ~3 (je 1 Zeile). Ältere raus → Git (`git log --oneline -- docs/`), nicht DECISIONS._
 
+- **2026-06-05 — Composer-Morph nach Orby-Technik (P1)** `max-height`-Ruckeln raus; Shell morpht via expliziter `height` + Crossfade. `47194bb`.
 - **2026-06-05 — Busy-Lock-Bug behoben (P0)** `review_ready` löste kein idle-Signal → Eingabe gesperrt bis Reload. Neues `intake.done`-Signal (nur `processing→idle`). 197/197. `354eec8`.
 - **2026-06-05 — Zuordnung select→confirm** Klick wählt nur, expliziter Button committet (kein Sofort-Commit, „Review vor Commit"). `c839026`.
 - **2026-06-04 — Entity-Core abgeschlossen (Phase 5–7)** Unified Composer + Kommunikation (ein Signal-Stream) + Multi-Mount-Beweis + Modulgrenze-Guard. 194/194 ✓. Detail: `entity-core.md`.
