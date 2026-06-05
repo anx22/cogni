@@ -21,9 +21,9 @@ describe("detectInputType", () => {
 
   describe("detectFromText", () => {
     it("trimmt und liefert url payload", () => {
-      const p = detectFromText("  https://lovable.dev  ");
+      const p = detectFromText("  https://example.com  ");
       expect(p.type).toBe("url");
-      expect(p.url).toBe("https://lovable.dev");
+      expect(p.url).toBe("https://example.com");
       expect(p.label).toBe("Link");
     });
     it("liefert text payload sonst", () => {

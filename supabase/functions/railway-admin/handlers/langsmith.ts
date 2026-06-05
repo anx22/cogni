@@ -100,7 +100,7 @@ export const handlers: Record<string, Handler> = {
       headers,
       body: JSON.stringify({
         repo_handle: body.repo_handle ?? "produktintelligenz-probe",
-        description: "Created by Lovable agent to verify write access",
+        description: "Created by Cogni agent to verify write access",
         is_public: false,
       }),
     });

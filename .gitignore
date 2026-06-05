@@ -22,6 +22,3 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-
-# Lovable-Plattform-Memory — gehoert nicht ins Repo (Doku liegt in docs/)
-.lovable/

@@ -31,47 +31,27 @@ Deno.serve(
         return fail("audio_base64 required", 400);
       }
 
-      const apiKey = Deno.env.get("LOVABLE_API_KEY");
-      if (!apiKey) return fail("LOVABLE_API_KEY not configured", 500);
+      const apiKey = Deno.env.get("OPENAI_API_KEY");
+      if (!apiKey) return fail("OPENAI_API_KEY not configured", 500);
 
-      const response = await fetch("https://ai-gateway.lovable.dev/v1/chat/completions", {
+      // base64 (webm) -> Bytes -> multipart/form-data für OpenAI Whisper STT.
+      const audioBytes = Uint8Array.from(atob(audioBase64), (c) => c.charCodeAt(0));
+      const form = new FormData();
+      form.append("file", new Blob([audioBytes], { type: "audio/webm" }), "audio.webm");
+      form.append("model", "whisper-1");
+      form.append("language", "de");
+
+      const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${apiKey}`,
         },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
-          messages: [
-            {
-              role: "system",
-              content:
-                "Du bist ein Transkriptions-Assistent. Transkribiere die folgende Audioaufnahme wortgenau auf Deutsch. Gib NUR den transkribierten Text zurück, keine Erklärungen, keine Anführungszeichen.",
-            },
-            {
-              role: "user",
-              content: [
-                {
-                  type: "input_audio",
-                  input_audio: {
-                    data: audioBase64,
-                    format: "webm",
-                  },
-                },
-                {
-                  type: "text",
-                  text: "Bitte transkribiere diese Audioaufnahme.",
-                },
-              ],
-            },
-          ],
-          max_tokens: 4096,
-        }),
+        body: form,
       });
 
       if (!response.ok) {
         const errText = await response.text();
-        log.warn("ai_gateway", "transcription request failed", {
+        log.warn("openai_stt", "transcription request failed", {
           detail: errText.slice(0, 240),
           status: response.status,
         });
@@ -80,7 +60,7 @@ Deno.serve(
       }
 
       const result = await response.json();
-      const text = result.choices?.[0]?.message?.content?.trim() ?? "";
+      const text = typeof result.text === "string" ? result.text.trim() : "";
 
       log.stage("exit", "transcription ok", { length: text.length });
       await log.flush();

@@ -3,11 +3,11 @@
 ## Stack
 
 - **Frontend** React 18 + Vite 5 + TypeScript 5, Tailwind v3, shadcn/ui, semantische Tokens (HSL).
-- **Backend** Lovable Cloud (Supabase): Postgres (kanonisch), Auth, Storage (`intake-files`, `assets`), Realtime, Edge Functions (Deno).
+- **Backend** Supabase: Postgres (kanonisch), Auth, Storage (`intake-files`, `assets`), Realtime, Edge Functions (Deno).
 - **Knowledge Graph** Graphiti + Neo4j (Spiegel, asynchron via `/messages`).
 - **Document Intelligence** Unstructured (Parsing in `intake-process`).
 - **Pipeline-Orchestrator** AOL-Service (FastAPI + LangGraph, Railway). Knoten: `router → context_loader → condenser`. Liest Graphiti, schreibt nicht in Supabase.
-- **Modelle** Lovable AI Gateway (Tool-Calling, Gemini Flash für Voice/Extraktion).
+- **Modelle** Anthropic (Tool-Calling für Extraktion/Zuordnung) · OpenAI Whisper (Voice-Transkription).
 - **Prompts/Traces** LangSmith (EU, `x-tenant-id = LANGSMITH_WORKSPACE_ID`, Owner `-`).
 - **Deployment** Edge Functions deployen automatisch beim Schreiben in `supabase/functions/`. Secrets in Cloud konfiguriert, niemals in Code/Doku.
 
