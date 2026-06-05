@@ -10,7 +10,7 @@ PLAYWRIGHT_USER_EMAIL=… PLAYWRIGHT_USER_PASSWORD=… bunx playwright test
 Gegen Preview-Deploy ohne lokalen dev-Server:
 
 ```bash
-PLAYWRIGHT_NO_SERVER=1 PLAYWRIGHT_BASE_URL=https://id-preview--…lovable.app \
+PLAYWRIGHT_NO_SERVER=1 PLAYWRIGHT_BASE_URL=https://<dein-preview-deploy> \
 PLAYWRIGHT_USER_EMAIL=… PLAYWRIGHT_USER_PASSWORD=… \
   bunx playwright test
 ```

@@ -2,7 +2,7 @@
 // =============================================================================
 //  AGENT-CLIENT (Provider-Adapter)
 // -----------------------------------------------------------------------------
-//  Diese Datei kapselt den eigentlichen KI-Aufruf. Aktuell: Lovable AI Gateway.
+//  Diese Datei kapselt den eigentlichen KI-Aufruf. Aktuell: Anthropic Messages API.
 //  Später (LangChain, eigener Agent-Service, ...) tauschst du NUR diese Datei.
 //
 //  Vertrag nach außen:
@@ -80,21 +80,42 @@ export class AgentTimeoutError extends Error {
   }
 }
 
-const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
+const ANTHROPIC_VERSION = "2023-06-01";
+const MAX_OUTPUT_TOKENS = 8192;
 
-async function callGateway(body: unknown): Promise<any> {
-  const apiKey = Deno.env.get("LOVABLE_API_KEY");
-  if (!apiKey) throw new Error("LOVABLE_API_KEY ist nicht gesetzt");
+// Vertrag nach innen: ein einzelner System-Prompt-String, ein User-Text, genau
+// ein Tool das per tool_choice erzwungen wird. Die Aufrufer bauen das aus
+// agentConfig zusammen und reichen es hier durch.
+interface AnthropicCallArgs {
+  system: string;
+  userText: string;
+  tool: { name: string; description: string; input_schema: unknown };
+}
+
+async function callAnthropic(args: AnthropicCallArgs): Promise<any> {
+  const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY ist nicht gesetzt");
+
+  const body = {
+    model: AGENT_MODEL,
+    max_tokens: MAX_OUTPUT_TOKENS,
+    system: args.system,
+    messages: [{ role: "user", content: args.userText }],
+    tools: [args.tool],
+    tool_choice: { type: "tool", name: args.tool.name },
+  };
 
   const ctl = new AbortController();
   const t = setTimeout(() => ctl.abort(), AGENT_TIMEOUT_MS);
 
   let res: Response;
   try {
-    res = await fetch(GATEWAY_URL, {
+    res = await fetch(ANTHROPIC_URL, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        "x-api-key": apiKey,
+        "anthropic-version": ANTHROPIC_VERSION,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(body),
@@ -108,24 +129,21 @@ async function callGateway(body: unknown): Promise<any> {
   }
 
   if (res.status === 429) throw new AgentRateLimitError();
+  if (res.status === 529) throw new AgentRateLimitError(); // overloaded — retrybar wie 429
   if (res.status === 402) throw new AgentPaymentError();
   if (!res.ok) {
     const txt = await res.text();
-    throw new Error(`Agent gateway ${res.status}: ${txt.slice(0, 300)}`);
+    throw new Error(`Anthropic ${res.status}: ${txt.slice(0, 300)}`);
   }
   return res.json();
 }
 
+// Anthropic liefert Tool-Aufrufe als content-Block { type:"tool_use", name, input }.
+// input ist bereits geparstes JSON-Objekt (kein String wie bei OpenAI).
 function parseToolArgs(data: any, expectedName: string): unknown {
-  const toolCall = data?.choices?.[0]?.message?.tool_calls?.[0];
-  if (toolCall?.function?.name && toolCall.function.name !== expectedName) return null;
-  const argsRaw = toolCall?.function?.arguments;
-  if (!argsRaw) return null;
-  try {
-    return typeof argsRaw === "string" ? JSON.parse(argsRaw) : argsRaw;
-  } catch {
-    return null;
-  }
+  const blocks = Array.isArray(data?.content) ? data.content : [];
+  const toolUse = blocks.find((b: any) => b?.type === "tool_use" && b?.name === expectedName);
+  return toolUse?.input ?? null;
 }
 
 // ----------------------------------------------------------------------------
@@ -143,24 +161,18 @@ export async function callExtractFacts(
     fallback: AGENT_SYSTEM_PROMPT_FALLBACK,
     autoCreate: true,
   });
-  const systemMessages: Array<{ role: "system"; content: string }> = [
-    { role: "system", content: prompt.system },
-  ];
+  let system = prompt.system;
   const trimmed = (graphHint ?? "").trim();
   if (trimmed) {
-    systemMessages.push({
-      role: "system",
-      content:
-        "Bekanntes aus dem Projekt-Wissensgraph (nur als Kontext, nicht zitieren, " +
-        "nicht doppelt extrahieren):\n" +
-        trimmed.slice(0, 4000),
-    });
+    system +=
+      "\n\nBekanntes aus dem Projekt-Wissensgraph (nur als Kontext, nicht zitieren, " +
+      "nicht doppelt extrahieren):\n" +
+      trimmed.slice(0, 4000);
   }
-  const data = await callGateway({
-    model: AGENT_MODEL,
-    messages: [...systemMessages, { role: "user", content: text }],
-    tools: [EXTRACT_FACTS_TOOL],
-    tool_choice: { type: "function", function: { name: "extract_facts" } },
+  const data = await callAnthropic({
+    system,
+    userText: text,
+    tool: EXTRACT_FACTS_TOOL,
   });
   logPromptUsed(log, "agent.extract_facts", prompt);
 
@@ -246,14 +258,10 @@ ${hintsBlock}`;
     fallback: ASSIGNMENT_SYSTEM_PROMPT_FALLBACK,
     autoCreate: true,
   });
-  const data = await callGateway({
-    model: AGENT_MODEL,
-    messages: [
-      { role: "system", content: prompt.system },
-      { role: "user", content: userMsg },
-    ],
-    tools: [SUGGEST_ASSIGNMENT_TOOL],
-    tool_choice: { type: "function", function: { name: "suggest_project_assignment" } },
+  const data = await callAnthropic({
+    system: prompt.system,
+    userText: userMsg,
+    tool: SUGGEST_ASSIGNMENT_TOOL,
   });
   logPromptUsed(log, "agent.suggest_assignment", prompt);
 

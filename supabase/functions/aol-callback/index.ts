@@ -1,7 +1,7 @@
 // =============================================================================
 //  aol-callback
 // -----------------------------------------------------------------------------
-//  Sicherer Rückkanal vom Railway-AOL-Service in die Lovable-Cloud-DB.
+//  Sicherer Rückkanal vom Railway-AOL-Service in die Supabase-DB.
 //  Statt Railway den SUPABASE_SERVICE_ROLE_KEY zu geben, ruft der AOL-Service
 //  diese Funktion mit Bearer AOL_CALLBACK_TOKEN auf. Hier wird mit dem intern
 //  verfügbaren Service-Role-Key in die Tabellen geschrieben.

@@ -51,7 +51,7 @@ class ConfirmRequest(BaseModel):
 
 
 def _post_callback(payload: dict[str, Any]) -> None:
-    """Schreibt Status zurück in Lovable Cloud (aol-callback Edge Function).
+    """Schreibt Status zurück in Supabase (aol-callback Edge Function).
 
     Best-effort: Fehler werden nur geloggt, niemals geworfen — der Run-Erfolg
     hängt nicht am Callback.

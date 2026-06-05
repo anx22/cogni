@@ -4,7 +4,7 @@
 
 ### Fix gesetzt
 
-- **Lovable** = Experience Layer / UI / Produktschale
+- **Frontend (React + Vite)** = Experience Layer / UI / Produktschale
 - **Supabase** = kanonischer Kernzustand, Auth, Storage, Realtime, strukturierte Daten, Jobs
 - **Unstructured** = Document Intelligence / Parsing / Partitioning / strukturierte Dokumentausgabe
 
@@ -31,7 +31,7 @@
 
 ## 3. Aufgabenverteilung pro Plattform
 
-### Lovable
+### Frontend (React + Vite)
 
 Verantwortlich für:
 
@@ -114,7 +114,7 @@ Cognee ist sinnvoll, wenn ein enger verzahnter Wissensmotor mit weniger Einzelve
 5. Der Wissensmotor erzeugt oder aktualisiert Themenbezüge, Stakeholder-Beziehungen, Versionhinweise, Widersprüche, Gap Signals, Dependency Signals und weitere kontextuelle Vorschläge.
 6. Diese Vorschläge werden als Proposed Facts, Change Events und Review Cases nach Supabase zurückgeschrieben.
 7. Erst nach Review-Commit wird der kanonische Projektzustand aktualisiert.
-8. Lovable liest den Projektzustand, aktive Reviews und Delta-Informationen aus Supabase und rendert Entität, Projektscreen und Overlay.
+8. Das Frontend liest den Projektzustand, aktive Reviews und Delta-Informationen aus Supabase und rendert Entität, Projektscreen und Overlay.
 
 ### Harte Kopplungsregel
 
@@ -366,7 +366,7 @@ Risiko:
 
 ### V1
 
-- Lovable als Produktschale
+- Frontend (React + Vite) als Produktschale
 - Supabase als kanonischer Kern
 - Unstructured als fixer Dokumentservice
 - Graphiti oder Cognee als Knowledge-Unterbau

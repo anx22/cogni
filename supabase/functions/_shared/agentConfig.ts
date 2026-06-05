@@ -17,7 +17,8 @@
 // =============================================================================
 
 // ---------- Modell ----------
-export const AGENT_MODEL = "google/gemini-2.5-pro";
+//  Anthropic Messages API. Modell-ID exakt wie hier; nicht datieren.
+export const AGENT_MODEL = "claude-sonnet-4-6";
 
 // ---------- Limits ----------
 export const MAX_INPUT_CHARS = 30_000;
@@ -105,85 +106,79 @@ Regeln:
 
 Du rufst ausschließlich das Tool "suggest_project_assignment" auf.`;
 
-// ---------- Tool-Schema Extract ----------
+// ---------- Tool-Schema Extract (Anthropic Messages API) ----------
 export const EXTRACT_FACTS_TOOL = {
-  type: "function" as const,
-  function: {
-    name: "extract_facts",
-    description: "Gib eine Liste extrahierter Fakten zurück.",
-    parameters: {
-      type: "object",
-      properties: {
-        facts: {
-          type: "array",
-          maxItems: MAX_FACTS_PER_RUN,
-          items: {
-            type: "object",
-            properties: {
-              fact_type: {
-                type: "string",
-                enum: [
-                  "stakeholder",
-                  "topic",
-                  "decision",
-                  "task",
-                  "deadline",
-                  "open_point",
-                  "reference",
-                  "other",
-                ],
-              },
-              modality: { type: "string", enum: [...MODALITIES] },
-              attaches_to: { type: ["string", "null"] },
-              asks: { type: ["string", "null"] },
-              understood: { type: "string", maxLength: 240 },
-              evidence: { type: ["string", "null"] },
-              title: { type: "string", maxLength: 120 },
-              content: { type: "object", additionalProperties: true },
-              confidence: { type: "number", minimum: 0, maximum: 1 },
+  name: "extract_facts",
+  description: "Gib eine Liste extrahierter Fakten zurück.",
+  input_schema: {
+    type: "object",
+    properties: {
+      facts: {
+        type: "array",
+        maxItems: MAX_FACTS_PER_RUN,
+        items: {
+          type: "object",
+          properties: {
+            fact_type: {
+              type: "string",
+              enum: [
+                "stakeholder",
+                "topic",
+                "decision",
+                "task",
+                "deadline",
+                "open_point",
+                "reference",
+                "other",
+              ],
             },
-            required: ["fact_type", "modality", "title", "content", "confidence", "understood"],
-            additionalProperties: false,
+            modality: { type: "string", enum: [...MODALITIES] },
+            attaches_to: { type: ["string", "null"] },
+            asks: { type: ["string", "null"] },
+            understood: { type: "string", maxLength: 240 },
+            evidence: { type: ["string", "null"] },
+            title: { type: "string", maxLength: 120 },
+            content: { type: "object", additionalProperties: true },
+            confidence: { type: "number", minimum: 0, maximum: 1 },
           },
+          required: ["fact_type", "modality", "title", "content", "confidence", "understood"],
+          additionalProperties: false,
         },
       },
-      required: ["facts"],
-      additionalProperties: false,
     },
+    required: ["facts"],
+    additionalProperties: false,
   },
 };
 
-// ---------- Tool-Schema Assignment ----------
+// ---------- Tool-Schema Assignment (Anthropic Messages API) ----------
 export const SUGGEST_ASSIGNMENT_TOOL = {
-  type: "function" as const,
-  function: {
-    name: "suggest_project_assignment",
-    description:
-      "Schlage das passende Projekt vor oder gib null zurück, wenn der Text vermutlich zu einem neuen Projekt gehört.",
-    parameters: {
-      type: "object",
-      properties: {
-        project_id: { type: ["string", "null"] },
-        confidence: { type: "number", minimum: 0, maximum: 1 },
-        reason_short: { type: "string", maxLength: 160 },
-        suggested_new_name: { type: ["string", "null"] },
-        alternatives: {
-          type: "array",
-          maxItems: 3,
-          items: {
-            type: "object",
-            properties: {
-              project_id: { type: "string" },
-              confidence: { type: "number", minimum: 0, maximum: 1 },
-            },
-            required: ["project_id", "confidence"],
-            additionalProperties: false,
+  name: "suggest_project_assignment",
+  description:
+    "Schlage das passende Projekt vor oder gib null zurück, wenn der Text vermutlich zu einem neuen Projekt gehört.",
+  input_schema: {
+    type: "object",
+    properties: {
+      project_id: { type: ["string", "null"] },
+      confidence: { type: "number", minimum: 0, maximum: 1 },
+      reason_short: { type: "string", maxLength: 160 },
+      suggested_new_name: { type: ["string", "null"] },
+      alternatives: {
+        type: "array",
+        maxItems: 3,
+        items: {
+          type: "object",
+          properties: {
+            project_id: { type: "string" },
+            confidence: { type: "number", minimum: 0, maximum: 1 },
           },
+          required: ["project_id", "confidence"],
+          additionalProperties: false,
         },
       },
-      required: ["project_id", "confidence", "reason_short"],
-      additionalProperties: false,
     },
+    required: ["project_id", "confidence", "reason_short"],
+    additionalProperties: false,
   },
 };
 

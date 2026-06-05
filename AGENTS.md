@@ -31,8 +31,8 @@ Drei Außenmodi: Entität, Projekt, Dialog-Overlay. Persistente `AppSidebar` (Pr
 
 ## Service-Schicht
 
-Lovable Cloud (Supabase) = kanonisch · Graphiti/Neo4j = Spiegel · Unstructured = Parsing ·
-AOL-Service auf Railway = LangGraph-Kontext · LangSmith = Prompts/Traces · Lovable AI Gateway = Modelle.
+Supabase = kanonisch · Graphiti/Neo4j = Spiegel · Unstructured = Parsing ·
+AOL-Service auf Railway = LangGraph-Kontext · LangSmith = Prompts/Traces · Anthropic + OpenAI Whisper = Modelle.
 
 ## Schlüsseldateien
 
