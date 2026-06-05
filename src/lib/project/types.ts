@@ -14,7 +14,8 @@ export type ObjektTyp =
   | "offener_punkt"
   | "feedback"
   | "dependency"
-  | "topic_merge";
+  | "topic_merge"
+  | "zurueckgestellt";
 
 export type DeltaTyp = "neu" | "ersetzt" | "bestaetigt" | "widersprochen" | "unclear";
 
@@ -114,6 +115,8 @@ export interface HandlungsbedarfVM {
   topicMerge?: TopicMergePayloadVM;
   /** Bei objektTyp='konflikt': vollständiger KonfliktVM für Tier-Routing und Popover. */
   konfliktRef?: KonfliktVM;
+  /** Bei objektTyp='zurueckgestellt': Reopen-Anker (eskalierter Review-Case + Session). */
+  reopen?: { caseId: string; sessionId: string };
   /** Einheitliche Empfehlung — für Gap/Dependency/Konflikt/Entscheidung. */
   empfehlung?: Empfehlung | null;
 }

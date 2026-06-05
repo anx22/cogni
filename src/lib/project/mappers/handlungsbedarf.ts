@@ -15,6 +15,8 @@ export function toHandlungsbedarf(rows: {
   feedbackRows: any[];
   deps: any[];
   topicMergeCandidates?: any[];
+  /** Eskalierte (zurückgestellte) Review-Cases dieses Projekts — wieder öffenbar. */
+  zurueckgestellt?: any[];
 }): HandlungsbedarfVM[] {
   const out: HandlungsbedarfVM[] = [];
 
@@ -117,6 +119,21 @@ export function toHandlungsbedarf(rows: {
       quelle: "Abhängigkeit",
       blocker: d.dependency_type === "blockiert_durch",
       empfehlung: deriveDepEmpfehlung(d.dependency_type, d.source_type, d.target_type),
+    }),
+  );
+
+  (rows.zurueckgestellt ?? []).forEach((rc) =>
+    out.push({
+      id: `esc-${rc.id}`,
+      arbeitsmodus: "pruefen",
+      objektTyp: "zurueckgestellt",
+      titel: rc.title ?? "Zurückgestellte Erkenntnis",
+      beschreibung: rc.description ?? "Später erneut entscheiden.",
+      verantwortlich: null,
+      frist: null,
+      quelle: "Zurückgestellt",
+      blocker: false,
+      reopen: { caseId: rc.id, sessionId: rc.session_id },
     }),
   );
 

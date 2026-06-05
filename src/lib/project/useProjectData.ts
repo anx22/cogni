@@ -55,6 +55,7 @@ export function useProjectData(projectId: string | null | undefined): UseProject
         assetsRes,
         stakeholderRes,
         mergeCandidatesRes,
+        escalatedRes,
       ] = await Promise.all([
         supabase.from("projects").select("*").eq("id", projectId).maybeSingle(),
         supabase
@@ -122,6 +123,13 @@ export function useProjectData(projectId: string | null | undefined): UseProject
           )
           .eq("project_id", projectId)
           .eq("status", "open"),
+        // Zurückgestellte (eskalierte) Review-Cases dieses Projekts. review_cases
+        // hat kein project_id → Scope über inner-Join auf dialog_sessions.
+        supabase
+          .from("review_cases")
+          .select("id, title, description, session_id, dialog_sessions!inner(project_id)")
+          .eq("box_state", "escalated")
+          .eq("dialog_sessions.project_id", projectId),
       ]);
 
       if (projectRes.error || !projectRes.data) {
@@ -158,6 +166,12 @@ export function useProjectData(projectId: string | null | undefined): UseProject
         assets: assetsRes.data ?? [],
         stakeholders: stakeholderRes.data ?? [],
         topicMergeCandidates: mergeCandidatesRes.data ?? [],
+        zurueckgestellt: (escalatedRes.data ?? []).map((r) => ({
+          id: r.id,
+          title: r.title,
+          description: r.description,
+          session_id: r.session_id,
+        })),
       });
       setStatus("ready");
     } catch (err) {
@@ -196,8 +210,11 @@ export function useProjectData(projectId: string | null | undefined): UseProject
       ...projectTables.map((table) => ({ table, filter: `project_id=eq.${projectId}` })),
       // Projekt selbst (Rename, Status-Wechsel, Delete) live verfolgen.
       { table: "projects", filter: `id=eq.${projectId}` },
+      // review_cases hat kein project_id → user-scoped lauschen, damit
+      // Zurückstellen/Reopen die „Zurückgestellt"-Liste live aktualisiert.
+      ...(userId ? [{ table: "review_cases", filter: `user_id=eq.${userId}` }] : []),
     ];
-  }, [projectId]);
+  }, [projectId, userId]);
 
   useRealtimeTables(projectId && userId ? `project-${projectId}` : null, realtimeListeners, {
     onTrigger: load,

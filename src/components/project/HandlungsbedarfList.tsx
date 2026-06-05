@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
-import { Flag, AlertCircle, HelpCircle, Link2, Zap, GitMerge } from "lucide-react";
+import { Flag, AlertCircle, HelpCircle, Link2, Zap, GitMerge, RotateCcw } from "lucide-react";
+import { toast } from "sonner";
 import { useDialog } from "@/components/dialog/DialogProvider";
+import { reopenEscalatedCase } from "@/lib/dialog/reopenEscalated";
 import {
   buildHandlungsbedarfSession,
   buildThemaMergeSession,
@@ -35,7 +37,9 @@ function TypeIcon({ kind }: { kind: ObjektTyp }) {
             ? Link2
             : kind === "topic_merge"
               ? GitMerge
-              : Flag;
+              : kind === "zurueckgestellt"
+                ? RotateCcw
+                : Flag;
   return <Icon className="w-3.5 h-3.5" />;
 }
 
@@ -210,10 +214,22 @@ const ActionRow = ({
   last: boolean;
   projectId?: string | null;
 }) => {
-  const { openDialog } = useDialog();
+  const { openDialog, openSessionFromDB } = useDialog();
   const [popover, setPopover] = useState<DOMRect | null>(null);
 
   const openDrilldown = () => {
+    // Zurückgestellt → eskalierten Case reaktivieren + Review-Session öffnen.
+    if (item.objektTyp === "zurueckgestellt" && item.reopen) {
+      const { caseId, sessionId } = item.reopen;
+      void reopenEscalatedCase(caseId, sessionId).then((ok) => {
+        if (ok) {
+          void openSessionFromDB(sessionId);
+        } else {
+          toast.error("Konnte nicht erneut öffnen");
+        }
+      });
+      return;
+    }
     if (item.objektTyp === "topic_merge" && item.topicMerge) {
       openDialog(
         buildThemaMergeSession({
