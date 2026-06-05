@@ -38,7 +38,6 @@ function toEmpfehlungBlock(e: Empfehlung | null | undefined): EmpfehlungBlockPay
   };
 }
 
-
 let counter = 0;
 const uid = (prefix = "b") => `${prefix}_${Date.now()}_${counter++}`;
 const sessionId = () => `s_${Date.now()}_${counter++}`;
@@ -82,22 +81,33 @@ export const buildKonfliktSession = (k: {
   const winner = winnerSide === "A" ? k.faktA : winnerSide === "B" ? k.faktB : null;
   const loser = winnerSide === "A" ? k.faktB : winnerSide === "B" ? k.faktA : null;
 
-  const empfehlungBlock: EmpfehlungBlockPayload | null = winner && winnerSide
-    ? {
-        kind: "konflikt",
-        vorschlag: winner.inhalt,
-        begruendung: k.empfehlung?.begruendung ?? "",
-        quelle: winner.quelle || undefined,
-        konfidenz:
-          (k.empfehlung?.konfidenz ?? 0) >= 0.8
-            ? "hoch"
-            : (k.empfehlung?.konfidenz ?? 0) >= 0.5
-              ? "mittel"
-              : "niedrig",
-        intent: "accept",
-        acceptPayload: { auswahl: winnerSide, wert: winner.inhalt },
-        // Top-Level Konflikt-Felder bleiben für renderConflict erhalten.
-        konflikt: {
+  const empfehlungBlock: EmpfehlungBlockPayload | null =
+    winner && winnerSide
+      ? ({
+          kind: "konflikt",
+          vorschlag: winner.inhalt,
+          begruendung: k.empfehlung?.begruendung ?? "",
+          quelle: winner.quelle || undefined,
+          konfidenz:
+            (k.empfehlung?.konfidenz ?? 0) >= 0.8
+              ? "hoch"
+              : (k.empfehlung?.konfidenz ?? 0) >= 0.5
+                ? "mittel"
+                : "niedrig",
+          intent: "accept",
+          acceptPayload: { auswahl: winnerSide, wert: winner.inhalt },
+          // Top-Level Konflikt-Felder bleiben für renderConflict erhalten.
+          konflikt: {
+            winnerSide,
+            winnerFact: winner.inhalt,
+            winnerQuelle: winner.quelle,
+            winnerDatum: winner.datum,
+            winnerMode: winner.mode,
+            loserFact: loser?.inhalt ?? "",
+            loserQuelle: loser?.quelle ?? "",
+            loserDatum: loser?.datum ?? "",
+          },
+          // Alias-Felder für bestehenden renderConflict-Code:
           winnerSide,
           winnerFact: winner.inhalt,
           winnerQuelle: winner.quelle,
@@ -106,18 +116,8 @@ export const buildKonfliktSession = (k: {
           loserFact: loser?.inhalt ?? "",
           loserQuelle: loser?.quelle ?? "",
           loserDatum: loser?.datum ?? "",
-        },
-        // Alias-Felder für bestehenden renderConflict-Code:
-        winnerSide,
-        winnerFact: winner.inhalt,
-        winnerQuelle: winner.quelle,
-        winnerDatum: winner.datum,
-        winnerMode: winner.mode,
-        loserFact: loser?.inhalt ?? "",
-        loserQuelle: loser?.quelle ?? "",
-        loserDatum: loser?.datum ?? "",
-      } as EmpfehlungBlockPayload & Record<string, unknown>
-    : null;
+        } as EmpfehlungBlockPayload & Record<string, unknown>)
+      : null;
 
   return mkSession("Widerspruch klären", k.title, [
     mkBox({

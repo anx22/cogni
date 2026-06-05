@@ -9,6 +9,7 @@
 import { useDialog } from "./DialogProvider";
 import SessionHeader from "./parts/SessionHeader";
 import AssignmentOptions, { type AssignmentPayload } from "./parts/AssignmentOptions";
+import { DeltaChip, RefToken } from "./parts/deltaTokens";
 import { END_STATES } from "@/lib/dialog/types";
 import { useState } from "react";
 import { ArrowLeft, AlertTriangle } from "lucide-react";
@@ -95,8 +96,17 @@ const FaktDrillOverlay = ({ onClose }: { onClose: () => void }) => {
         <span style={{ fontSize: 13.5, color: "var(--d-ink-2)", fontWeight: 450 }}>
           {box.title}
         </span>
+        {/* Delta-Chip — in JEDER Drill-Variante sichtbar (Was hat der Linker getan?). */}
+        <DeltaChip delta={box.payload?.delta_type as string | null | undefined} marginLeft={0} />
       </div>
       <div className="flex items-center" style={{ gap: 10 }}>
+        {/* Quelle/Bezug — Herkunft sichtbar machen (PRODUCT: Quelle + Delta). */}
+        {(box.payload?.quelle as string | null) && (
+          <RefToken to={String(box.payload?.quelle)} label="Quelle" />
+        )}
+        {(box.payload?.attaches_to as string | null) && (
+          <RefToken to={String(box.payload?.attaches_to)} />
+        )}
         {drillSource && (
           <span className="mono" style={{ fontSize: 11, color: "var(--d-ink-3)" }}>
             {drillSource}
@@ -444,6 +454,19 @@ const FaktDrillOverlay = ({ onClose }: { onClose: () => void }) => {
                 {beschreibung}
               </div>
             )}
+            {(box.payload?.understood as string | null) && (
+              <div
+                style={{ fontSize: 12.5, color: "var(--d-ink-2)", marginTop: 6, lineHeight: 1.5 }}
+              >
+                <span
+                  className="mono"
+                  style={{ fontSize: 10.5, color: "var(--d-ink-3)", marginRight: 6 }}
+                >
+                  VERSTANDEN:
+                </span>
+                {String(box.payload?.understood)}
+              </div>
+            )}
           </div>
         </div>
 
@@ -588,6 +611,7 @@ const FaktDrillOverlay = ({ onClose }: { onClose: () => void }) => {
     const betrifft = box.payload?.betrifft as string | undefined;
     const lebensdauer = box.payload?.lebensdauer as string | undefined;
     const quelle = box.payload?.quelle as string | undefined;
+    const evidence = box.payload?.evidence as string | undefined;
     const suggestions = (box.payload?.suggestions as string[] | undefined) ?? [];
     const blockiert =
       (box.payload?.blockiert as Array<{ what: string; strong?: boolean }> | undefined) ?? [];
@@ -654,6 +678,36 @@ const FaktDrillOverlay = ({ onClose }: { onClose: () => void }) => {
                   }}
                 >
                   {wirkung}
+                </div>
+              )}
+              {(box.payload?.understood as string | null) && (
+                <div
+                  style={{ marginTop: 12, fontSize: 13, color: "var(--d-ink-2)", lineHeight: 1.5 }}
+                >
+                  <span
+                    className="mono"
+                    style={{ fontSize: 10.5, color: "var(--d-ink-3)", marginRight: 6 }}
+                  >
+                    VERSTANDEN:
+                  </span>
+                  {String(box.payload?.understood)}
+                </div>
+              )}
+              {evidence && (
+                <div
+                  style={{
+                    marginTop: 12,
+                    padding: "10px 14px",
+                    background: "var(--d-surf-3)",
+                    borderRadius: 8,
+                    fontSize: 12.5,
+                    color: "var(--d-ink-3)",
+                    fontStyle: "italic",
+                    lineHeight: 1.5,
+                    borderLeft: "2px solid var(--d-hair-2)",
+                  }}
+                >
+                  „{evidence}"
                 </div>
               )}
               {quelle && (
@@ -895,49 +949,76 @@ const FaktDrillOverlay = ({ onClose }: { onClose: () => void }) => {
     unklar: "Unklar",
   };
 
+  type ModalityTone = "review" | "conflict" | "accent" | "neutral";
   type ModalityAction = {
     primaryLabel: string;
     secondaryLabel?: string;
     inlineEdit?: "bezug" | "due_date" | "decide";
+    /** Führende Frage über dem Footer — „was ist hier zu entscheiden?". */
+    leadQuestion?: string;
+    /** Signalfarbe des Führungs-Banners. */
+    tone?: ModalityTone;
   };
   const MODALITY: Record<string, ModalityAction> = {
-    bedingung: { primaryLabel: "Übernehmen", secondaryLabel: "Bezug ändern", inlineEdit: "bezug" },
-    ausschluss: { primaryLabel: "Übernehmen", secondaryLabel: "Bezug ändern", inlineEdit: "bezug" },
-    annahme: { primaryLabel: "Als Annahme" },
+    bedingung: {
+      primaryLabel: "Übernehmen",
+      secondaryLabel: "Bezug ändern",
+      inlineEdit: "bezug",
+      leadQuestion: "Diese Bedingung übernehmen?",
+      tone: "neutral",
+    },
+    ausschluss: {
+      primaryLabel: "Übernehmen",
+      secondaryLabel: "Bezug ändern",
+      inlineEdit: "bezug",
+      leadQuestion: "Diesen Ausschluss übernehmen?",
+      tone: "neutral",
+    },
+    annahme: {
+      primaryLabel: "Als Annahme",
+      leadQuestion: "Als Annahme festhalten?",
+      tone: "neutral",
+    },
     vorschlag: {
       primaryLabel: "Vormerken",
       secondaryLabel: "Jetzt entscheiden",
       inlineEdit: "decide",
+      leadQuestion: "Jetzt entscheiden oder vormerken?",
+      tone: "review",
     },
-    notiz: { primaryLabel: "Ablegen" },
+    notiz: { primaryLabel: "Ablegen", leadQuestion: "Notiz ablegen?", tone: "neutral" },
     beziehung: {
       primaryLabel: "Kante übernehmen",
       secondaryLabel: "Bezug ändern",
       inlineEdit: "bezug",
+      leadQuestion: "Diese Verknüpfung übernehmen?",
+      tone: "neutral",
     },
     attribut: {
       primaryLabel: "Aktualisieren",
       secondaryLabel: "Bezug ändern",
       inlineEdit: "bezug",
+      leadQuestion: "Dieses Detail aktualisieren?",
+      tone: "accent",
     },
     risiko: {
       primaryLabel: "Risiko aufnehmen",
       secondaryLabel: "Frist setzen",
       inlineEdit: "due_date",
+      leadQuestion: "Dieses Risiko aufnehmen?",
+      tone: "conflict",
     },
-    unklar: { primaryLabel: "Verstehe ich das richtig?" },
-    wissen: { primaryLabel: "Bestätigen" },
-    kontext: { primaryLabel: "Bestätigen" },
+    unklar: {
+      primaryLabel: "Verstehe ich das richtig?",
+      leadQuestion: "Verstehe ich das richtig?",
+      tone: "review",
+    },
+    wissen: { primaryLabel: "Bestätigen", leadQuestion: "Stimmt das?", tone: "accent" },
+    kontext: { primaryLabel: "Bestätigen", leadQuestion: "Stimmt das?", tone: "accent" },
   };
 
   const renderGeneric = () => {
     const deltaType = (box.payload?.delta_type as string | null) ?? null;
-    const DELTA_LABEL: Record<string, string> = {
-      add: "neu",
-      replace: "ersetzt",
-      contradict: "widersprochen",
-      merge: "verbunden",
-    };
     const understood = (box.payload?.understood as string | null) ?? null;
     const attachesTo = (box.payload?.attaches_to as string | null) ?? null;
     const evidence = (box.payload?.evidence as string | null) ?? null;
@@ -949,6 +1030,15 @@ const FaktDrillOverlay = ({ onClose }: { onClose: () => void }) => {
     const quelle = (box.payload?.quelle as string | null) ?? null;
     const action = MODALITY[box.type] ?? { primaryLabel: "Bestätigen" };
     const aktionen: string[] = Array.isArray(box.payload?.aktionen) ? box.payload.aktionen : [];
+
+    // Tone → [Signalfarbe, weiche Fläche, Rahmen] für Führungs-Banner + Frage.
+    const TONE_TOK: Record<string, [string, string, string]> = {
+      review: ["var(--d-warn)", "var(--d-warn-soft)", "var(--d-warn)"],
+      conflict: ["var(--d-conf)", "var(--d-conf-soft)", "var(--d-conf)"],
+      accent: ["var(--d-blue)", "var(--d-blue-soft)", "var(--d-hair-2)"],
+      neutral: ["var(--d-ink-3)", "var(--d-surf-3)", "var(--d-hair-2)"],
+    };
+    const [toneInk, toneBg, toneBorder] = TONE_TOK[action.tone ?? "neutral"];
 
     const inlineKey =
       action.inlineEdit === "bezug"
@@ -974,41 +1064,44 @@ const FaktDrillOverlay = ({ onClose }: { onClose: () => void }) => {
           overflowY: "auto",
         }}
       >
-        <div className="cogni-card" style={{ padding: 28 }}>
-          <div
-            className="mono"
+        {/* Führungs-Banner: trägt den Typ OBEN in Tonfall + Signal-Dot, statt
+            als blasses 10px-Mikro-Label. Macht klar, um was es geht. */}
+        <div
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 9,
+            alignSelf: "flex-start",
+            padding: "7px 14px",
+            borderRadius: 999,
+            background: toneBg,
+            border: `1px solid ${toneBorder}`,
+          }}
+        >
+          <span
             style={{
-              fontSize: 10,
-              color: "var(--d-ink-3)",
-              letterSpacing: ".06em",
-              textTransform: "uppercase",
-              marginBottom: 12,
+              width: 7,
+              height: 7,
+              borderRadius: 999,
+              background: toneInk,
+              flex: "0 0 auto",
             }}
-          >
-            {TYPE_LABEL[box.type] ?? box.type.toUpperCase()}
-            {deltaType && DELTA_LABEL[deltaType] && (
-              <span
-                style={{
-                  marginLeft: 10,
-                  padding: "2px 7px",
-                  borderRadius: 5,
-                  background: "var(--d-blue-soft)",
-                  color: "var(--d-blue)",
-                  letterSpacing: ".05em",
-                }}
-                title={`Linker: ${deltaType}`}
-              >
-                {DELTA_LABEL[deltaType]}
-              </span>
-            )}
-          </div>
+          />
+          <span style={{ fontSize: 13, fontWeight: 600, color: toneInk, letterSpacing: "-.005em" }}>
+            {TYPE_LABEL[box.type] ?? box.type}
+          </span>
+          <DeltaChip delta={deltaType} marginLeft={0} />
+        </div>
+
+        <div className="cogni-card" style={{ padding: 28 }}>
+          {/* Kern-Aussage als unbestrittene visuelle Spitze (28px). */}
           <div
             style={{
-              fontSize: 24,
+              fontSize: 28,
               fontWeight: 500,
-              letterSpacing: "-.018em",
+              letterSpacing: "-.02em",
               color: "var(--d-ink)",
-              lineHeight: 1.25,
+              lineHeight: 1.15,
             }}
           >
             {box.title}
@@ -1075,6 +1168,24 @@ const FaktDrillOverlay = ({ onClose }: { onClose: () => void }) => {
             </div>
           )}
         </div>
+
+        {/* Führende Frage — der „jetzt entscheiden"-Fokuspunkt vor den Buttons. */}
+        {action.leadQuestion && box.type !== "aktion" && !editing && (
+          <div
+            style={{
+              padding: "13px 18px",
+              borderRadius: 12,
+              border: `1px solid ${toneBorder}`,
+              background: toneBg,
+              fontSize: 14,
+              fontWeight: 500,
+              color: toneInk,
+              letterSpacing: "-.005em",
+            }}
+          >
+            {action.leadQuestion}
+          </div>
+        )}
 
         <div
           style={{

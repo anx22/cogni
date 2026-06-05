@@ -211,6 +211,8 @@ export async function loadDialogSession(sessionId: string): Promise<DialogSessio
           attaches_to: attachesTo,
           understood,
           evidence,
+          delta_type: deltaType,
+          quelle: factType ?? null,
           __reviewCaseId: c.id,
         },
       };
@@ -237,6 +239,9 @@ export async function loadDialogSession(sessionId: string): Promise<DialogSessio
               : undefined),
           asks,
           understood,
+          evidence,
+          delta_type: deltaType,
+          quelle: factType ?? null,
           __reviewCaseId: c.id,
         },
       };

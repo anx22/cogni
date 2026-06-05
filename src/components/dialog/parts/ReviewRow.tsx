@@ -22,6 +22,7 @@ import type { DialogBox } from "@/lib/dialog/types";
 import { END_STATES } from "@/lib/dialog/types";
 import ConfirmDestructive from "@/components/shared/ConfirmDestructive";
 import AssignmentOptions from "./AssignmentOptions";
+import { DeltaChip, RefToken } from "./deltaTokens";
 import { useDialog } from "@/components/dialog/dialogContext";
 
 // -----------------------------------------------------------------------------
@@ -100,41 +101,6 @@ const Stripe = ({ color }: { color: string }) => (
   <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: color }} />
 );
 
-/** Inline-Tag, das zeigt was der Linker mit diesem Fakt gemacht hat
- *  (add | replace | contradict | merge). `confirm` zeigt nichts, weil
- *  es der Default-Fall ist und keine zusätzliche Information trägt. */
-const DELTA_TAGS: Record<string, { label: string; bg: string; fg: string }> = {
-  add: { label: "neu", bg: "var(--d-blue-soft)", fg: "var(--d-blue)" },
-  replace: { label: "ersetzt", bg: "var(--d-warn-soft)", fg: "var(--d-warn)" },
-  contradict: { label: "widersprochen", bg: "var(--d-warn-soft)", fg: "var(--d-warn)" },
-  merge: { label: "verbunden", bg: "var(--d-surf-3)", fg: "var(--d-ink-3)" },
-};
-const DeltaChip = ({ delta }: { delta: string | null | undefined }) => {
-  if (!delta) return null;
-  const cfg = DELTA_TAGS[delta];
-  if (!cfg) return null;
-  return (
-    <span
-      className="mono"
-      style={{
-        fontSize: 9.5,
-        fontWeight: 600,
-        letterSpacing: "0.04em",
-        textTransform: "uppercase",
-        padding: "3px 7px",
-        borderRadius: 5,
-        background: cfg.bg,
-        color: cfg.fg,
-        marginLeft: 8,
-        flex: "0 0 auto",
-      }}
-      title={`Linker: ${delta}`}
-    >
-      {cfg.label}
-    </span>
-  );
-};
-
 const TypeChip = ({ kind, color }: { kind: string; color?: { bg: string; fg: string } }) => (
   <span
     className="mono"
@@ -153,25 +119,6 @@ const TypeChip = ({ kind, color }: { kind: string; color?: { bg: string; fg: str
     }}
   >
     {TYPE_LABEL[kind] ?? kind}
-  </span>
-);
-
-/** Mini-Token: zeigt das Bezugsobjekt, an das diese Modalität anknüpft. */
-const RefToken = ({ to }: { to: string }) => (
-  <span
-    className="mono"
-    style={{
-      fontSize: 10.5,
-      padding: "2px 8px",
-      borderRadius: 999,
-      border: "1px solid var(--d-hair-2)",
-      color: "var(--d-ink-3)",
-      background: "var(--d-surf-3)",
-      flex: "0 0 auto",
-    }}
-    title={`Bezug: ${to}`}
-  >
-    → {to}
   </span>
 );
 

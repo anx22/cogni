@@ -31,6 +31,7 @@ Graph Deko bleibt:
 > Hier numerisch sortiert.
 
 ### S0 — Beleg-Verankerung (Gap A, vorgezogen, aktiv)
+
 - Agent liefert schon `evidence` (Zitat) — heute nur im Konflikt-Drill gezeigt, kein model/prompt-Version.
 - (a) Zitat per Substring-Match auf ein `parsed_documents.segments[]`-Element abbilden → **stabile Segment-Referenz** (`element_id` falls vorhanden, sonst Array-Index; Unstructured-Elemente tragen `element_id`, Notiz/Link-Segmente Index 0).
 - (b) Beleg-Referenz + Modell (`google/gemini-2.5-pro`) + Prompt-Version **first-class in `provenance`** (proposed → canonical).
@@ -38,6 +39,7 @@ Graph Deko bleibt:
 - Owner-Entscheid: Segment-Referenz statt Offsets/Rohtext — highlightbar genug, DSGVO-schonend (kein Rohtext-Speichern). Best Practice: Anchor-to-Source / Citation-Grounding.
 
 ### S1 — Risk-Gate im Silent-Commit (klein, sofort)
+
 - WO: `understandRun.ts` `canSilent`-Prädikat + Helper `isRisky()` in `factRules.ts`.
 - REGEL: nie still bei `fact_type === 'decision'` · `modality ∈ {risk, exclusion, condition, assumption}`
   · `delta_type ∈ {replace, contradict, merge}` · `against_fact_id` auf decision/deadline/status.
@@ -45,6 +47,7 @@ Graph Deko bleibt:
 - TEST: Matrix-Unit `fact_type × modality × delta_type`.
 
 ### S2 — „Anders" / Related-not-same (klein)
+
 - WO: `commitRoute.planCommitRoute` + `commit-fact/kernel.ts` + DialogProvider + Box-Render.
 - Aktion nur sichtbar bei confirm-Kandidat (`delta_type === 'confirm'` && `against_fact_id`).
 - Effekt: committet als **neuer** Fakt (delta `add` statt `confirm`) + markiert Review-Case session-intern.
@@ -53,12 +56,14 @@ Graph Deko bleibt:
 - Persistentes Negativ-Link-Gedächtnis → `entity_link_rejections` (landet mit S3, gelesen in S5).
 
 ### S3 — Entity-Identitäts-Schicht (groß, der Kern)
+
 ```
 entities(id, user_id, entity_type, canonical_name, metadata jsonb, graphiti_uuid, created_at, updated_at)
   entity_type: person | organization | topic | tool | artifact   (bounded)
 entity_aliases(id, entity_id→entities, alias, normalized, source, created_at)
   normalized: lower/trim/diakritika-frei
 ```
+
 - `canonical_facts` + `proposed_facts`: nullable `entity_id`.
 - Cross-Project: entities user-scoped → spannen Projekte natürlich.
 - Backfill aus bestehenden stakeholder/topic-`canonical_facts`.
@@ -67,6 +72,7 @@ entity_aliases(id, entity_id→entities, alias, normalized, source, created_at)
 - **Anti-Bloat:** Entities = nur Identität. Statements bleiben im getypten Fact-Modell. Kein Prädikat-Graph.
 
 ### S4 — Entity-Resolver ersetzt `linker.ts`
+
 - Lokaler Guard zuerst: `normalized`-exakt + E-Mail-exakt gegen `entity_aliases` (deterministisch, netzfrei).
 - Graphiti primär (semantisch) über `_shared/clients/graphitiSearch.ts` → Kandidaten via `graphiti_uuid → entities`.
 - Output `{ match: entity_id|null, confidence, candidates[], matched_via: 'local'|'graphiti'|'none' }`.
@@ -75,39 +81,46 @@ entity_aliases(id, entity_id→entities, alias, normalized, source, created_at)
 - Observability: `matched_via` loggen (messen statt vertrauen — Lehre aus 422).
 
 ### S5 — Feedback-Schleife minimal schließen
+
 - Resolver liest `entity_link_rejections` → kein Re-Vorschlag desselben Falsch-Matches.
 - Akzeptierte Aliasse wachsen → deterministische Auflösung verbessert sich.
 - **Erweitert (Gap C, spezifiziert): Fakt-Level-Reject als Negativ-Signal.** `reject` erfasst Grund-Taxonomie (`falsch`/`Duplikat`/`irrelevant`/`Beleg fehlt`) → vereinheitlichte Negatives-Schicht (mit `entity_link_rejections`); Extraktion/Resolver liest sie → kein Re-Vorschlag. Heute verschwindet ein abgelehnter Fakt spurlos.
 - Zurückgestellt (L1): Prompt-Tuning aus `corrections`, Confidence-Rekalibrierung.
 
 ### S6 — Cross-Project-Identitäts-Signal (UI)
+
 - „Dieser Stakeholder erscheint in N Projekten" — Read in bestehende `useProject`/`useProjects` falten, kein neuer Roundtrip.
 - Verzahnt mit M2-Präsenz. Der Magic-Moment.
 
 ### S7 — Einheitlicher Fakt-Status (Gap B, abgeleitet, spätere Stufe)
+
 - Status heute über 4 Tabellen verstreut.
 - Reine `factStatus()`-Ableitung (Funktion/View) aus `valid_until`/`superseded_by` + offenen `contradictions`: `active | superseded | contradicted | deprecated | needs_review`.
 - **Keine gespeicherte Spalte** → kein Drift (bitemporale Best Practice). Workflow-State `needs_review` orthogonal.
 - Speist UI-Badges, Resolver, Projektzustand.
 
 ### S8 — Aktions-Set: Needs-source + Escalate (Gap #7, aktiv)
+
 - Commit kennt nur `confirm`/`reject`; `escalate:true` aus `FaktDrillOverlay` wird vom Kernel ignoriert (toter Pfad); „Beleg fehlt" ist nur Reject-Grund.
 - **Needs-source** = blockierender Wartezustand: Fakt mit schwachem/keinem Beleg (nutzt S0-Segment-Referenz) wartet statt Commit/Reject.
 - **Escalate** zu echtem zurückgestelltem Review-Zustand verdrahten (Kernel respektiert es, Box bleibt offen + markiert).
 - Schließt Aktions-Lücke + latenten Bug. Split bleibt bewusst gestrichen.
 
 ### S9 — Pre-commit Supersede/Contradict-Emission (Gap #9, spätere Stufe)
+
 - Heute: Linker emittiert nie `replace`; Ersetzungen/Widersprüche erst post-commit von Detektoren erkannt.
 - Resolver markiert eindeutige Ersetzung/Widerspruch schon **vor** dem Commit als `replace`/`contradict` → Review-Case erscheint sofort als Supersede/Konflikt (Empfehlung-First).
 - Größerer Umbau → spätere Stufe; post-commit-Detektoren + S1/S7 bleiben Sicherheitsnetz.
 
 ## Owner-Entscheidungen (gesetzt)
+
 - Generische `entities`-Tabelle (statt persons/orgs/topics aktivieren).
 - Graphiti-getriebene Resolution **+ deterministischer lokaler Guard** (Robustheits-Leitplanke).
 - Zwei geordnete Blöcke: billige Bedeutungs-Fixes (S1/S2) vor der Identitäts-Schicht (S3–S6).
 - Delta-Lücken (2026-06-03): Beleg via **Segment-Referenz** · Fakt-Status **abgeleitet** · Reject als **Negativ-Signal mit Grund**. Einbettung: **nur Evidence (S0) vorgezogen**, Status (S7) + Reject (S5) spätere Stufen.
 
 ## Leitplanken (Anti-Bloat — verbindlich)
+
 - Keine separate Review-Inbox (Dialog-Overlay + Projekt-Screen sind die Review-Oberfläche).
 - Kein rollenbasiertes Routing (Solo-Owner). Kein blindes Zweit-Review.
 - Kein generischer Prädikat-Graph. Kein Prompt-Lernen jetzt. Kein „Split"-Button.
