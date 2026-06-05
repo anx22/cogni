@@ -48,8 +48,8 @@ Die Entität (Gesicht der App) wird zum in sich geschlossenen Modul: reines Gehi
 **P1 — Kern-Gefühl & Führung**
 
 - ✅ **Morph neu (Orby-Technik)** (`47194bb`, dev) — Shell ist die morphende Box (explizite `height` 3.1↔17rem + `radius` + `max-width` auf einer Kurve); Ruheleiste/Panel absolut + Opacity-Crossfade; `max-height` raus. Reines CSS. _Optik live prüfen._
-- ☐ **Drill-Führung & Hierarchie** — systemisch über `renderGeneric()` (alle Box-Typen), Größenkontraste + führende Frage + Banner (Vorlage `dialog-overlay.jsx`/Overlays).
-- ☐ **„Was wurde verstanden" zeigen** — Quelle + Delta + Beleg vor/bei Entscheidung (PRODUCT-Versprechen); Drill-Header erweitern (`loadSession` liefert `deltaType`).
+- ✅ **Drill-Führung & Hierarchie** (`a55fdd9`, dev) — `renderGeneric`: Tone-Banner + führende Frage + Titel 28px; `MODALITY` um `leadQuestion`/`tone`.
+- ✅ **„Was wurde verstanden" zeigen** (`a55fdd9`, dev) — `loadSession` trägt `delta_type`/`evidence`/`quelle` in Konflikt+Gap nach; `DrillHeader` zeigt Delta-Chip + Quelle universell; VERSTANDEN-Zeile in Konflikt/Gap; geteiltes `parts/deltaTokens.tsx`.
 - ☐ **Verarbeitung = echte Queue** — Busy-Hard-Lock raus, weiter droppen, AssetOrbit-Ring zeigt Queue (`Index.tsx`/`satellites/AssetOrbit.tsx`).
 - _Abgrenzung:_ „ERKANNT"-Streifen braucht Pipeline-Daten (nach Intake) → spätere Stufe.
 
