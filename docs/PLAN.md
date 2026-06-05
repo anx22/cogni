@@ -2,7 +2,7 @@
 
 > Vorwärts-Sicht (Zukunft). Gegenwart: `NOW.md` · Begründungen: `DECISIONS.md` · M4-Detail: `m4-spec.md` · Entity-Core-Detail: `entity-core.md`.
 
-**Sequenz:** M1 ✅ → M2 ✅ → M3 ✅ → **Entity-Core ✅** → **M4 (priorisiert, aktiv)** → **Wave 3** → Langfrist-Backlog (L1–L15).
+**Sequenz:** M1 ✅ → M2 ✅ → M3 ✅ → **Entity-Core ✅** → **UI-Politur (aktiv)** → **M4 (priorisiert)** → **Wave 3** → Langfrist-Backlog (L1–L15).
 
 ---
 
@@ -25,6 +25,39 @@ Die Entität (Gesicht der App) wird zum in sich geschlossenen Modul: reines Gehi
 - **5–7** Unified Composer · Kommunikation (ein Signal-Stream) · Mehrfach-Mount-Reuse — ✅ 2026-06-04. Kein ⌘+Space-Overlay (gestrichen).
 
 **→ Entity-Core vollständig abgeschlossen.**
+
+---
+
+## Entity-UI & Review-Flow — Politur (aktiv)
+
+> Quelle: Live-Test-Feedback (Composer-Morph, Orb, Voice, Drop, Verarbeitung, Review/Zuordnung). **Grounding-Pflicht — Originale studieren, nicht improvisieren:**
+>
+> - **`../ui_design/shell/`** — Home/Composer-Ziel (`Tag _ Text eingef_gt.png` = Karte + Inline-Entity-Highlights + „ERKANNT"-Streifen + Aktionen _Offen lassen · Erst speichern · Review öffnen →_ + AssetOrbit-Ring + rechtes PIPELINE-Panel).
+> - **`../ui_design/Overlays/`** — Drill-Ziel (`A_Batch`, `B_Konflikt expanded`, `F_Gap` als .html+.png): Größenhierarchie, Führung, Kontrast.
+> - **`../entitaet/Orby/Orby.css`** — Morph-**Technik**: explizite `width`/`height`+`border-radius` `transition: all .6s` (kein `max-height`!), Glas `blur(50px)`.
+> - **`docs/redesign/prototype/dialog-overlay.jsx`** + `tokens.css` — Drill-CSS/Token-Referenz.
+
+**Erledigt:** Zuordnung-Render+editierbarer Titel · Voice auf ProjectScreen · escalate-Session-Progress · **Zuordnung select→confirm** (kein Sofort-Commit beim Klick).
+
+**P0 — kaputt / Daten-Integrität**
+
+- ✅ Sofort-Commit bei Zuordnung → select→confirm
+- ✅ **Busy-Lock-Bug** (`354eec8`, dev) — `review_ready` mappte auf `null` → kein idle-Signal. Neues `intake.done` (nur `processing→idle`, lässt `review-ready`/`failed`), via 1500 ms-Grace. Reorder-Edge (spätes `running` nach `review_ready`) → gehört zur Queue/activeCount (Batch 3).
+- ☐ **Voice verifizieren** — Diagnose: **kein Frontend-Defekt** (Mount+Trigger-Kette intakt), Ursache vermutl. Realtime-upstream → Ops-/Backend-Prüfung, nicht blind coden.
+
+**P1 — Kern-Gefühl & Führung**
+
+- ☐ **Morph neu (Orby-Technik)** — `width`/`height`/`radius`-Transition + Glas statt `max-height`; saubere Karte. `EntityComposer.tsx`/`composerTokens.css`.
+- ☐ **Drill-Führung & Hierarchie** — systemisch über `renderGeneric()` (alle Box-Typen), Größenkontraste + führende Frage + Banner (Vorlage `dialog-overlay.jsx`/Overlays).
+- ☐ **„Was wurde verstanden" zeigen** — Quelle + Delta + Beleg vor/bei Entscheidung (PRODUCT-Versprechen); Drill-Header erweitern (`loadSession` liefert `deltaType`).
+- ☐ **Verarbeitung = echte Queue** — Busy-Hard-Lock raus, weiter droppen, AssetOrbit-Ring zeigt Queue (`Index.tsx`/`satellites/AssetOrbit.tsx`).
+- _Abgrenzung:_ „ERKANNT"-Streifen braucht Pipeline-Daten (nach Intake) → spätere Stufe.
+
+**P2 — visuelle Politur**
+
+- ☐ Kontrast/Farben durchgängig (`--d-hair`→`--d-hair-2`+; blasse Flächen) · ☐ Orb-Idle-Atmung dämpfen (`expression/signatures.ts`) · ☐ Drop-Hinweis-Position (`HomeDropOverlay` relativ zur Orb-Bühne).
+
+**Infra:** CI rot (`bun --frozen-lockfile` vs `bun-version:latest` — `qa.yml` pinnen/Lockfile neu) · Vercel dev-Preview aktivieren · Deploy je Batch per `dev → main`.
 
 ---
 
@@ -56,6 +89,7 @@ Macht das Cross-Project-Versprechen (Säule 2) erst echt. **Volle Detailspec mit
 - **LS-1 — Wissen altert (Confidence Decay).** _Was:_ Fakten, die lange nicht revalidiert wurden, markiert das System selbst als „prüfen". _Auftritt:_ sanftes Prüf-Item im **Handlungsbedarf** („Diese Entscheidung ist 8 Monate alt — noch gültig?"); dezentes Alters-Zeichen in **Substanz** (gedämpfte Opazität, kein Rot). _Ansatz:_ `pg_cron` auf `canonical_facts` (Alter + letzter Review-Timestamp) → `gap_signal` Typ `stale_fact`; nährt M4-S7 (`needs_review`). _Default:_ Fakt > 120 Tage ohne Revalidierung (pro `fact_type` justierbar), nur decision/deadline (Anti-Noise). _Aufwand:_ niedrig.
   - _Später-Erweiterung:_ **periodischer Projekt-Lint** — ein ganzprojekt-Health-Pass (verwaiste Entities, stale Facts, fehlende Cross-Refs), nicht nur event-getrieben beim Commit. Andockend an LS-1 + M4-S7-Status. Quelle: Inbox/„LLM-Wiki-Pattern" (Lint als first-class Operation).
 - **LS-2 — Project Pulse (das System kommt zu dir).** _Was:_ cogni meldet sich von selbst, wenn ein Projekt verrottet. _Auftritt:_ **Entität + EntityVoice** beim App-Open — ruhige Eigen-Aussage („In Projekt Y wartet seit 14 Tagen eine Entscheidung"), kein Toast/Banner. _Ansatz:_ täglicher `pg_cron` pro Projekt: Gap ohne Aktivität > 14 T · Konflikt ohne Commit > 7 T · letzte Nutzeraktion > 21 T → Push-Event in die EntityVoice-Realtime-Queue. _Harte Schranke:_ **max. 1 Alert / Projekt / Woche.** _Aufwand:_ mittel; Design-Kern = Noise-Management. _Abhängigkeit:_ stabiler Projektzustand.
+  -->dazu UI Idee - cogni meldet sich wird spielerisch im ui gelöst über "GEdanken" überlegte Gedanken ploppen aus Entität schwebend in den raum (runde Sprech bubbles) , wenn sie angeklickt werden öffnet sich der Gesprächs Drill mit dem Gedanken (frage, aussage, whatever..), kann skipped (bubble bleibt) oder beantwortet werden (bubble platzt verschwindet) - das ganze > NUR home
 - **LS-3 — Cross-Project Review-Badge.** _Was:_ immer sichtbar, wie viele Erkenntnisse projektübergreifend auf Review warten. _Auftritt:_ ruhige Zahl an der **EntityRail/Sidebar** oder als Entitäts-Zustand („3 offene Erkenntnisse warten") — **kein** lautes rotes Badge. _Ansatz:_ Cross-Project-Query auf `review_cases` (`box_state = 'proposed'`) + 1 dezente Komponente. _Aufwand:_ sehr niedrig. _Vorsicht:_ leise Intelligenz, nicht Notification-Ästhetik.
 
 ---

@@ -94,11 +94,14 @@ export function useEntitySources(
           emit(assetUpdateTriggers(row));
           const sig = assetRowToSignal("UPDATE", row);
           if (!sig) return;
-          if (sig.kind === "intake.empty") {
-            // Grace period before going idle — keeps processing visual a moment longer.
+          if (sig.kind === "intake.empty" || sig.kind === "intake.done") {
+            // Grace before resolving: hält das Processing-Visual einen Moment und
+            // lässt ein fast gleichzeitiges review.ready (dialog INSERT) zuerst
+            // gewinnen. `intake.done` no-opt danach, falls schon review-ready.
+            const settleSig = sig.kind === "intake.done" ? sig : entitySignal.intakeSettle();
             if (settleTimerRef.current) clearTimeout(settleTimerRef.current);
             settleTimerRef.current = setTimeout(() => {
-              dispatchRef.current(entitySignal.intakeSettle());
+              dispatchRef.current(settleSig);
               settleTimerRef.current = null;
             }, 1500);
           } else {

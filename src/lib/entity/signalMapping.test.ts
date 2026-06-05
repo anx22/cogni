@@ -39,6 +39,20 @@ describe("signalMapping — assetRowToSignal", () => {
       kind: "intake.empty",
     }));
 
+  it("UPDATE review_ready → intake.done{assetId} (Bugfix: war vorher null → busy hing)", () =>
+    expect(assetRowToSignal("UPDATE", { id: "a1", understanding_status: "review_ready" })).toEqual({
+      kind: "intake.done",
+      assetId: "a1",
+    }));
+
+  it("UPDATE processing_status completed (us pending) → null, KEIN done (Idle-Flackern vermeiden)", () =>
+    expect(
+      assetRowToSignal("UPDATE", {
+        processing_status: "completed",
+        understanding_status: "pending",
+      }),
+    ).toBeNull());
+
   it("UPDATE-Rauschen → null", () =>
     expect(assetRowToSignal("UPDATE", { understanding_status: "pending" })).toBeNull());
 });

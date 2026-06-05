@@ -14,6 +14,7 @@ export const entitySignal = {
   }),
   intakeEmpty: (): EntitySignal => ({ kind: "intake.empty" }),
   intakeSettle: (): EntitySignal => ({ kind: "intake.settle" }),
+  intakeDone: (assetId?: string): EntitySignal => ({ kind: "intake.done", assetId }),
   reviewReady: (sessionId: string): EntitySignal => ({ kind: "review.ready", sessionId }),
   reviewOpened: (sessionId?: string): EntitySignal => ({ kind: "review.opened", sessionId }),
   reviewDismissed: (): EntitySignal => ({ kind: "review.dismissed" }),
