@@ -25,3 +25,6 @@ dist-ssr
 
 # Lovable-Plattform-Memory — gehoert nicht ins Repo (Doku liegt in docs/)
 .lovable/
+
+# Temporaere Brand-Asset-Vorschauen (Magnific-Downloads, nicht versionieren)
+.brand-tmp/
