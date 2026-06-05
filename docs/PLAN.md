@@ -42,8 +42,8 @@ Die Entität (Gesicht der App) wird zum in sich geschlossenen Modul: reines Gehi
 **P0 — kaputt / Daten-Integrität**
 
 - ✅ Sofort-Commit bei Zuordnung → select→confirm
-- ☐ **Busy-Lock-Bug** — nach 1 Drop gesperrt, erst Reload entsperrt (`busy`-State hängt; `Index.tsx`/`useEntitySources`-Timer/`useDropZone`).
-- ☐ **Voice verifizieren** — „spricht nicht / keine schwebenden Texte" (Home-Verarbeitung + ProjectScreen; `useEntityCommunication`-Trigger + `EntityVoiceLine`-Mount).
+- ✅ **Busy-Lock-Bug** (`354eec8`, dev) — `review_ready` mappte auf `null` → kein idle-Signal. Neues `intake.done` (nur `processing→idle`, lässt `review-ready`/`failed`), via 1500 ms-Grace. Reorder-Edge (spätes `running` nach `review_ready`) → gehört zur Queue/activeCount (Batch 3).
+- ☐ **Voice verifizieren** — Diagnose: **kein Frontend-Defekt** (Mount+Trigger-Kette intakt), Ursache vermutl. Realtime-upstream → Ops-/Backend-Prüfung, nicht blind coden.
 
 **P1 — Kern-Gefühl & Führung**
 
@@ -89,7 +89,7 @@ Macht das Cross-Project-Versprechen (Säule 2) erst echt. **Volle Detailspec mit
 - **LS-1 — Wissen altert (Confidence Decay).** _Was:_ Fakten, die lange nicht revalidiert wurden, markiert das System selbst als „prüfen". _Auftritt:_ sanftes Prüf-Item im **Handlungsbedarf** („Diese Entscheidung ist 8 Monate alt — noch gültig?"); dezentes Alters-Zeichen in **Substanz** (gedämpfte Opazität, kein Rot). _Ansatz:_ `pg_cron` auf `canonical_facts` (Alter + letzter Review-Timestamp) → `gap_signal` Typ `stale_fact`; nährt M4-S7 (`needs_review`). _Default:_ Fakt > 120 Tage ohne Revalidierung (pro `fact_type` justierbar), nur decision/deadline (Anti-Noise). _Aufwand:_ niedrig.
   - _Später-Erweiterung:_ **periodischer Projekt-Lint** — ein ganzprojekt-Health-Pass (verwaiste Entities, stale Facts, fehlende Cross-Refs), nicht nur event-getrieben beim Commit. Andockend an LS-1 + M4-S7-Status. Quelle: Inbox/„LLM-Wiki-Pattern" (Lint als first-class Operation).
 - **LS-2 — Project Pulse (das System kommt zu dir).** _Was:_ cogni meldet sich von selbst, wenn ein Projekt verrottet. _Auftritt:_ **Entität + EntityVoice** beim App-Open — ruhige Eigen-Aussage („In Projekt Y wartet seit 14 Tagen eine Entscheidung"), kein Toast/Banner. _Ansatz:_ täglicher `pg_cron` pro Projekt: Gap ohne Aktivität > 14 T · Konflikt ohne Commit > 7 T · letzte Nutzeraktion > 21 T → Push-Event in die EntityVoice-Realtime-Queue. _Harte Schranke:_ **max. 1 Alert / Projekt / Woche.** _Aufwand:_ mittel; Design-Kern = Noise-Management. _Abhängigkeit:_ stabiler Projektzustand.
--->dazu UI Idee - cogni meldet sich wird spielerisch im ui gelöst über "GEdanken" überlegte Gedanken ploppen aus Entität schwebend in den raum (runde Sprech bubbles) , wenn sie angeklickt werden öffnet sich der Gesprächs Drill mit dem Gedanken (frage, aussage, whatever..), kann skipped (bubble bleibt) oder beantwortet werden (bubble platzt verschwindet) - das ganze > NUR home
+  -->dazu UI Idee - cogni meldet sich wird spielerisch im ui gelöst über "GEdanken" überlegte Gedanken ploppen aus Entität schwebend in den raum (runde Sprech bubbles) , wenn sie angeklickt werden öffnet sich der Gesprächs Drill mit dem Gedanken (frage, aussage, whatever..), kann skipped (bubble bleibt) oder beantwortet werden (bubble platzt verschwindet) - das ganze > NUR home
 - **LS-3 — Cross-Project Review-Badge.** _Was:_ immer sichtbar, wie viele Erkenntnisse projektübergreifend auf Review warten. _Auftritt:_ ruhige Zahl an der **EntityRail/Sidebar** oder als Entitäts-Zustand („3 offene Erkenntnisse warten") — **kein** lautes rotes Badge. _Ansatz:_ Cross-Project-Query auf `review_cases` (`box_state = 'proposed'`) + 1 dezente Komponente. _Aufwand:_ sehr niedrig. _Vorsicht:_ leise Intelligenz, nicht Notification-Ästhetik.
 
 ---
