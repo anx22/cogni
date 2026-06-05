@@ -36,6 +36,7 @@ export type EntitySignal =
   | { kind: "intake.failed"; assetId?: string; reason?: IntakeFailReason }
   | { kind: "intake.empty" }
   | { kind: "intake.settle" }
+  | { kind: "intake.done"; assetId?: string } // terminaler Erfolg (review_ready) → löst hängendes processing idempotent nach idle
   | { kind: "review.ready"; sessionId: string }
   | { kind: "review.opened"; sessionId?: string }
   | { kind: "review.dismissed" }

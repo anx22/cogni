@@ -35,6 +35,12 @@ export function transition(state: EntityState, signal: EntitySignal): EntityStat
     case "intake.settle":
       return state === "failed" ? "failed" : "idle";
 
+    case "intake.done":
+      // Terminaler Erfolg eines Assets: löst NUR ein hängendes `processing`
+      // nach idle. `review-ready` (Review wartet) und `failed` bleiben unberührt
+      // — kein Un-Review, kein Un-Fail. (Multi-Run-Korrektheit folgt in der Queue.)
+      return state === "processing" ? "idle" : state;
+
     case "review.ready":
       return "review-ready";
 

@@ -40,6 +40,11 @@ export function assetRowToSignal(event: RealtimeEvent, row: AssetRowLike): Entit
   if (us === "empty") {
     return { kind: "intake.empty" };
   }
+  if (us === "review_ready") {
+    // Terminaler Erfolg: das war bisher `null` → kein idle-Signal → busy hing bis
+    // Reload. Jetzt explizit auflösen (machine: processing→idle, review-ready bleibt).
+    return { kind: "intake.done", assetId: row.id };
+  }
   return null;
 }
 

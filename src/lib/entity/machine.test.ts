@@ -36,6 +36,13 @@ describe("entity machine — transition", () => {
     expect(transition("processing", entitySignal.intakeSettle())).toBe("idle");
   });
 
+  it("intake.done löst hängendes processing, lässt review-ready/failed unberührt", () => {
+    expect(transition("processing", entitySignal.intakeDone("a1"))).toBe("idle");
+    expect(transition("review-ready", entitySignal.intakeDone("a1"))).toBe("review-ready");
+    expect(transition("failed", entitySignal.intakeDone("a1"))).toBe("failed");
+    expect(transition("idle", entitySignal.intakeDone("a1"))).toBe("idle");
+  });
+
   it("block / unblock", () => {
     expect(transition("idle", entitySignal.systemBlocked())).toBe("busy-blocked");
     expect(transition("busy-blocked", entitySignal.systemUnblocked())).toBe("idle");
