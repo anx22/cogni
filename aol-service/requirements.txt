@@ -4,6 +4,6 @@ pydantic==2.9.2
 httpx==0.27.2
 langgraph==0.2.50
 langgraph-checkpoint-postgres==2.0.7
-langsmith==0.1.142
+langsmith==0.8.0
 psycopg[binary,pool]==3.2.3
-python-dotenv==1.0.1
+python-dotenv==1.2.2

@@ -79,3 +79,12 @@
 - **Zeit (bewegt sich):** `NOW` (Gegenwart) · `PLAN` (Zukunft, vormals ROADMAP) · **Vergangenheit = Git** (`git log --oneline -- docs/`; alten Stand: `git show <commit>:<datei>`). Kein eigenes History-File — Git ist verlustfrei und auslesbar; das _Warum_ kann Git aber nicht, deshalb bleibt DECISIONS kuratiert.
 - **Wissen (steht):** `PRODUCT` (was) · `ARCHITECTURE` (wie) · `DECISIONS` (warum, thematisch).
 - **`CLAUDE.md`** wird automatisch injiziert (Pflichtregeln), `AGENTS.md` ist der Router. **Branch-Flow:** Direkt-Push auf `dev`, `main` nur via PR.
+
+## 11. Security-Hygiene (Dependabot, 2026-06-05)
+
+> Getrennt vom v1-Dogfood-Meilenstein. Wahrheit = `origin/dev`; npm- (`package-lock.json`) und bun-Lockfile (`bun.lock`) konsistent gehalten.
+
+- **JS/TS-Stack: 0 Vulnerabilities.** Sichere Transitiv-Bumps via `npm audit fix` (ohne `--force`); danach gekoppelter Major-Bump **vitest 3→4 + vite 5→6** (vitest 4 verlangt vite ^6/7/8). Bewertet: `lovable-tagger` (peer vite `>=5 <9`) und `@vitejs/plugin-react-swc` (peer vite `^4..^8`) bleiben kompatibel → Lovables paralleler Build bricht nicht. Gate grün (tsc 0, vitest 205/205, lint 0 Errors, build ok).
+- **`bun.lockb` entfernt** — stale seit Template-Commit (2025-01-01), nie gepflegt, von bun bei vorhandenem Text-`bun.lock` ignoriert; eine tote, verwundbar gepinnte Datei.
+- **Python (`aol-service/requirements.txt`):** `langsmith 0.1.142→0.8.0` (high+moderate) und `python-dotenv 1.0.1→1.2.2` (moderate) — beide nur transitiv/deklarativ genutzt (kein direkter Import), Resolver-kompatibel mit gepinntem `langgraph 0.2.50` (pip-Dry-Run verifiziert).
+- **OFFEN — `langgraph 0.2.50 → 1.0.10` (moderate):** Major-API-Bruch (0.2→1.0), zieht vermutlich `langgraph-checkpoint-postgres` nach. **Nicht blind geforct** — aol-service hat kein Test-Gate; Migration gehört zum Service-Owner mit Python-Lauf. Bis dahin akzeptiertes Restrisiko (moderate, interner Graph-Runtime-Dep).
